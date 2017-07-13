@@ -11,33 +11,128 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <enkan.version>0.2.0-SNAPSHOT</enkan.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>LATEST</version>
-        </dependency>
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
             <version>2.0.0.Alpha1</version>
         </dependency>
         <dependency>
-            <groupId>javax.cache</groupId>
-            <artifactId>cache-api</artifactId>
-            <version>1.0.0</version>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-system</artifactId>
+            <version>${enkan.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jsr107.ri</groupId>
-            <artifactId>cache-ri-impl</artifactId>
-            <version>1.0.0</version>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>kotowari</artifactId>
+            <version>${enkan.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>2.6.3</version>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-doma2</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jackson</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-HikariCP</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-flyway</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-freemarker</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-metrics</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>5.4.0.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.4.193</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.18</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.22</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>LATEST</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-repl-pseudo</artifactId>
+            <version>${enkan.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
         </dependency>
      </dependencies>
+
+
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-devel</artifactId>
+                    <version>${enkan.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.jsr107.ri</groupId>
+                    <artifactId>cache-ri-impl</artifactId>
+                    <version>1.0.0</version>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>jcache</id>
+            <activation>
+                <property>
+                    <name>enkan.env</name>
+                    <value>jcache</value>
+                </property>
+            </activation>
+            <dependencies>
+            </dependencies>
+
+        </profile>
+    </profiles>
+
 </project>

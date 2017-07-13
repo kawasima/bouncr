@@ -60,7 +60,6 @@ public class MultiAppProxyClient implements ProxyClient {
                 cfg.getPass(),
                 exchange.getIoThread(),
                 exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
-        ;
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {

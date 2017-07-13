@@ -1,0 +1,32 @@
+@startuml
+
+User "1" -- "*" Membership
+Membership "*" -- "1" Group
+
+Role "1" -- "*" RolePermission
+RolePermission "*" -- "1" Permission
+
+Realm "*" -- "1" Application
+
+Assign "*" -- "1" Role
+Assign "*" -- "1" Realm
+Assign "*" -- "1" Group
+
+class User {
+  VARCHAR name
+}
+
+note as N1
+SELECT permissions.id
+FROM permissions
+JOIN role_permissions USING(permission_id)
+JOIN roles USING(role_id)
+JOIN assigns USING(role_id)
+JOIN realms USING(realm_id)
+JOIN groups USING(group_id)
+JOIN memberships USING(group_id)
+JOIN users USING(user_id)
+WHERE realms.url like ?
+WHERE users.account = ?
+end note
+@enduml
