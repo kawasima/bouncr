@@ -5,7 +5,9 @@ import enkan.collection.Headers;
 import enkan.collection.OptionMap;
 import enkan.component.ApplicationComponent;
 import enkan.component.ComponentLifecycle;
+import enkan.component.DataSourceComponent;
 import enkan.component.WebServerComponent;
+import enkan.component.doma2.DomaProvider;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
@@ -21,6 +23,7 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import org.xnio.streams.ChannelInputStream;
 
@@ -38,6 +41,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * The component for an reverse proxy server.
+ *
  * @author kawasima
  */
 public class ReverseProxyComponent extends WebServerComponent {
@@ -75,18 +80,21 @@ public class ReverseProxyComponent extends WebServerComponent {
             @Override
             public void start(ReverseProxyComponent component) {
                 StoreProvider storeProvider = getDependency(StoreProvider.class);
+                RealmCache realmCache = getDependency(RealmCache.class);
                 ApplicationComponent app = getDependency(ApplicationComponent.class);
+
                 if (server == null) {
                     OptionMap options = OptionMap.of("join?", false);
                     if (port != null) options.put("port", port);
                     if (host != null) options.put("host", host);
                     HttpHandler appHandler = createAdminApp((WebApplication) app.getApplication());
                     Map<String, LocationConfig> config = new HashMap<>();
-                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(config);
+                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(storeProvider.getStore(), realmCache, config);
                     ProxyHandler proxyHandler = new ProxyHandler(proxyClient, maxRequestTime, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded);
                     server = Undertow.builder()
                             .addHttpListener(port, host)
                             .setHandler(Handlers.path()
+                                    .addPrefixPath("/my", appHandler)
                                     .addPrefixPath("/admin", appHandler)
                                     .addPrefixPath("/", proxyHandler))
                             .build();
@@ -218,5 +226,6 @@ public class ReverseProxyComponent extends WebServerComponent {
                     }
                 }));
     }
+
 
 }

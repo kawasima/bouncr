@@ -1,8 +1,8 @@
-<#import "../layout/defaultLayout.ftl" as layout>
-<@layout.layout "List of groups">
-  <h1>List of groups</h1>
+<#import "../../layout/defaultLayout.ftl" as layout>
+<@layout.layout "List of permissions">
+  <h1>List of permissions</h1>
 
-  <#list groups>
+  <#list permissions>
   <table>
     <thead>
       <tr>
@@ -10,16 +10,16 @@
       </tr>
     </thead>
     <tbody>
-      <#items as group>
+      <#items as permission>
         <tr>
-          <td><a href="/group/${group.id}">${group.name}</a></td>
+          <td><a href="/permission/${permission.id}">${permission.name}</a></td>
         </tr>
       </#items>
     </tbody>
   </table>
   <#else>
   <div class="alert alert-info" role="alert">
-     <p>No groups</p>
+     <p>No permissions</p>
   </div>
   </#list>
 

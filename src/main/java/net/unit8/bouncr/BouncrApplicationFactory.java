@@ -24,7 +24,10 @@ import enkan.util.HttpResponseUtils;
 import kotowari.middleware.*;
 import kotowari.middleware.serdes.ToStringBodyWriter;
 import kotowari.routing.Routes;
-import net.unit8.bouncr.web.controller.UserController;
+import net.unit8.bouncr.authn.BouncrStoreBackend;
+import net.unit8.bouncr.web.controller.*;
+import net.unit8.bouncr.web.entity.Permission;
+import net.unit8.bouncr.web.entity.Role;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -33,6 +36,8 @@ import static enkan.util.BeanBuilder.builder;
 import static enkan.util.Predicates.*;
 
 /**
+ * The factory for Bouncr application.
+ *
  * @author kawasima
  */
 public class BouncrApplicationFactory implements ApplicationFactory {
@@ -42,8 +47,32 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         // Routing
         Routes routes = Routes.define(r -> {
-            r.get("/admin/user").to(UserController.class, "newUser");
+            r.get("/admin/").to(IndexController.class, "home");
+
+            /* Routing for user actions */
+            r.get("/admin/user").to(UserController.class, "list");
+            r.get("/admin/user/new").to(UserController.class, "newUser");
             r.post("/admin/user").to(UserController.class, "create");
+            r.get("/admin/user/:id/edit").to(UserController.class, "edit");
+            r.post("/admin/user/:id").to(UserController.class, "update");
+            r.post("/admin/user/:id/delete").to(UserController.class, "delete");
+
+            /* Routing for group actions */
+            r.get("/admin/group").to(GroupController.class, "list");
+
+            /* Routing for application actions */
+            r.get("/admin/application").to(ApplicationController.class, "list");
+
+            /* Routing for permission actions */
+            r.get("/admin/permission").to(PermissionController.class, "list");
+
+            /* Routing for role actions */
+            r.get("/admin/role").to(RoleController.class, "list");
+
+            /* My page */
+            r.get("/my/login").to(LoginController.class, "loginForm");
+            r.post("/my/login").to(LoginController.class, "loginByPassword");
+            r.get("/my").to(MyController.class, "home");
         }).compile();
 
         // Enkan
@@ -62,16 +91,10 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new NestedParamsMiddleware());
         app.use(new CookiesMiddleware());
 
-        KeyValueStore store = Objects.equals(Env.get("ENKAN_ENV"), "jcache") ? new JCacheStore() : new MemoryStore();
-        app.use(builder(new SessionMiddleware())
-                .set(SessionMiddleware::setStore, store)
-                .build());
-        app.use(PathPredicate.ANY("^/(guestbook|conversation)/.*"), new ConversationMiddleware());
-
-        app.use(new AuthenticationMiddleware<>(Collections.singletonList(new SessionBackend())));
-        app.use(and(path("^/guestbook/"), authenticated().negate()),
+        app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
+        app.use(and(path("^(/my(?!/login)|/admin)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
-                        HttpResponseUtils.redirect("/guestbook/login?url=" + req.getUri(),
+                        HttpResponseUtils.redirect("/my/login?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
 
         app.use(new ContentNegotiationMiddleware());

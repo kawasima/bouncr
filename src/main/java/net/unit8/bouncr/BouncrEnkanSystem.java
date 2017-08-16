@@ -12,6 +12,7 @@ import enkan.component.jackson.JacksonBeansConverter;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
+import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
 
@@ -31,6 +32,7 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "doma", new DomaProvider(),
                 "jackson", new JacksonBeansConverter(),
                 "storeprovider", new StoreProvider(),
+                "realmCache", new RealmCache(),
                 "flyway", new FlywayMigration(),
                 "template", new FreemarkerTemplateEngine(),
                 "metrics", new MetricsComponent(),
@@ -40,8 +42,9 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
                         .build()
         ).relationships(
-                component("http").using("app", "storeprovider"),
-                component("app").using("storeprovider", "datasource", "template", "doma", "jackson", "metrics"),
+                component("http").using("app", "storeprovider", "realmCache"),
+                component("app").using("storeprovider", "datasource", "template", "doma", "jackson", "metrics", "realmCache"),
+                component("realmCache").using("doma"),
                 component("doma").using("datasource", "flyway"),
                 component("flyway").using("datasource")
         );

@@ -18,7 +18,7 @@ public class V6__CreateRealms implements JdbcMigration {
                     + "url  VARCHAR(100) NOT NULL,"
                     + "application_id BIGINT NOT NULL,"
                     + "PRIMARY KEY (realm_id),"
-                    + "FOREIGN KEY (application_id) REFERENCES application(application_id)"
+                    + "FOREIGN KEY (application_id) REFERENCES applications(application_id)"
                     + ")");
         }
     }

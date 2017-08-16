@@ -14,7 +14,9 @@ public class V1__CreateUsers implements JdbcMigration {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("CREATE TABLE users("
                     + "user_id IDENTITY not null,"
-                    + "name VARCHAR(100) not null,"
+                    + "account VARCHAR(100) not null,"
+                    + "name    VARCHAR(100) not null,"
+                    + "email   VARCHAR(100) not null,"
                     + "PRIMARY KEY(user_id)"
                     + ")");
         }

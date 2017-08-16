@@ -1,4 +1,4 @@
-<#import "../layout/defaultLayout.ftl" as layout>
+<#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "New user">
    <h1>New user</h1>
 

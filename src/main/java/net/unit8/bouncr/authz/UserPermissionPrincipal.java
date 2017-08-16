@@ -1,12 +1,18 @@
 package net.unit8.bouncr.authz;
 
+import enkan.security.UserPrincipal;
+
+import java.io.Serializable;
 import java.security.Principal;
+import java.util.Map;
 import java.util.Set;
 
 /**
+ * A user principal with permissions.
+ *
  * @author kawasima
  */
-public class UserPermissionPrincipal implements Principal {
+public class UserPermissionPrincipal implements UserPrincipal, Serializable {
     private final String name;
     private final Set<String> permissions;
 
@@ -20,7 +26,9 @@ public class UserPermissionPrincipal implements Principal {
         return name;
     }
 
-    public boolean isAllowed(String permission) {
+
+    @Override
+    public boolean hasPermission(String permission) {
         return permissions.contains(permission);
     }
 }

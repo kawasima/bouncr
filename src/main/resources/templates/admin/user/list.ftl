@@ -1,4 +1,4 @@
-<#import "../layout/defaultLayout.ftl" as layout>
+<#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "List of users">
   <h1>List of users</h1>
 
@@ -12,7 +12,7 @@
     <tbody>
       <#items as user>
         <tr>
-          <td><a href="/admin/user/${user.id}">${user.name}</a></td>
+          <td><a href="${urlFor('edit?id=' + user.id)}">${user.name}</a></td>
         </tr>
       </#items>
     </tbody>

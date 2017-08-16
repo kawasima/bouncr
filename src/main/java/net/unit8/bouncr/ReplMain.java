@@ -12,7 +12,7 @@ import kotowari.system.KotowariCommandRegister;
  */
 public class ReplMain {
     public static void main(String[] args) throws Exception {
-        PseudoRepl repl = new PseudoRepl(BouncrEnkanSystem.class.getName());
+        PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.BouncrEnkanSystem");
         ReplBoot.start(repl,
                 new KotowariCommandRegister(),
                 new DevelCommandRegister(),

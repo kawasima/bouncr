@@ -8,6 +8,8 @@ import net.unit8.bouncr.web.form.UserForm;
 import javax.inject.Inject;
 
 /**
+ * A controller about application actions.
+ *
  * @author kawasima
  */
 public class ApplicationController {
@@ -19,7 +21,7 @@ public class ApplicationController {
 
     public HttpResponse newForm() {
         UserForm application = new UserForm();
-        return templateEngine.render("application/new",
+        return templateEngine.render("admin/application/new",
                 "application", application);
     }
 
