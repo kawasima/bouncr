@@ -21,4 +21,5 @@ public class Permission implements Serializable {
 
     private String name;
     private String description;
+    private Boolean writeProtected;
 }

@@ -22,4 +22,5 @@ public class User implements Serializable {
     private String account;
     private String name;
     private String email;
+    private String writeProtected;
 }

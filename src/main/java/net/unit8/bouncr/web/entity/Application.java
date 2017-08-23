@@ -4,6 +4,7 @@ import lombok.Data;
 import org.seasar.doma.*;
 
 import java.io.Serializable;
+import java.net.URI;
 
 /**
  * @author kawasima
@@ -19,4 +20,13 @@ public class Application implements Serializable {
 
     private String name;
     private String description;
+    private String passTo;
+    private String virtualPath;
+    private String topPage;
+    private Boolean writeProtected;
+
+    public URI getUriToPass() {
+        return URI.create(passTo);
+    }
+
 }

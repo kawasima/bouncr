@@ -12,6 +12,7 @@ import net.unit8.bouncr.web.form.GroupForm;
 import net.unit8.bouncr.web.form.UserForm;
 
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 import java.util.List;
 
 /**
@@ -37,12 +38,13 @@ public class GroupController {
                 "groups", groups);
     }
 
-    public HttpResponse newGroup() {
+    public HttpResponse newForm() {
         GroupForm group = new GroupForm();
         return templateEngine.render("admin/group/new",
                 "group", group);
     }
 
+    @Transactional
     public HttpResponse create(GroupForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/group/new",

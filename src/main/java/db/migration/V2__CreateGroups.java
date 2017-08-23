@@ -15,6 +15,8 @@ public class V2__CreateGroups implements JdbcMigration {
             stmt.execute("CREATE TABLE groups("
                     + "group_id IDENTITY,"
                     + "name VARCHAR(100) NOT NULL,"
+                    + "description VARCHAR(100) NOT NULL,"
+                    + "write_protected BOOLEAN NOT NULL,"
                     + "PRIMARY KEY(group_id)"
                     + ")");
         }

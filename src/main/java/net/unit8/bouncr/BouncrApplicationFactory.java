@@ -27,6 +27,7 @@ import kotowari.routing.Routes;
 import net.unit8.bouncr.authn.BouncrStoreBackend;
 import net.unit8.bouncr.web.controller.*;
 import net.unit8.bouncr.web.entity.Permission;
+import net.unit8.bouncr.web.entity.Realm;
 import net.unit8.bouncr.web.entity.Role;
 
 import java.util.Collections;
@@ -47,27 +48,55 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         // Routing
         Routes routes = Routes.define(r -> {
-            r.get("/admin/").to(IndexController.class, "home");
+            r.scope("/admin", ar -> {
+                ar.get("/").to(IndexController.class, "home");
+                /* Routing for user actions */
+                ar.get("/user").to(UserController.class, "list");
+                ar.get("/user/new").to(UserController.class, "newUser");
+                ar.post("/user").to(UserController.class, "create");
+                ar.get("/user/:id/edit").to(UserController.class, "edit");
+                ar.post("/user/:id").to(UserController.class, "update");
+                ar.post("/user/:id/delete").to(UserController.class, "delete");
 
-            /* Routing for user actions */
-            r.get("/admin/user").to(UserController.class, "list");
-            r.get("/admin/user/new").to(UserController.class, "newUser");
-            r.post("/admin/user").to(UserController.class, "create");
-            r.get("/admin/user/:id/edit").to(UserController.class, "edit");
-            r.post("/admin/user/:id").to(UserController.class, "update");
-            r.post("/admin/user/:id/delete").to(UserController.class, "delete");
+                /* Routing for group actions */
+                ar.get("/group").to(GroupController.class, "list");
+                ar.get("/group/new").to(GroupController.class, "newForm");
+                ar.post("/group").to(GroupController.class, "create");
+                ar.get("/group/:id/edit").to(GroupController.class, "edit");
+                ar.post("/group/:id").to(GroupController.class, "update");
+                ar.post("/group/:id/delete").to(GroupController.class, "delete");
 
-            /* Routing for group actions */
-            r.get("/admin/group").to(GroupController.class, "list");
+                /* Routing for application actions */
+                ar.get("/application").to(ApplicationController.class, "list");
+                ar.get("/application/new").to(ApplicationController.class, "newForm");
+                ar.post("/application").to(ApplicationController.class, "create");
+                ar.get("/application/:id/edit").to(ApplicationController.class, "edit");
+                ar.post("/application/:id").to(ApplicationController.class, "update");
+                ar.post("/application/:id/delete").to(ApplicationController.class, "delete");
+                ar.get("/application/:applicationId/realms").to(RealmController.class, "listByApplicationId");
+                /* Routing for realm actions */
+                ar.get("/application/:applicationId/realms/new").to(RealmController.class, "newForm");
+                ar.post("/application/:applicationId/realms").to(RealmController.class, "create");
+                ar.get("/application/:applicationId/realms/:id/edit").to(RealmController.class, "edit");
+                ar.post("/application/:applicationId/realms/:id").to(RealmController.class, "update");
+                ar.post("/application/:applicationId/realms/:id/delete").to(RealmController.class, "delete");
 
-            /* Routing for application actions */
-            r.get("/admin/application").to(ApplicationController.class, "list");
+                /* Routing for permission actions */
+                ar.get("/permission").to(PermissionController.class, "list");
+                ar.get("/permission/new").to(PermissionController.class, "newForm");
+                ar.post("/permission").to(PermissionController.class, "create");
+                ar.get("/permission/:id/edit").to(PermissionController.class, "edit");
+                ar.post("/permission/:id").to(PermissionController.class, "update");
+                ar.post("/permission/:id/delete").to(PermissionController.class, "delete");
 
-            /* Routing for permission actions */
-            r.get("/admin/permission").to(PermissionController.class, "list");
-
-            /* Routing for role actions */
-            r.get("/admin/role").to(RoleController.class, "list");
+                /* Routing for role actions */
+                ar.get("/role").to(RoleController.class, "list");
+                ar.get("/role/new").to(RoleController.class, "newForm");
+                ar.post("/role").to(RoleController.class, "create");
+                ar.get("/role/:id/edit").to(RoleController.class, "edit");
+                ar.post("/role/:id").to(RoleController.class, "update");
+                ar.post("/role/:id/delete").to(RoleController.class, "delete");
+            });
 
             /* My page */
             r.get("/my/login").to(LoginController.class, "loginForm");
@@ -92,7 +121,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new CookiesMiddleware());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!/login)|/admin)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/login|/assets))|/admin)($|/.*)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
                         HttpResponseUtils.redirect("/my/login?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));

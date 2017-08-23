@@ -12,7 +12,7 @@
     <tbody>
       <#items as realm>
         <tr>
-          <td><a href="/realm/${realm.id}">${realm.name}</a></td>
+          <td><a href="${urlFor('edit?applicationId=' + applicationId + '&id=' + realm.id)}">${realm.name}</a></td>
         </tr>
       </#items>
     </tbody>
@@ -23,5 +23,6 @@
   </div>
   </#list>
 
-  <a href="${urlFor('newForm')}">New register</a>
+  <a href="${urlFor('newForm?applicationId=' + applicationId)}">New register</a>
+  <a href="${urlFor('net.unit8.bouncr.web.controller.ApplicationController', 'list?id=' + applicationId)}">Back to application</a>
 </@layout.layout>

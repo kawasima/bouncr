@@ -19,6 +19,9 @@ public interface ApplicationDao {
     @Select
     List<Application> selectByUserId(Long userId);
 
+    @Select
+    Application selectById(Long id);
+
     @Insert
     int insert(Application app);
 

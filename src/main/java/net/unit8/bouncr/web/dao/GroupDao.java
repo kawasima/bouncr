@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.dao;
 
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.Group;
+import net.unit8.bouncr.web.entity.User;
 import org.seasar.doma.*;
 
 import java.util.List;
@@ -24,4 +25,10 @@ public interface GroupDao {
 
     @Delete
     int delete(Group group);
+
+    @Insert(sqlFile = true)
+    int addUser(Group group, User user);
+
+    @Delete(sqlFile = true)
+    int removeUser(Group group, User user);
 }

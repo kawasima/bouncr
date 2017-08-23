@@ -17,6 +17,7 @@ public class V1__CreateUsers implements JdbcMigration {
                     + "account VARCHAR(100) not null,"
                     + "name    VARCHAR(100) not null,"
                     + "email   VARCHAR(100) not null,"
+                    + "write_protected BOOLEAN NOT NULL,"
                     + "PRIMARY KEY(user_id)"
                     + ")");
         }

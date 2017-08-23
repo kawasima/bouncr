@@ -21,4 +21,5 @@ public class Realm implements Serializable {
     private String url;
     private String description;
     private Long applicationId;
+    private Boolean writeProtected;
 }

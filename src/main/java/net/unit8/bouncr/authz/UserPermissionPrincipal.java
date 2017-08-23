@@ -4,6 +4,7 @@ import enkan.security.UserPrincipal;
 
 import java.io.Serializable;
 import java.security.Principal;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,5 +31,9 @@ public class UserPermissionPrincipal implements UserPrincipal, Serializable {
     @Override
     public boolean hasPermission(String permission) {
         return permissions.contains(permission);
+    }
+
+    public Set<String> getPermissions() {
+        return permissions;
     }
 }

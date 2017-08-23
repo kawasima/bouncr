@@ -40,6 +40,9 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "app", new ApplicationComponent("net.unit8.bouncr.BouncrApplicationFactory"),
                 "http", builder(new ReverseProxyComponent())
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
+                        .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3001))
+                        .set(ReverseProxyComponent::setKeystore, Env.getString("KEYSTORE", ""))
+                        .set(ReverseProxyComponent::setKeyPassword, Env.getString("KEY_PASSWORD", ""))
                         .build()
         ).relationships(
                 component("http").using("app", "storeprovider", "realmCache"),

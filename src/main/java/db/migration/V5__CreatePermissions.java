@@ -15,6 +15,8 @@ public class V5__CreatePermissions implements JdbcMigration {
             stmt.execute("CREATE TABLE permissions("
                     + "permission_id IDENTITY,"
                     + "name VARCHAR(100) NOT NULL,"
+                    + "description VARCHAR(100) NOT NULL,"
+                    + "write_protected BOOLEAN NOT NULL,"
                     + "PRIMARY KEY(permission_id)"
                     + ")");
         }

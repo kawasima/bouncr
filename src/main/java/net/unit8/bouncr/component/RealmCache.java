@@ -3,7 +3,9 @@ package net.unit8.bouncr.component;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.component.doma2.DomaProvider;
+import net.unit8.bouncr.web.dao.ApplicationDao;
 import net.unit8.bouncr.web.dao.RealmDao;
+import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.entity.Realm;
 
 import java.util.List;
@@ -12,6 +14,7 @@ import java.util.regex.Pattern;
 public class RealmCache extends SystemComponent {
     private DomaProvider domaProvider;
     private List<Realm> cache;
+    private List<Application> applications;
 
     @Override
     protected ComponentLifecycle lifecycle() {
@@ -36,8 +39,17 @@ public class RealmCache extends SystemComponent {
                 .orElse(null);
     }
 
+    public Application getApplication(Realm realm) {
+        return applications.stream()
+                .filter(app -> app.getId() == realm.getApplicationId())
+                .findFirst()
+                .orElse(null);
+    }
+
     public synchronized void refresh() {
         RealmDao realmDao = domaProvider.getDao(RealmDao.class);
         cache = realmDao.selectAll();
+        ApplicationDao applicationDao = domaProvider.getDao(ApplicationDao.class);
+        applications = applicationDao.selectAll();
     }
 }

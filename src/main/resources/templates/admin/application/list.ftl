@@ -3,16 +3,32 @@
   <h1>List of applications</h1>
 
   <#list applications>
-  <table>
+  <table class="table">
     <thead>
       <tr>
         <th>Name</th>
+        <th>Virtual path</th>
+        <th>Pass to</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       <#items as application>
         <tr>
-          <td><a href="/application/${application.id}">${application.name}</a></td>
+          <td>
+          <#if application.writeProtected>
+            ${application.name}
+          <#else>
+            <a href="${urlFor('edit?id=' + application.id)}">${application.name}</a>
+          </#if>
+          </td>
+          <td>${application.virtualPath}</td>
+          <td>${application.passTo}</td>
+          <td>
+          <#if !application.writeProtected>
+            <a href="${urlFor('net.unit8.bouncr.web.controller.RealmController', 'listByApplicationId?applicationId=' + application.id)}">Realms</a>
+          </#if>
+          </td>
         </tr>
       </#items>
     </tbody>

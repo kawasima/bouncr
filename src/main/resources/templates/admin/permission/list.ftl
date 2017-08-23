@@ -3,16 +3,24 @@
   <h1>List of permissions</h1>
 
   <#list permissions>
-  <table>
+  <table class="table">
     <thead>
       <tr>
         <th>Name</th>
+        <th>Description</th>
       </tr>
     </thead>
     <tbody>
       <#items as permission>
         <tr>
-          <td><a href="/permission/${permission.id}">${permission.name}</a></td>
+          <td>
+          <#if role.writeProtected>
+            ${role.name}
+          <#else>
+            <a href="${urlFor('edit?id=' + permission.id)}">${permission.name}</a>
+          </#if>
+          </td>
+          <td>${permission.description}</td>
         </tr>
       </#items>
     </tbody>
@@ -23,5 +31,5 @@
   </div>
   </#list>
 
-  <a href="${urlFor('newForm')}">New register</a>
+  <a href="${urlFor('newForm')}">New permission</a>
 </@layout.layout>

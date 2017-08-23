@@ -38,20 +38,20 @@ public class UserController {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         List<User> users = userDao.selectAll();
 
-        return templateEngine.render("user/list",
+        return templateEngine.render("admin/user/list",
                 "users", users);
     }
 
     public HttpResponse newUser() {
         UserForm user = new UserForm();
-        return templateEngine.render("user/new",
+        return templateEngine.render("admin/user/new",
                 "user", user);
     }
 
     @Transactional
     public HttpResponse create(UserForm form) {
         if (form.hasErrors()) {
-            return templateEngine.render("user/new",
+            return templateEngine.render("admin/user/new",
                     "user", form);
         }
         User user = beansConverter.createFrom(form, User.class);
@@ -75,7 +75,7 @@ public class UserController {
         UserForm form = beansConverter.createFrom(user, UserForm.class);
         return templateEngine.render("admin/user/edit",
                 "user", form,
-                "user_id", user.getId());
+                "userId", user.getId());
     }
 
     @Transactional

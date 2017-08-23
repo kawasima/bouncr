@@ -11,6 +11,12 @@ public interface RealmDao {
     @Select
     List<Realm> selectAll();
 
+    @Select
+    List<Realm> selectByApplicationId(Long applicationId);
+
+    @Select(ensureResult = true)
+    Realm selectById(Long id);
+
     @Insert
     int insert(Realm realm);
 
