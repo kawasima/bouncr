@@ -16,7 +16,6 @@ import net.unit8.bouncr.web.entity.Group;
 import net.unit8.bouncr.web.entity.Realm;
 import net.unit8.bouncr.web.entity.Role;
 import net.unit8.bouncr.web.form.RealmForm;
-import org.seasar.doma.Delete;
 
 import javax.inject.Inject;
 import javax.transaction.Transactional;
@@ -99,7 +98,7 @@ public class RealmController {
                 .map(e -> new RealmForm.AssignmentForm(e.getKey(),
                         e.getValue()
                                 .stream()
-                                .map(a -> a.getRoleId())
+                                .map(Assignment::getRoleId)
                                 .collect(Collectors.toList())))
                 .collect(Collectors.toList()));
 

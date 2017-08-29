@@ -18,7 +18,7 @@ public class ForTestBackentApp {
                     );
                 })
                 .build();
-        Runtime.getRuntime().addShutdownHook(new Thread(()->server.stop()));
+        Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
         server.start();
     }
 }

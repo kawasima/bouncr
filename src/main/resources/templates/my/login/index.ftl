@@ -6,8 +6,12 @@
       <form class="form-signin" method="post">
         <input type="text" name="account" class="form-control" placeholder="Account"/>
         <input type="password" name="password" class="form-control" placeholder="Password"/>
+        <#if url??>
+        <input type="hidden" name="url" value="${url}">
+        </#if>
         <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
       </form>
     </div>
   </div>
 </@layout.layout>
+

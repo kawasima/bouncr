@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.Length;
+import org.hibernate.validator.constraints.NotBlank;
 
 import java.io.Serializable;
 import java.util.List;
@@ -12,8 +14,17 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = false)
 public class RealmForm extends FormBase {
     private Long id;
+
+    @NotBlank
+    @Length(max = 100)
     private String name;
+
+    @NotBlank
+    @Length(max = 255)
     private String description;
+
+    @NotBlank
+    @Length(max = 255)
     private String url;
     private Long applicationId;
 

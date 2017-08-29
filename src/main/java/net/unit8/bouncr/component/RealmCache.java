@@ -41,7 +41,7 @@ public class RealmCache extends SystemComponent {
 
     public Application getApplication(Realm realm) {
         return applications.stream()
-                .filter(app -> app.getId() == realm.getApplicationId())
+                .filter(app -> app.getId().equals(realm.getApplicationId()))
                 .findFirst()
                 .orElse(null);
     }

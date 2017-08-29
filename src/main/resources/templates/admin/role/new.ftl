@@ -1,6 +1,11 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "Edit permission">
-   <h1>New permission</h1>
+<@layout.layout "New role">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('list')}">Roles</a></li>
+    <li class="breadcrumb-item active">New</li>
+  </ol>
+   <h1>New role</h1>
 
    <form method="post" action="${urlFor('create')}">
      <#include "_form.ftl">

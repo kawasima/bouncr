@@ -5,15 +5,14 @@ import enkan.collection.Headers;
 import enkan.collection.OptionMap;
 import enkan.component.ApplicationComponent;
 import enkan.component.ComponentLifecycle;
-import enkan.component.DataSourceComponent;
 import enkan.component.WebServerComponent;
-import enkan.component.doma2.DomaProvider;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.exception.MisconfigurationException;
 import enkan.exception.ServiceUnavailableException;
 import enkan.exception.UnreachableException;
+import enkan.security.UserPrincipal;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.io.IoCallback;
@@ -27,6 +26,7 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -36,11 +36,20 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.X500NameStyle;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.cert.jcajce.JcaX500NameUtil;
+import org.bouncycastle.jce.PrincipalUtil;
+import org.xnio.Options;
+import org.xnio.SslClientAuthMode;
 import org.xnio.streams.ChannelInputStream;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
+import javax.net.ssl.*;
+import javax.security.auth.message.ClientAuth;
+import javax.security.auth.x500.X500Principal;
 import javax.validation.constraints.DecimalMax;
 import javax.validation.constraints.DecimalMin;
 import java.io.*;
@@ -50,6 +59,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.security.*;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
@@ -79,6 +89,10 @@ public class ReverseProxyComponent extends WebServerComponent {
     private Integer sslPort;
     private String keystore;
     private String keyPassword;
+
+    private String truststore;
+    private String trustPassword;
+
     private String host;
 
     private int ioThreads = 4;
@@ -121,6 +135,20 @@ public class ReverseProxyComponent extends WebServerComponent {
 
                         @Override
                         public Account verify(Credential credential) {
+                            if (credential instanceof X509CertificateCredential) {
+                                X509CertificateCredential x509cert = (X509CertificateCredential) credential;
+                                return new Account(){
+                                    @Override
+                                    public Principal getPrincipal() {
+                                        return x509cert.getCertificate().getSubjectX500Principal();
+                                    }
+
+                                    @Override
+                                    public Set<String> getRoles() {
+                                        return Collections.emptySet();
+                                    }
+                                };
+                            }
                             return null;
                         }
                     };
@@ -135,7 +163,8 @@ public class ReverseProxyComponent extends WebServerComponent {
                                     , identityManager)
                             );
                     if (sslPort != null) {
-                        builder.addHttpsListener(sslPort, host, createSSLContext());
+                        builder.addHttpsListener(sslPort, host, createSSLContext())
+                        .setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUIRED);
                     }
                     server = builder.build();
                     server.start();
@@ -173,6 +202,14 @@ public class ReverseProxyComponent extends WebServerComponent {
         this.keyPassword = keyPassword;
     }
 
+    public void setTruststore(String truststore) {
+        this.truststore = truststore;
+    }
+
+    public void setTrustPassword(String trustPassword) {
+        this.trustPassword = trustPassword;
+    }
+
     public void setMaxRequestTime(int maxRequestTime) {
         this.maxRequestTime = maxRequestTime;
     }
@@ -197,10 +234,21 @@ public class ReverseProxyComponent extends WebServerComponent {
         return keyManagerFactory.getKeyManagers();
     }
 
+    private TrustManager[] getTrustManagers() throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+        KeyStore trustStore = KeyStore.getInstance("JKS");
+        trustStore.load(new FileInputStream(truststore),
+                trustPassword.toCharArray());
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory
+                .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+
+        trustManagerFactory.init(trustStore);
+        return trustManagerFactory.getTrustManagers();
+    }
+
     private SSLContext createSSLContext()  {
         try {
             SSLContext context = SSLContext.getInstance("TLS");
-            context.init(getKeyManagers(), null, null);
+            context.init(getKeyManagers(), getTrustManagers(), null);
             return context;
         } catch (NoSuchAlgorithmException | KeyManagementException | UnrecoverableKeyException | CertificateException | KeyStoreException | IOException e) {
             // TODO
@@ -228,11 +276,13 @@ public class ReverseProxyComponent extends WebServerComponent {
                 request.setScheme(exchange.getRequestScheme());
                 request.setServerName(exchange.getHostName());
                 request.setServerPort(exchange.getHostPort());
+
                 Headers headers = Headers.empty();
                 exchange.getRequestHeaders().forEach(e -> {
                     String headerName = e.getHeaderName().toString();
                     e.forEach(v -> headers.put(headerName, v));
                 });
+                headers.put("X-Client-DN", exchange.getSecurityContext().getAuthenticatedAccount().getPrincipal().getName());
                 request.setHeaders(headers);
 
                 try {
@@ -303,7 +353,7 @@ public class ReverseProxyComponent extends WebServerComponent {
     private static HttpHandler addSecurity(final HttpHandler toWrap, final IdentityManager identityManager) {
         HttpHandler handler = toWrap;
         handler = new AuthenticationCallHandler(handler);
-///        handler = new AuthenticationConstraintHandler(handler);
+        handler = new AuthenticationConstraintHandler(handler);
         final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new ClientCertAuthenticationMechanism("My Realm"));
         handler = new AuthenticationMechanismsHandler(handler, mechanisms);
         handler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, handler);

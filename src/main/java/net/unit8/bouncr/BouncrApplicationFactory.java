@@ -2,7 +2,6 @@ package net.unit8.bouncr;
 
 import enkan.Application;
 import enkan.Endpoint;
-import enkan.Env;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
 import enkan.data.HttpRequest;
@@ -14,11 +13,6 @@ import enkan.middleware.devel.StacktraceMiddleware;
 import enkan.middleware.devel.TraceWebMiddleware;
 import enkan.middleware.doma2.DomaTransactionMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
-import enkan.middleware.session.JCacheStore;
-import enkan.middleware.session.KeyValueStore;
-import enkan.middleware.session.MemoryStore;
-import enkan.predicate.PathPredicate;
-import enkan.security.backend.SessionBackend;
 import enkan.system.inject.ComponentInjector;
 import enkan.util.HttpResponseUtils;
 import kotowari.middleware.*;
@@ -26,12 +20,8 @@ import kotowari.middleware.serdes.ToStringBodyWriter;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.authn.BouncrStoreBackend;
 import net.unit8.bouncr.web.controller.*;
-import net.unit8.bouncr.web.entity.Permission;
-import net.unit8.bouncr.web.entity.Realm;
-import net.unit8.bouncr.web.entity.Role;
 
 import java.util.Collections;
-import java.util.Objects;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.Predicates.*;
@@ -101,6 +91,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             /* My page */
             r.get("/my/login").to(LoginController.class, "loginForm");
             r.post("/my/login").to(LoginController.class, "loginByPassword");
+            r.post("/my/login/clientDN").to(LoginController.class, "loginByClientDN");
+            r.post("/my/logout").to(LoginController.class, "logout");
             r.get("/my").to(MyController.class, "home");
         }).compile();
 

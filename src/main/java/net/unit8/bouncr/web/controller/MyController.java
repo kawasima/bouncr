@@ -5,9 +5,12 @@ import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.web.dao.ApplicationDao;
+import net.unit8.bouncr.web.dao.AuditDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.Application;
+import net.unit8.bouncr.web.entity.LoginHistory;
 import net.unit8.bouncr.web.entity.User;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import javax.inject.Inject;
 import java.util.List;
@@ -22,10 +25,17 @@ public class MyController {
     public HttpResponse home(UserPermissionPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectByAccount(principal.getName());
+
+        AuditDao auditDao = daoProvider.getDao(AuditDao.class);
+        List<LoginHistory> loginHistories = auditDao
+                .selectForConditionalSearch(null, null, user.getAccount(), null,
+                        SelectOptions.get().limit(10));
+
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         List<Application> applications = applicationDao.selectByUserId(user.getId());
         return templateEngine.render("my/home",
                 "user", user,
-                "applications", applications);
+                "applications", applications,
+                "loginHistories", loginHistories);
     }
 }

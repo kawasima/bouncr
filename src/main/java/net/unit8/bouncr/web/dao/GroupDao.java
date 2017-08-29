@@ -17,6 +17,9 @@ public interface GroupDao {
     @Select
     List<Group> selectAll();
 
+    @Select(ensureResult = true)
+    Group selectById(Long id);
+
     @Insert
     int insert(Group group);
 
@@ -31,4 +34,7 @@ public interface GroupDao {
 
     @Delete(sqlFile = true)
     int removeUser(Group group, User user);
+
+    @Delete(sqlFile = true)
+    int clearUsers(Long groupId);
 }

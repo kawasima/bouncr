@@ -1,5 +1,9 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "List of permissions">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item active">Permissions</li>
+  </ol>
   <h1>List of permissions</h1>
 
   <#list permissions>
@@ -14,8 +18,8 @@
       <#items as permission>
         <tr>
           <td>
-          <#if role.writeProtected>
-            ${role.name}
+          <#if permission.writeProtected>
+            ${permission.name}
           <#else>
             <a href="${urlFor('edit?id=' + permission.id)}">${permission.name}</a>
           </#if>

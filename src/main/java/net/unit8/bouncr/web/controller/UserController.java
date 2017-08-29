@@ -8,7 +8,6 @@ import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
-import net.unit8.bouncr.web.entity.PasswordCredential;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.UserForm;
 
@@ -42,6 +41,12 @@ public class UserController {
                 "users", users);
     }
 
+    public List<User> search(Parameters params) {
+        String word = params.get("q");
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        return userDao.selectForIncrementalSearch(word + "%");
+    }
+
     public HttpResponse newUser() {
         UserForm user = new UserForm();
         return templateEngine.render("admin/user/new",
@@ -55,6 +60,7 @@ public class UserController {
                     "user", form);
         }
         User user = beansConverter.createFrom(form, User.class);
+        user.setWriteProtected(false);
         UserDao userDao = daoProvider.getDao(UserDao.class);
         userDao.insert(user);
 
@@ -89,6 +95,13 @@ public class UserController {
         beansConverter.copy(form, user);
         userDao.update(user);
 
+        PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
+        Random random = new Random();
+        passwordCredentialDao.update(
+                user.getId(),
+                form.getPassword(),
+                generateRandomString(random, 16));
+
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
     }
 
@@ -97,7 +110,7 @@ public class UserController {
      *
      * @param random the Random object
      * @param length the length of generated string
-     * @return
+     * @return a generated random sting
      */
     private static String generateRandomString(Random random, int length){
         return random.ints(48,122)

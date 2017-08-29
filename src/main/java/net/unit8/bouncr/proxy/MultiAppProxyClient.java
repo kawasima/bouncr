@@ -22,7 +22,6 @@ import org.xnio.OptionMap;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;

@@ -25,6 +25,9 @@ public interface UserDao {
     @Select
     User selectByPassword(String account, String password);
 
+    @Select
+    List<User> selectForIncrementalSearch(String word);
+
     @Insert
     int insert(User user);
 

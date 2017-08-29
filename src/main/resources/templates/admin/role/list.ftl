@@ -1,5 +1,9 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "List of roles">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item active">Roles</li>
+  </ol>
   <h1>List of roles</h1>
 
   <#list roles>

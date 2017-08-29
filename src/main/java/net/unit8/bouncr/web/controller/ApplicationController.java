@@ -9,7 +9,6 @@ import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.web.dao.ApplicationDao;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.form.ApplicationForm;
-import net.unit8.bouncr.web.form.UserForm;
 
 import javax.inject.Inject;
 import javax.transaction.Transactional;
@@ -70,4 +69,27 @@ public class ApplicationController {
         }
     }
 
+    @Transactional
+    public HttpResponse update(ApplicationForm form) {
+        if (form.hasErrors()) {
+            return templateEngine.render("admin/application/edit",
+                    "application", form);
+        } else {
+            ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+            Application application = applicationDao.selectById(form.getId());
+            beansConverter.copy(form, application);
+            applicationDao.update(application);
+
+            return UrlRewriter.redirect(ApplicationController.class, "list", SEE_OTHER);
+        }
+    }
+
+    @Transactional
+    public HttpResponse delete(Parameters params) {
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        Application application = applicationDao.selectById(params.getLong("id"));
+        applicationDao.delete(application);
+
+        return UrlRewriter.redirect(ApplicationController.class, "list", SEE_OTHER);
+    }
 }

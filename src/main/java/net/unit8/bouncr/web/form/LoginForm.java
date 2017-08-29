@@ -13,4 +13,5 @@ import lombok.EqualsAndHashCode;
 public class LoginForm extends FormBase {
     private String account;
     private String password;
+    private String url;
 }

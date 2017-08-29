@@ -3,9 +3,6 @@ package net.unit8.bouncr.authz;
 import enkan.security.UserPrincipal;
 
 import java.io.Serializable;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 
 /**

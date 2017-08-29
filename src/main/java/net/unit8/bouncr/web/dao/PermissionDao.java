@@ -17,8 +17,14 @@ public interface PermissionDao {
     @Select
     List<Permission> selectAll();
 
+    @Select(ensureResult = true)
+    Permission selectById(Long id);
+
     @Select
     List<PermissionWithRealm> selectByUserId(Long userId);
+
+    @Select
+    List<Permission> selectByRoleId(Long roleId);
 
     @Insert
     int insert(Permission permission);
