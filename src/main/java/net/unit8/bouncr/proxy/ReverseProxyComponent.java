@@ -12,13 +12,13 @@ import enkan.data.HttpResponse;
 import enkan.exception.MisconfigurationException;
 import enkan.exception.ServiceUnavailableException;
 import enkan.exception.UnreachableException;
-import enkan.security.UserPrincipal;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
@@ -34,33 +34,30 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
-import org.bouncycastle.asn1.x500.RDN;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.X500NameStyle;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.cert.jcajce.JcaX500NameUtil;
-import org.bouncycastle.jce.PrincipalUtil;
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 import org.xnio.streams.ChannelInputStream;
 
 import javax.net.ssl.*;
-import javax.security.auth.message.ClientAuth;
-import javax.security.auth.x500.X500Principal;
-import javax.validation.constraints.DecimalMax;
-import javax.validation.constraints.DecimalMin;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.security.*;
 import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import static enkan.util.ThreadingUtils.some;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
 /**
  * The component for an reverse proxy server.
@@ -80,21 +77,6 @@ public class ReverseProxyComponent extends WebServerComponent {
         }
     };
 
-    @DecimalMin("1")
-    @DecimalMax("65535")
-    private Integer port;
-
-    @DecimalMin("1")
-    @DecimalMax("65535")
-    private Integer sslPort;
-    private String keystore;
-    private String keyPassword;
-
-    private String truststore;
-    private String trustPassword;
-
-    private String host;
-
     private int ioThreads = 4;
 
     private int maxRequestTime = 30000;
@@ -113,13 +95,13 @@ public class ReverseProxyComponent extends WebServerComponent {
                 StoreProvider storeProvider = getDependency(StoreProvider.class);
                 RealmCache realmCache = getDependency(RealmCache.class);
                 ApplicationComponent app = getDependency(ApplicationComponent.class);
+                BouncrConfiguration config = getDependency(BouncrConfiguration.class);
 
                 if (server == null) {
-                    OptionMap options = OptionMap.of("join?", false);
-                    if (port != null) options.put("port", port);
-                    if (host != null) options.put("host", host);
+                    OptionMap options = buildOptionMap();
+
                     HttpHandler appHandler = createAdminApp((WebApplication) app.getApplication());
-                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(storeProvider.getStore(), realmCache);
+                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(config, storeProvider.getStore(BOUNCR_TOKEN), realmCache);
                     ProxyHandler proxyHandler = new ProxyHandler(proxyClient, maxRequestTime, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded);
 
                     IdentityManager identityManager = new IdentityManager() {
@@ -154,17 +136,23 @@ public class ReverseProxyComponent extends WebServerComponent {
                     };
 
                     Undertow.Builder builder = Undertow.builder()
-                            .addHttpListener(port, host)
                             .setHandler(addSecurity(
                                     Handlers.path()
                                             .addPrefixPath("/my", appHandler)
                                             .addPrefixPath("/admin", appHandler)
                                             .addPrefixPath("/", proxyHandler)
-                                    , identityManager)
+                                    , identityManager, options)
                             );
-                    if (sslPort != null) {
-                        builder.addHttpsListener(sslPort, host, createSSLContext())
-                        .setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUIRED);
+
+                    if (options.getBoolean("http?", true)) {
+                        builder.addHttpListener(options.getInt("port"), options.getString("host"));
+                    }
+                    if (options.getBoolean("ssl?", false)) {
+                        builder = builder.addHttpsListener(options.getInt("sslPort"), options.getString("host"),
+                                createSSLContext(options));
+                    }
+                    if (options.get("truststore") != null) {
+                        builder = builder.setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUIRED);
                     }
                     server = builder.build();
                     server.start();
@@ -182,34 +170,6 @@ public class ReverseProxyComponent extends WebServerComponent {
         };
     }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public void setSslPort(int sslPort) {
-        this.sslPort = sslPort;
-    }
-
-    public void setKeystore(String keystore) {
-        this.keystore = keystore;
-    }
-
-    public void setKeyPassword(String keyPassword) {
-        this.keyPassword = keyPassword;
-    }
-
-    public void setTruststore(String truststore) {
-        this.truststore = truststore;
-    }
-
-    public void setTrustPassword(String trustPassword) {
-        this.trustPassword = trustPassword;
-    }
-
     public void setMaxRequestTime(int maxRequestTime) {
         this.maxRequestTime = maxRequestTime;
     }
@@ -218,37 +178,34 @@ public class ReverseProxyComponent extends WebServerComponent {
         this.ioThreads = ioThreads;
     }
 
-    @Override
-    public int getPort() {
-        return port;
+    private KeyManager[] getKeyManagers(OptionMap options) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        KeyStore keystore = (KeyStore) options.get("keystore");
+        if (keystore != null) {
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory
+                    .getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keystore, "password".toCharArray());
+            return keyManagerFactory.getKeyManagers();
+        } else {
+            return null;
+        }
     }
 
-    private KeyManager[] getKeyManagers() throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(new FileInputStream(keystore),
-                keyPassword.toCharArray());
-
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory
-                .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, "password".toCharArray());
-        return keyManagerFactory.getKeyManagers();
+    private TrustManager[] getTrustManagers(OptionMap options) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+        KeyStore truststore = (KeyStore) options.get("truststore");
+        if (truststore != null) {
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(truststore);
+            return trustManagerFactory.getTrustManagers();
+        } else {
+            return null;
+        }
     }
 
-    private TrustManager[] getTrustManagers() throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
-        KeyStore trustStore = KeyStore.getInstance("JKS");
-        trustStore.load(new FileInputStream(truststore),
-                trustPassword.toCharArray());
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory
-                .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-
-        trustManagerFactory.init(trustStore);
-        return trustManagerFactory.getTrustManagers();
-    }
-
-    private SSLContext createSSLContext()  {
+    private SSLContext createSSLContext(OptionMap options)  {
         try {
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(getKeyManagers(), getTrustManagers(), null);
+            SSLContext context = SSLContext.getInstance("TLSv1.2");
+            context.init(getKeyManagers(options), getTrustManagers(options), null);
             return context;
         } catch (NoSuchAlgorithmException | KeyManagementException | UnrecoverableKeyException | CertificateException | KeyStoreException | IOException e) {
             // TODO
@@ -282,7 +239,11 @@ public class ReverseProxyComponent extends WebServerComponent {
                     String headerName = e.getHeaderName().toString();
                     e.forEach(v -> headers.put(headerName, v));
                 });
-                headers.put("X-Client-DN", exchange.getSecurityContext().getAuthenticatedAccount().getPrincipal().getName());
+                some(exchange.getSecurityContext(),
+                        SecurityContext::getAuthenticatedAccount,
+                        Account::getPrincipal,
+                        Principal::getName,
+                        name -> headers.put("X-Client-DN", name));
                 request.setHeaders(headers);
 
                 try {
@@ -350,13 +311,16 @@ public class ReverseProxyComponent extends WebServerComponent {
                 }));
     }
 
-    private static HttpHandler addSecurity(final HttpHandler toWrap, final IdentityManager identityManager) {
+    private HttpHandler addSecurity(final HttpHandler toWrap, final IdentityManager identityManager, OptionMap options) {
         HttpHandler handler = toWrap;
-        handler = new AuthenticationCallHandler(handler);
-        handler = new AuthenticationConstraintHandler(handler);
-        final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new ClientCertAuthenticationMechanism("My Realm"));
-        handler = new AuthenticationMechanismsHandler(handler, mechanisms);
-        handler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, handler);
+        KeyStore truststore = (KeyStore) options.get("truststore");
+        if (truststore != null) {
+            handler = new AuthenticationCallHandler(handler);
+            handler = new AuthenticationConstraintHandler(handler);
+            final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new ClientCertAuthenticationMechanism("My Realm"));
+            handler = new AuthenticationMechanismsHandler(handler, mechanisms);
+            handler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, handler);
+        }
         return handler;
     }
 }

@@ -16,6 +16,9 @@ public interface UserDao {
     @Select
     List<User> selectAll();
 
+    @Select
+    List<User> selectByGroupId(Long groupId);
+
     @Select(ensureResult = true)
     User selectById(long id);
 
@@ -37,4 +40,6 @@ public interface UserDao {
     @Delete
     int delete(User user);
 
+    @Select
+    User selectByOAuth2(Long oauth2ProviderId, String oauth2Account);
 }

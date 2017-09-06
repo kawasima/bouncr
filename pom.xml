@@ -11,14 +11,14 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <enkan.version>0.2.0-SNAPSHOT</enkan.version>
+        <enkan.version>0.2.1-SNAPSHOT</enkan.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
-            <version>2.0.0.Alpha1</version>
+            <version>1.4.19.Final</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -61,14 +61,9 @@
             <version>${enkan.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>5.4.0.Final</version>
-        </dependency>
-        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>1.4.193</version>
+            <version>1.4.196</version>
         </dependency>
 
         <dependency>
@@ -80,7 +75,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.22</version>
+            <version>1.7.25</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -101,6 +96,18 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15on</artifactId>
             <version>1.57</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.scribejava</groupId>
+            <artifactId>scribejava-core</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>3.8.1</version>
         </dependency>
 
         <dependency>
@@ -154,6 +161,17 @@
                     <groupId>org.jsr107.ri</groupId>
                     <artifactId>cache-ri-impl</artifactId>
                     <version>1.0.0</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.directory.server</groupId>
+                    <artifactId>apacheds-all</artifactId>
+                    <version>2.0.0-M24</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>*</groupId>
+                            <artifactId>*</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
             </dependencies>
         </profile>

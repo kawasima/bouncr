@@ -9,8 +9,8 @@ public class ForTestBackentApp {
                 .addHttpListener(8083, "localhost")
                 .setHandler(exchange -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-                    String user = exchange.getRequestHeaders().getFirst("X-BOUNCR-USER");
-                    String permissions = exchange.getRequestHeaders().getFirst("X-BOUNCR-PERMISSIONS");
+                    String user = exchange.getRequestHeaders().getFirst("X-Bouncr-Id");
+                    String permissions = exchange.getRequestHeaders().getFirst("X-Bouncr-Permissions");
 
                     exchange.getResponseSender().send("Server1\n"
                             + "User=" + user + "\n"

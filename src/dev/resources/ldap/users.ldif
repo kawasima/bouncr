@@ -1,0 +1,25 @@
+dn: dc=example,dc=com
+objectClass: dcObject
+objectClass: organization
+dc: example
+o: Example
+description: Example directory
+
+dn: ou=users,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: users
+description: user group
+
+dn: cn=kawasima,ou=users,dc=example,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: securityPrincipal
+cn: kawasima
+sn: kawasima
+userPassword: password
+sAMAccountName: kawasima
+
+
+

@@ -14,7 +14,9 @@ import net.unit8.bouncr.web.form.GroupForm;
 
 import javax.inject.Inject;
 import javax.transaction.Transactional;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 
@@ -47,7 +49,8 @@ public class GroupController {
         List<User> users = userDao.selectAll();
         return templateEngine.render("admin/group/new",
                 "group", group,
-                "users", users);
+                "users", users,
+                "userIds", Collections.emptyList());
     }
 
     @Transactional
@@ -57,10 +60,12 @@ public class GroupController {
             List<User> users = userDao.selectAll();
             return templateEngine.render("admin/group/new",
                     "group", form,
-                    "users", users);
+                    "users", users,
+                    "userIds", Collections.emptyList());
         } else {
             GroupDao groupDao = daoProvider.getDao(GroupDao.class);
             Group group = beansConverter.createFrom(form, Group.class);
+            group.setWriteProtected(false);
             groupDao.insert(group);
 
             UserDao userDao = daoProvider.getDao(UserDao.class);
@@ -81,9 +86,15 @@ public class GroupController {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         List<User> users = userDao.selectAll();
 
+        List<Long> userIds = userDao.selectByGroupId(group.getId())
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
         return templateEngine.render("admin/group/edit",
                 "group", form,
-                "users", users);
+                "users", users,
+                "userIds", userIds);
     }
 
     @Transactional

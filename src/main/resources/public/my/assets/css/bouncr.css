@@ -44,6 +44,11 @@
     min-height: 1em;
 }
 
+.dropdown-menu-right {
+    right:0;
+    left: auto;
+}
+
 .form-signin input[type=password],
 .form-signin input[type=text] {
     width: 100%;

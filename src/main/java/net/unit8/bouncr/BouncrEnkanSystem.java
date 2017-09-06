@@ -12,12 +12,14 @@ import enkan.component.jackson.JacksonBeansConverter;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
+import static enkan.util.ThreadingUtils.some;
 
 /**
  * An EnkanSystem for Bouncr application.
@@ -29,6 +31,7 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
     public EnkanSystem create() {
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),
+                "config", new BouncrConfiguration(),
                 "doma", new DomaProvider(),
                 "jackson", new JacksonBeansConverter(),
                 "storeprovider", new StoreProvider(),
@@ -40,15 +43,16 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "app", new ApplicationComponent("net.unit8.bouncr.BouncrApplicationFactory"),
                 "http", builder(new ReverseProxyComponent())
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
-                        .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3001))
-                        .set(ReverseProxyComponent::setKeystore, Env.getString("KEYSTORE", ""))
-                        .set(ReverseProxyComponent::setKeyPassword, Env.getString("KEY_PASSWORD", ""))
-                        .set(ReverseProxyComponent::setTruststore, Env.getString("TRUSTSTORE", ""))
-                        .set(ReverseProxyComponent::setTrustPassword, Env.getString("TRUST_PASSWORD", ""))
+                        .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3002))
+                        .set(ReverseProxyComponent::setKeystorePath, Env.getString("KEYSTORE_PATH", ""))
+                        .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))
+                        .set(ReverseProxyComponent::setTruststorePath, Env.getString("TRUSTSTORE_PATH", ""))
+                        .set(ReverseProxyComponent::setTruststorePassword, Env.getString("TRUSTSTORE_PASSWORD", ""))
                         .build()
         ).relationships(
-                component("http").using("app", "storeprovider", "realmCache"),
-                component("app").using("storeprovider", "datasource", "template", "doma", "jackson", "metrics", "realmCache"),
+                component("http").using("app", "storeprovider", "realmCache", "config"),
+                component("app").using("storeprovider", "datasource", "template", "doma", "jackson", "metrics", "realmCache", "config"),
+                component("storeprovider").using("config"),
                 component("realmCache").using("doma"),
                 component("doma").using("datasource", "flyway"),
                 component("flyway").using("datasource")

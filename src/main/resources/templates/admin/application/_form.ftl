@@ -1,7 +1,7 @@
      <div class="form-group<#if application.hasErrors("name")> has-danger</#if>">
        <label for="name">Name</label>
        <input id="name" class="form-control<#if application.hasErrors("name")> is-invalid</#if>" type="text" name="name" value="${application.name!''}"/><#if application.hasErrors("name")!false>${application.getErrors("name")?join(",")}</#if>
-       <span class="invalid-feedback"><#if applicaion.hasErrors("name")>${application.getErrors("name")?join(",")}</#if></span>
+       <span class="invalid-feedback"><#if application.hasErrors("name")>${application.getErrors("name")?join(",")}</#if></span>
      </div>
 
      <div class="form-group<#if application.hasErrors("description")> has-danger</#if>">

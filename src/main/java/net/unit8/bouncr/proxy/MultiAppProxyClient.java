@@ -13,6 +13,7 @@ import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HttpString;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.entity.Realm;
@@ -39,9 +40,11 @@ public class MultiAppProxyClient implements ProxyClient {
     private final UndertowClient client;
     private final KeyValueStore store;
     private final RealmCache realmCache;
+    private final BouncrConfiguration config;
 
-    public MultiAppProxyClient(KeyValueStore store, RealmCache realmCache) {
+    public MultiAppProxyClient(BouncrConfiguration config, KeyValueStore store, RealmCache realmCache) {
         client = UndertowClient.getInstance();
+        this.config = config;
         this.store = store;
         this.realmCache = realmCache;
     }
@@ -58,8 +61,8 @@ public class MultiAppProxyClient implements ProxyClient {
             parseToken(exchange).ifPresent(token -> {
                 Optional<UserPermissionPrincipal> principal = authenticate(realm.getId(), token);
                 principal.ifPresent(p -> {
-                    exchange.getRequestHeaders().put(HttpString.tryFromString("X-BOUNCR-USER"), p.getName());
-                    exchange.getRequestHeaders().put(HttpString.tryFromString("X-BOUNCR-PERMISSIONS"), String.join(",", p.getPermissions()));
+                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getIdHeaderName()), p.getName());
+                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getPermissionHeaderName()), String.join(",", p.getPermissions()));
                 });
             });
         } else {
@@ -94,8 +97,8 @@ public class MultiAppProxyClient implements ProxyClient {
             } else {
                 return Optional.empty();
             }
-        } else if (exchange.getRequestCookies().containsKey("BOUNCR_TOKEN")) {
-            Cookie tokenCookie = exchange.getRequestCookies().get("BOUNCR_TOKEN");
+        } else if (exchange.getRequestCookies().containsKey(config.getTokenName())) {
+            Cookie tokenCookie = exchange.getRequestCookies().get(config.getTokenName());
             return Optional.of(tokenCookie.getValue());
         } else {
             return Optional.empty();

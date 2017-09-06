@@ -1,6 +1,7 @@
 package net.unit8.bouncr.web.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.seasar.doma.*;
 
 import java.io.Serializable;
@@ -12,6 +13,7 @@ import java.net.URI;
 @Entity
 @Table(name = "APPLICATIONS")
 @Data
+@EqualsAndHashCode
 public class Application implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -9,3 +9,9 @@
   <input id="description" class="form-control<#if group.hasErrors("description")> is-invalid</#if>" type="text" name="description" value="${group.description!''}"/>
   <span class="invalid-feedback"><#if group.hasErrors("description")>${group.getErrors("description")?join(",")}</#if></span>
 </div>
+
+<select name="userId[]" class="selectpicker" multiple>
+  <#list users as user>
+  <option value="${user.id}"<#if userIds?seq_contains(user.id)> selected</#if>>${user.name}</option>
+  </#list>
+</select>

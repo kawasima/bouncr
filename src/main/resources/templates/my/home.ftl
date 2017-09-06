@@ -20,7 +20,7 @@
   </div>
 
   <h2>Sign in</h2>
-  <#list loginHistories>
+  <#list signInHistories>
   <table class="table">
     <thead>
       <tr>
@@ -33,7 +33,7 @@
       <#items as hist>
       <tr class="table-<#if hist.successful>success<#else>danger</#if>">
         <td>${hist.account}</td>
-        <td>${hist.loginedAt}</td>
+        <td>${hist.signedInAt}</td>
         <td>
           <#if hist.successful>
           <i class="fa fa-check" aria-hidden="true"></i>

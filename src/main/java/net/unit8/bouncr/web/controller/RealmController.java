@@ -72,6 +72,9 @@ public class RealmController {
             realm.setWriteProtected(false);
             RealmDao realmDao = daoProvider.getDao(RealmDao.class);
             realmDao.insert(realm);
+
+            createAssign(form, realm);
+
             return UrlRewriter.redirect(RealmController.class,
                     "listByApplicationId?applicationId=" + form.getApplicationId(), SEE_OTHER);
         }
@@ -119,24 +122,29 @@ public class RealmController {
             RealmDao realmDao = daoProvider.getDao(RealmDao.class);
             realmDao.update(realm);
 
-            AssignmentDao assignmentDao = daoProvider.getDao(AssignmentDao.class);
-            assignmentDao.selectByRealmId(realm.getId()).forEach(assignmentDao::delete);
-            form.getAssignments()
-                    .stream()
-                    .filter(a -> a.getGroupId() != null && a.getRoleId() != null)
-                    .forEach(a -> a.getRoleId().forEach(
-                    roleId -> {
-                        Assignment assignment = new Assignment();
-                        assignment.setGroupId(a.getGroupId());
-                        assignment.setRealmId(realm.getId());
-                        assignment.setRoleId(roleId);
-                        assignmentDao.insert(assignment);
-                    }
-            ));
-            realmCache.refresh();
+            createAssign(form, realm);
+
             return UrlRewriter.redirect(RealmController.class,
                     "listByApplicationId?applicationId=" + form.getApplicationId(), SEE_OTHER);
         }
+    }
+
+    private void createAssign(RealmForm form, Realm realm) {
+        AssignmentDao assignmentDao = daoProvider.getDao(AssignmentDao.class);
+        assignmentDao.selectByRealmId(realm.getId()).forEach(assignmentDao::delete);
+        form.getAssignments()
+                .stream()
+                .filter(a -> a.getGroupId() != null && a.getRoleId() != null)
+                .forEach(a -> a.getRoleId().forEach(
+                        roleId -> {
+                            Assignment assignment = new Assignment();
+                            assignment.setGroupId(a.getGroupId());
+                            assignment.setRealmId(realm.getId());
+                            assignment.setRoleId(roleId);
+                            assignmentDao.insert(assignment);
+                        }
+                ));
+        realmCache.refresh();
     }
 
     @Transactional

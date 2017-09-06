@@ -58,6 +58,9 @@ public class PermissionController {
             return templateEngine.render("admin/permission/new",
                     "permission", form);
         } else {
+            PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
+            Permission permission = beansConverter.createFrom(form, Permission.class);
+            permissionDao.insert(permission);
             return UrlRewriter.redirect(PermissionController.class, "list", SEE_OTHER);
         }
     }

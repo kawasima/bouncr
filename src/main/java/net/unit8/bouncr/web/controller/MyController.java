@@ -8,7 +8,7 @@ import net.unit8.bouncr.web.dao.ApplicationDao;
 import net.unit8.bouncr.web.dao.AuditDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.Application;
-import net.unit8.bouncr.web.entity.LoginHistory;
+import net.unit8.bouncr.web.entity.SignInHistory;
 import net.unit8.bouncr.web.entity.User;
 import org.seasar.doma.jdbc.SelectOptions;
 
@@ -27,7 +27,7 @@ public class MyController {
         User user = userDao.selectByAccount(principal.getName());
 
         AuditDao auditDao = daoProvider.getDao(AuditDao.class);
-        List<LoginHistory> loginHistories = auditDao
+        List<SignInHistory> signInHistories = auditDao
                 .selectForConditionalSearch(null, null, user.getAccount(), null,
                         SelectOptions.get().limit(10));
 
@@ -36,6 +36,6 @@ public class MyController {
         return templateEngine.render("my/home",
                 "user", user,
                 "applications", applications,
-                "loginHistories", loginHistories);
+                "signInHistories", signInHistories);
     }
 }

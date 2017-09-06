@@ -4,13 +4,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * The form object for login/logout.
+ * The form object for signIn/logout.
  *
  * @author kawasima
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class LoginForm extends FormBase {
+public class SignInForm extends FormBase {
     private String account;
     private String password;
     private String url;

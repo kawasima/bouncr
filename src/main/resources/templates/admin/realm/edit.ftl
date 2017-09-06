@@ -2,7 +2,7 @@
 <@layout.layout "Edit realm">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
-    <li class="breadcrumb-item"><a href="${urlFor('list')}">Realms</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('listByApplicationId?applicationId=' + realm.applicationId)}">Realms</a></li>
     <li class="breadcrumb-item active">Edit</li>
   </ol>
    <h1>Edit realm</h1>

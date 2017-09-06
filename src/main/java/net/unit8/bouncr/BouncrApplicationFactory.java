@@ -20,6 +20,8 @@ import kotowari.middleware.serdes.ToStringBodyWriter;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.authn.BouncrStoreBackend;
 import net.unit8.bouncr.web.controller.*;
+import net.unit8.bouncr.web.controller.admin.OAuth2ApplicationController;
+import net.unit8.bouncr.web.controller.api.OAuth2Controller;
 
 import java.util.Collections;
 
@@ -86,14 +88,27 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.get("/role/:id/edit").to(RoleController.class, "edit");
                 ar.post("/role/:id").to(RoleController.class, "update");
                 ar.post("/role/:id/delete").to(RoleController.class, "delete");
+
+                /* Routing for oauth2 application actions */
+                ar.get("/oauth2app").to(OAuth2ApplicationController.class, "list");
+                ar.get("/oauth2app/new").to(OAuth2ApplicationController.class, "newForm");
+                ar.post("/oauth2app").to(OAuth2ApplicationController.class, "create");
+                ar.get("/oauth2app/:id/edit").to(OAuth2ApplicationController.class, "edit");
+                ar.post("/oauth2app/:id").to(OAuth2ApplicationController.class, "update");
+                ar.post("/oauth2app/:id/delete").to(OAuth2ApplicationController.class, "delete");
             });
 
             /* My page */
-            r.get("/my/login").to(LoginController.class, "loginForm");
-            r.post("/my/login").to(LoginController.class, "loginByPassword");
-            r.post("/my/login/clientDN").to(LoginController.class, "loginByClientDN");
-            r.post("/my/logout").to(LoginController.class, "logout");
+            r.get("/my/signIn").to(SignInController.class, "signInForm");
+            r.post("/my/signIn").to(SignInController.class, "signInByPassword");
+            r.post("/my/signIn/clientDN").to(SignInController.class, "signInByClientDN");
+            r.get("/my/signIn/oauth").to(SignInController.class, "signInByOAuth");
+            r.post("/my/signOut").to(SignInController.class, "logout");
             r.get("/my").to(MyController.class, "home");
+
+            /* OAuth */
+            r.get("/my/oauth/authorize").to(OAuth2Controller.class, "authorize");
+            r.post("/my/oauth/accessToken").to(OAuth2Controller.class, "accessToken");
         }).compile();
 
         // Enkan
@@ -113,9 +128,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new CookiesMiddleware());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!(/login|/assets))|/admin)($|/.*)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/signIn|/assets))|/admin)($|/.*)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
-                        HttpResponseUtils.redirect("/my/login?url=" + req.getUri(),
+                        HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
 
         app.use(new ContentNegotiationMiddleware());

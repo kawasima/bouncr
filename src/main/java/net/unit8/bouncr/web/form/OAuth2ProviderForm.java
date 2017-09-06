@@ -1,11 +1,13 @@
 package net.unit8.bouncr.web.form;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
 @Data
-public class OAuth2ProviderForm implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class OAuth2ProviderForm extends FormBase {
     private Long id;
 
     private String apiKey;

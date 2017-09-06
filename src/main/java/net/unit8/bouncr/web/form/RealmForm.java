@@ -4,9 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Length;
-import org.hibernate.validator.constraints.NotBlank;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 
@@ -16,15 +16,15 @@ public class RealmForm extends FormBase {
     private Long id;
 
     @NotBlank
-    @Length(max = 100)
+    @Size(max = 100)
     private String name;
 
     @NotBlank
-    @Length(max = 255)
+    @Size(max = 255)
     private String description;
 
     @NotBlank
-    @Length(max = 255)
+    @Size(max = 255)
     private String url;
     private Long applicationId;
 

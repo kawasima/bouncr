@@ -13,10 +13,10 @@ import kotowari.system.KotowariCommandRegister;
 public class ReplMain {
     public static void main(String[] args) throws Exception {
         System.setProperty("ssl.port", "3002");
-        System.setProperty("keystore", "src/dev/resources/bouncr.jks");
-        System.setProperty("key.password", "password");
-        System.setProperty("truststore", "src/dev/resources/bouncr_clients.jks");
-        System.setProperty("trust.password", "password");
+        System.setProperty("keystore.path", "src/dev/resources/bouncr.jks");
+        System.setProperty("keystore.password", "password");
+        //System.setProperty("truststore.path", "src/dev/resources/bouncr_clients.jks");
+        //System.setProperty("truststore.password", "password");
         Class.forName("net.unit8.bouncr.authz.UserPermissionPrincipal");
         PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.BouncrEnkanSystem");
         ReplBoot.start(repl,

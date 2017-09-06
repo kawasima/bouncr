@@ -21,7 +21,7 @@
             <#if group.writeProtected>
             ${group.name}
             <#else>
-            <a href="/group/${group.id}">${group.name}</a>
+            <a href="${urlFor('edit?id='+ group.id)}">${group.name}</a>
             </#if>
           </td>
           <td>${group.description}</td>

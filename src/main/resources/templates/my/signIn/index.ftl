@@ -1,5 +1,5 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "List of users">
+<@layout.layout "Sign in">
   <div class="container">
     <div class="card card-container">
       <img class="profile-img-card" class="profile-img-card" src="//ssl.gstatic.com/accounts/ui/avatar_2x.png"/>
@@ -10,6 +10,14 @@
         <input type="hidden" name="url" value="${url}">
         </#if>
         <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
+
+        <#list oauth2Providers>
+        <hr/>
+
+        <#items as oauth2Provider>
+        <a class="btn btn-lg" href="${oauth2Provider.authorizationUrl}">Sign in by ${oauth2Provider.oauth2Provider.name}</a>
+        </#items>
+        </#list>
       </form>
     </div>
   </div>

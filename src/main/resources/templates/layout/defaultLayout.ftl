@@ -20,13 +20,16 @@
       <img src="/my/assets/img/logo.svg" width="200" class="d-inline-block align-top" alt="bouncr">
     </a>
     <#if userPrincipal??>
-    <div class="dropdown">
+    <div class="btn-group">
       <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-
+        You
       </button>
-      <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <form name="signout" method="post" action="/my/logout">
-          <a href="javascript:signout.submit()">Sign out</a>
+      <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+        <#if hasAnyPermissions(userPrincipal, "CREATE_USER", "")>
+          <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Admin</a>
+        </#if>
+        <form name="signout" method="post" action="/my/signOut">
+          <button class="dropdown-item" type="submit">Sign out</button>
         </form>
       </div>
     </div>

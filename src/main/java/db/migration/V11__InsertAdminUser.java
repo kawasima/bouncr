@@ -111,20 +111,13 @@ public class V11__InsertAdminUser implements JdbcMigration {
             stmtInsApplication.executeUpdate();
             Long applicationId = fetchGeneratedKey(stmtInsApplication);
 
-            stmtInsRealm.setString(1, "BOUNCR_ADMIN");
-            stmtInsRealm.setString(2, "^/admin($|/.*)");
+            stmtInsRealm.setString(1, "BOUNCR");
+            stmtInsRealm.setString(2, "^/(admin|my)($|/.*)");
             stmtInsRealm.setLong(3, applicationId);
-            stmtInsRealm.setString(4, "Bouncr administration");
+            stmtInsRealm.setString(4, "Bouncr Application Realm");
             stmtInsRealm.setBoolean(5, true);
             stmtInsRealm.executeUpdate();
-            Long adminRealmId = fetchGeneratedKey(stmtInsRealm);
-            stmtInsRealm.setString(1, "BOUNCR_MY");
-            stmtInsRealm.setString(2, "^/my($|/.*)");
-            stmtInsRealm.setLong(3, applicationId);
-            stmtInsRealm.setString(4, "Bouncr user pages");
-            stmtInsRealm.setBoolean(5, true);
-            stmtInsRealm.executeUpdate();
-            Long myRealmId = fetchGeneratedKey(stmtInsRealm);
+            Long bouncrRealmId = fetchGeneratedKey(stmtInsRealm);
 
             stmtInsRole.setString(1, "BOUNCR_ADMIN");
             stmtInsRole.setString(2, "Bouncer administrations");
@@ -164,14 +157,13 @@ public class V11__InsertAdminUser implements JdbcMigration {
 
             stmtInsAssignment.setLong(1, adminGroupId);
             stmtInsAssignment.setLong(2, adminRoleId);
-            stmtInsAssignment.setLong(3, adminRealmId);
+            stmtInsAssignment.setLong(3, bouncrRealmId);
             stmtInsAssignment.executeUpdate();
 
             stmtInsAssignment.setLong(1, userGroupId);
             stmtInsAssignment.setLong(2, myRoleId);
-            stmtInsAssignment.setLong(3, myRealmId);
+            stmtInsAssignment.setLong(3, bouncrRealmId);
             stmtInsAssignment.executeUpdate();
-
         }
     }
 }

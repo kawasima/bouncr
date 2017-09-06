@@ -7,7 +7,7 @@
   <h1>List of realms</h1>
 
   <#list realms>
-  <table>
+  <table class="table">
     <thead>
       <tr>
         <th>Name</th>
