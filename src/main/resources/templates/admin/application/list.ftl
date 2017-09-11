@@ -1,7 +1,7 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "List of applications">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
     <li class="breadcrumb-item active">Applications</li>
   </ol>
   <h1>List of applications</h1>
@@ -30,7 +30,7 @@
           <td>${application.passTo}</td>
           <td>
           <#if !application.writeProtected>
-            <a href="${urlFor('net.unit8.bouncr.web.controller.RealmController', 'listByApplicationId?applicationId=' + application.id)}">Realms</a>
+            <a href="${urlFor('net.unit8.bouncr.web.controller.admin.RealmController', 'listByApplicationId?applicationId=' + application.id)}">Realms</a>
           </#if>
           </td>
         </tr>

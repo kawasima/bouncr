@@ -25,11 +25,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.LdapClient;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.web.dao.AuditDao;
 import net.unit8.bouncr.web.dao.OAuth2ProviderDao;
 import net.unit8.bouncr.web.dao.PermissionDao;
 import net.unit8.bouncr.web.dao.UserDao;
+import net.unit8.bouncr.web.entity.ActionType;
 import net.unit8.bouncr.web.entity.OAuth2Provider;
 import net.unit8.bouncr.web.entity.PermissionWithRealm;
 import net.unit8.bouncr.web.entity.User;
@@ -39,8 +41,11 @@ import okhttp3.Request;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.seasar.doma.jdbc.SelectOptions;
+import org.seasar.doma.jdbc.UniqueConstraintException;
 
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -54,6 +59,7 @@ import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 import static enkan.util.HttpResponseUtils.redirect;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
+import static net.unit8.bouncr.web.entity.ActionType.*;
 
 public class SignInController {
     @Inject
@@ -69,6 +75,9 @@ public class SignInController {
     private StoreProvider storeProvider;
 
     @Inject
+    private LdapClient ldapClient;
+
+    @Inject
     private BouncrConfiguration config;
 
     public HttpResponse signInForm(HttpRequest request, SignInForm form) {
@@ -76,7 +85,7 @@ public class SignInController {
         if (account != null) {
             return templateEngine.render("my/signIn/clientdn",
                     "account", account,
-                    "url", form.getUrl());
+                    "signin", form);
         } else {
             OAuth2ProviderDao oauth2ProviderDao = daoProvider.getDao(OAuth2ProviderDao.class);
             String callbackUrl = request.getScheme() + "://" + request.getServerName() + ":" +request.getServerPort()
@@ -91,7 +100,7 @@ public class SignInController {
 
             return templateEngine.render("my/signIn/index",
                     "oauth2Providers", oauth2Providers,
-                    "url", form.getUrl());
+                    "signin", form);
         }
     }
 
@@ -102,11 +111,45 @@ public class SignInController {
         private String authorizationUrl;
     }
 
-    public HttpResponse signInByPassword(SignInForm form) {
-        UserDao userDao = daoProvider.getDao(UserDao.class);
-        User user= userDao.selectByPassword(form.getAccount(), form.getPassword());
+    private void recordSignIn(User user, HttpRequest request, SignInForm form) {
         AuditDao auditDao = daoProvider.getDao(AuditDao.class);
-        auditDao.signIn(form.getAccount(), user != null);
+        auditDao.insertUserAction(user != null ? USER_SIGNIN : USER_FAILED_SIGNIN,
+                form.getAccount(),
+                request.getRemoteAddr());
+
+        if (user == null) {
+            UserDao userDao = daoProvider.getDao(UserDao.class);
+            user = userDao.selectByAccount(form.getAccount());
+            if (user != null) {
+                List<String> actionTypes = auditDao.selectRecentSigninHistories(form.getAccount(),
+                        SelectOptions.get().limit(config.getPasswordPolicy().getNumOfTrialsUntilLock()));
+                if (actionTypes.stream().filter(t -> t.equals("user.failed_signin")).count() >= config.getPasswordPolicy().getNumOfTrialsUntilLock()) {
+                    try {
+                        userDao.lock(user.getId());
+                    } catch(UniqueConstraintException ignore) {
+
+                    }
+                }
+            }
+        }
+    }
+
+    @Transactional
+    public HttpResponse signInByPassword(HttpRequest request, SignInForm form) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        if (userDao.isLock(form.getAccount())) {
+            form.setErrors(Multimap.of("account", "error.accountLocked"));
+            return signInForm(request, form);
+        }
+        User user= userDao.selectByPassword(form.getAccount(), form.getPassword());
+
+        if (user == null && ldapClient != null) {
+            if (ldapClient.search(form.getAccount(), form.getPassword())) {
+                user = userDao.selectByAccount(form.getAccount());
+            }
+        }
+
+        recordSignIn(user, request, form);
 
         if (user != null) {
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
@@ -121,16 +164,18 @@ public class SignInController {
                     .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
                     .build();
         } else {
-            return templateEngine.render("my/signIn/index");
+            form.setErrors(Multimap.of("account", "error.failToSignin"));
+            return signInForm(request, form);
         }
     }
 
+    @Transactional
     public HttpResponse signInByClientDN(HttpRequest request, SignInForm form) {
         form.setAccount(getAccountFromClientDN(request));
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user= userDao.selectByAccount(form.getAccount());
         AuditDao auditDao = daoProvider.getDao(AuditDao.class);
-        auditDao.signIn(form.getAccount(), user != null);
+        auditDao.insertUserAction(user != null?USER_SIGNIN:USER_FAILED_SIGNIN, form.getAccount(), request.getRemoteAddr());
 
         if (user != null) {
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
@@ -146,8 +191,7 @@ public class SignInController {
                     .build();
         } else {
             return templateEngine.render("my/signIn/clientdn",
-                    "account", form.getAccount(),
-                    "url", form.getUrl());
+                    "signin", form);
         }
     }
 

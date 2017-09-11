@@ -25,4 +25,36 @@ public class PasswordPolicy extends SystemComponent {
             }
         };
     }
+
+    public Duration getExpires() {
+        return expires;
+    }
+
+    public void setExpires(Duration expires) {
+        this.expires = expires;
+    }
+
+    public int getMinLength() {
+        return minLength;
+    }
+
+    public void setMinLength(int minLength) {
+        this.minLength = minLength;
+    }
+
+    public int getMaxLength() {
+        return maxLength;
+    }
+
+    public void setMaxLength(int maxLength) {
+        this.maxLength = maxLength;
+    }
+
+    public int getNumOfTrialsUntilLock() {
+        return numOfTrialsUntilLock;
+    }
+
+    public void setNumOfTrialsUntilLock(int numOfTrialsUntilLock) {
+        this.numOfTrialsUntilLock = numOfTrialsUntilLock;
+    }
 }

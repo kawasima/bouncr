@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -10,6 +10,7 @@ import net.unit8.bouncr.web.dao.ApplicationDao;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.form.ApplicationForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -31,6 +32,7 @@ public class ApplicationController {
     @Inject
     private DomaProvider daoProvider;
 
+    @RolesAllowed("LIST_APPLICATIONS")
     public HttpResponse list() {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         List<Application> applications = applicationDao.selectAll();
@@ -38,12 +40,14 @@ public class ApplicationController {
                 "applications", applications);
     }
 
+    @RolesAllowed("CREATE_APPLICATION")
     public HttpResponse newForm() {
         ApplicationForm application = new ApplicationForm();
         return templateEngine.render("admin/application/new",
                 "application", application);
     }
 
+    @RolesAllowed("MODIFY_APPLICATION")
     public HttpResponse edit(Parameters params) {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         Application application = applicationDao.selectById(params.getLong("id"));
@@ -52,6 +56,7 @@ public class ApplicationController {
                 "application", form);
     }
 
+    @RolesAllowed("CREATE_APPLICATION")
     @Transactional
     public HttpResponse create(ApplicationForm form) {
         if (form.hasErrors()) {
@@ -69,6 +74,7 @@ public class ApplicationController {
         }
     }
 
+    @RolesAllowed("MODIFY_APPLICATION")
     @Transactional
     public HttpResponse update(ApplicationForm form) {
         if (form.hasErrors()) {
@@ -84,6 +90,7 @@ public class ApplicationController {
         }
     }
 
+    @RolesAllowed("DELETE_APPLICATION")
     @Transactional
     public HttpResponse delete(Parameters params) {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);

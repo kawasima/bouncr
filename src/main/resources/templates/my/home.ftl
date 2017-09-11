@@ -20,27 +20,21 @@
   </div>
 
   <h2>Sign in</h2>
-  <#list signInHistories>
+  <#list userActions>
   <table class="table">
     <thead>
       <tr>
-        <th>Account</th>
+        <th>Type</th>
         <th>Date</th>
-        <th>Successful?</th>
+        <th>Actor IP</th>
       </tr>
     </thead>
     <tbody>
-      <#items as hist>
-      <tr class="table-<#if hist.successful>success<#else>danger</#if>">
-        <td>${hist.account}</td>
-        <td>${hist.signedInAt}</td>
-        <td>
-          <#if hist.successful>
-          <i class="fa fa-check" aria-hidden="true"></i>
-          <#else>
-          <i class="fa fa-ban" aria-hidden="true"></i>
-          </#if>
-        </td>
+      <#items as userAction>
+      <tr>
+        <td>${userAction.actionType.getName()}</td>
+        <td>${userAction.createdAt}</td>
+        <td>${userAction.actorIp}</td>
       </tr>
       </#items>
     </tbody>

@@ -8,7 +8,7 @@ import enkan.middleware.session.KeyValueStore;
 import enkan.security.UserPrincipal;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
-import net.unit8.bouncr.RandomUtils;
+import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.web.dao.OAuth2ApplicationDao;
 import net.unit8.bouncr.web.entity.OAuth2Application;

@@ -9,6 +9,7 @@ public class BouncrConfiguration extends SystemComponent {
     private String tokenName = "BOUNCR_TOKEN";
     private String idHeaderName = "X-Bouncr-Id";
     private String permissionHeaderName = "X-Bouncr-Permissions";
+    private PasswordPolicy passwordPolicy = new PasswordPolicy();
 
 
     @Override
@@ -64,5 +65,13 @@ public class BouncrConfiguration extends SystemComponent {
 
     public void setPermissionHeaderName(String permissionHeaderName) {
         this.permissionHeaderName = permissionHeaderName;
+    }
+
+    public PasswordPolicy getPasswordPolicy() {
+        return passwordPolicy;
+    }
+
+    public void setPasswordPolicy(PasswordPolicy passwordPolicy) {
+        this.passwordPolicy = passwordPolicy;
     }
 }

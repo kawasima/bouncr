@@ -1,11 +1,12 @@
 package net.unit8.bouncr.web.dao;
 
+import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.OAuth2Application;
 import org.seasar.doma.*;
 
 import java.util.List;
 
-@Dao
+@Dao(config= DomaConfig.class)
 public interface OAuth2ApplicationDao {
     @Select
     List<OAuth2Application> selectAll();

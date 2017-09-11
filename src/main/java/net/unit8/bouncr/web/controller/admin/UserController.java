@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -6,11 +6,13 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.UserForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -33,6 +35,7 @@ public class UserController {
     @Inject
     private BeansConverter beansConverter;
 
+    @RolesAllowed("LIST_USERS")
     public HttpResponse list() {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         List<User> users = userDao.selectAll();
@@ -47,12 +50,14 @@ public class UserController {
         return userDao.selectForIncrementalSearch(word + "%");
     }
 
+    @RolesAllowed("CREATE_USER")
     public HttpResponse newUser() {
         UserForm user = new UserForm();
         return templateEngine.render("admin/user/new",
                 "user", user);
     }
 
+    @RolesAllowed("CREATE_USER")
     @Transactional
     public HttpResponse create(UserForm form) {
         if (form.hasErrors()) {
@@ -69,12 +74,13 @@ public class UserController {
         passwordCredentialDao.insert(
                 user.getId(),
                 form.getPassword(),
-                generateRandomString(random, 16));
+                RandomUtils.generateRandomString(random, 16));
 
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
     }
 
+    @RolesAllowed("MODIFY_USER")
     public HttpResponse edit(Parameters params) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(params.getLong("id"));
@@ -84,6 +90,7 @@ public class UserController {
                 "userId", user.getId());
     }
 
+    @RolesAllowed("MODIFY_USER")
     @Transactional
     public HttpResponse update(UserForm form, Parameters params) {
         if (form.hasErrors()) {
@@ -100,24 +107,8 @@ public class UserController {
         passwordCredentialDao.update(
                 user.getId(),
                 form.getPassword(),
-                generateRandomString(random, 16));
+                RandomUtils.generateRandomString(random, 16));
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
-    }
-
-    /**
-     * Generate a random string.
-     *
-     * @param random the Random object
-     * @param length the length of generated string
-     * @return a generated random sting
-     */
-    private static String generateRandomString(Random random, int length){
-        return random.ints(48,122)
-                .filter(i-> (i<57 || i>65) && (i <90 || i>97))
-                .mapToObj(i -> (char) i)
-                .limit(length)
-                .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
-                .toString();
     }
 }

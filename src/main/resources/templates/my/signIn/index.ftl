@@ -4,10 +4,17 @@
     <div class="card card-container">
       <img class="profile-img-card" class="profile-img-card" src="//ssl.gstatic.com/accounts/ui/avatar_2x.png"/>
       <form class="form-signin" method="post">
-        <input type="text" name="account" class="form-control" placeholder="Account"/>
+        <input type="text" name="account" class="form-control" placeholder="Account" value="${signin.account!''}"/>
         <input type="password" name="password" class="form-control" placeholder="Password"/>
-        <#if url??>
-        <input type="hidden" name="url" value="${url}">
+        <#if signin.hasErrors('account')>
+        <div class="alert alert-danger" role="alert">
+          <#list signin.getErrors('account') as err>
+          ${t(err)}
+          </#list>
+        </div>
+        </#if>
+        <#if signin.url??>
+        <input type="hidden" name="url" value="${signin.url}">
         </#if>
         <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
 

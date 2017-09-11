@@ -6,12 +6,12 @@ import java.security.cert.X509Certificate;
 
 public class JdbcTrustManager implements X509TrustManager {
     @Override
-    public void checkClientTrusted(X509Certificate[] x509Certificates, String authType) throws CertificateException {
+    public void checkClientTrusted(X509Certificate[] certificates, String authType) throws CertificateException {
 
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] x509Certificates, String authType) throws CertificateException {
+    public void checkServerTrusted(X509Certificate[] certificates, String authType) throws CertificateException {
 
     }
 

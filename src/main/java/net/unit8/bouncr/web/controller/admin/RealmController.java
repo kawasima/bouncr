@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -17,6 +17,7 @@ import net.unit8.bouncr.web.entity.Realm;
 import net.unit8.bouncr.web.entity.Role;
 import net.unit8.bouncr.web.form.RealmForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.Collections;
@@ -38,6 +39,7 @@ public class RealmController {
     @Inject
     private RealmCache realmCache;
 
+    @RolesAllowed("LIST_REALMS")
     public HttpResponse listByApplicationId(Parameters params) {
         Long applicationId = params.getLong("applicationId");
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
@@ -47,6 +49,7 @@ public class RealmController {
                 "realms", realms);
     }
 
+    @RolesAllowed("CREATE_REALM")
     public HttpResponse newForm(RealmForm form) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectAll();
@@ -63,6 +66,7 @@ public class RealmController {
     }
 
     @Transactional
+    @RolesAllowed("CREATE_REALM")
     public HttpResponse create(RealmForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/realm/new",
@@ -80,6 +84,7 @@ public class RealmController {
         }
     }
 
+    @RolesAllowed("MODIFY_REALM")
     public HttpResponse edit(Parameters params) {
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
         Realm realm = realmDao.selectById(params.getLong("id"));
@@ -112,6 +117,7 @@ public class RealmController {
     }
 
     @Transactional
+    @RolesAllowed("MODIFY_REALM")
     public HttpResponse update(RealmForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/realm/new",

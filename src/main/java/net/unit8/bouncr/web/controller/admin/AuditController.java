@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;

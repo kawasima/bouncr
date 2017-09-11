@@ -10,6 +10,7 @@ import net.unit8.bouncr.web.dao.OAuth2ApplicationDao;
 import net.unit8.bouncr.web.entity.OAuth2Application;
 import net.unit8.bouncr.web.form.OAuth2ApplicationForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -26,6 +27,7 @@ public class OAuth2ApplicationController {
     @Inject
     private BeansConverter beansConverter;
 
+    @RolesAllowed("LIST_OAUTH2_APPLICATIONS")
     public HttpResponse list() {
         OAuth2ApplicationDao OAuth2ApplicationDao = daoProvider.getDao(OAuth2ApplicationDao.class);
         List<OAuth2Application> oauth2Applications =OAuth2ApplicationDao.selectAll();
@@ -34,11 +36,13 @@ public class OAuth2ApplicationController {
                 "oauth2Applications", oauth2Applications);
     }
 
+    @RolesAllowed("CREATE_OAUTH2_APPLICATION")
     public HttpResponse newForm(OAuth2ApplicationForm form) {
         return templateEngine.render("admin/oauth2Application/new",
                 "oauth2Application", form);
     }
 
+    @RolesAllowed("MODIFY_OAUTH2_APPLICATION")
     public HttpResponse edit(Parameters params) {
         OAuth2ApplicationDao OAuth2ApplicationDao = daoProvider.getDao(OAuth2ApplicationDao.class);
         OAuth2Application OAuth2Application = OAuth2ApplicationDao.selectById(params.getLong("id"));
@@ -47,6 +51,7 @@ public class OAuth2ApplicationController {
                 "oauth2Application", form);
     }
 
+    @RolesAllowed("CREATE_OAUTH2_APPLICATION")
     @Transactional
     public HttpResponse create(OAuth2ApplicationForm form) {
         if (form.hasErrors()) {
@@ -60,6 +65,7 @@ public class OAuth2ApplicationController {
         }
     }
 
+    @RolesAllowed("MODIFY_OAUTH2_APPLICATION")
     @Transactional
     public HttpResponse update(OAuth2ApplicationForm form) {
         if (form.hasErrors()) {

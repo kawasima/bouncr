@@ -2,7 +2,7 @@
 <#assign editMode=false>
 <@layout.layout "New user">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
     <li class="breadcrumb-item"><a href="${urlFor('list')}">Users</a></li>
     <li class="breadcrumb-item active">New</li>
   </ol>

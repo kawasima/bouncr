@@ -1,7 +1,7 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
 <@layout.layout "New application">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
     <li class="breadcrumb-item"><a href="${urlFor('list')}">Applications</a></li>
     <li class="breadcrumb-item active">New</li>
   </ol>

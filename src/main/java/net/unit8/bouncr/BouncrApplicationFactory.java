@@ -19,8 +19,10 @@ import kotowari.middleware.*;
 import kotowari.middleware.serdes.ToStringBodyWriter;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.authn.BouncrStoreBackend;
+import net.unit8.bouncr.authz.AuthorizeControllerMethodMiddleware;
+import net.unit8.bouncr.i18n.I18nMiddleware;
 import net.unit8.bouncr.web.controller.*;
-import net.unit8.bouncr.web.controller.admin.OAuth2ApplicationController;
+import net.unit8.bouncr.web.controller.admin.*;
 import net.unit8.bouncr.web.controller.api.OAuth2Controller;
 
 import java.util.Collections;
@@ -104,6 +106,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             r.post("/my/signIn/clientDN").to(SignInController.class, "signInByClientDN");
             r.get("/my/signIn/oauth").to(SignInController.class, "signInByOAuth");
             r.post("/my/signOut").to(SignInController.class, "logout");
+            r.get("/my/account").to(MyController.class, "account");
+            r.post("/my/account").to(MyController.class, "changePassword");
             r.get("/my").to(MyController.class, "home");
 
             /* OAuth */
@@ -137,7 +141,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         // Kotowari
         app.use(new ResourceMiddleware());
         app.use(new RenderTemplateMiddleware());
+        app.use(new I18nMiddleware());
         app.use(new RoutingMiddleware(routes));
+        app.use(new AuthorizeControllerMethodMiddleware());
         app.use(new DomaTransactionMiddleware<>());
         app.use(new FormMiddleware());
         app.use(builder(new SerDesMiddleware())

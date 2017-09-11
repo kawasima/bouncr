@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -12,6 +12,7 @@ import net.unit8.bouncr.web.entity.Group;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.GroupForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.Collections;
@@ -35,6 +36,7 @@ public class GroupController {
     @Inject
     private BeansConverter beansConverter;
 
+    @RolesAllowed("LIST_GROUPS")
     public HttpResponse list() {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectAll();
@@ -43,6 +45,7 @@ public class GroupController {
                 "groups", groups);
     }
 
+    @RolesAllowed("CREATE_GROUP")
     public HttpResponse newForm() {
         GroupForm group = new GroupForm();
         UserDao userDao = daoProvider.getDao(UserDao.class);
@@ -53,6 +56,7 @@ public class GroupController {
                 "userIds", Collections.emptyList());
     }
 
+    @RolesAllowed("CREATE_GROUP")
     @Transactional
     public HttpResponse create(GroupForm form) {
         if (form.hasErrors()) {
@@ -78,6 +82,7 @@ public class GroupController {
         }
     }
 
+    @RolesAllowed("MODIFY_GROUP")
     public HttpResponse edit(Parameters params) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         Group group = groupDao.selectById(params.getLong("id"));
@@ -97,6 +102,7 @@ public class GroupController {
                 "userIds", userIds);
     }
 
+    @RolesAllowed("MODIFY_GROUP")
     @Transactional
     public HttpResponse update(GroupForm form) {
         if (form.hasErrors()) {

@@ -47,6 +47,8 @@ public class V11__InsertAdminUser implements JdbcMigration {
             "LIST_REALMS", "CREATE_REALM", "MODIFY_REALM", "DELETE_REALM",
             "LIST_ROLES", "CREATE_ROLE", "MODIFY_ROLE", "DELETE_ROLE",
             "LIST_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_PERMISSION", "DELETE_PERMISSION",
+            "LIST_OAUTH2_APPLICATIONS", "CREATE_OAUTH2_APPLICATIONS", "MODIFY_OAUTH2_APPLICATIONS", "DELETE_OAUTH2_APPLICATIONS",
+            "LIST_OAUTH2_PROVIDERS", "CREATE_OAUTH2_PROVIDERS", "MODIFY_OAUTH2_PROVIDERS", "DELETE_OAUTH2_PROVIDERS",
     };
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
         try (ResultSet rs = stmt.getGeneratedKeys()) {

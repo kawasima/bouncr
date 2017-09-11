@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -10,9 +10,9 @@ import net.unit8.bouncr.web.dao.PermissionDao;
 import net.unit8.bouncr.web.dao.RoleDao;
 import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.entity.Role;
-import net.unit8.bouncr.web.form.PermissionForm;
 import net.unit8.bouncr.web.form.RoleForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -35,6 +35,7 @@ public class RoleController {
     @Inject
     private BeansConverter beansConverter;
 
+    @RolesAllowed("LIST_ROLES")
     public HttpResponse list() {
         RoleDao roleDao= daoProvider.getDao(RoleDao.class);
         List<Role> roles =roleDao.selectAll();
@@ -42,6 +43,8 @@ public class RoleController {
         return templateEngine.render("admin/role/list",
                 "roles", roles);
     }
+
+    @RolesAllowed("CREATE_ROLE")
     public HttpResponse newForm(RoleForm form) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         List<Permission> permissions = permissionDao.selectAll();
@@ -50,6 +53,7 @@ public class RoleController {
                 "permissions", permissions);
     }
 
+    @RolesAllowed("MODIFY_ROLE")
     public HttpResponse edit(Parameters params) {
         RoleDao roleDao = daoProvider.getDao(RoleDao.class);
         Role role = roleDao.selectById(params.getLong("id"));
@@ -70,6 +74,7 @@ public class RoleController {
     }
 
     @Transactional
+    @RolesAllowed("CREATE_ROLE")
     public HttpResponse create(RoleForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/role/new",
@@ -89,6 +94,7 @@ public class RoleController {
     }
 
     @Transactional
+    @RolesAllowed("MODIFY_ROLE")
     public HttpResponse update(RoleForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/role/edit",

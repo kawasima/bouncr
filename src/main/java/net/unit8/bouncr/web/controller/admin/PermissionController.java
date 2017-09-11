@@ -1,4 +1,4 @@
-package net.unit8.bouncr.web.controller;
+package net.unit8.bouncr.web.controller.admin;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -10,6 +10,7 @@ import net.unit8.bouncr.web.dao.PermissionDao;
 import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.form.PermissionForm;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -31,6 +32,7 @@ public class PermissionController {
     @Inject
     private BeansConverter beansConverter;
 
+    @RolesAllowed("LIST_PERMISSIONS")
     public HttpResponse list() {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         List<Permission> permissions =permissionDao.selectAll();
@@ -39,11 +41,13 @@ public class PermissionController {
                 "permissions", permissions);
     }
 
+    @RolesAllowed("CREATE_PERMISSION")
     public HttpResponse newForm(PermissionForm form) {
         return templateEngine.render("admin/permission/new",
                 "permission", form);
     }
 
+    @RolesAllowed("MODIFY_PERMISSION")
     public HttpResponse edit(Parameters params) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         Permission permission = permissionDao.selectById(params.getLong("id"));
@@ -52,6 +56,7 @@ public class PermissionController {
                 "permission", form);
     }
 
+    @RolesAllowed("CREATE_PERMISSION")
     @Transactional
     public HttpResponse create(PermissionForm form) {
         if (form.hasErrors()) {
@@ -66,6 +71,7 @@ public class PermissionController {
     }
 
     @Transactional
+    @RolesAllowed("MODIFY_PERMISSION")
     public HttpResponse update(PermissionForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/permission/edit",

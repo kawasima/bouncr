@@ -1,12 +1,12 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "List of groups">
+<@layout.layout "List of OAuth2 Applications">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.IndexController', 'home')}">Administration</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
     <li class="breadcrumb-item active">OAuth2 applications</li>
   </ol>
   <h1>List of oauth2 applications</h1>
 
-  <#list groups>
+  <#list oauth2Applications>
   <table class="table">
     <thead>
       <tr>
@@ -20,7 +20,6 @@
         <tr>
           <td>
             <a href="${urlFor('edit?id='+ oauth2Application.id)}">${oauth2Application.name}</a>
-            </#if>
           </td>
           <td>${oauth2Application.homepageUrl}</td>
           <td>${oauth2Application.description}</td>
@@ -30,7 +29,7 @@
   </table>
   <#else>
   <div class="alert alert-info" role="alert">
-     <p>No groups</p>
+     <p>${t('info.noOAuth2Applications')}</p>
   </div>
   </#list>
 
