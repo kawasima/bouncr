@@ -11,3 +11,4 @@ Bouncr is an reverse proxy with authentication and authorization for backend app
 - Logout
 - Audit
 
+![bouncr architecture](https://i.imgur.com/BXWLGPG.png)
