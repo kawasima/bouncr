@@ -16,6 +16,7 @@ public class OAuth2Application implements Serializable {
     @Column(name = "oauth2_application_id")
     private Long id;
 
+    private String name;
     private String clientId;
     private String clientSecret;
     private String homeUrl;

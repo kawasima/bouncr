@@ -11,6 +11,7 @@ public class V16__CreateOAuth2Applications implements JdbcMigration {
         try(Statement stmt = connection.createStatement()) {
             stmt.execute("CREATE TABLE oauth2_applications(" +
                     "oauth2_application_id IDENTITY," +
+                    "name VARCHAR(100) NOT NULL," +
                     "client_id VARCHAR(100) NOT NULL," +
                     "client_secret VARCHAR(100) NOT NULL," +
                     "home_url VARCHAR(100) NOT NULL," +

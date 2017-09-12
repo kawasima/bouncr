@@ -6,6 +6,7 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.OAuth2ApplicationDao;
 import net.unit8.bouncr.web.entity.OAuth2Application;
 import net.unit8.bouncr.web.form.OAuth2ApplicationForm;
@@ -14,6 +15,7 @@ import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Random;
 
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 
@@ -37,9 +39,9 @@ public class OAuth2ApplicationController {
     }
 
     @RolesAllowed("CREATE_OAUTH2_APPLICATION")
-    public HttpResponse newForm(OAuth2ApplicationForm form) {
+    public HttpResponse newForm() {
         return templateEngine.render("admin/oauth2Application/new",
-                "oauth2Application", form);
+                "oauth2Application", new OAuth2ApplicationForm());
     }
 
     @RolesAllowed("MODIFY_OAUTH2_APPLICATION")
@@ -60,6 +62,9 @@ public class OAuth2ApplicationController {
         } else {
             OAuth2ApplicationDao oauth2ApplicationDao = daoProvider.getDao(OAuth2ApplicationDao.class);
             OAuth2Application oauth2Application = beansConverter.createFrom(form, OAuth2Application.class);
+            Random random = new Random();
+            oauth2Application.setClientId(RandomUtils.generateRandomString(random, 16));
+            oauth2Application.setClientSecret(RandomUtils.generateRandomString(random, 32));
             oauth2ApplicationDao.insert(oauth2Application);
             return UrlRewriter.redirect(OAuth2ApplicationController.class, "list", SEE_OTHER);
         }

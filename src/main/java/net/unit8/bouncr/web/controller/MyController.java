@@ -7,10 +7,7 @@ import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.util.RandomUtils;
-import net.unit8.bouncr.web.dao.ApplicationDao;
-import net.unit8.bouncr.web.dao.AuditDao;
-import net.unit8.bouncr.web.dao.PasswordCredentialDao;
-import net.unit8.bouncr.web.dao.UserDao;
+import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.ChangePasswordForm;
 import org.seasar.doma.jdbc.SelectOptions;
@@ -38,10 +35,15 @@ public class MyController {
                 .selectForConditionalSearch(null, null, user.getAccount(),
                         SelectOptions.get().limit(10));
 
+        UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
+        List<UserSession> userSessions = userSessionDao.selectByUserId(user.getId());
+
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         List<Application> applications = applicationDao.selectByUserId(user.getId());
+
         return templateEngine.render("my/home",
                 "user", user,
+                "userSessions", userSessions,
                 "applications", applications,
                 "userActions", userActions);
     }

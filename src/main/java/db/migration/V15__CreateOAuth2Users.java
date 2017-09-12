@@ -12,7 +12,7 @@ public class V15__CreateOAuth2Users implements JdbcMigration {
             stmt.execute("CREATE TABLE oauth2_users("
                     + "oauth2_provider_id BIGINT NOT NULL,"
                     + "user_id BIGINT NOT NULL,"
-                    + "oauth2_account VARCHAR(100) NOT NULL,"
+                    + "oauth2_user_name VARCHAR(255) NOT NULL,"
                     + "PRIMARY KEY(oauth2_provider_id, user_id)"
                     + ")");
         }

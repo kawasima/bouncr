@@ -1,5 +1,5 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "Edit OAuth2 application">
+<@layout.layout "New OAuth2 application">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
     <li class="breadcrumb-item"><a href="${urlFor('list')}">OAuth2 applications</a></li>

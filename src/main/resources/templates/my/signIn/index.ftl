@@ -27,6 +27,7 @@
         </#list>
       </form>
     </div>
+    <a href="${urlFor('net.unit8.bouncr.web.controller.SignUpController', 'newForm')}" class="text-center new-account">Create an account</a>
   </div>
 </@layout.layout>
 

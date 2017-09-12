@@ -27,20 +27,16 @@ import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.LdapClient;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.web.dao.AuditDao;
-import net.unit8.bouncr.web.dao.OAuth2ProviderDao;
-import net.unit8.bouncr.web.dao.PermissionDao;
-import net.unit8.bouncr.web.dao.UserDao;
-import net.unit8.bouncr.web.entity.ActionType;
-import net.unit8.bouncr.web.entity.OAuth2Provider;
-import net.unit8.bouncr.web.entity.PermissionWithRealm;
-import net.unit8.bouncr.web.entity.User;
+import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.web.dao.*;
+import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignInForm;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.seasar.doma.jdbc.NoResultException;
 import org.seasar.doma.jdbc.SelectOptions;
 import org.seasar.doma.jdbc.UniqueConstraintException;
 
@@ -49,6 +45,7 @@ import javax.transaction.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +56,8 @@ import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 import static enkan.util.HttpResponseUtils.redirect;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
-import static net.unit8.bouncr.web.entity.ActionType.*;
+import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
+import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
 
 public class SignInController {
     @Inject
@@ -111,6 +109,13 @@ public class SignInController {
         private String authorizationUrl;
     }
 
+    /**
+     * Record the event of signing in
+     *
+     * @param user    the user entity
+     * @param request the http request
+     * @param form    the form for sign in
+     */
     private void recordSignIn(User user, HttpRequest request, SignInForm form) {
         AuditDao auditDao = daoProvider.getDao(AuditDao.class);
         auditDao.insertUserAction(user != null ? USER_SIGNIN : USER_FAILED_SIGNIN,
@@ -119,7 +124,9 @@ public class SignInController {
 
         if (user == null) {
             UserDao userDao = daoProvider.getDao(UserDao.class);
-            user = userDao.selectByAccount(form.getAccount());
+            try {
+                user = userDao.selectByAccount(form.getAccount());
+            } catch(NoResultException ignore) {}
             if (user != null) {
                 List<String> actionTypes = auditDao.selectRecentSigninHistories(form.getAccount(),
                         SelectOptions.get().limit(config.getPasswordPolicy().getNumOfTrialsUntilLock()));
@@ -132,6 +139,28 @@ public class SignInController {
                 }
             }
         }
+    }
+
+    private HttpResponse signIn(User user, String redirectUrl) {
+        PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
+        String token = UUID.randomUUID().toString();
+
+        UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
+
+        userSessionDao.insert(builder(new UserSession())
+                .set(UserSession::setToken, token)
+                .set(UserSession::setUserId, user.getId())
+                .set(UserSession::setCreatedAt, LocalDateTime.now())
+                .build());
+        storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
+
+        Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
+        tokenCookie.setPath("/");
+        tokenCookie.setHttpOnly(true);
+        return BeanBuilder.builder(redirect(Optional.ofNullable(redirectUrl).orElse("/my"),
+                HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
+                .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
+                .build();
     }
 
     @Transactional
@@ -152,17 +181,7 @@ public class SignInController {
         recordSignIn(user, request, form);
 
         if (user != null) {
-            PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-            String token = UUID.randomUUID().toString();
-            storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
-
-            Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
-            tokenCookie.setPath("/");
-            tokenCookie.setHttpOnly(true);
-            String redirectUrl = Optional.ofNullable(form.getUrl()).orElse("/my");
-            return BeanBuilder.builder(redirect(redirectUrl, HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
-                    .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
-                    .build();
+            return signIn(user, form.getUrl());
         } else {
             form.setErrors(Multimap.of("account", "error.failToSignin"));
             return signInForm(request, form);
@@ -178,17 +197,7 @@ public class SignInController {
         auditDao.insertUserAction(user != null?USER_SIGNIN:USER_FAILED_SIGNIN, form.getAccount(), request.getRemoteAddr());
 
         if (user != null) {
-            PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-            String token = UUID.randomUUID().toString();
-            storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
-
-            Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
-            tokenCookie.setPath("/");
-            tokenCookie.setHttpOnly(true);
-            String redirectUrl = Optional.ofNullable(form.getUrl()).orElse("/my");
-            return BeanBuilder.builder(redirect(redirectUrl, HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
-                    .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
-                    .build();
+            return signIn(user, form.getUrl());
         } else {
             return templateEngine.render("my/signIn/clientdn",
                     "signin", form);
@@ -235,25 +244,41 @@ public class SignInController {
             Object id = map.get(oauth2Provider.getUserIdPath());
             if (id != null) {
                 User user = userDao.selectByOAuth2(oauth2Provider.getId(), Objects.toString(id));
-                // TODO
-                if (user == null) {
-
+                if (user != null) {
+                    return signIn(user, params.get("url"));
                 } else {
-
+                    Random random = new Random();
+                    Invitation invitation = builder(new Invitation())
+                            .set(Invitation::setCode, RandomUtils.generateRandomString(random, 8))
+                            .build();
+                    InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
+                    invitationDao.insert(invitation);
+                    invitationDao.insert(builder(new OAuth2Invitation())
+                            .set(OAuth2Invitation::setInvitationId, invitation.getId())
+                            .set(OAuth2Invitation::setOauth2ProviderId, oauth2Provider.getId())
+                            .set(OAuth2Invitation::setOauth2UserName, id.toString())
+                            .build());
+                    return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
                 }
             }
+            return signInForm(request, new SignInForm());
         } catch (IOException e) {
             return builder(HttpResponseUtils.response("Cannot fetch the user information from the resource server."))
                     .set(HttpResponse::setStatus, 503)
                     .build();
         }
-        return HttpResponse.of("OK");
     }
 
-    public HttpResponse logout(HttpRequest request) {
+    @Transactional
+    public HttpResponse signOut(HttpRequest request) {
         some(request.getCookies().get(config.getTokenName()),
                 Cookie::getValue).ifPresent(
-                token -> storeProvider.getStore(BOUNCR_TOKEN).delete(token)
+                token -> {
+                    UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
+                    UserSession thisSession = userSessionDao.selectByToken(token);
+                    userSessionDao.delete(thisSession);
+                    storeProvider.getStore(BOUNCR_TOKEN).delete(token);
+                }
         );
         Cookie expire = builder(Cookie.create(config.getTokenName(), ""))
                 .set(Cookie::setPath, "/")

@@ -13,16 +13,24 @@
         <th>Name</th>
         <th>Homepage URL</th>
         <th>Description</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
-      <#items as group>
+      <#items as oauth2Application>
         <tr>
           <td>
-            <a href="${urlFor('edit?id='+ oauth2Application.id)}">${oauth2Application.name}</a>
+            <a href="${urlFor('edit?id='+ oauth2Application.id)}">${oauth2Application.name!''}</a>
           </td>
-          <td>${oauth2Application.homepageUrl}</td>
+          <td>${oauth2Application.homeUrl}</td>
           <td>${oauth2Application.description}</td>
+          <td>
+            <button type="button" class="btn btn-info" data-toggle="popover">Secret</button>
+            <div>
+              <p>Client Id: ${oauth2Application.clientId}</p>
+              <p>Client Secret: ${oauth2Application.clientSecret}</p>
+            </div>
+          </td>
         </tr>
       </#items>
     </tbody>
@@ -34,4 +42,12 @@
   </#list>
 
   <a href="${urlFor('newForm')}">New register</a>
+
+  <script>
+<!--
+    $(function() {
+      $('[data-toggle="popover"]').popover();
+    });
+//-->
+  </script>
 </@layout.layout>

@@ -26,4 +26,6 @@ public class SignUpForm extends FormBase {
     @NotBlank
     @Size(min = 8, max = 256)
     private String password;
+
+    private String code;
 }

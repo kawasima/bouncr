@@ -20,6 +20,9 @@ public interface GroupDao {
     @Select(ensureResult = true)
     Group selectById(Long id);
 
+    @Select(ensureResult = true)
+    Group selectByName(String name);
+
     @Insert
     int insert(Group group);
 

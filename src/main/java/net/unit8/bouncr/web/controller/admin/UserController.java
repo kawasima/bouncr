@@ -4,8 +4,10 @@ import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
+import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
@@ -36,9 +38,10 @@ public class UserController {
     private BeansConverter beansConverter;
 
     @RolesAllowed("LIST_USERS")
-    public HttpResponse list() {
+    public HttpResponse list(UserPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
-        List<User> users = userDao.selectAll();
+        List<User> users;
+        users = userDao.selectAll();
 
         return templateEngine.render("admin/user/list",
                 "users", users);

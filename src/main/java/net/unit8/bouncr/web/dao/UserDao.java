@@ -43,7 +43,7 @@ public interface UserDao {
     int delete(User user);
 
     @Select
-    User selectByOAuth2(Long oauth2ProviderId, String oauth2Account);
+    User selectByOAuth2(Long oauth2ProviderId, String oauth2UserName);
 
 
     default boolean isLock(String account) {
@@ -59,6 +59,9 @@ public interface UserDao {
 
     @Insert(sqlFile = true)
     int lock(Long id);
+
+    @Insert(sqlFile = true)
+    int connectToOAuth2Provider(Long id, Long oauth2ProviderId, String oauth2UserName);
 
     @Delete(sqlFile = true)
     int unlock(Long id);

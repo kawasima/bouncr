@@ -105,7 +105,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             r.post("/my/signIn").to(SignInController.class, "signInByPassword");
             r.post("/my/signIn/clientDN").to(SignInController.class, "signInByClientDN");
             r.get("/my/signIn/oauth").to(SignInController.class, "signInByOAuth");
-            r.post("/my/signOut").to(SignInController.class, "logout");
+            r.post("/my/signOut").to(SignInController.class, "signOut");
+
+            r.get("my/signUp").to(SignUpController.class, "newForm");
+            r.post("my/signUp").to(SignUpController.class, "create");
+
             r.get("/my/account").to(MyController.class, "account");
             r.post("/my/account").to(MyController.class, "changePassword");
             r.get("/my").to(MyController.class, "home");
@@ -132,7 +136,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new CookiesMiddleware());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!(/signIn|/assets))|/admin)($|/.*)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oauth))|/admin)($|/.*)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
                         HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));

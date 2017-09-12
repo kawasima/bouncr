@@ -6,6 +6,8 @@ import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.middleware.session.KeyValueStore;
 import enkan.security.UserPrincipal;
+import enkan.util.CodecUtils;
+import enkan.util.HttpRequestUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.util.RandomUtils;
@@ -52,7 +54,7 @@ public class OAuth2Controller {
             }
             return HttpResponseUtils.redirect(redirectUrl, SEE_OTHER);
         } else {
-            return HttpResponseUtils.redirect("/my/signIn?url=" + request.getUri() + "?" + request.getQueryString(), SEE_OTHER);
+            return HttpResponseUtils.redirect("/my/signIn?url=" + request.getUri() + "?" + CodecUtils.urlEncode(request.getQueryString()), SEE_OTHER);
         }
     }
 

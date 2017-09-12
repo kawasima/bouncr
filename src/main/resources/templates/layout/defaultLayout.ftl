@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <link rel="shortcut icon" type="image/x-icon" href="/my/assets/img/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} | Bouncr</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
