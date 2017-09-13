@@ -27,7 +27,7 @@
         You
       </button>
       <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
-        <#if hasAnyPermissions(userPrincipal, "LIST_USERS", "LIST_GROUPS")>
+        <#if hasAnyPermissions(userPrincipal, "LIST_ANY_USERS", "LIST_USERS")>
           <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Admin</a>
         </#if>
         <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.MyController', 'account')}">${t('label.account')}</a>

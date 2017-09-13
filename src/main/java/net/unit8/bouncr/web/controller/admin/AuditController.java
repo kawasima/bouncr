@@ -17,7 +17,7 @@ public class AuditController {
     @Inject
     private BeansConverter beansConverter;
 
-    public HttpResponse showLoginLogs() {
+    public HttpResponse showSecurityLogs() {
         return templateEngine.render("admin/audit/list");
     }
 }

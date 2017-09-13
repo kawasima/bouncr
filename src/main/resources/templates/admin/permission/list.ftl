@@ -10,8 +10,8 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Description</th>
+        <th>${t('field.name')}</th>
+        <th>${t('field.description')}</th>
       </tr>
     </thead>
     <tbody>

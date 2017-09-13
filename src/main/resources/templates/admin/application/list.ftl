@@ -10,7 +10,7 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Name</th>
+        <th>${t('field.name')}</th>
         <th>Virtual path</th>
         <th>Pass to</th>
         <th></th>
@@ -29,9 +29,7 @@
           <td>${application.virtualPath}</td>
           <td>${application.passTo}</td>
           <td>
-          <#if !application.writeProtected>
             <a href="${urlFor('net.unit8.bouncr.web.controller.admin.RealmController', 'listByApplicationId?applicationId=' + application.id)}">Realms</a>
-          </#if>
           </td>
         </tr>
       </#items>

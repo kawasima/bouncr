@@ -10,8 +10,8 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Account</th>
-        <th>Name</th>
+        <th>${t('field.account')}</th>
+        <th>${t('field.name')}</th>
       </tr>
     </thead>
     <tbody>
@@ -21,7 +21,7 @@
             <#if user.writeProtected>
             ${user.account}
             <#else>
-            <a href="${urlFor('edit?id=' + user.id)}">${user.account}</a>
+            <a href="${urlFor('show?id=' + user.id)}">${user.account}</a>
             </#if>
           </td>
           <td>${user.name}</td>
@@ -35,5 +35,7 @@
   </div>
   </#list>
 
+  <#if hasAnyPermissions(userPrincipal, "CREATE_USER")>
   <a href="${urlFor('newUser')}">New register</a>
+  </#if>
 </@layout.layout>

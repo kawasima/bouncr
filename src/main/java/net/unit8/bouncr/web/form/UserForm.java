@@ -13,6 +13,8 @@ import javax.validation.constraints.Size;
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class UserForm extends FormBase {
+    private Long id;
+
     @NotBlank
     @Size(max = 100)
     private String account;

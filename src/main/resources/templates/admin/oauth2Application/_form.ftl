@@ -1,11 +1,11 @@
 <div class="form-group<#if oauth2Application.hasErrors("name")> has-error</#if>">
-  <label for="name">Name</label>
+  <label for="name">${t('field.name')}</label>
   <input id="name" class="form-control<#if oauth2Application.hasErrors("name")> is-invalid</#if>" type="text" name="name" value="${oauth2Application.name!''}"/>
   <span class="invalid-feedback"><#if oauth2Application.hasErrors("name")>${oauth2Application.getErrors("name")?join(",")}</#if></span>
 </div>
 
 <div class="form-group<#if oauth2Application.hasErrors("description")> has-error</#if>">
-  <label for="description">Description</label>
+  <label for="description">${t('field.description')}</label>
   <input id="description" class="form-control<#if oauth2Application.hasErrors("description")> is-invalid</#if>" type="text" name="description" value="${oauth2Application.description!''}"/>
   <span class="invalid-feedback"><#if oauth2Application.hasErrors("description")>${oauth2Application.getErrors("description")?join(",")}</#if></span>
 </div>

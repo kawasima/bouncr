@@ -1,10 +1,12 @@
 package net.unit8.bouncr.web.dao;
 
+import enkan.security.UserPrincipal;
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.entity.Role;
 import net.unit8.bouncr.web.entity.RolePermission;
 import org.seasar.doma.*;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import java.util.List;
 
@@ -17,6 +19,9 @@ import java.util.List;
 public interface RoleDao {
     @Select
     List<Role> selectAll();
+
+    @Select
+    List<Role> selectByPrincipalScope(UserPrincipal principal, SelectOptions options);
 
     @Select(ensureResult = true)
     Role selectById(Long id);

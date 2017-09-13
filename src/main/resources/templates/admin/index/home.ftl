@@ -3,38 +3,50 @@
   <h1>Administration</h1>
 
   <ul class="list-group">
-    <#if hasPermission(userPrincipal, "LIST_USERS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_USERS", "LIST_ANY_USERS")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.UserController', 'list')}">Users</a>
     </li>
     </#if>
 
-    <#if hasPermission(userPrincipal, "LIST_GROUPS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_GROUPS", "LIST_ANY_GROUPS")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.GroupController', 'list')}">Groups</a>
     </li>
     </#if>
 
-    <#if hasPermission(userPrincipal, "LIST_APPLICATIONS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_APPLICATIONS", "LIST_ANY_APPLICATIONS")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.ApplicationController', 'list')}">Applications</a></li>
     </#if>
 
-    <#if hasPermission(userPrincipal, "LIST_ROLES")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_ROLES", "LIST_ANY_ROLES")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.RoleController', 'list')}">Roles</a>
     </li>
     </#if>
 
-    <#if hasPermission(userPrincipal, "LIST_PERMISSIONS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_PERMISSIONS", "LIST_ANY_PERMISSIONS")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.PermissionController', 'list')}">Permissions</a>
     </li>
     </#if>
 
-    <#if hasPermission(userPrincipal, "LIST_OAUTH2_APPLICATIONS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_OAUTH2_APPLICATIONS", "LIST_ANY_OAUTH2_APPLICATIONS")>
     <li class="list-group-item">
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OAuth2ApplicationController', 'list')}"><i class="fa fa-ticket" aria-hidden="true"></i>OAuth2 Applications</a>
+    </li>
+    </#if>
+
+    <#if hasAnyPermissions(userPrincipal, "LIST_OAUTH2_PROVIDERS", "LIST_ANY_OAUTH2_PROVIDERS")>
+    <li class="list-group-item">
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OAuth2ProviderController', 'list')}"><i class="fa fa-ticket" aria-hidden="true"></i>OAuth2 Providers</a>
+    </li>
+    </#if>
+
+    <#if hasAnyPermissions(userPrincipal, "CREATE_INVITATION")>
+    <li class="list-group-item">
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.InvitationController', 'list')}">Invitation</a>
     </li>
     </#if>
   </ul>

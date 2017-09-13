@@ -1,3 +1,3 @@
 SELECT *
-FROM user_sessioins
+FROM user_sessions
 WHERE token = /*token*/'token'

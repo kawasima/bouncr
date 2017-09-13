@@ -29,7 +29,7 @@ public class OAuth2ApplicationController {
     @Inject
     private BeansConverter beansConverter;
 
-    @RolesAllowed("LIST_OAUTH2_APPLICATIONS")
+    @RolesAllowed({"LIST_OAUTH2_APPLICATIONS"})
     public HttpResponse list() {
         OAuth2ApplicationDao OAuth2ApplicationDao = daoProvider.getDao(OAuth2ApplicationDao.class);
         List<OAuth2Application> oauth2Applications =OAuth2ApplicationDao.selectAll();

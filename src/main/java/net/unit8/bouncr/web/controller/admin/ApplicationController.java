@@ -32,7 +32,7 @@ public class ApplicationController {
     @Inject
     private DomaProvider daoProvider;
 
-    @RolesAllowed("LIST_APPLICATIONS")
+    @RolesAllowed({"LIST_APPLICATIONS", "LIST_ANY_APPLICATIONS"})
     public HttpResponse list() {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         List<Application> applications = applicationDao.selectAll();
@@ -74,7 +74,7 @@ public class ApplicationController {
         }
     }
 
-    @RolesAllowed("MODIFY_APPLICATION")
+    @RolesAllowed({"MODIFY_APPLICATION", "MODIFY_ANY_APPLICATION"})
     @Transactional
     public HttpResponse update(ApplicationForm form) {
         if (form.hasErrors()) {
@@ -90,7 +90,7 @@ public class ApplicationController {
         }
     }
 
-    @RolesAllowed("DELETE_APPLICATION")
+    @RolesAllowed({"DELETE_APPLICATION", "DELETE_ANY_APPLICATION"})
     @Transactional
     public HttpResponse delete(Parameters params) {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);

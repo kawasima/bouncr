@@ -1,9 +1,11 @@
 package net.unit8.bouncr.web.dao;
 
+import enkan.security.UserPrincipal;
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.User;
 import org.seasar.doma.*;
 import org.seasar.doma.jdbc.Config;
+import org.seasar.doma.jdbc.SelectOptions;
 import org.seasar.doma.jdbc.builder.SelectBuilder;
 
 import java.util.List;
@@ -17,6 +19,9 @@ import java.util.List;
 public interface UserDao {
     @Select
     List<User> selectAll();
+
+    @Select
+    List<User> selectByPrincipalScope(UserPrincipal principal, SelectOptions options);
 
     @Select
     List<User> selectByGroupId(Long groupId);

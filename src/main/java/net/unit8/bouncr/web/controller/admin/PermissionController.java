@@ -4,11 +4,13 @@ import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
+import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.web.dao.PermissionDao;
 import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.form.PermissionForm;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -32,10 +34,11 @@ public class PermissionController {
     @Inject
     private BeansConverter beansConverter;
 
-    @RolesAllowed("LIST_PERMISSIONS")
-    public HttpResponse list() {
+    @RolesAllowed({"LIST_PERMISSIONS", "LIST_ANY_PERMISSIONS"})
+    public HttpResponse list(UserPrincipal principal) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-        List<Permission> permissions =permissionDao.selectAll();
+        SelectOptions options = SelectOptions.get();
+        List<Permission> permissions = permissionDao.selectByPrincipalScope(principal, options);
 
         return templateEngine.render("admin/permission/list",
                 "permissions", permissions);
@@ -47,7 +50,7 @@ public class PermissionController {
                 "permission", form);
     }
 
-    @RolesAllowed("MODIFY_PERMISSION")
+    @RolesAllowed({"MODIFY_PERMISSION", "MODIFY_ANY_PERMISSION"})
     public HttpResponse edit(Parameters params) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         Permission permission = permissionDao.selectById(params.getLong("id"));
@@ -71,7 +74,7 @@ public class PermissionController {
     }
 
     @Transactional
-    @RolesAllowed("MODIFY_PERMISSION")
+    @RolesAllowed({"MODIFY_PERMISSION", "MODIFY_ANY_PERMISSION"})
     public HttpResponse update(PermissionForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/permission/edit",

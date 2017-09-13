@@ -1,9 +1,11 @@
 package net.unit8.bouncr.web.dao;
 
+import enkan.security.UserPrincipal;
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.entity.PermissionWithRealm;
 import org.seasar.doma.*;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import java.util.List;
 
@@ -16,6 +18,9 @@ import java.util.List;
 public interface PermissionDao {
     @Select
     List<Permission> selectAll();
+
+    @Select
+    List<Permission> selectByPrincipalScope(UserPrincipal principal, SelectOptions options);
 
     @Select(ensureResult = true)
     Permission selectById(Long id);

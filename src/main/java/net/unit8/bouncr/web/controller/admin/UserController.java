@@ -9,10 +9,13 @@ import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.web.dao.GroupDao;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
+import net.unit8.bouncr.web.entity.Group;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.UserForm;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -37,14 +40,30 @@ public class UserController {
     @Inject
     private BeansConverter beansConverter;
 
-    @RolesAllowed("LIST_USERS")
+    @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
     public HttpResponse list(UserPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
-        List<User> users;
-        users = userDao.selectAll();
+
+        SelectOptions options = SelectOptions.get();
+        List<User> users = userDao.selectByPrincipalScope(principal, options);
 
         return templateEngine.render("admin/user/list",
                 "users", users);
+    }
+
+    @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
+    public HttpResponse show(UserPrincipal principal, Parameters params) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(params.getLong("id"));
+        boolean isLock = userDao.isLock(user.getAccount());
+
+        GroupDao groupDao = daoProvider.getDao(GroupDao.class);
+        List<Group> groups = groupDao.selectByUserId(user.getId());
+
+        return templateEngine.render("admin/user/show",
+                "user", user,
+                "groups", groups,
+                "isLock", isLock);
     }
 
     public List<User> search(Parameters params) {
@@ -79,11 +98,14 @@ public class UserController {
                 form.getPassword(),
                 RandomUtils.generateRandomString(random, 16));
 
+        GroupDao groupDao = daoProvider.getDao(GroupDao.class);
+        Group bouncrUserGroup = groupDao.selectByName("BOUNCR_USER");
+        groupDao.addUser(bouncrUserGroup, user);
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
     }
 
-    @RolesAllowed("MODIFY_USER")
+    @RolesAllowed({"MODIFY_USER", "MODIFY_ANY_USER"})
     public HttpResponse edit(Parameters params) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(params.getLong("id"));
@@ -93,7 +115,7 @@ public class UserController {
                 "userId", user.getId());
     }
 
-    @RolesAllowed("MODIFY_USER")
+    @RolesAllowed({"MODIFY_USER", "MODIFY_ANY_USER"})
     @Transactional
     public HttpResponse update(UserForm form, Parameters params) {
         if (form.hasErrors()) {
@@ -114,4 +136,25 @@ public class UserController {
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
     }
+
+    @RolesAllowed({"UNLOCK_USER", "UNLOCK_ANY_USER"})
+    @Transactional
+    public HttpResponse unlock(Parameters params) {
+        Long id = params.getLong("id");
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(id);
+        userDao.unlock(user.getId());
+        return UrlRewriter.redirect(UserController.class, "show?id=" + id, SEE_OTHER);
+    }
+
+    @RolesAllowed({"LOCK_USER", "LOCK_ANY_USER"})
+    @Transactional
+    public HttpResponse lock(Parameters params) {
+        Long id = params.getLong("id");
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(id);
+        userDao.lock(user.getId());
+        return UrlRewriter.redirect(UserController.class, "show?id=" + id, SEE_OTHER);
+    }
+
 }

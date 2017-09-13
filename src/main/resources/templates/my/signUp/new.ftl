@@ -1,5 +1,5 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "New user">
+<@layout.layout "Sign up">
    <h1>Sign up</h1>
 
    <form method="post" action="${urlFor('create')}">

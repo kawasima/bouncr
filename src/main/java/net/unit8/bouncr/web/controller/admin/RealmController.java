@@ -4,6 +4,7 @@ import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
+import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.component.RealmCache;
@@ -16,6 +17,7 @@ import net.unit8.bouncr.web.entity.Group;
 import net.unit8.bouncr.web.entity.Realm;
 import net.unit8.bouncr.web.entity.Role;
 import net.unit8.bouncr.web.form.RealmForm;
+import org.seasar.doma.jdbc.SelectOptions;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -39,11 +41,12 @@ public class RealmController {
     @Inject
     private RealmCache realmCache;
 
-    @RolesAllowed("LIST_REALMS")
-    public HttpResponse listByApplicationId(Parameters params) {
+    @RolesAllowed({"LIST_REALMS", "LIST_ANY_REALMS"})
+    public HttpResponse listByApplicationId(Parameters params, UserPrincipal principal) {
         Long applicationId = params.getLong("applicationId");
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
-        List<Realm> realms = realmDao.selectByApplicationId(applicationId);
+        SelectOptions options = SelectOptions.get();
+        List<Realm> realms = realmDao.selectByApplicationId(applicationId, principal, options);
         return templateEngine.render("admin/realm/list",
                 "applicationId", applicationId,
                 "realms", realms);
@@ -61,6 +64,7 @@ public class RealmController {
 
         return templateEngine.render("admin/realm/new",
                 "realm", form,
+                "writeProtected", false,
                 "groups", groups,
                 "roles", roles);
     }
@@ -84,7 +88,7 @@ public class RealmController {
         }
     }
 
-    @RolesAllowed("MODIFY_REALM")
+    @RolesAllowed({"MODIFY_REALM", "MODIFY_ANY_REALM"})
     public HttpResponse edit(Parameters params) {
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
         Realm realm = realmDao.selectById(params.getLong("id"));
@@ -112,12 +116,13 @@ public class RealmController {
 
         return templateEngine.render("admin/realm/edit",
                 "realm", form,
+                "writeProtected", realm.getWriteProtected(),
                 "groups", groups,
                 "roles", roles);
     }
 
     @Transactional
-    @RolesAllowed("MODIFY_REALM")
+    @RolesAllowed({"MODIFY_REALM", "MODIFY_ANY_REALM"})
     public HttpResponse update(RealmForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/realm/new",
@@ -154,6 +159,7 @@ public class RealmController {
     }
 
     @Transactional
+    @RolesAllowed({"DELETE_REALM", "DELETE_ANY_REALM"})
     public HttpResponse delete(Parameters params) {
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
         Realm realm = realmDao.selectById(params.getLong("id"));

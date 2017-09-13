@@ -4,6 +4,7 @@ import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
+import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.web.dao.PermissionDao;
@@ -15,6 +16,7 @@ import net.unit8.bouncr.web.form.RoleForm;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,8 +37,8 @@ public class RoleController {
     @Inject
     private BeansConverter beansConverter;
 
-    @RolesAllowed("LIST_ROLES")
-    public HttpResponse list() {
+    @RolesAllowed({"LIST_ROLES", "LIST_ANY_ROLES"})
+    public HttpResponse list(UserPrincipal principal) {
         RoleDao roleDao= daoProvider.getDao(RoleDao.class);
         List<Role> roles =roleDao.selectAll();
 
@@ -50,10 +52,11 @@ public class RoleController {
         List<Permission> permissions = permissionDao.selectAll();
         return templateEngine.render("admin/role/new",
                 "role", form,
-                "permissions", permissions);
+                "permissions", permissions,
+                "rolePermissionIds", Collections.emptyList());
     }
 
-    @RolesAllowed("MODIFY_ROLE")
+    @RolesAllowed({"MODIFY_ROLE", "MODIFY_ANY_ROLE"})
     public HttpResponse edit(Parameters params) {
         RoleDao roleDao = daoProvider.getDao(RoleDao.class);
         Role role = roleDao.selectById(params.getLong("id"));
@@ -77,7 +80,11 @@ public class RoleController {
     @RolesAllowed("CREATE_ROLE")
     public HttpResponse create(RoleForm form) {
         if (form.hasErrors()) {
+            PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
+            List<Permission> permissions = permissionDao.selectAll();
             return templateEngine.render("admin/role/new",
+                    "rolePermissionIds", form.getPermissionId(),
+                    "permissions", permissions,
                     "role", form);
         } else {
             RoleDao roleDao = daoProvider.getDao(RoleDao.class);
@@ -94,7 +101,7 @@ public class RoleController {
     }
 
     @Transactional
-    @RolesAllowed("MODIFY_ROLE")
+    @RolesAllowed({"MODIFY_ROLE", "MODIFY_ANY_ROLE"})
     public HttpResponse update(RoleForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/role/edit",

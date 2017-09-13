@@ -30,6 +30,9 @@ public interface InvitationDao {
     @Insert
     int insert(OAuth2Invitation oAuth2Invitation);
 
+    @Insert
+    int insertGroupInvitation(GroupInvitation groupInvitation);
+
     default int delete(Invitation invitation) {
         Config config = Config.get(this);
         DeleteBuilder.newInstance(config)

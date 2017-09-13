@@ -1,3 +1,3 @@
-SELECT *
-FROM groups
-WHERE group_id = /*id*/1
+SELECT G.*
+FROM groups G
+WHERE G.group_id = /*id*/1

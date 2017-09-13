@@ -10,9 +10,9 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Name</th>
+        <th>${t('field.name')}</th>
         <th>Homepage URL</th>
-        <th>Description</th>
+        <th>${t('field.description')}</th>
         <th>Actions</th>
       </tr>
     </thead>

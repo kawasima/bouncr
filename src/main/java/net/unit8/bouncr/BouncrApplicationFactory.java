@@ -48,7 +48,10 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.get("/user").to(UserController.class, "list");
                 ar.get("/user/new").to(UserController.class, "newUser");
                 ar.post("/user").to(UserController.class, "create");
+                ar.get("/user/:id").to(UserController.class, "show");
                 ar.get("/user/:id/edit").to(UserController.class, "edit");
+                ar.post("/user/:id/lock").to(UserController.class, "lock");
+                ar.post("/user/:id/unlock").to(UserController.class, "unlock");
                 ar.post("/user/:id").to(UserController.class, "update");
                 ar.post("/user/:id/delete").to(UserController.class, "delete");
 
@@ -91,6 +94,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.post("/role/:id").to(RoleController.class, "update");
                 ar.post("/role/:id/delete").to(RoleController.class, "delete");
 
+                ar.get("/oauth2provider").to(OAuth2ProviderController.class, "list");
                 /* Routing for oauth2 application actions */
                 ar.get("/oauth2app").to(OAuth2ApplicationController.class, "list");
                 ar.get("/oauth2app/new").to(OAuth2ApplicationController.class, "newForm");
@@ -98,25 +102,39 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.get("/oauth2app/:id/edit").to(OAuth2ApplicationController.class, "edit");
                 ar.post("/oauth2app/:id").to(OAuth2ApplicationController.class, "update");
                 ar.post("/oauth2app/:id/delete").to(OAuth2ApplicationController.class, "delete");
+
+                ar.get("/invitation/new").to(InvitationController.class, "newForm");
+                ar.get("/invitation/").to(InvitationController.class, "create");
+                ar.get("/invitation/").to(InvitationController.class, "create");
             });
 
             /* My page */
-            r.get("/my/signIn").to(SignInController.class, "signInForm");
-            r.post("/my/signIn").to(SignInController.class, "signInByPassword");
-            r.post("/my/signIn/clientDN").to(SignInController.class, "signInByClientDN");
-            r.get("/my/signIn/oauth").to(SignInController.class, "signInByOAuth");
-            r.post("/my/signOut").to(SignInController.class, "signOut");
+            r.scope("/my", mr-> {
+                mr.get("/signIn").to(SignInController.class, "signInForm");
+                mr.post("/signIn").to(SignInController.class, "signInByPassword");
+                mr.post("/signIn/clientDN").to(SignInController.class, "signInByClientDN");
+                mr.get("/signIn/oauth").to(SignInController.class, "signInByOAuth");
+                mr.post("/signOut").to(SignInController.class, "signOut");
 
-            r.get("my/signUp").to(SignUpController.class, "newForm");
-            r.post("my/signUp").to(SignUpController.class, "create");
 
-            r.get("/my/account").to(MyController.class, "account");
-            r.post("/my/account").to(MyController.class, "changePassword");
-            r.get("/my").to(MyController.class, "home");
+                mr.get("/signUp").to(SignUpController.class, "newForm");
+                mr.post("/signUp").to(SignUpController.class, "create");
 
-            /* OAuth */
-            r.get("/my/oauth/authorize").to(OAuth2Controller.class, "authorize");
-            r.post("/my/oauth/accessToken").to(OAuth2Controller.class, "accessToken");
+                mr.get("/account").to(MyController.class, "account");
+                mr.post("/account").to(MyController.class, "changePassword");
+
+                /* Invitation*/
+                mr.get("/invitation").to(InvitationController.class, "");
+                mr.post("/invitation").to(InvitationController.class, "");
+
+                /* OAuth */
+                mr.get("/my/oauth/authorize").to(OAuth2Controller.class, "authorize");
+                mr.post("/my/oauth/accessToken").to(OAuth2Controller.class, "accessToken");
+
+                mr.get("/").to(MyController.class, "home");
+
+            });
+
         }).compile();
 
         // Enkan

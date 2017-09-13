@@ -40,16 +40,27 @@ public class V11__InsertAdminUser implements JdbcMigration {
             "INSERT INTO assignments(group_id, role_id, realm_id) VALUES(?, ?, ?)";
 
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "LIST_USERS", "CREATE_USER", "MODIFY_USER", "DELETE_USER",
-            "LOCK_USER", "UNLOCK_USER",
-            "LIST_GROUPS", "CREATE_GROUP", "MODIFY_GROUP", "DELETE_GROUP",
+            "LIST_ANY_USERS", "CREATE_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
+            "LOCK_ANY_USER", "UNLOCK_ANY_USER",
+            "LIST_ANY_GROUPS", "CREATE_GROUP", "MODIFY_ANY_GROUP", "DELETE_ANY_GROUP",
             "CREATE_MEMBERSHIP", "DELETE_MEMBERSHIP",
-            "LIST_APPLICATIONS", "CREATE_APPLICATION", "MODIFY_APPLICATION", "DELETE_APPLICATION",
-            "LIST_REALMS", "CREATE_REALM", "MODIFY_REALM", "DELETE_REALM",
-            "LIST_ROLES", "CREATE_ROLE", "MODIFY_ROLE", "DELETE_ROLE",
-            "LIST_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_PERMISSION", "DELETE_PERMISSION",
-            "LIST_OAUTH2_APPLICATIONS", "CREATE_OAUTH2_APPLICATION", "MODIFY_OAUTH2_APPLICATION", "DELETE_OAUTH2_APPLICATION",
-            "LIST_OAUTH2_PROVIDERS", "CREATE_OAUTH2_PROVIDER", "MODIFY_OAUTH2_PROVIDER", "DELETE_OAUTH2_PROVIDER",
+            "LIST_ANY_APPLICATIONS", "CREATE_APPLICATION", "MODIFY_ANY_APPLICATION", "DELETE_ANY_APPLICATION",
+            "LIST_ANY_REALMS", "CREATE_REALM", "MODIFY_ANY_REALM", "DELETE_ANY_REALM",
+            "LIST_ANY_ROLES", "CREATE_ROLE", "MODIFY_ANY_ROLE", "DELETE_ANY_ROLE",
+            "LIST_ANY_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_ANY_PERMISSION", "DELETE_ANY_PERMISSION",
+            "LIST_OAUTH2_APPLICATIONS", "MODIFY_OAUTH2_APPLICATION", "DELETE_OAUTH2_APPLICATION",
+            "LIST_OAUTH2_PROVIDERS", "MODIFY_OAUTH2_PROVIDER", "DELETE_OAUTH2_PROVIDER",
+            "CREATE INVITATION"
+    };
+
+    private static final String[] OTHER_PERMISSIONS = new String[]{
+            "LIST_USERS", "MODIFY_USER", "DELETE_USER",
+            "LOCK_USER", "UNLOCK_USER",
+            "LIST_GROUPS", "MODIFY_GROUP", "DELETE_GROUP",
+            "LIST_APPLICATIONS", "MODIFY_APPLICATION", "DELETE_APPLICATION",
+            "LIST_REALMS", "MODIFY_REALM", "DELETE_REALM",
+            "LIST_ROLES", "MODIFY_ROLE", "DELETE_ROLE",
+            "LIST_PERMISSIONS", "MODIFY_PERMISSION", "DELETE_PERMISSION",
     };
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
         try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -139,6 +150,17 @@ public class V11__InsertAdminUser implements JdbcMigration {
                     stmtInsRolePermission.setLong(1, adminRoleId);
                     stmtInsRolePermission.setLong(2, permissionId);
                     stmtInsRolePermission.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Arrays.asList(OTHER_PERMISSIONS).forEach(perm -> {
+                try {
+                    stmtInsPermission.setString(1, perm);
+                    stmtInsPermission.setString(2, "");
+                    stmtInsPermission.setBoolean(3, true);
+                    stmtInsPermission.executeUpdate();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
