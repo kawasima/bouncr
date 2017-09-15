@@ -19,6 +19,7 @@ public class UserSession implements Serializable {
 
     private String token;
 
+    private String remoteAddress;
     private String userAgent;
 
     private LocalDateTime createdAt;

@@ -141,17 +141,22 @@ public class SignInController {
         }
     }
 
-    private HttpResponse signIn(User user, String redirectUrl) {
+    private HttpResponse signIn(User user, HttpRequest request, String redirectUrl) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         String token = UUID.randomUUID().toString();
 
         UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
 
+        String userAgent = some(request.getHeaders().get("User-Agent"),
+                ua -> ua.substring(0, Math.min(ua.length(), 255))).orElse("");
         userSessionDao.insert(builder(new UserSession())
                 .set(UserSession::setToken, token)
                 .set(UserSession::setUserId, user.getId())
+                .set(UserSession::setRemoteAddress, request.getRemoteAddr())
+                .set(UserSession::setUserAgent, userAgent)
                 .set(UserSession::setCreatedAt, LocalDateTime.now())
                 .build());
+
         storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
 
         Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
@@ -181,7 +186,7 @@ public class SignInController {
         recordSignIn(user, request, form);
 
         if (user != null) {
-            return signIn(user, form.getUrl());
+            return signIn(user, request, form.getUrl());
         } else {
             form.setErrors(Multimap.of("account", "error.failToSignin"));
             return signInForm(request, form);
@@ -197,7 +202,7 @@ public class SignInController {
         auditDao.insertUserAction(user != null?USER_SIGNIN:USER_FAILED_SIGNIN, form.getAccount(), request.getRemoteAddr());
 
         if (user != null) {
-            return signIn(user, form.getUrl());
+            return signIn(user, request, form.getUrl());
         } else {
             return templateEngine.render("my/signIn/clientdn",
                     "signin", form);
@@ -245,7 +250,7 @@ public class SignInController {
             if (id != null) {
                 User user = userDao.selectByOAuth2(oauth2Provider.getId(), Objects.toString(id));
                 if (user != null) {
-                    return signIn(user, params.get("url"));
+                    return signIn(user, request, params.get("url"));
                 } else {
                     Random random = new Random();
                     Invitation invitation = builder(new Invitation())
@@ -298,7 +303,9 @@ public class SignInController {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e ->
                         new UserPermissionPrincipal(
+                                user.getId(),
                                 user.getAccount(),
+                                user.getEmail(),
                                 e.getValue().stream()
                                         .map(PermissionWithRealm::getPermission)
                                         .collect(Collectors.toSet()))));

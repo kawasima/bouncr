@@ -13,6 +13,7 @@ public class V19__CreateUserSessions implements JdbcMigration {
                     + "user_session_id IDENTITY,"
                     + "user_id BIGINT NOT NULL,"
                     + "token VARCHAR(36) NOT NULL,"
+                    + "remote_address VARCHAR(255),"
                     + "user_agent VARCHAR(255),"
                     + "created_at TIMESTAMP NOT NULL,"
                     + "PRIMARY KEY (user_session_id),"

@@ -23,10 +23,12 @@
     </a>
     <#if userPrincipal??>
     <div class="btn-group">
-      <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <img src="https://www.gravatar.com/avatar/${md5hex(userPrincipal.name)}?s=24"/>
+      <button class="btn btn-avatar dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <img src="https://www.gravatar.com/avatar/${md5hex(userPrincipal.email)}?s=32"/>
       </button>
       <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+        <h6 class="dropdown-header">Signed in as <b>${userPrincipal.name}</b></h6>
+        <div class="dropdown-divider"></div>
         <#if hasAnyPermissions(userPrincipal, "LIST_ANY_USERS", "LIST_USERS")>
           <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Admin</a>
         </#if>

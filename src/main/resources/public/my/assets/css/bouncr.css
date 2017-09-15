@@ -11,6 +11,20 @@
     user-select: none;
     cursor: default;
 }
+
+.btn.btn-avatar {
+    padding: .0rem .5rem;
+    color: #fff;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.btn.btn-avatar img {
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+}
+
 .card {
     background-color: #F7F7F7;
     /* just in case there no content*/

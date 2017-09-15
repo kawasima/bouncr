@@ -11,17 +11,21 @@ import java.util.Set;
  * @author kawasima
  */
 public class UserPermissionPrincipal implements UserPrincipal, Serializable {
-    private final String name;
+    private final Long id;
+    private final String email;
+    private final String account;
     private final Set<String> permissions;
 
-    public UserPermissionPrincipal(String name, Set<String> permissions) {
-        this.name = name;
+    public UserPermissionPrincipal(Long id, String account, String email, Set<String> permissions) {
+        this.id = id;
+        this.account = account;
+        this.email = email;
         this.permissions = permissions;
     }
 
     @Override
     public String getName() {
-        return name;
+        return account;
     }
 
 
@@ -32,5 +36,13 @@ public class UserPermissionPrincipal implements UserPrincipal, Serializable {
 
     public Set<String> getPermissions() {
         return permissions;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Long getId() {
+        return id;
     }
 }

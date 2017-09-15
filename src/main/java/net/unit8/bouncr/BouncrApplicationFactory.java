@@ -18,6 +18,7 @@ import enkan.middleware.metrics.MetricsMiddleware;
 import enkan.security.UserPrincipal;
 import enkan.system.inject.ComponentInjector;
 import enkan.util.HttpResponseUtils;
+import is.tagomor.woothee.Classifier;
 import kotowari.middleware.*;
 import kotowari.middleware.serdes.ToStringBodyWriter;
 import kotowari.routing.Routes;
@@ -128,6 +129,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
                 mr.get("/account").to(MyController.class, "account");
                 mr.post("/account").to(MyController.class, "changePassword");
+                mr.post("/session/:id/revoke").to(MyController.class, "revokeSession");
 
                 /* Invitation*/
                 mr.get("/invitation").to(InvitationController.class, "");
@@ -194,6 +196,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             } else {
                 throw new MisconfigurationException("bouncr.MD5_HEX_WRONG_ARGS");
             }
+        });
+        functions.put("parseUserAgent", arguments -> {
+           if (arguments.size() < 1) throw new MisconfigurationException("bouncr.PARSE_USER_AGENT_WRONG_ARGS");
+
+           return Classifier.parse(Objects.toString(arguments.get(0)));
         });
         return functions;
     }
