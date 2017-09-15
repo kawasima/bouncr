@@ -17,7 +17,7 @@ import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Random;
 
-import static enkan.util.HttpResponseUtils.RedirectStatusCode.*;
+import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 
 public class MyController {
     @Inject
@@ -83,4 +83,5 @@ public class MyController {
             return UrlRewriter.redirect(MyController.class, "home", SEE_OTHER);
         }
     }
+
 }

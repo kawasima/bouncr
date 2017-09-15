@@ -18,11 +18,7 @@
       <#items as group>
         <tr>
           <td>
-            <#if group.writeProtected>
-            ${group.name}
-            <#else>
-            <a href="${urlFor('edit?id='+ group.id)}">${group.name}</a>
-            </#if>
+            <a href="${urlFor('show?id='+ group.id)}">${group.name}</a>
           </td>
           <td>${group.description}</td>
         </tr>

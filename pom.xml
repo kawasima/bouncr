@@ -14,6 +14,15 @@
         <enkan.version>0.2.1-SNAPSHOT</enkan.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>ossrh-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>io.undertow</groupId>
@@ -116,7 +125,7 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-     </dependencies>
+    </dependencies>
 
 
     <profiles>
@@ -143,7 +152,9 @@
                             <execution>
                                 <id>add-dev-source</id>
                                 <phase>generate-sources</phase>
-                                <goals><goal>add-source</goal></goals>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
                                 <configuration>
                                     <sources>
                                         <source>src/dev/java</source>

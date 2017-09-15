@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import static enkan.util.BeanBuilder.builder;
 
-@Middleware(name = "ahtorizeControllerMethod", dependencies = "routing")
+@Middleware(name = "authorizeControllerMethod", dependencies = "routing")
 public class AuthorizeControllerMethodMiddleware extends AbstractWebMiddleware {
     @Override
     public HttpResponse handle(HttpRequest request, MiddlewareChain chain) {

@@ -152,7 +152,7 @@ public class ReverseProxyComponent extends WebServerComponent {
                                 createSSLContext(options));
                     }
                     if (options.get("truststore") != null) {
-                        builder = builder.setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUIRED);
+                        builder = builder.setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUESTED);
                     }
                     server = builder.build();
                     server.start();
@@ -242,8 +242,7 @@ public class ReverseProxyComponent extends WebServerComponent {
                 some(exchange.getSecurityContext(),
                         SecurityContext::getAuthenticatedAccount,
                         Account::getPrincipal,
-                        Principal::getName,
-                        name -> headers.put("X-Client-DN", name));
+                        principal -> headers.put("X-Client-DN", principal.getName()));
                 request.setHeaders(headers);
 
                 try {
@@ -316,8 +315,13 @@ public class ReverseProxyComponent extends WebServerComponent {
         KeyStore truststore = (KeyStore) options.get("truststore");
         if (truststore != null) {
             handler = new AuthenticationCallHandler(handler);
-            handler = new AuthenticationConstraintHandler(handler);
-            final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new ClientCertAuthenticationMechanism("My Realm"));
+            handler = new AuthenticationConstraintHandler(handler) {
+                @Override
+                protected boolean isAuthenticationRequired(final HttpServerExchange exchange) {
+                    return false;
+                }
+            };
+            final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new ClientCertAuthenticationMechanism("Bouncr"));
             handler = new AuthenticationMechanismsHandler(handler, mechanisms);
             handler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, handler);
         }

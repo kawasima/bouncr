@@ -81,8 +81,8 @@ public class SignInController {
     public HttpResponse signInForm(HttpRequest request, SignInForm form) {
         String account = getAccountFromClientDN(request);
         if (account != null) {
+            form.setAccount(account);
             return templateEngine.render("my/signIn/clientdn",
-                    "account", account,
                     "signin", form);
         } else {
             OAuth2ProviderDao oauth2ProviderDao = daoProvider.getDao(OAuth2ProviderDao.class);

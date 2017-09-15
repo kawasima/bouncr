@@ -3,16 +3,19 @@ package net.unit8.bouncr;
 import enkan.Application;
 import enkan.Endpoint;
 import enkan.application.WebApplication;
+import enkan.collection.OptionMap;
 import enkan.config.ApplicationFactory;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.endpoint.ResourceEndpoint;
+import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
 import enkan.middleware.devel.HttpStatusCatMiddleware;
 import enkan.middleware.devel.StacktraceMiddleware;
 import enkan.middleware.devel.TraceWebMiddleware;
 import enkan.middleware.doma2.DomaTransactionMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
+import enkan.security.UserPrincipal;
 import enkan.system.inject.ComponentInjector;
 import enkan.util.HttpResponseUtils;
 import kotowari.middleware.*;
@@ -21,11 +24,13 @@ import kotowari.routing.Routes;
 import net.unit8.bouncr.authn.BouncrStoreBackend;
 import net.unit8.bouncr.authz.AuthorizeControllerMethodMiddleware;
 import net.unit8.bouncr.i18n.I18nMiddleware;
+import net.unit8.bouncr.util.DigestUtils;
 import net.unit8.bouncr.web.controller.*;
 import net.unit8.bouncr.web.controller.admin.*;
 import net.unit8.bouncr.web.controller.api.OAuth2Controller;
 
-import java.util.Collections;
+import java.util.*;
+import java.util.function.Function;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.Predicates.*;
@@ -59,6 +64,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.get("/group").to(GroupController.class, "list");
                 ar.get("/group/new").to(GroupController.class, "newForm");
                 ar.post("/group").to(GroupController.class, "create");
+                ar.get("/group/:id").to(GroupController.class, "show");
                 ar.get("/group/:id/edit").to(GroupController.class, "edit");
                 ar.post("/group/:id").to(GroupController.class, "update");
                 ar.post("/group/:id/delete").to(GroupController.class, "delete");
@@ -162,7 +168,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new ContentNegotiationMiddleware());
         // Kotowari
         app.use(new ResourceMiddleware());
-        app.use(new RenderTemplateMiddleware());
+        app.use(builder(new RenderTemplateMiddleware())
+                .set(RenderTemplateMiddleware::setUserFunctions, userFunctions())
+                .build());
         app.use(new I18nMiddleware());
         app.use(new RoutingMiddleware(routes));
         app.use(new AuthorizeControllerMethodMiddleware());
@@ -176,4 +184,18 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         return app;
     }
+
+    private Map<String, Function<List, Object>> userFunctions() {
+        Map<String, Function<List, Object>> functions = new HashMap<>();
+        functions.put("md5hex", arguments -> {
+            if (arguments.size() == 1) {
+                String text = Objects.toString(arguments.get(0));
+                return DigestUtils.md5hex(text);
+            } else {
+                throw new MisconfigurationException("bouncr.MD5_HEX_WRONG_ARGS");
+            }
+        });
+        return functions;
+    }
+
 }

@@ -18,11 +18,7 @@
       <#items as user>
         <tr>
           <td>
-            <#if user.writeProtected>
-            ${user.account}
-            <#else>
             <a href="${urlFor('show?id=' + user.id)}">${user.account}</a>
-            </#if>
           </td>
           <td>${user.name}</td>
         </tr>

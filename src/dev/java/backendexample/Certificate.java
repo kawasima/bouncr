@@ -3,6 +3,7 @@ package backendexample;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import net.unit8.bouncr.cert.X509CertificateUtils;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -21,14 +22,18 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
+import javax.security.auth.x500.X500PrivateCredential;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.temporal.TemporalUnit;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class Certificate {
     private static final Date NOT_BEFORE = new Date(System.currentTimeMillis() - 86400000L * 365);
@@ -55,30 +60,6 @@ public class Certificate {
                 new GeneralName(GeneralName.dNSName, "127.0.0.1")
         });
         builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNames);
-        X509Certificate cert = signCertificate(builder, caKeyPair.getPrivate());
-
-        return new CertificateAndPrivKey(cert, kp.getPrivate());
-    }
-
-    public static CertificateAndPrivKey generateClientCertificate(KeyPair caKeyPair) throws NoSuchAlgorithmException, CertificateException, OperatorCreationException, CertIOException, InvalidKeyException {
-        X500Name issuerName = new X500Name("CN=bouncrca");
-        X500Name subjectName = new X500Name("CN=admin");
-        BigInteger serial = BigInteger.valueOf(3);
-        KeyPairGenerator rsa = KeyPairGenerator.getInstance("RSA");
-        rsa.initialize(4096);
-        KeyPair kp = rsa.generateKeyPair();
-
-        X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(issuerName, serial, NOT_BEFORE, NOT_AFTER, subjectName, kp.getPublic());
-        builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
-        builder.addExtension(Extension.keyUsage, true, new KeyUsage(
-                KeyUsage.digitalSignature | KeyUsage.keyCertSign | KeyUsage.dataEncipherment | KeyUsage.keyAgreement));
-        builder.addExtension(Extension.authorityKeyIdentifier, true, new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(caKeyPair.getPublic()));
-        DERSequence subjectAlternativeNames = new DERSequence(new ASN1Encodable[] {
-                new GeneralName(GeneralName.dNSName, "localhost"),
-                new GeneralName(GeneralName.dNSName, "127.0.0.1")
-        });
-        builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNames);
-
         X509Certificate cert = signCertificate(builder, caKeyPair.getPrivate());
 
         return new CertificateAndPrivKey(cert, kp.getPrivate());
@@ -122,22 +103,25 @@ public class Certificate {
             keyStore.store(out, "password".toCharArray());
         }
 
-        CertificateAndPrivKey clientCert = generateClientCertificate(kp);
+
+        X500PrivateCredential clientCredential = X509CertificateUtils.generateClientCertificate(
+                new X500PrivateCredential(cert, kp.getPrivate()),
+                "CN=admin",
+                3L,
+                Duration.ofDays(365));
         KeyStore trustStore = KeyStore.getInstance("JKS");
         trustStore.load(null, null);
         try(OutputStream out = new FileOutputStream("src/dev/resources/bouncr_clients.jks")) {
-            trustStore.setKeyEntry("kawasima", clientCert.getPrivateKey(), "password".toCharArray()
-                    , new java.security.cert.Certificate[]{ clientCert.getCertificate() });
-            trustStore.setKeyEntry("bouncrca", kp.getPrivate(), "password".toCharArray(),
-                    new java.security.cert.Certificate[]{ cert });
+            trustStore.setCertificateEntry("admin", clientCredential.getCertificate());
+            trustStore.setCertificateEntry("bouncrca", cert);
             trustStore.store(out, "password".toCharArray());
         }
 
         KeyStore trustPkcs12 = KeyStore.getInstance("PKCS12");
         trustPkcs12.load(null, null);
         try(OutputStream out = new FileOutputStream("src/dev/resources/bouncr_clients.p12")) {
-            trustPkcs12.setKeyEntry("kawasima", clientCert.getPrivateKey(), "password".toCharArray()
-                    , new java.security.cert.Certificate[]{ clientCert.getCertificate() });
+            trustPkcs12.setKeyEntry("admin", clientCredential.getPrivateKey(), "password".toCharArray()
+                    , new java.security.cert.Certificate[]{ clientCredential.getCertificate() });
             trustPkcs12.store(out, "password".toCharArray());
         }
 

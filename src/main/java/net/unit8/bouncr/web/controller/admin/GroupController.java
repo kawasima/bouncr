@@ -49,6 +49,19 @@ public class GroupController {
                 "groups", groups);
     }
 
+    @RolesAllowed({"LIST_GROUPS", "LIST_ANY_GROUPS"})
+    public HttpResponse show(UserPrincipal principal, Parameters params) {
+        GroupDao groupDao = daoProvider.getDao(GroupDao.class);
+        Group group = groupDao.selectById(params.getLong("id"));
+
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        List<User> users = userDao.selectByGroupId(group.getId());
+
+        return templateEngine.render("admin/group/show",
+                "group", group,
+                "users", users);
+    }
+
     @RolesAllowed("CREATE_GROUP")
     public HttpResponse newForm() {
         GroupForm group = new GroupForm();

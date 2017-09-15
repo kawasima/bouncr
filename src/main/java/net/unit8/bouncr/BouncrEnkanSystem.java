@@ -44,6 +44,7 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "http", builder(new ReverseProxyComponent())
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
                         .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3002))
+                        .set(ReverseProxyComponent::setSsl, Env.get("SSL_PORT") != null)
                         .set(ReverseProxyComponent::setKeystorePath, Env.getString("KEYSTORE_PATH", ""))
                         .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))
                         .set(ReverseProxyComponent::setTruststorePath, Env.getString("TRUSTSTORE_PATH", ""))
