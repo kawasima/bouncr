@@ -1,44 +1,16 @@
 package db.migration;
 
+import net.unit8.bouncr.util.PasswordUtils;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 
 import java.sql.*;
 import java.util.Arrays;
 
+import static org.jooq.impl.DSL.*;
+
 public class V11__InsertAdminUser implements JdbcMigration {
-    private static final String INS_USER =
-            "INSERT INTO users(account, name, email, write_protected)"
-                    + "VALUES(?,?,?,?)";
-
-    /* H2 Only */
-    private static final String INS_PASSWD_CRED =
-            "INSERT INTO password_credentials(user_id, password, salt)"
-                    + "VALUES(?,HASH('SHA256', STRINGTOUTF8(CONCAT('0123456789012345', ?)), 100),?)";
-
-    private static final String INS_GROUP =
-            "INSERT INTO groups(name, description, write_protected) VALUES(?,?,?)";
-
-    private static final String INS_ROLE =
-            "INSERT INTO roles(name, description, write_protected) VALUES(?,?,?)";
-
-    private static final String INS_PERMISSION =
-            "INSERT INTO permissions(name, description, write_protected) VALUES(?,?,?)";
-
-    private static final String INS_ROLE_PERMISSION =
-            "INSERT INTO role_permissions(role_id, permission_id) VALUES(?, ?)";
-
-    private static final String INS_MEMBERSHIP =
-            "INSERT INTO memberships(user_id, group_id) VALUES(?, ?)";
-
-    private static final String INS_APPLICATION =
-            "INSERT INTO applications(name, description, pass_to, virtual_path, top_page, write_protected) VALUES(?,?,?,?,?,?)";
-
-    private static final String INS_REALM =
-            "INSERT INTO realms(name, url, application_id, description, write_protected) VALUES(?, ?, ?, ?,?)";
-
-    private static final String INS_ASSIGNMENT =
-            "INSERT INTO assignments(group_id, role_id, realm_id) VALUES(?, ?, ?)";
-
     private static final String[] ADMIN_PERMISSIONS = new String[]{
             "LIST_ANY_USERS", "CREATE_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
             "LOCK_ANY_USER", "UNLOCK_ANY_USER",
@@ -48,7 +20,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
             "LIST_ANY_REALMS", "CREATE_REALM", "MODIFY_ANY_REALM", "DELETE_ANY_REALM",
             "LIST_ANY_ROLES", "CREATE_ROLE", "MODIFY_ANY_ROLE", "DELETE_ANY_ROLE",
             "LIST_ANY_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_ANY_PERMISSION", "DELETE_ANY_PERMISSION",
-            "LIST_OAUTH2_APPLICATIONS", "MODIFY_OAUTH2_APPLICATION", "DELETE_OAUTH2_APPLICATION",
+            "LIST_OIDC_APPLICATIONS", "CREATE_OIDC_APPLICATION", "MODIFY_OIDC_APPLICATION", "DELETE_OIDC_APPLICATION",
             "LIST_OAUTH2_PROVIDERS", "MODIFY_OAUTH2_PROVIDER", "DELETE_OAUTH2_PROVIDER",
             "CREATE INVITATION"
     };
@@ -73,6 +45,109 @@ public class V11__InsertAdminUser implements JdbcMigration {
 
     @Override
     public void migrate(Connection connection) throws Exception {
+        DSLContext create = DSL.using(connection);
+        final String INS_USER = create
+                .insertInto(table("users"))
+                .columns(
+                        field("account"),
+                        field("name"),
+                        field("email"),
+                        field("write_protected"))
+                .values(param(), param(), param(), param())
+                .getSQL();
+        /* H2 Only */
+        final String INS_PASSWD_CRED = create
+                .insertInto(table("password_credentials"))
+                .columns(
+                        field("user_id"),
+                        field("password"),
+                        field("salt"),
+                        field("created_at"))
+                .values(param(), param(), param(), param(Date.class))
+                .getSQL();
+
+        final String INS_GROUP = create
+                .insertInto(table("groups"))
+                .columns(
+                        field("name"),
+                        field("description"),
+                        field("write_protected")
+                )
+                .values("?", "?", "?")
+                .getSQL();
+
+        final String INS_ROLE = create
+                .insertInto(table("roles"))
+                .columns(
+                        field("name"),
+                        field("description"),
+                        field("write_protected")
+                )
+                .values("?", "?", "?")
+                .getSQL();
+
+        final String INS_PERMISSION = create
+                .insertInto(table("permissions"))
+                .columns(
+                        field("name"),
+                        field("description"),
+                        field("write_protected")
+                )
+                .values("?", "?", "?")
+                .getSQL();
+
+        final String INS_ROLE_PERMISSION = create
+                .insertInto(table("role_permissions"))
+                .columns(
+                        field("role_id"),
+                        field("permission_id")
+                )
+                .values("?", "?")
+                .getSQL();
+
+        final String INS_MEMBERSHIP = create
+                .insertInto(table("memberships"))
+                .columns(
+                        field("user_id"),
+                        field("group_id")
+                )
+                .values("?", "?")
+                .getSQL();
+
+        final String INS_APPLICATION = create
+                .insertInto(table("applications"))
+                .columns(
+                        field("name"),
+                        field("description"),
+                        field("pass_to"),
+                        field("virtual_path"),
+                        field("top_page"),
+                        field("write_protected"))
+                .values("?", "?", "?", "?", "?", "?")
+                .getSQL();
+
+        final String INS_REALM = create
+                .insertInto(table("realms"))
+                .columns(
+                        field("name"),
+                        field("url"),
+                        field("application_id"),
+                        field("description"),
+                        field("write_protected")
+                )
+                .values("?", "?", "?", "?", "?")
+                .getSQL();
+
+        final String INS_ASSIGNMENT = create
+                .insertInto(table("assignments"))
+                .columns(
+                        field("group_id"),
+                        field("role_id"),
+                        field("realm_id")
+                )
+                .values("?", "?", "?")
+                .getSQL();
+
         try (PreparedStatement stmtInsUser = connection.prepareStatement(INS_USER, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsPasswdCred = connection.prepareStatement(INS_PASSWD_CRED);
              PreparedStatement stmtInsPermission = connection.prepareStatement(INS_PERMISSION, Statement.RETURN_GENERATED_KEYS);
@@ -92,8 +167,9 @@ public class V11__InsertAdminUser implements JdbcMigration {
             Long userId = fetchGeneratedKey(stmtInsUser);
 
             stmtInsPasswdCred.setLong(1, userId);
-            stmtInsPasswdCred.setString(2, "password");
+            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
             stmtInsPasswdCred.setString(3, "0123456789012345");
+            stmtInsPasswdCred.setDate(4, new Date(System.currentTimeMillis() / 1000));
             stmtInsPasswdCred.executeUpdate();
 
             stmtInsGroup.setString(1, "BOUNCR_ADMIN");

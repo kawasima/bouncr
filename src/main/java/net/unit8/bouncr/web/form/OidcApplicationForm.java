@@ -7,7 +7,7 @@ import javax.validation.constraints.NotBlank;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class OAuth2ApplicationForm extends FormBase {
+public class OidcApplicationForm extends FormBase {
     private Long id;
 
     @NotBlank

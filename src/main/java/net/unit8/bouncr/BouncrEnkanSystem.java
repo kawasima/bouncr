@@ -12,10 +12,17 @@ import enkan.component.jackson.JacksonBeansConverter;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
+import net.unit8.bouncr.cert.CertificateProvider;
+import net.unit8.bouncr.cert.ReloadableTrustManager;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
+import net.unit8.bouncr.sign.IdToken;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import java.security.Security;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
@@ -27,6 +34,12 @@ import static enkan.util.ThreadingUtils.some;
  * @author kawasima
  */
 public class BouncrEnkanSystem implements EnkanSystemFactory {
+    static {
+        if (Security.getProvider("BC") == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+    }
+
     @Override
     public EnkanSystem create() {
         return EnkanSystem.of(
@@ -35,6 +48,13 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "doma", new DomaProvider(),
                 "jackson", new JacksonBeansConverter(),
                 "storeprovider", new StoreProvider(),
+                "flake", new Flake(),
+                "certificate", new CertificateProvider(),
+                "trustManager", builder(new ReloadableTrustManager())
+                        .set(ReloadableTrustManager::setTruststorePath, Env.getString("TRUSTSTORE_PATH", ""))
+                        .set(ReloadableTrustManager::setTruststorePassword, Env.getString("TRUSTSTORE_PASSWORD", ""))
+                        .build(),
+                "idToken", new IdToken(),
                 "realmCache", new RealmCache(),
                 "flyway", new FlywayMigration(),
                 "template", new FreemarkerTemplateEngine(),
@@ -47,16 +67,17 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                         .set(ReverseProxyComponent::setSsl, Env.get("SSL_PORT") != null)
                         .set(ReverseProxyComponent::setKeystorePath, Env.getString("KEYSTORE_PATH", ""))
                         .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))
-                        .set(ReverseProxyComponent::setTruststorePath, Env.getString("TRUSTSTORE_PATH", ""))
-                        .set(ReverseProxyComponent::setTruststorePassword, Env.getString("TRUSTSTORE_PASSWORD", ""))
                         .build()
         ).relationships(
-                component("http").using("app", "storeprovider", "realmCache", "config"),
-                component("app").using("storeprovider", "datasource", "template", "doma", "jackson", "metrics", "realmCache", "config"),
+                component("http").using("app", "storeprovider", "realmCache", "trustManager", "config"),
+                component("app").using(
+                        "storeprovider", "datasource", "template", "doma", "jackson", "metrics",
+                        "realmCache", "config", "idToken", "certificate", "trustManager"),
                 component("storeprovider").using("config"),
                 component("realmCache").using("doma"),
                 component("doma").using("datasource", "flyway"),
-                component("flyway").using("datasource")
+                component("flyway").using("datasource"),
+                component("certificate").using("flake", "config")
         );
     }
 }

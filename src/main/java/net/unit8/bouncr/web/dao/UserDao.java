@@ -1,14 +1,19 @@
 package net.unit8.bouncr.web.dao;
 
 import enkan.security.UserPrincipal;
+import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.web.DomaConfig;
+import net.unit8.bouncr.web.entity.OtpKey;
+import net.unit8.bouncr.web.entity.PasswordCredential;
 import net.unit8.bouncr.web.entity.User;
 import org.seasar.doma.*;
 import org.seasar.doma.jdbc.Config;
 import org.seasar.doma.jdbc.SelectOptions;
 import org.seasar.doma.jdbc.builder.SelectBuilder;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A data access object for user entity.
@@ -32,8 +37,21 @@ public interface UserDao {
     @Select(ensureResult = true)
     User selectByAccount(String account);
 
-    @Select
-    User selectByPassword(String account, String password);
+    default User selectByPassword(String account, String password) {
+        User user = selectByAccount(account);
+        Config config = Config.get(this);
+        SelectBuilder builder = SelectBuilder.newInstance(config);
+        PasswordCredential credential = builder.sql("SELECT * ")
+                .sql("FROM password_credentials ")
+                .sql("WHERE user_id = ").param(Long.class, user.getId())
+                .getEntitySingleResult(PasswordCredential.class);
+        if (Arrays.equals(
+                credential.getPassword(),
+                PasswordUtils.pbkdf2(password, credential.getSalt(), 100))) {
+            return user;
+        }
+        return null;
+    }
 
     @Select
     List<User> selectForIncrementalSearch(String word);
@@ -50,6 +68,8 @@ public interface UserDao {
     @Select
     User selectByOAuth2(Long oauth2ProviderId, String oauth2UserName);
 
+    @Select
+    OtpKey selectOtpKeyById(Long id);
 
     default boolean isLock(String account) {
         Config config = Config.get(this);

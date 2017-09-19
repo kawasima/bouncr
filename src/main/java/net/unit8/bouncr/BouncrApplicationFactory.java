@@ -3,7 +3,6 @@ package net.unit8.bouncr;
 import enkan.Application;
 import enkan.Endpoint;
 import enkan.application.WebApplication;
-import enkan.collection.OptionMap;
 import enkan.config.ApplicationFactory;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
@@ -15,7 +14,6 @@ import enkan.middleware.devel.StacktraceMiddleware;
 import enkan.middleware.devel.TraceWebMiddleware;
 import enkan.middleware.doma2.DomaTransactionMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
-import enkan.security.UserPrincipal;
 import enkan.system.inject.ComponentInjector;
 import enkan.util.HttpResponseUtils;
 import is.tagomor.woothee.Classifier;
@@ -28,7 +26,7 @@ import net.unit8.bouncr.i18n.I18nMiddleware;
 import net.unit8.bouncr.util.DigestUtils;
 import net.unit8.bouncr.web.controller.*;
 import net.unit8.bouncr.web.controller.admin.*;
-import net.unit8.bouncr.web.controller.api.OAuth2Controller;
+import net.unit8.bouncr.web.controller.api.OidcController;
 
 import java.util.*;
 import java.util.function.Function;
@@ -103,12 +101,12 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
                 ar.get("/oauth2provider").to(OAuth2ProviderController.class, "list");
                 /* Routing for oauth2 application actions */
-                ar.get("/oauth2app").to(OAuth2ApplicationController.class, "list");
-                ar.get("/oauth2app/new").to(OAuth2ApplicationController.class, "newForm");
-                ar.post("/oauth2app").to(OAuth2ApplicationController.class, "create");
-                ar.get("/oauth2app/:id/edit").to(OAuth2ApplicationController.class, "edit");
-                ar.post("/oauth2app/:id").to(OAuth2ApplicationController.class, "update");
-                ar.post("/oauth2app/:id/delete").to(OAuth2ApplicationController.class, "delete");
+                ar.get("/oidcApp").to(OidcApplicationController.class, "list");
+                ar.get("/oidcApp/new").to(OidcApplicationController.class, "newForm");
+                ar.post("/oidcApp").to(OidcApplicationController.class, "create");
+                ar.get("/oidcApp/:id/edit").to(OidcApplicationController.class, "edit");
+                ar.post("/oidcApp/:id").to(OidcApplicationController.class, "update");
+                ar.post("/oidcApp/:id/delete").to(OidcApplicationController.class, "delete");
 
                 ar.get("/invitation/new").to(InvitationController.class, "newForm");
                 ar.get("/invitation/").to(InvitationController.class, "create");
@@ -120,7 +118,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.get("/signIn").to(SignInController.class, "signInForm");
                 mr.post("/signIn").to(SignInController.class, "signInByPassword");
                 mr.post("/signIn/clientDN").to(SignInController.class, "signInByClientDN");
-                mr.get("/signIn/oauth").to(SignInController.class, "signInByOAuth");
+                mr.get("/signIn/oauth/:id").to(SignInController.class, "signInByOAuth");
                 mr.post("/signOut").to(SignInController.class, "signOut");
 
 
@@ -130,14 +128,15 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.get("/account").to(MyController.class, "account");
                 mr.post("/account").to(MyController.class, "changePassword");
                 mr.post("/session/:id/revoke").to(MyController.class, "revokeSession");
+                mr.post("/2fa/:enabled").to(MyController.class,  "switchTwoFactorAuth");
 
                 /* Invitation*/
                 mr.get("/invitation").to(InvitationController.class, "");
                 mr.post("/invitation").to(InvitationController.class, "");
 
                 /* OAuth */
-                mr.get("/my/oauth/authorize").to(OAuth2Controller.class, "authorize");
-                mr.post("/my/oauth/accessToken").to(OAuth2Controller.class, "accessToken");
+                mr.get("/oauth/authorize").to(OidcController.class, "authorize");
+                mr.post("/oauth/token").to(OidcController.class, "token");
 
                 mr.get("/").to(MyController.class, "home");
 

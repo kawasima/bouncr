@@ -1,16 +1,17 @@
 package net.unit8.bouncr.web.dao;
 
 import net.unit8.bouncr.web.DomaConfig;
-import org.seasar.doma.Dao;
-import org.seasar.doma.Insert;
-import org.seasar.doma.Update;
+import net.unit8.bouncr.web.entity.PasswordCredential;
+import org.seasar.doma.*;
 
 @Dao(config = DomaConfig.class)
 public interface PasswordCredentialDao {
-    @Insert(sqlFile = true)
-    int insert(Long id, String password, String salt);
+    @Insert
+    int insert(PasswordCredential passwordCredential);
 
-    @Update(sqlFile = true)
-    int update(Long id, String password, String salt);
+    @Update
+    int update(PasswordCredential passwordCredential);
 
+    @Delete
+    int delete(PasswordCredential passwordCredential);
 }

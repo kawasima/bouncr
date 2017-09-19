@@ -1,20 +1,28 @@
 package db.migration;
 
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 
 import java.sql.Connection;
 import java.sql.Statement;
+
+import static org.jooq.impl.DSL.*;
 
 public class V18__CreateUserLocks implements JdbcMigration {
     @Override
     public void migrate(Connection connection) throws Exception {
         try(Statement stmt = connection.createStatement()) {
-            stmt.execute("CREATE TABLE user_locks("
-                    + "user_id BIGINT,"
-                    + "locked_at TIMESTAMP NOT NULL,"
-                    + "PRIMARY KEY (user_id),"
-                    + "FOREIGN KEY (user_id) REFERENCES users(user_id)"
-                    + ")");
+            DSLContext create = DSL.using(connection);
+            String ddl = create.createTable(table("user_locks"))
+                    .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("locked_at", SQLDataType.TIMESTAMP.nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("user_id")),
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                    ).getSQL();
+            stmt.execute(ddl);
         }
     }
 }

@@ -28,7 +28,9 @@ public class StoreProvider extends SystemComponent {
                 Factory<ExpiryPolicy> expiryPolicyFactory = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getTokenExpires()));
                 provider.bouncrTokenStore = new JCacheStore(expiryPolicyFactory);
 
-                provider.authorizationCodeStore = new JCacheStore();
+                provider.authorizationCodeStore = new JCacheStore(
+                        AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getAuthorizationCodeExpires()))
+                );
                 provider.accessTokenStore = new JCacheStore();
             }
 

@@ -14,4 +14,5 @@ public class SignInForm extends FormBase {
     private String account;
     private String password;
     private String url;
+    private String code;
 }

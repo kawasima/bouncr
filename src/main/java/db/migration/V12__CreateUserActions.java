@@ -1,29 +1,40 @@
 package db.migration;
 
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 
 import java.sql.Connection;
 import java.sql.Statement;
+
+import static org.jooq.impl.DSL.*;
 
 public class V12__CreateUserActions implements JdbcMigration {
     @Override
     public void migrate(Connection connection) throws Exception {
         try(Statement stmt = connection.createStatement()) {
-            stmt.execute("CREATE TABLE actions("
-                    + "action_id IDENTITY,"
-                    + "name VARCHAR(100) NOT NULL,"
-                    + "PRIMARY KEY (action_id)"
-                    + ")");
+            DSLContext create = DSL.using(connection);
+            String ddl = create.createTable(table("actions"))
+                    .column(field("action_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("name", SQLDataType.VARCHAR(100).nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("action_id")),
+                            constraint().unique(field("name"))
+                    ).getSQL();
+            stmt.execute(ddl);
 
-            stmt.execute("CREATE TABLE user_actions("
-                    + "user_action_id IDENTITY,"
-                    + "action_id BIGINT NOT NULL,"
-                    + "actor VARCHAR(100),"
-                    + "actor_ip VARCHAR(50),"
-                    + "options CLOB,"
-                    + "created_at TIMESTAMP NOT NULL,"
-                    + "PRIMARY KEY (user_action_id)"
-                    + ")");
+            ddl = create.createTable(table("user_actions"))
+                    .column(field("user_action_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("action_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("actor", SQLDataType.VARCHAR(100).nullable(false)))
+                    .column(field("actor_ip", SQLDataType.VARCHAR(50).nullable(false)))
+                    .column(field("options", SQLDataType.CLOB))
+                    .column(field("created_at", SQLDataType.TIMESTAMP.nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("user_action_id"))
+                    ).getSQL();
+            stmt.execute(ddl);
         }
     }
 }

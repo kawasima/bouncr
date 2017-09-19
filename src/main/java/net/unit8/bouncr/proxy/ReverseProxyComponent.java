@@ -34,6 +34,7 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import net.unit8.bouncr.cert.ReloadableTrustManager;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
@@ -183,29 +184,21 @@ public class ReverseProxyComponent extends WebServerComponent {
         if (keystore != null) {
             KeyManagerFactory keyManagerFactory = KeyManagerFactory
                     .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(keystore, "password".toCharArray());
+            keyManagerFactory.init(keystore, options.getString("keystorePassword").toCharArray());
             return keyManagerFactory.getKeyManagers();
         } else {
             return null;
         }
     }
 
-    private TrustManager[] getTrustManagers(OptionMap options) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
-        KeyStore truststore = (KeyStore) options.get("truststore");
-        if (truststore != null) {
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory
-                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(truststore);
-            return trustManagerFactory.getTrustManagers();
-        } else {
-            return null;
-        }
-    }
 
     private SSLContext createSSLContext(OptionMap options)  {
         try {
             SSLContext context = SSLContext.getInstance("TLSv1.2");
-            context.init(getKeyManagers(options), getTrustManagers(options), null);
+            ReloadableTrustManager trustManager = getDependency(ReloadableTrustManager.class);
+            context.init(getKeyManagers(options),
+                    trustManager.initialized() ? new TrustManager[]{ trustManager } : null,
+                    null);
             return context;
         } catch (NoSuchAlgorithmException | KeyManagementException | UnrecoverableKeyException | CertificateException | KeyStoreException | IOException e) {
             // TODO
@@ -229,7 +222,9 @@ public class ReverseProxyComponent extends WebServerComponent {
                 request.setCharacterEncoding(exchange.getRequestCharset());
                 request.setBody(new ChannelInputStream(exchange.getRequestChannel()));
                 request.setContentLength(exchange.getRequestContentLength());
-                request.setRemoteAddr(exchange.getSourceAddress().toString());
+                request.setRemoteAddr(exchange.getSourceAddress()
+                        .getAddress()
+                        .getHostAddress());
                 request.setScheme(exchange.getRequestScheme());
                 request.setServerName(exchange.getHostName());
                 request.setServerPort(exchange.getHostPort());

@@ -1,44 +1,54 @@
 package db.migration;
 
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 
 import java.sql.Connection;
 import java.sql.Statement;
+
+import static org.jooq.impl.DSL.*;
 
 public class V17__CreateInvitations implements JdbcMigration {
 
     @Override
     public void migrate(Connection connection) throws Exception {
         try(Statement stmt = connection.createStatement()) {
-            stmt.execute("CREATE TABLE invitations("
-                    + "invitation_id IDENTITY,"
-                    + "email VARCHAR(100),"
-                    + "code  VARCHAR(8) NOT NULL,"
-                    + "invited_at TIMESTAMP NOT NULL,"
-                    + "PRIMARY KEY(invitation_id)"
-                    + ")"
-            );
+            DSLContext create = DSL.using(connection);
+            String ddl = create.createTable(table("invitations"))
+                    .column(field("invitation_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("email", SQLDataType.VARCHAR(100)))
+                    .column(field("code", SQLDataType.VARCHAR(8)))
+                    .column(field("invited_at", SQLDataType.TIMESTAMP.nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("invitation_id")),
+                            constraint().unique(field("code")),constraint()
+                    ).getSQL();
+            stmt.execute(ddl);
 
-            stmt.execute("CREATE TABLE group_invitations("
-                    + "group_invitation_id IDENTITY,"
-                    + "invitation_id BIGINT NOT NULL,"
-                    + "group_id BIGINT NOT NULL,"
-                    + "PRIMARY KEY(group_invitation_id),"
-                    + "FOREIGN KEY(invitation_id) REFERENCES invitations(invitation_id),"
-                    + "FOREIGN KEY(group_id) REFERENCES groups(group_id)"
-                    + ")"
-            );
+            ddl = create.createTable(table("group_invitations"))
+                    .column(field("group_invitation_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("invitation_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("group_id", SQLDataType.BIGINT.nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("group_invitation_id")),
+                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")),
+                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id"))
+                    ).getSQL();
+            stmt.execute(ddl);
 
-            stmt.execute("CREATE TABLE oauth2_invitations("
-                    + "oauth2_invitation_id IDENTITY,"
-                    + "invitation_id BIGINT NOT NULL,"
-                    + "oauth2_provider_id BIGINT NOT NULL,"
-                    + "oauth2_user_name VARCHAR(255) NOT NULL,"
-                    + "PRIMARY KEY(oauth2_invitation_id),"
-                    + "FOREIGN KEY(invitation_id) REFERENCES invitations(invitation_id),"
-                    + "FOREIGN KEY(oauth2_provider_id) REFERENCES oauth2_providers(oauth2_provider_id)"
-                    + ")"
-            );
+            ddl = create.createTable(table("oauth2_invitations"))
+                    .column(field("oauth2_invitation_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("invitation_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("oauth2_provider_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("oauth2_user_name", SQLDataType.VARCHAR(255).nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("oauth2_invitation_id")),
+                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")),
+                            constraint().foreignKey(field("oauth2_provider_id")).references(table("oauth2_providers"), field("oauth2_provider_id"))
+                    ).getSQL();
+            stmt.execute(ddl);
 
         }
     }

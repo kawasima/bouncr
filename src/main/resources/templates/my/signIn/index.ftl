@@ -22,7 +22,7 @@
         <hr/>
 
         <#items as oauth2Provider>
-        <a class="btn btn-lg" href="${oauth2Provider.authorizationUrl}">Sign in by ${oauth2Provider.oauth2Provider.name}</a>
+        <a class="btn btn-lg" href="${oauth2Provider.authorizationUrl}">Sign in by ${oauth2Provider.name}</a>
         </#items>
         </#list>
       </form>

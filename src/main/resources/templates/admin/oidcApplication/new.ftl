@@ -1,11 +1,11 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "New OAuth2 application">
+<@layout.layout "New OpenId connect application">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
-    <li class="breadcrumb-item"><a href="${urlFor('list')}">OAuth2 applications</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('list')}">OpenId connect applications</a></li>
     <li class="breadcrumb-item active">New</li>
   </ol>
-   <h1>New OAuth2 application</h1>
+   <h1>New OpenId Connect application</h1>
 
    <form method="post" action="${urlFor('create')}">
      <#include "_form.ftl">

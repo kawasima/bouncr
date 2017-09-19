@@ -6,6 +6,7 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
 import net.unit8.bouncr.web.dao.InvitationDao;
@@ -81,10 +82,13 @@ public class SignUpController {
             groupDao.addUser(bouncrUserGroup, user);
 
             if (config.isPasswordEnabled()) {
-                Random random = new Random();
                 PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-                passwordCredentialDao.insert(user.getId(), form.getPassword(),
-                        RandomUtils.generateRandomString(random, 16));
+                String salt = RandomUtils.generateRandomString(16);
+                passwordCredentialDao.insert(builder(new PasswordCredential())
+                        .set(PasswordCredential::setId, user.getId())
+                        .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
+                        .set(PasswordCredential::setSalt, salt)
+                        .build());
             }
 
 

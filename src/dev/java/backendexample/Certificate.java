@@ -1,21 +1,22 @@
 package backendexample;
 
 
+import enkan.system.EnkanSystem;
+import enkan.util.BeanBuilder;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import net.unit8.bouncr.cert.X509CertificateUtils;
+import net.unit8.bouncr.cert.CertificateProvider;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.Flake;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.CertIOException;
-import org.bouncycastle.cert.X509ExtensionUtils;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
@@ -29,30 +30,24 @@ import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.temporal.TemporalUnit;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
+
+import static enkan.component.ComponentRelationship.component;
 
 public class Certificate {
     private static final Date NOT_BEFORE = new Date(System.currentTimeMillis() - 86400000L * 365);
     private static final Date NOT_AFTER  = new Date(System.currentTimeMillis() + 86400000L * 365 * 100);
 
-    @Data
-    @AllArgsConstructor
-    public static class CertificateAndPrivKey {
-        private X509Certificate certificate;
-        private PrivateKey privateKey;
-    }
-
-    public static CertificateAndPrivKey generateServerCertificate(KeyPair caKeyPair) throws NoSuchAlgorithmException, CertificateException, OperatorCreationException, CertIOException {
+    public static X500PrivateCredential generateServerCertificate(KeyPair caKeyPair) throws NoSuchAlgorithmException, CertificateException, OperatorCreationException, CertIOException {
         X500Name issuerName = new X500Name("CN=bouncrca");
         X500Name subjectName = new X500Name("CN=bouncr");
         BigInteger serial = BigInteger.valueOf(2);
+        long t1 = System.currentTimeMillis();
         KeyPairGenerator rsa = KeyPairGenerator.getInstance("RSA");
-        rsa.initialize(4096);
+        rsa.initialize(2048, SecureRandom.getInstance("NativePRNGNonBlocking"));
         KeyPair kp = rsa.generateKeyPair();
+        System.out.println(System.currentTimeMillis() - t1);
 
         X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(issuerName, serial, NOT_BEFORE, NOT_AFTER, subjectName, kp.getPublic());
         DERSequence subjectAlternativeNames = new DERSequence(new ASN1Encodable[] {
@@ -62,7 +57,7 @@ public class Certificate {
         builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNames);
         X509Certificate cert = signCertificate(builder, caKeyPair.getPrivate());
 
-        return new CertificateAndPrivKey(cert, kp.getPrivate());
+        return new X500PrivateCredential(cert, kp.getPrivate());
     }
 
     public static X509Certificate signCertificate(X509v3CertificateBuilder certificateBuilder, PrivateKey caPrivateKey) throws OperatorCreationException, CertificateException {
@@ -77,7 +72,7 @@ public class Certificate {
     public static void main(String[] args) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         KeyPairGenerator rsa = KeyPairGenerator.getInstance("RSA");
-        rsa.initialize(4096);
+        rsa.initialize(2048, SecureRandom.getInstance("NativePRNGNonBlocking"));
         KeyPair kp = rsa.generateKeyPair();
 
         Calendar cal = Calendar.getInstance();
@@ -89,9 +84,9 @@ public class Certificate {
         X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(issuerName, serial, NOT_BEFORE, NOT_AFTER, subjectName, kp.getPublic());
 
         builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));
-        X509Certificate cert = signCertificate(builder, kp.getPrivate());
+        X509Certificate cacert = signCertificate(builder, kp.getPrivate());
 
-        CertificateAndPrivKey serverCert = generateServerCertificate(kp);
+        X500PrivateCredential serverCert = generateServerCertificate(kp);
 
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
@@ -103,17 +98,24 @@ public class Certificate {
             keyStore.store(out, "password".toCharArray());
         }
 
-
-        X500PrivateCredential clientCredential = X509CertificateUtils.generateClientCertificate(
-                new X500PrivateCredential(cert, kp.getPrivate()),
-                "CN=admin",
-                3L,
-                Duration.ofDays(365));
+        EnkanSystem system = EnkanSystem.of(
+                "certificate", BeanBuilder.builder(new CertificateProvider())
+                        .set(CertificateProvider::setCA, new X500PrivateCredential(cacert, kp.getPrivate()))
+                        .build(),
+                "flake", new Flake(),
+                "config", new BouncrConfiguration()
+        ).relationships(
+                component("certificate").using("flake", "config")
+        );
+        system.start();
+        CertificateProvider certificateProvider = (CertificateProvider) system.getComponent("certificate");
+        X500PrivateCredential clientCredential = certificateProvider.generateClientCertificate(
+                "CN=admin");
         KeyStore trustStore = KeyStore.getInstance("JKS");
         trustStore.load(null, null);
         try(OutputStream out = new FileOutputStream("src/dev/resources/bouncr_clients.jks")) {
             trustStore.setCertificateEntry("admin", clientCredential.getCertificate());
-            trustStore.setCertificateEntry("bouncrca", cert);
+            trustStore.setCertificateEntry("bouncrca", cacert);
             trustStore.store(out, "password".toCharArray());
         }
 

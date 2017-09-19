@@ -2,14 +2,6 @@ package net.unit8.bouncr.web.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.scribejava.core.builder.ServiceBuilder;
-import com.github.scribejava.core.builder.api.DefaultApi20;
-import com.github.scribejava.core.extractors.OAuth2AccessTokenExtractor;
-import com.github.scribejava.core.extractors.TokenExtractor;
-import com.github.scribejava.core.model.OAuth2AccessToken;
-import com.github.scribejava.core.model.OAuthAsyncRequestCallback;
-import com.github.scribejava.core.model.Verb;
-import com.github.scribejava.core.oauth.OAuth20Service;
 import enkan.collection.Multimap;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -17,22 +9,28 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
+import enkan.exception.FalteringEnvironmentException;
 import enkan.util.BeanBuilder;
+import enkan.util.CodecUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import net.unit8.bouncr.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.LdapClient;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.sign.IdToken;
+import net.unit8.bouncr.sign.IdTokenPayload;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignInForm;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
@@ -47,8 +45,6 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
@@ -76,6 +72,9 @@ public class SignInController {
     private LdapClient ldapClient;
 
     @Inject
+    private IdToken idToken;
+
+    @Inject
     private BouncrConfiguration config;
 
     public HttpResponse signInForm(HttpRequest request, SignInForm form) {
@@ -86,14 +85,14 @@ public class SignInController {
                     "signin", form);
         } else {
             OAuth2ProviderDao oauth2ProviderDao = daoProvider.getDao(OAuth2ProviderDao.class);
-            String callbackUrl = request.getScheme() + "://" + request.getServerName() + ":" +request.getServerPort()
-                    + "/my/signIn/oauth";
             List<OAuth2ProviderDto> oauth2Providers = oauth2ProviderDao
                     .selectAll()
                     .stream()
-                    .map(p -> new OAuth2ProviderDto(p,
-                            getOAuth20Service(p, callbackUrl + "?id=" + p.getId())
-                                    .getAuthorizationUrl()))
+                    .map(p -> {
+                        OAuth2ProviderDto dto = beansConverter.createFrom(p, OAuth2ProviderDto.class);
+                        dto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
+                        return dto;
+                    })
                     .collect(Collectors.toList());
 
             return templateEngine.render("my/signIn/index",
@@ -103,10 +102,32 @@ public class SignInController {
     }
 
     @Data
-    @AllArgsConstructor
     public static class OAuth2ProviderDto implements Serializable {
-        private OAuth2Provider oauth2Provider;
-        private String authorizationUrl;
+        private Long id;
+        private String name;
+        private String apiKey;
+        private String scope;
+        private String state = RandomUtils.generateRandomString(8);
+        private String responseType;
+        private String userAgent;
+        private String accessTokenEndpoint;
+        private String authorizationBaseUrl;
+        private String nonce = RandomUtils.generateRandomString(32);
+        private String redirectUriBase;
+
+        public String getRedirectUri() {
+            return redirectUriBase
+                    + "/my/signIn/oauth/" + id;
+        }
+
+        public String getAuthorizationUrl() {
+            return authorizationBaseUrl + "?response_type=" + CodecUtils.urlEncode(responseType)
+                    + "&client_id=" + apiKey
+                    + "&redirect_uri=" + CodecUtils.urlEncode(getRedirectUri())
+                    + "&state=" + state
+                    + "&scope=" + scope
+                    + "&nonce=" + nonce;
+        }
     }
 
     /**
@@ -140,7 +161,6 @@ public class SignInController {
             }
         }
     }
-
     private HttpResponse signIn(User user, HttpRequest request, String redirectUrl) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         String token = UUID.randomUUID().toString();
@@ -183,6 +203,22 @@ public class SignInController {
             }
         }
 
+        if (user != null) {
+            OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
+            if (otpKey != null) {
+                Set<String> codeSet = new OneTimePasswordGenerator(30)
+                        .generateTotpSet(otpKey.getKey(), 5)
+                        .stream()
+                        .map(n -> String.format(Locale.US, "%06d", n))
+                        .collect(Collectors.toSet());
+
+                if (!codeSet.contains(form.getCode())) {
+                    return templateEngine.render("my/signIn/2fa",
+                            "signin", form);
+                }
+            }
+        }
+
         recordSignIn(user, request, form);
 
         if (user != null) {
@@ -213,64 +249,51 @@ public class SignInController {
         OAuth2ProviderDao oauth2ProviderDao = daoProvider.getDao(OAuth2ProviderDao.class);
         UserDao userDao = daoProvider.getDao(UserDao.class);
         OAuth2Provider oauth2Provider = oauth2ProviderDao.selectById(params.getLong("id"));
-        OAuth20Service oauthService = getOAuth20Service(oauth2Provider, "");
-        Future<OAuth2AccessToken> accessTokenFuture = oauthService.getAccessToken(params.get("code"), new OAuthAsyncRequestCallback<OAuth2AccessToken>() {
-            @Override
-            public void onCompleted(OAuth2AccessToken oAuth2AccessToken) {
+        OAuth2ProviderDto oauth2ProviderDto = beansConverter.createFrom(oauth2Provider, OAuth2ProviderDto.class);
+        oauth2ProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
 
-            }
-
-            @Override
-            public void onThrowable(Throwable throwable) {
-
-            }
-        });
-        OAuth2AccessToken accessToken;
-        try {
-            accessToken = accessTokenFuture.get(3, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            return builder(HttpResponseUtils.response("Cannot fetch the access token."))
-                    .set(HttpResponse::setStatus, 503)
-                    .build();
-        }
         OkHttpClient okhttp = new OkHttpClient();
         try {
-            ObjectMapper jsonMapper = new ObjectMapper();
-
             InputStream in = okhttp.newCall(new Request.Builder()
-                    .url(oauth2Provider.getUserInfoEndpoint())
-                    .header("Authorization", "token " + accessToken.getAccessToken())
+                    .url(oauth2Provider.getTokenEndpoint())
+                    .header("Authorization", "Basic " +
+                            Base64.getUrlEncoder().encodeToString((oauth2Provider.getApiKey() + ":" + oauth2Provider.getApiSecret()).getBytes()))
+                    .post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded"),
+                            "grant_type=authorization_code&code=" + params.get("code") +
+                                    "&redirect_uri=" + oauth2ProviderDto.getRedirectUri()))
                     .build())
                     .execute()
                     .body()
                     .byteStream();
-            TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {};
+            TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {
+            };
+            ObjectMapper jsonMapper = new ObjectMapper();
             HashMap<String, Object> map = jsonMapper.readValue(in, typeRef);
-            Object id = map.get(oauth2Provider.getUserIdPath());
-            if (id != null) {
-                User user = userDao.selectByOAuth2(oauth2Provider.getId(), Objects.toString(id));
+            String encodedIdToken = (String) map.get("id_token");
+            String[] tokens = encodedIdToken.split("\\.", 3);
+            IdTokenPayload payload =idToken.decodePayload(tokens[1]);
+
+            if (payload.getSub() != null) {
+                User user = userDao.selectByOAuth2(oauth2Provider.getId(), payload.getSub());
                 if (user != null) {
                     return signIn(user, request, params.get("url"));
                 } else {
-                    Random random = new Random();
                     Invitation invitation = builder(new Invitation())
-                            .set(Invitation::setCode, RandomUtils.generateRandomString(random, 8))
+                            .set(Invitation::setCode, RandomUtils.generateRandomString(8))
                             .build();
                     InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
                     invitationDao.insert(invitation);
                     invitationDao.insert(builder(new OAuth2Invitation())
                             .set(OAuth2Invitation::setInvitationId, invitation.getId())
                             .set(OAuth2Invitation::setOauth2ProviderId, oauth2Provider.getId())
-                            .set(OAuth2Invitation::setOauth2UserName, id.toString())
+                            .set(OAuth2Invitation::setOauth2UserName, payload.getSub())
                             .build());
                     return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
                 }
             }
             return signInForm(request, new SignInForm());
         } catch (IOException e) {
-            return builder(HttpResponseUtils.response("Cannot fetch the user information from the resource server."))
-                    .set(HttpResponse::setStatus, 503)
-                    .build();
+            throw new FalteringEnvironmentException(e);
         }
     }
 
@@ -315,32 +338,5 @@ public class SignInController {
         return some(request.getHeaders().get("X-Client-DN"),
                 clientDN -> new X500Name(clientDN).getRDNs(BCStyle.CN)[0],
                 cn -> IETFUtils.valueToString(cn.getFirst().getValue())).orElse(null);
-    }
-
-    private OAuth20Service getOAuth20Service(OAuth2Provider oauth2Provider, String callbackUrl) {
-        ServiceBuilder oauth2builder = new ServiceBuilder(oauth2Provider.getApiKey());
-        if (oauth2Provider.getApiSecret() != null) oauth2builder = oauth2builder.apiSecret(oauth2Provider.getApiSecret());
-        oauth2builder = oauth2builder.callback(callbackUrl);
-        return oauth2builder.build(new DefaultApi20() {
-            @Override
-            public String getAccessTokenEndpoint() {
-                return oauth2Provider.getAccessTokenEndpoint();
-            }
-
-            @Override
-            protected String getAuthorizationBaseUrl() {
-                return oauth2Provider.getAuthorizationBaseUrl();
-            }
-
-            @Override
-            public Verb getAccessTokenVerb() {
-                return Verb.POST;
-            }
-
-            @Override
-            public TokenExtractor<OAuth2AccessToken> getAccessTokenExtractor() {
-                return OAuth2AccessTokenExtractor.instance();
-            }
-        });
     }
 }

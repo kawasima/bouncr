@@ -1,5 +1,9 @@
 package net.unit8.bouncr.util;
 
+import enkan.exception.UnreachableException;
+
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Random;
 
 public class RandomUtils {
@@ -18,4 +22,14 @@ public class RandomUtils {
                 .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                 .toString();
     }
+
+    public static String generateRandomString(int length) {
+        try {
+            SecureRandom prng = SecureRandom.getInstance("NativePRNGNonBlocking");
+            return generateRandomString(prng, length);
+        } catch (NoSuchAlgorithmException e) {
+            throw new UnreachableException(e);
+        }
+    }
+
 }

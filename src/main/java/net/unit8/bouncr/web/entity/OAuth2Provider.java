@@ -20,11 +20,7 @@ public class OAuth2Provider implements Serializable {
     private String apiKey;
     private String apiSecret;
     private String scope;
-    private String state;
     private String responseType;
-    private String userAgent;
-    private String accessTokenEndpoint;
+    private String tokenEndpoint;
     private String authorizationBaseUrl;
-    private String userInfoEndpoint;
-    private String userIdPath;
 }

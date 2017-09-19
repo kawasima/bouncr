@@ -7,18 +7,20 @@ import org.seasar.doma.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "oauth2_applications")
+@Table(name = "oidc_applications")
 @Data
 @EqualsAndHashCode
-public class OAuth2Application implements Serializable {
+public class OidcApplication implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "oauth2_application_id")
+    @Column(name = "oidc_application_id")
     private Long id;
 
     private String name;
     private String clientId;
     private String clientSecret;
+    private byte[] privateKey;
+    private byte[] publicKey;
     private String homeUrl;
     private String callbackUrl;
     private String description;

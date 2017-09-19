@@ -1,12 +1,12 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "List of OAuth2 Applications">
+<@layout.layout "List of OpenId connect Applications">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
-    <li class="breadcrumb-item active">OAuth2 applications</li>
+    <li class="breadcrumb-item active">OpenId connect applications</li>
   </ol>
-  <h1>List of oauth2 applications</h1>
+  <h1>List of OpenId connect applications</h1>
 
-  <#list oauth2Applications>
+  <#list oidcApplications>
   <table class="table">
     <thead>
       <tr>
@@ -17,18 +17,18 @@
       </tr>
     </thead>
     <tbody>
-      <#items as oauth2Application>
+      <#items as oidcApplication>
         <tr>
           <td>
-            <a href="${urlFor('edit?id='+ oauth2Application.id)}">${oauth2Application.name!''}</a>
+            <a href="${urlFor('edit?id='+ oidcApplication.id)}">${oidcApplication.name!''}</a>
           </td>
-          <td>${oauth2Application.homeUrl}</td>
-          <td>${oauth2Application.description}</td>
+          <td>${oidcApplication.homeUrl}</td>
+          <td>${oidcApplication.description}</td>
           <td>
             <button type="button" class="btn btn-info" data-toggle="popover">Secret</button>
             <div>
-              <p>Client Id: ${oauth2Application.clientId}</p>
-              <p>Client Secret: ${oauth2Application.clientSecret}</p>
+              <p>Client Id: ${oidcApplication.clientId}</p>
+              <p>Client Secret: ${oidcApplication.clientSecret}</p>
             </div>
           </td>
         </tr>
@@ -37,7 +37,7 @@
   </table>
   <#else>
   <div class="alert alert-info" role="alert">
-     <p>${t('info.noOAuth2Applications')}</p>
+     <p>${t('info.noOidcApplications')}</p>
   </div>
   </#list>
 

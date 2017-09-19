@@ -9,17 +9,22 @@ import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.util.Base32Utils;
+import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.ChangePasswordForm;
+import net.unit8.bouncr.web.form.TwoFactorAuthForm;
 import org.seasar.doma.jdbc.SelectOptions;
 
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
@@ -62,10 +67,20 @@ public class MyController {
                 "userActions", userActions);
     }
 
-    public HttpResponse account() {
+    public HttpResponse account(UserPermissionPrincipal principal) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(principal.getId());
+
         ChangePasswordForm form = new ChangePasswordForm();
+        OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
+        String twofaSecret = null;
+        if (otpKey != null) {
+            twofaSecret = Base32Utils.encode(otpKey.getKey());
+        }
         return templateEngine.render("my/account",
-                "user", form);
+                "user", user,
+                "changePassword", form,
+                "twofaSecret", twofaSecret);
     }
 
     @Transactional
@@ -84,11 +99,12 @@ public class MyController {
             }
 
             PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-            Random random = new Random();
-            passwordCredentialDao.update(
-                    user.getId(),
-                    form.getNewPassword(),
-                    RandomUtils.generateRandomString(random, 16));
+            String salt = RandomUtils.generateRandomString(16);
+            passwordCredentialDao.update(builder(new PasswordCredential())
+                            .set(PasswordCredential::setId, user.getId())
+                            .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getNewPassword(), salt, 100))
+                            .set(PasswordCredential::setSalt, salt)
+                            .build());
             userDao.update(user);
 
             AuditDao auditDao = daoProvider.getDao(AuditDao.class);
@@ -110,4 +126,20 @@ public class MyController {
         return UrlRewriter.redirect(MyController.class, "home", SEE_OTHER);
     }
 
+    @Transactional
+    public HttpResponse switchTwoFactorAuth(UserPermissionPrincipal principal, TwoFactorAuthForm form) {
+        OtpKeyDao otpKeyDao = daoProvider.getDao(OtpKeyDao.class);
+        if (Objects.equals(form.getEnabled(), "on")) {
+            otpKeyDao.insert(builder(new OtpKey())
+                    .set(OtpKey::setUserId, principal.getId())
+                    .set(OtpKey::setKey, RandomUtils.generateRandomString(20).getBytes())
+                    .build());
+        } else {
+            otpKeyDao.delete(builder(new OtpKey())
+                    .set(OtpKey::setUserId, principal.getId())
+                    .build());
+        }
+
+        return UrlRewriter.redirect(MyController.class, "account", SEE_OTHER);
+    }
 }

@@ -8,11 +8,13 @@ import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.Group;
+import net.unit8.bouncr.web.entity.PasswordCredential;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.UserForm;
 import org.seasar.doma.jdbc.SelectOptions;
@@ -23,6 +25,7 @@ import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Random;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 
 /**
@@ -66,9 +69,11 @@ public class UserController {
                 "isLock", isLock);
     }
 
-    public List<User> search(Parameters params) {
+    @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
+    public List<User> search(Parameters params, UserPrincipal principal) {
         String word = params.get("q");
         UserDao userDao = daoProvider.getDao(UserDao.class);
+        SelectOptions options = SelectOptions.get();
         return userDao.selectForIncrementalSearch(word + "%");
     }
 
@@ -92,11 +97,12 @@ public class UserController {
         userDao.insert(user);
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-        Random random = new Random();
-        passwordCredentialDao.insert(
-                user.getId(),
-                form.getPassword(),
-                RandomUtils.generateRandomString(random, 16));
+        String salt = RandomUtils.generateRandomString(16);
+        passwordCredentialDao.insert(builder(new PasswordCredential())
+                .set(PasswordCredential::setId, user.getId())
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
+                .set(PasswordCredential::setSalt, salt)
+                .build());
 
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         Group bouncrUserGroup = groupDao.selectByName("BOUNCR_USER");
@@ -128,11 +134,12 @@ public class UserController {
         userDao.update(user);
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-        Random random = new Random();
-        passwordCredentialDao.update(
-                user.getId(),
-                form.getPassword(),
-                RandomUtils.generateRandomString(random, 16));
+        String salt = RandomUtils.generateRandomString(16);
+        passwordCredentialDao.insert(builder(new PasswordCredential())
+                .set(PasswordCredential::setId, user.getId())
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
+                .set(PasswordCredential::setSalt, salt)
+                .build());
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
     }

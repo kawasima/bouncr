@@ -12,6 +12,13 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 
+/**
+ * The middleware for client authentication.
+ *
+ * A HTTP header "X-Client-DN" was set by Undertow client authentication.
+ *
+ * @author kawasima
+ */
 @Middleware(name = "ClientAuthenticate", dependencies = {"authenticate"})
 public class ClientAuthenticateMiddleware extends AbstractWebMiddleware {
     private boolean isAuthenticated(PrincipalAvailable request) {

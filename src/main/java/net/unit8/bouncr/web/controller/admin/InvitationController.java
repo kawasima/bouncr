@@ -47,8 +47,7 @@ public class InvitationController {
     @Transactional
     @RolesAllowed("CREATE_INVITATION")
     public HttpResponse create(InvitationForm form) {
-        Random random = new Random();
-        String code = RandomUtils.generateRandomString(random, 8);
+        String code = RandomUtils.generateRandomString(8);
         Invitation invitation = beansConverter.createFrom(form, Invitation.class);
         invitation.setCode(code);
         InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);

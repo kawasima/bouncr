@@ -16,6 +16,11 @@ import java.util.stream.Stream;
 
 import static enkan.util.BeanBuilder.builder;
 
+/**
+ * The middleware for annotation-based authorization.
+ *
+ * @author kawasima
+ */
 @Middleware(name = "authorizeControllerMethod", dependencies = "routing")
 public class AuthorizeControllerMethodMiddleware extends AbstractWebMiddleware {
     @Override
