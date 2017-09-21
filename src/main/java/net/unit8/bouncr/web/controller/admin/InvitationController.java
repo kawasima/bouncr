@@ -6,6 +6,7 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
 import net.unit8.bouncr.web.dao.InvitationDao;
@@ -35,6 +36,9 @@ public class InvitationController {
     @Inject
     private BeansConverter beansConverter;
 
+    @Inject
+    private BouncrConfiguration config;
+
     @RolesAllowed("CREATE_INVITATION")
     public HttpResponse newForm(UserPrincipal principal) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
@@ -47,7 +51,7 @@ public class InvitationController {
     @Transactional
     @RolesAllowed("CREATE_INVITATION")
     public HttpResponse create(InvitationForm form) {
-        String code = RandomUtils.generateRandomString(8);
+        String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
         Invitation invitation = beansConverter.createFrom(form, Invitation.class);
         invitation.setCode(code);
         InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);

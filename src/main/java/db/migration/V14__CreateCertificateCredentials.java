@@ -16,7 +16,7 @@ public class V14__CreateCertificateCredentials implements JdbcMigration {
         try(Statement stmt = connection.createStatement()) {
             DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("certificate_credentials"))
-                    .column(field("user_id", SQLDataType.BIGINT))
+                    .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("client_dn", SQLDataType.VARCHAR(150).nullable(false)))
                     .column(field("certificate", SQLDataType.BLOB.nullable(false)))
                     .constraints(

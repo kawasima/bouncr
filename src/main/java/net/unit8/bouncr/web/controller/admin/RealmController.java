@@ -8,14 +8,8 @@ import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.component.RealmCache;
-import net.unit8.bouncr.web.dao.AssignmentDao;
-import net.unit8.bouncr.web.dao.GroupDao;
-import net.unit8.bouncr.web.dao.RealmDao;
-import net.unit8.bouncr.web.dao.RoleDao;
-import net.unit8.bouncr.web.entity.Assignment;
-import net.unit8.bouncr.web.entity.Group;
-import net.unit8.bouncr.web.entity.Realm;
-import net.unit8.bouncr.web.entity.Role;
+import net.unit8.bouncr.web.dao.*;
+import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.RealmForm;
 import org.seasar.doma.jdbc.SelectOptions;
 
@@ -44,16 +38,24 @@ public class RealmController {
     @RolesAllowed({"LIST_REALMS", "LIST_ANY_REALMS"})
     public HttpResponse listByApplicationId(Parameters params, UserPrincipal principal) {
         Long applicationId = params.getLong("applicationId");
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        Application application = applicationDao.selectById(applicationId);
+
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
         SelectOptions options = SelectOptions.get();
         List<Realm> realms = realmDao.selectByApplicationId(applicationId, principal, options);
+
         return templateEngine.render("admin/realm/list",
-                "applicationId", applicationId,
+                "application", application,
                 "realms", realms);
     }
 
     @RolesAllowed("CREATE_REALM")
-    public HttpResponse newForm(RealmForm form) {
+    public HttpResponse newForm(Parameters params) {
+        RealmForm form = new RealmForm();
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        Application application = applicationDao.selectById(params.getLong("applicationId"));
+
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectAll();
 
@@ -64,6 +66,7 @@ public class RealmController {
 
         return templateEngine.render("admin/realm/new",
                 "realm", form,
+                "appliction", application,
                 "writeProtected", false,
                 "groups", groups,
                 "roles", roles);
@@ -93,6 +96,10 @@ public class RealmController {
         RealmDao realmDao = daoProvider.getDao(RealmDao.class);
         Realm realm = realmDao.selectById(params.getLong("id"));
 
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        Application application = applicationDao.selectById(realm.getApplicationId());
+
+
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectAll();
 
@@ -116,6 +123,7 @@ public class RealmController {
 
         return templateEngine.render("admin/realm/edit",
                 "realm", form,
+                "application", application,
                 "writeProtected", realm.getWriteProtected(),
                 "groups", groups,
                 "roles", roles);

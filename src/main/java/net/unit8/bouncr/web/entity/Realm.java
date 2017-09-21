@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import org.seasar.doma.*;
 
 import java.io.Serializable;
+import java.util.regex.Pattern;
 
 /**
  * @author kawasima
@@ -24,4 +25,7 @@ public class Realm implements Serializable {
     private String description;
     private Long applicationId;
     private Boolean writeProtected;
+
+    @Transient
+    private transient Pattern pathPattern;
 }

@@ -41,7 +41,7 @@
 <#list oauth2Invitations>
 <div class="form-group">
   <#items as oauth2Invitation>
-  <button class="btn" type="button">${oauth2Invitation.oauth2ProviderId}</button>
+  <button class="btn" type="button">${oauth2Invitation.oidcProviderId}</button>
   </#items>
 </div>
 </#list>

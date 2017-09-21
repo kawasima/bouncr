@@ -14,7 +14,7 @@ public class RandomUtils {
      * @param length the length of generated string
      * @return a generated random sting
      */
-    public static String generateRandomString(Random random, int length) {
+    public static String generateRandomString(int length, SecureRandom random) {
         return random.ints(48,122)
                 .filter(i-> (i<57 || i>65) && (i <90 || i>97))
                 .mapToObj(i -> (char) i)
@@ -26,7 +26,7 @@ public class RandomUtils {
     public static String generateRandomString(int length) {
         try {
             SecureRandom prng = SecureRandom.getInstance("NativePRNGNonBlocking");
-            return generateRandomString(prng, length);
+            return generateRandomString(length, prng);
         } catch (NoSuchAlgorithmException e) {
             throw new UnreachableException(e);
         }

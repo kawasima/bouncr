@@ -32,15 +32,15 @@
     </li>
     </#if>
 
-    <#if hasAnyPermissions(userPrincipal, "LIST_OIDC_APPLICATIONS", "LIST_ANY_OIDC_APPLICATIONS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_OIDC_APPLICATIONS")>
     <li class="list-group-item">
-      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OidcApplicationController', 'list')}"><i class="fa fa-ticket" aria-hidden="true"></i>OpenId connect Applications</a>
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OidcApplicationController', 'list')}">OpenID Connect Applications</a>
     </li>
     </#if>
 
-    <#if hasAnyPermissions(userPrincipal, "LIST_OAUTH2_PROVIDERS", "LIST_ANY_OAUTH2_PROVIDERS")>
+    <#if hasAnyPermissions(userPrincipal, "LIST_OIDC_PROVIDERS")>
     <li class="list-group-item">
-      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OAuth2ProviderController', 'list')}"><i class="fa fa-ticket" aria-hidden="true"></i>OAuth2 Providers</a>
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.OidcProviderController', 'list')}">OpenID Connect Providers</a>
     </li>
     </#if>
 

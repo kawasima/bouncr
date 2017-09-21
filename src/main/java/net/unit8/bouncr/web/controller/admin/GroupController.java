@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
+import static enkan.util.ThreadingUtils.some;
 
 /**
  * A controller about group actions.
@@ -90,10 +91,13 @@ public class GroupController {
             groupDao.insert(group);
 
             UserDao userDao = daoProvider.getDao(UserDao.class);
-            form.getUserId().stream().forEach(userId -> {
-                User user = userDao.selectById(userId);
-                groupDao.addUser(group, user);
-            });
+            some(form.getUserId(),
+                    uid -> uid.stream()
+                            .map(userId -> {
+                                User user = userDao.selectById(userId);
+                                return groupDao.addUser(group, user);
+                            })
+                            .collect(Collectors.toList()));
 
             return UrlRewriter.redirect(GroupController.class, "list", SEE_OTHER);
         }
@@ -110,7 +114,7 @@ public class GroupController {
 
         List<Long> userIds = userDao.selectByGroupId(group.getId())
                 .stream()
-                .map(user -> user.getId())
+                .map(User::getId)
                 .collect(Collectors.toList());
 
         return templateEngine.render("admin/group/edit",
@@ -141,11 +145,13 @@ public class GroupController {
             UserDao userDao = daoProvider.getDao(UserDao.class);
             groupDao.clearUsers(group.getId());
 
-            form.getUserId().stream().forEach(userId -> {
-                User user = userDao.selectById(userId);
-                groupDao.addUser(group, user);
-            });
-
+            some(form.getUserId(),
+                    uid -> uid.stream()
+                            .map(userId -> {
+                                User user = userDao.selectById(userId);
+                                return groupDao.addUser(group, user);
+                            })
+                            .collect(Collectors.toList()));
             return UrlRewriter.redirect(GroupController.class, "list", SEE_OTHER);
         }
     }

@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.controller;
 
 import enkan.collection.Parameters;
 import enkan.component.doma2.DomaProvider;
+import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
@@ -51,7 +52,7 @@ public class MyController {
                 .selectForConditionalSearch(null, null, user.getAccount(),
                         SelectOptions.get().limit(10));
         String token = some(request.getCookies().get(config.getTokenName()),
-                cookie -> cookie.getValue())
+                Cookie::getValue)
                 .orElse(null);
         UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
         List<UserSession> userSessions = userSessionDao.selectByUserId(user.getId());
@@ -99,7 +100,7 @@ public class MyController {
             }
 
             PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-            String salt = RandomUtils.generateRandomString(16);
+            String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
             passwordCredentialDao.update(builder(new PasswordCredential())
                             .set(PasswordCredential::setId, user.getId())
                             .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getNewPassword(), salt, 100))
@@ -132,7 +133,7 @@ public class MyController {
         if (Objects.equals(form.getEnabled(), "on")) {
             otpKeyDao.insert(builder(new OtpKey())
                     .set(OtpKey::setUserId, principal.getId())
-                    .set(OtpKey::setKey, RandomUtils.generateRandomString(20).getBytes())
+                    .set(OtpKey::setKey, RandomUtils.generateRandomString(20, config.getSecureRandom()).getBytes())
                     .build());
         } else {
             otpKeyDao.delete(builder(new OtpKey())

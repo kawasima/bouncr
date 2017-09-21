@@ -60,18 +60,18 @@ public class Flake extends SystemComponent {
         return new ComponentLifecycle<Flake>() {
             @Override
             public void start(Flake component) {
-                clock = Clock.systemUTC();
-                lastTime = clock.millis();
-                macAddress = getMacAddress();
-                sequence = 0;
+                component.clock = Clock.systemUTC();
+                component.lastTime = clock.millis();
+                component.macAddress = getMacAddress();
+                component.sequence = 0;
             }
 
             @Override
             public void stop(Flake component) {
-                lastTime = clock.millis();
-                clock = null;
-                macAddress = null;
-                sequence = 0;
+                if (component.clock != null) component.lastTime = component.clock.millis();
+                component.clock = null;
+                component.macAddress = null;
+                component.sequence = 0;
             }
         };
     }

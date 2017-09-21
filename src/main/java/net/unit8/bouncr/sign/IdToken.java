@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import enkan.collection.OptionMap;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.MisconfigurationException;
+import net.unit8.bouncr.component.BouncrConfiguration;
 
 import java.security.*;
 import java.util.Base64;
@@ -17,6 +19,18 @@ public class IdToken extends SystemComponent {
     private ObjectMapper mapper;
     private Base64.Decoder base64Decoder;
     private Base64.Encoder base64Encoder;
+
+    private static final OptionMap ALGORITHMS = OptionMap.of(
+            "HS256", "HmacSHA256",
+            "HS384", "HmacSHA384",
+            "HS512", "HmacSHA512",
+            "RS256", "SHA256withRSA",
+            "RS384", "SHA384withRSA",
+            "RS512", "SHA512withRSA",
+            "PS256", "SHA256withRSAandMGF1",
+            "PS384", "SHA384withRSAandMGF1",
+            "PS512", "SHA512withRSAandMGF1"
+            );
 
     private String encodeHeader(IdTokenHeader header) {
         return some(header,
@@ -39,8 +53,9 @@ public class IdToken extends SystemComponent {
                 s -> Base64.getEncoder().encodeToString(s)).orElse(null);
 
         try {
-            Signature signature = Signature.getInstance("SHA256withRSAandMGF1", "BC");
-            SecureRandom prng = SecureRandom.getInstance("NativePRNGNonBlocking");
+            String signAlgorithm = ALGORITHMS.getString(header.getAlg());
+            Signature signature = Signature.getInstance(signAlgorithm, "BC");
+            SecureRandom prng = getDependency(BouncrConfiguration.class).getSecureRandom();
             signature.initSign(key, prng);
             signature.update(String.join(".", encodedHeader, encodedPayload).getBytes());
             String encodedSignature = Base64.getEncoder().encodeToString(signature.sign());

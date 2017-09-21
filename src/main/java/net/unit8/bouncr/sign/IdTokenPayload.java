@@ -17,4 +17,5 @@ public class IdTokenPayload implements Serializable {
     public String preferredUsername;
     public Long exp;
     public Long iat;
+    public Long nonce;
 }

@@ -19,8 +19,6 @@ import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.Random;
 
 import static enkan.util.BeanBuilder.builder;
 
@@ -40,12 +38,12 @@ public class SignUpController {
     public HttpResponse newForm(Parameters params) {
         String code = params.get("code");
         List<GroupInvitation> groupInvitations = Collections.emptyList();
-        List<OAuth2Invitation> oauth2Invitations = Collections.emptyList();
+        List<OidcInvitation> oauth2Invitations = Collections.emptyList();
         if (code != null) {
             InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
             Invitation invitation = invitationDao.selectByCode(code);
             invitationDao.selectGroupInvitations(invitation.getId());
-            invitationDao.selectOAuth2Invitations(invitation.getId());
+            invitationDao.selectOidcInvitations(invitation.getId());
         }
         SignUpForm form = new SignUpForm();
         form.setCode(code);
@@ -60,12 +58,12 @@ public class SignUpController {
     public HttpResponse create(SignUpForm form) {
         if (form.hasErrors()) {
             List<GroupInvitation> groupInvitations = Collections.emptyList();
-            List<OAuth2Invitation> oauth2Invitations = Collections.emptyList();
+            List<OidcInvitation> oauth2Invitations = Collections.emptyList();
             if (form.getCode() != null && !form.getCode().isEmpty()) {
                 InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
                 Invitation invitation = invitationDao.selectByCode(form.getCode());
                 invitationDao.selectGroupInvitations(invitation.getId());
-                invitationDao.selectOAuth2Invitations(invitation.getId());
+                invitationDao.selectOidcInvitations(invitation.getId());
             }
             return templateEngine.render("my/signUp/new",
                     "signUp", form,
@@ -83,7 +81,7 @@ public class SignUpController {
 
             if (config.isPasswordEnabled()) {
                 PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-                String salt = RandomUtils.generateRandomString(16);
+                String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
                 passwordCredentialDao.insert(builder(new PasswordCredential())
                         .set(PasswordCredential::setId, user.getId())
                         .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
@@ -106,11 +104,9 @@ public class SignUpController {
                             groupDao.addUser(group, user);
                         });
 
-                invitationDao.selectOAuth2Invitations(invitation.getId())
+                invitationDao.selectOidcInvitations(invitation.getId())
                         .stream()
-                        .forEach(oAuth2Invitation -> {
-                            userDao.connectToOAuth2Provider(user.getId(), oAuth2Invitation.getOauth2ProviderId(), oAuth2Invitation.getOauth2UserName());
-                        });
+                        .forEach(oidcInvitation -> userDao.connectToOAuth2Provider(user.getId(), oidcInvitation.getOidcProviderId(), oidcInvitation.getOidcSub()));
                 invitationDao.delete(invitation);
             }
 

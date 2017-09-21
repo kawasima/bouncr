@@ -6,6 +6,8 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.OidcApplicationDao;
@@ -33,6 +35,9 @@ public class OidcApplicationController {
 
     @Inject
     private BeansConverter beansConverter;
+
+    @Inject
+    private BouncrConfiguration config;
 
     @RolesAllowed({"LIST_OIDC_APPLICATIONS"})
     public HttpResponse list() {
@@ -67,10 +72,10 @@ public class OidcApplicationController {
         } else {
             OidcApplicationDao oidcApplicationDao = daoProvider.getDao(OidcApplicationDao.class);
             OidcApplication oidcApplication = beansConverter.createFrom(form, OidcApplication.class);
-            oidcApplication.setClientId(RandomUtils.generateRandomString(16));
-            oidcApplication.setClientSecret(RandomUtils.generateRandomString(32));
+            oidcApplication.setClientId(RandomUtils.generateRandomString(16, config.getSecureRandom()));
+            oidcApplication.setClientSecret(RandomUtils.generateRandomString(32, config.getSecureRandom()));
 
-            KeyPair keyPair = KeyUtils.generate(4096);
+            KeyPair keyPair = KeyUtils.generate(2048, config.getSecureRandom());
             oidcApplication.setPublicKey(keyPair.getPublic().getEncoded());
             oidcApplication.setPrivateKey(keyPair.getPrivate().getEncoded());
 

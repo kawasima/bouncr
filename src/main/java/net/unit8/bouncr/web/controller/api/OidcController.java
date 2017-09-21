@@ -10,6 +10,7 @@ import enkan.util.CodecUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.sign.IdToken;
 import net.unit8.bouncr.sign.IdTokenHeader;
 import net.unit8.bouncr.sign.IdTokenPayload;
@@ -26,7 +27,9 @@ import javax.inject.Inject;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 
 import static enkan.util.BeanBuilder.builder;
@@ -47,6 +50,9 @@ public class OidcController {
     @Inject
     private IdToken idToken;
 
+    @Inject
+    private BouncrConfiguration config;
+
     public HttpResponse authorize(Parameters params, UserPermissionPrincipal principal, HttpRequest request) {
         if (principal != null) {
             String clientId = params.get("client_id");
@@ -55,7 +61,7 @@ public class OidcController {
             String redirectUrl = (String) params.getOrDefault("redirect_url", oidcApplication.getCallbackUrl());
 
             KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
-            String code = RandomUtils.generateRandomString(16);
+            String code = RandomUtils.generateRandomString(16, config.getSecureRandom());
             authorizationCodeStore.write(code, principal.getId());
 
             if (redirectUrl.contains("?")) {
@@ -71,7 +77,18 @@ public class OidcController {
         }
     }
 
-    public HttpResponse token(Parameters params) {
+    private String[] getClientIdAndSecret(HttpRequest request, Parameters params) {
+        return Optional.ofNullable(request.getHeaders().get("Authorization"))
+                .filter(authz ->  authz.startsWith("Basic"))
+                .map(   authz ->  authz.split("\\s+", 2))
+                .filter(tokens -> tokens.length == 2)
+                .map(   tokens -> Base64.getUrlDecoder().decode(tokens[1]))
+                .map(   bytes ->  new String(bytes).split(":", 2))
+                .filter(idAndSecret -> idAndSecret.length == 2)
+                .orElseGet(() -> new String[]{ params.get("client_id"), params.get("client_secret")});
+    }
+
+    public HttpResponse token(HttpRequest request, Parameters params) {
         KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
         Long userId = (Long) authorizationCodeStore.read(params.get("code"));
         if (userId == null) {
@@ -81,16 +98,20 @@ public class OidcController {
         }
         authorizationCodeStore.delete(params.get("code"));
 
+        String[] clientIdAndSecret = getClientIdAndSecret(request, params);
+        String clientId = clientIdAndSecret[0];
+        String clientSecret = clientIdAndSecret[1];
+
         OidcApplicationDao oidcApplicationDao = daoProvider.getDao(OidcApplicationDao.class);
-        OidcApplication oidcApplication = oidcApplicationDao.selectByClientId(params.get("client_id"));
-        if (!Objects.equals(oidcApplication.getClientSecret(), params.get("client_secret"))) {
+        OidcApplication oidcApplication = oidcApplicationDao.selectByClientId(clientId);
+        if (!Objects.equals(oidcApplication.getClientSecret(), clientSecret)) {
             return builder(HttpResponseUtils.response("client secret is not authorized"))
                     .set(HttpResponse::setStatus, 401)
                     .build();
         }
 
         KeyValueStore accessTokenStore = storeProvider.getStore(ACCESS_TOKEN);
-        String accessToken = RandomUtils.generateRandomString(16);
+        String accessToken = RandomUtils.generateRandomString(16, config.getSecureRandom());
         accessTokenStore.write(accessToken, accessToken);
 
         UserDao userDao = daoProvider.getDao(UserDao.class);

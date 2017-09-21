@@ -23,7 +23,7 @@ public class V17__CreateInvitations implements JdbcMigration {
                     .column(field("invited_at", SQLDataType.TIMESTAMP.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("invitation_id")),
-                            constraint().unique(field("code")),constraint()
+                            constraint().unique(field("code"))
                     ).getSQL();
             stmt.execute(ddl);
 
@@ -38,15 +38,15 @@ public class V17__CreateInvitations implements JdbcMigration {
                     ).getSQL();
             stmt.execute(ddl);
 
-            ddl = create.createTable(table("oauth2_invitations"))
-                    .column(field("oauth2_invitation_id", SQLDataType.BIGINT.identity(true)))
+            ddl = create.createTable(table("oidc_invitations"))
+                    .column(field("oidc_invitation_id", SQLDataType.BIGINT.identity(true)))
                     .column(field("invitation_id", SQLDataType.BIGINT.nullable(false)))
-                    .column(field("oauth2_provider_id", SQLDataType.BIGINT.nullable(false)))
-                    .column(field("oauth2_user_name", SQLDataType.VARCHAR(255).nullable(false)))
+                    .column(field("oidc_provider_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("oidc_sub", SQLDataType.VARCHAR(255).nullable(false)))
                     .constraints(
-                            constraint().primaryKey(field("oauth2_invitation_id")),
+                            constraint().primaryKey(field("oidc_invitation_id")),
                             constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")),
-                            constraint().foreignKey(field("oauth2_provider_id")).references(table("oauth2_providers"), field("oauth2_provider_id"))
+                            constraint().foreignKey(field("oidc_provider_id")).references(table("oidc_providers"), field("oidc_provider_id"))
                     ).getSQL();
             stmt.execute(ddl);
 

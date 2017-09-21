@@ -54,7 +54,7 @@ public interface UserDao {
     }
 
     @Select
-    List<User> selectForIncrementalSearch(String word);
+    List<User> selectForIncrementalSearch(String word, UserPrincipal principal, SelectOptions options);
 
     @Insert
     int insert(User user);

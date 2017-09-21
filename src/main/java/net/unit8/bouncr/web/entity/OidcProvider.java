@@ -7,12 +7,12 @@ import org.seasar.doma.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "oauth2_providers")
+@Table(name = "oidc_providers")
 @Data
 @EqualsAndHashCode
-public class OAuth2Provider implements Serializable {
+public class OidcProvider implements Serializable {
     @Id
-    @Column(name = "oauth2_provider_id")
+    @Column(name = "oidc_provider_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -22,5 +22,8 @@ public class OAuth2Provider implements Serializable {
     private String scope;
     private String responseType;
     private String tokenEndpoint;
-    private String authorizationBaseUrl;
+    private String authorizationEndpoint;
+
+    @Column(name = "token_endpoint_auth_method")
+    private TokenEndpointAuthMethod tokenEndpointAuthMethod;
 }

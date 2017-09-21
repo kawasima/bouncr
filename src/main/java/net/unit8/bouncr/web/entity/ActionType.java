@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.entity;
 
 import org.seasar.doma.Domain;
 
+import java.util.Objects;
 import java.util.stream.Stream;
 
 @Domain(valueType = Long.class, factoryMethod = "of", accessorMethod = "getId")
@@ -28,7 +29,7 @@ public enum ActionType {
 
     public static ActionType of(Long id) {
         return Stream.of(ActionType.values())
-                .filter(type -> type.getId() == id)
+                .filter(type -> Objects.equals(type.getId(), id))
                 .findAny()
                 .orElseGet(null);
     }

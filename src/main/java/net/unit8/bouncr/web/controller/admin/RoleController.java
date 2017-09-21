@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
+import static enkan.util.ThreadingUtils.some;
 
 /**
  * A controller for role actions.
@@ -93,9 +94,11 @@ public class RoleController {
             roleDao.insert(role);
 
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-            form.getPermissionId().stream()
-                    .map(permissionId -> permissionDao.selectById(permissionId))
-                    .forEach(p -> roleDao.addPermission(role, p));
+            some(form.getPermissionId(),
+                    pids ->pids.stream()
+                            .map(permissionDao::selectById)
+                            .map(p -> roleDao.addPermission(role, p))
+                            .collect(Collectors.toList()));
             return UrlRewriter.redirect(RoleController.class, "list", SEE_OTHER);
         }
     }
@@ -114,9 +117,11 @@ public class RoleController {
 
             roleDao.clearPermissions(role);
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-            form.getPermissionId().stream()
-                    .map(permissionId -> permissionDao.selectById(permissionId))
-                    .forEach(p -> roleDao.addPermission(role, p));
+            some(form.getPermissionId(),
+                    pids ->pids.stream()
+                            .map(permissionDao::selectById)
+                            .map(p -> roleDao.addPermission(role, p))
+                            .collect(Collectors.toList()));
 
             return UrlRewriter.redirect(RoleController.class, "list", SEE_OTHER);
         }

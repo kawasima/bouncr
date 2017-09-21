@@ -47,7 +47,7 @@ public class ApplicationController {
                 "application", application);
     }
 
-    @RolesAllowed("MODIFY_APPLICATION")
+    @RolesAllowed({"MODIFY_APPLICATION", "MODIFY_ANY_APPLICATION"})
     public HttpResponse edit(Parameters params) {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         Application application = applicationDao.selectById(params.getLong("id"));
@@ -66,6 +66,9 @@ public class ApplicationController {
             Application application = beansConverter.createFrom(form, Application.class);
             application.setWriteProtected(false);
             application.setId(null);
+            if (application.getVirtualPath().endsWith("/")) {
+                application.setVirtualPath(application.getVirtualPath().replaceFirst("[\\s/]*$", ""));
+            }
 
             ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
             applicationDao.insert(application);

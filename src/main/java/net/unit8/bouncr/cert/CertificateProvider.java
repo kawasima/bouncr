@@ -43,7 +43,7 @@ public class CertificateProvider extends SystemComponent {
         X500Name issuerName = new X500Name(ca.getCertificate().getSubjectX500Principal().getName());
         X500Name subjectName = new X500Name(clientDn);
 
-        KeyPair kp = KeyUtils.generate(config.getCertConfiguration().getKeyLength());
+        KeyPair kp = KeyUtils.generate(config.getCertConfiguration().getKeyLength(), config.getSecureRandom());
 
         Date notBefore = new Date(System.currentTimeMillis() - 86400000L);
         Date notAfter  = new Date(System.currentTimeMillis() + expiry.getSeconds() * 1000);

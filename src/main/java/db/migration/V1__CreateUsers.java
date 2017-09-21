@@ -32,12 +32,12 @@ public class V1__CreateUsers implements JdbcMigration {
             stmt.execute(ddl);
 
             stmt.execute(
-                    createIndex("idx_users_01")
+                    create.createIndex(name("idx_users_01"))
                             .on(table("users"), field("account"))
                             .getSQL()
             );
             stmt.execute(
-                    createIndex("idx_users_02")
+                    create.createIndex(name("idx_users_02"))
                             .on(table("users"), field("email"))
                             .getSQL()
             );

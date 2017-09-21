@@ -45,7 +45,8 @@ public class PermissionController {
     }
 
     @RolesAllowed("CREATE_PERMISSION")
-    public HttpResponse newForm(PermissionForm form) {
+    public HttpResponse newForm() {
+        PermissionForm form = new PermissionForm();
         return templateEngine.render("admin/permission/new",
                 "permission", form);
     }
@@ -68,6 +69,7 @@ public class PermissionController {
         } else {
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
             Permission permission = beansConverter.createFrom(form, Permission.class);
+            permission.setWriteProtected(false);
             permissionDao.insert(permission);
             return UrlRewriter.redirect(PermissionController.class, "list", SEE_OTHER);
         }

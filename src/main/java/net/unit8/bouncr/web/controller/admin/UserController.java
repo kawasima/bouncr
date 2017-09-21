@@ -8,6 +8,7 @@ import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
@@ -43,6 +44,9 @@ public class UserController {
     @Inject
     private BeansConverter beansConverter;
 
+    @Inject
+    private BouncrConfiguration config;
+
     @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
     public HttpResponse list(UserPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
@@ -74,7 +78,7 @@ public class UserController {
         String word = params.get("q");
         UserDao userDao = daoProvider.getDao(UserDao.class);
         SelectOptions options = SelectOptions.get();
-        return userDao.selectForIncrementalSearch(word + "%");
+        return userDao.selectForIncrementalSearch(word + "%", principal, options);
     }
 
     @RolesAllowed("CREATE_USER")
@@ -97,7 +101,7 @@ public class UserController {
         userDao.insert(user);
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-        String salt = RandomUtils.generateRandomString(16);
+        String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         passwordCredentialDao.insert(builder(new PasswordCredential())
                 .set(PasswordCredential::setId, user.getId())
                 .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
@@ -134,7 +138,7 @@ public class UserController {
         userDao.update(user);
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-        String salt = RandomUtils.generateRandomString(16);
+        String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         passwordCredentialDao.insert(builder(new PasswordCredential())
                 .set(PasswordCredential::setId, user.getId())
                 .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))

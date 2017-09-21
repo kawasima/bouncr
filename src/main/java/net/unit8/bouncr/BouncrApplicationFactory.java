@@ -99,7 +99,13 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.post("/role/:id").to(RoleController.class, "update");
                 ar.post("/role/:id/delete").to(RoleController.class, "delete");
 
-                ar.get("/oauth2provider").to(OAuth2ProviderController.class, "list");
+                ar.get("/oidcProvider").to(OidcProviderController.class, "list");
+                ar.get("/oidcProvider/new").to(OidcProviderController.class, "newForm");
+                ar.post("/oidcProvider").to(OidcProviderController.class, "create");
+                ar.get("/oidcProvider/:id/edit").to(OidcProviderController.class, "edit");
+                ar.post("/oidcProvider/:id").to(OidcProviderController.class, "update");
+                ar.post("/oidcProvider/:id/delete").to(OidcProviderController.class, "delete");
+
                 /* Routing for oauth2 application actions */
                 ar.get("/oidcApp").to(OidcApplicationController.class, "list");
                 ar.get("/oidcApp/new").to(OidcApplicationController.class, "newForm");

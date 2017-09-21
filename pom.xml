@@ -108,12 +108,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.scribejava</groupId>
-            <artifactId>scribejava-core</artifactId>
-            <version>4.2.0</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>3.8.1</version>
@@ -206,6 +200,12 @@
                             <artifactId>*</artifactId>
                         </exclusion>
                     </exclusions>
+                </dependency>
+
+                <dependency>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                    <version>5.1.44</version>
                 </dependency>
             </dependencies>
         </profile>

@@ -9,8 +9,8 @@ import java.sql.SQLException;
 
 public class V999__TestData implements JdbcMigration {
     private static final String INS_OAUTH2_PROVIDER =
-            "INSERT INTO oauth2_providers(name, api_key, api_secret, response_type, token_endpoint, authorization_base_url, scope) "
-                    + "VALUES(?,?,?,?,?,?,?)";
+            "INSERT INTO oidc_providers(name, api_key, api_secret, response_type, token_endpoint, authorization_endpoint, scope, token_endpoint_auth_method) "
+                    + "VALUES(?,?,?,?,?,?,?,?)";
 
     @Override
     public void migrate(Connection connection) throws Exception {
@@ -22,6 +22,7 @@ public class V999__TestData implements JdbcMigration {
             stmtOauth2Provider.setString(5, "https://www.googleapis.com/oauth2/v4/token");
             stmtOauth2Provider.setString(6, "https://accounts.google.com/o/oauth2/v2/auth");
             stmtOauth2Provider.setString(7, "openid");
+            stmtOauth2Provider.setString(8, "POST");
             stmtOauth2Provider.executeUpdate();
             connection.commit();
         } catch(SQLException ex) {

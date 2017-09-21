@@ -6,6 +6,6 @@
 
 <div class="form-group<#if permission.hasErrors("description")> has-error</#if>">
   <label for="description">${t('field.description')}</label>
-  <input id="description" class="form-control<#if permission.hasErrors("description")> is-invalid</#if>" type="text" name="name" value="${permission.description!''}"/>
+  <input id="description" class="form-control<#if permission.hasErrors("description")> is-invalid</#if>" type="text" name="description" value="${permission.description!''}"/>
   <span class="invalid-feedback"><#if permission.hasErrors("description")>${permission.getErrors("description")?join(",")}</#if></span>
 </div>

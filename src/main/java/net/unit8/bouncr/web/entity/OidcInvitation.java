@@ -6,16 +6,16 @@ import org.seasar.doma.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "oauth2_invitations")
+@Table(name = "oidc_invitations")
 @Data
-public class OAuth2Invitation implements Serializable {
+public class OidcInvitation implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "oauth2_invitation_id")
+    @Column(name = "oidc_invitation_id")
     private Long id;
 
     private Long invitationId;
 
-    private Long oauth2ProviderId;
-    private String oauth2UserName;
+    private Long oidcProviderId;
+    private String oidcSub;
 }

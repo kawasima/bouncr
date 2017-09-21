@@ -18,6 +18,7 @@ public class StoreProvider extends SystemComponent {
     private KeyValueStore bouncrTokenStore;
     private KeyValueStore authorizationCodeStore;
     private KeyValueStore accessTokenStore;
+    private KeyValueStore oidcSessionStore;
 
     @Override
     protected ComponentLifecycle lifecycle() {
@@ -32,6 +33,11 @@ public class StoreProvider extends SystemComponent {
                         AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getAuthorizationCodeExpires()))
                 );
                 provider.accessTokenStore = new JCacheStore();
+
+                provider.oidcSessionStore = new JCacheStore(
+                        AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getOidcSessionExpires()))
+                );
+
             }
 
             @Override
@@ -46,6 +52,7 @@ public class StoreProvider extends SystemComponent {
             case BOUNCR_TOKEN: return bouncrTokenStore;
             case AUTHORIZATION_CODE: return authorizationCodeStore;
             case ACCESS_TOKEN: return accessTokenStore;
+            case OIDC_SESSION: return oidcSessionStore;
             default: throw new IllegalArgumentException(storeType + " is unknown");
         }
     }
@@ -53,6 +60,7 @@ public class StoreProvider extends SystemComponent {
     public enum StoreType {
         BOUNCR_TOKEN,
         AUTHORIZATION_CODE,
-        ACCESS_TOKEN
+        ACCESS_TOKEN,
+        OIDC_SESSION
     }
 }

@@ -1,3 +1,3 @@
- ```
- % keytool -genkey -alias bouncr -keyalg RSA -keystore keystore.jks
- ```
+```
+% keytool -genkey -alias bouncr -keyalg RSA -keystore keystore.jks
+```

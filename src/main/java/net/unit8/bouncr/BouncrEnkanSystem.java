@@ -14,19 +14,17 @@ import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.cert.CertificateProvider;
 import net.unit8.bouncr.cert.ReloadableTrustManager;
-import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.component.Flake;
-import net.unit8.bouncr.component.RealmCache;
-import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.*;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
 import net.unit8.bouncr.sign.IdToken;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.security.SecureRandom;
 import java.security.Security;
+import java.time.Duration;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
-import static enkan.util.ThreadingUtils.some;
 
 /**
  * An EnkanSystem for Bouncr application.
@@ -44,7 +42,11 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
     public EnkanSystem create() {
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),
-                "config", new BouncrConfiguration(),
+                "config", builder(new BouncrConfiguration())
+                        .set(BouncrConfiguration::setPasswordPolicy, builder(new PasswordPolicy())
+                                .set(PasswordPolicy::setExpires, Duration.ofDays(10))
+                                .build())
+                        .build(),
                 "doma", new DomaProvider(),
                 "jackson", new JacksonBeansConverter(),
                 "storeprovider", new StoreProvider(),
@@ -59,7 +61,10 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "flyway", new FlywayMigration(),
                 "template", new FreemarkerTemplateEngine(),
                 "metrics", new MetricsComponent(),
-                "datasource", new HikariCPComponent(OptionMap.of("uri", "jdbc:h2:mem:test")),
+                "datasource", new HikariCPComponent(OptionMap.of(
+                        "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),
+                        "username", Env.get("JDBC_USER"),
+                        "password", Env.get("JDBC_PASSWORD"))),
                 "app", new ApplicationComponent("net.unit8.bouncr.BouncrApplicationFactory"),
                 "http", builder(new ReverseProxyComponent())
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))

@@ -24,7 +24,10 @@
   ${realm.url}
   <input type="hidden" name="url" value="${realm.url}"/>
   <#else>
-  <input id="url" class="form-control<#if realm.hasErrors("url")> is-invalid</#if>" type="text" name="url" value="${realm.url!''}"/>
+  <div class="input-group">
+    <span class="input-group-addon" id="url-addon">${application.virtualPath}/</span>
+    <input id="url" class="form-control<#if realm.hasErrors("url")> is-invalid</#if>" type="text" name="url" value="${realm.url!''}" aria-describedby="url-addon"/>
+  </div>
   <span class="invalid-feedback"><#if realm.hasErrors("url")>${realm.getErrors("url")?join(",")}</#if></span>
   </#if>
 </div>

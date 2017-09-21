@@ -67,6 +67,7 @@ public class MultiAppProxyClient implements ProxyClient {
             });
         } else {
             exchange.setStatusCode(404);
+            exchange.endExchange();
             return;
         }
 
@@ -75,7 +76,12 @@ public class MultiAppProxyClient implements ProxyClient {
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
-                callback.completed(exchange, new ProxyConnection(existing, application.getVirtualPath()));
+                String path = exchange.getRequestPath();
+                if (path.startsWith(application.getVirtualPath())) {
+                    exchange.setRequestPath(path.substring(application.getVirtualPath().length(), path.length()));
+                    exchange.setRequestURI(path.substring(application.getVirtualPath().length(), path.length()));
+                }
+                callback.completed(exchange, new ProxyConnection(existing, "/"));
                 return;
             } else {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
@@ -128,8 +134,13 @@ public class MultiAppProxyClient implements ProxyClient {
             connection.getCloseSetter().set((ChannelListener<Channel>) channel -> serverConnection.removeAttachment(clientAttachmentKey));
 
             exchange.setRelativePath("/");
-            //Realm realm = realmCache.matches(exchange.getRequestPath());
-            //Application application = realmCache.getApplication(realm);
+            Realm realm = realmCache.matches(exchange.getRequestPath());
+            Application application = realmCache.getApplication(realm);
+            String path = exchange.getRequestPath();
+            if (path.startsWith(application.getVirtualPath())) {
+                exchange.setRequestPath(path.substring(application.getVirtualPath().length(), path.length()));
+                exchange.setRequestURI(path.substring(application.getVirtualPath().length(), path.length()));
+            }
             callback.completed(exchange, new ProxyConnection(connection, "/"));
         }
 

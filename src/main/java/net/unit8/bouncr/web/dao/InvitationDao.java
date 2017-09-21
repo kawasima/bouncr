@@ -3,9 +3,8 @@ package net.unit8.bouncr.web.dao;
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.GroupInvitation;
 import net.unit8.bouncr.web.entity.Invitation;
-import net.unit8.bouncr.web.entity.OAuth2Invitation;
+import net.unit8.bouncr.web.entity.OidcInvitation;
 import org.seasar.doma.Dao;
-import org.seasar.doma.Delete;
 import org.seasar.doma.Insert;
 import org.seasar.doma.Select;
 import org.seasar.doma.jdbc.Config;
@@ -22,13 +21,13 @@ public interface InvitationDao {
     List<GroupInvitation> selectGroupInvitations(Long invitationId);
 
     @Select
-    List<OAuth2Invitation> selectOAuth2Invitations(Long invitationId);
+    List<OidcInvitation> selectOidcInvitations(Long invitationId);
 
     @Insert
     int insert(Invitation invitation);
 
     @Insert
-    int insert(OAuth2Invitation oAuth2Invitation);
+    int insert(OidcInvitation oidcInvitation);
 
     @Insert
     int insertGroupInvitation(GroupInvitation groupInvitation);
@@ -42,7 +41,7 @@ public interface InvitationDao {
                 .execute();
 
         DeleteBuilder.newInstance(config)
-                .sql("DELETE FROM oauth2_invitations ")
+                .sql("DELETE FROM oidc_invitations ")
                 .sql("WHERE invitation_id = ")
                 .param(long.class, invitation.getId())
                 .execute();
