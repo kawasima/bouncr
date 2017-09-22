@@ -13,6 +13,7 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 
+import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
 
 public class IdTokenTest {
@@ -23,7 +24,12 @@ public class IdTokenTest {
     }
     @Test
     public void test() throws IOException, NoSuchAlgorithmException {
-        EnkanSystem system = EnkanSystem.of("idToken", new IdToken());
+        EnkanSystem system = EnkanSystem.of(
+                "idToken", new IdToken(),
+                "config", new BouncrConfiguration()
+        ).relationships(
+                component("idToken").using("config")
+        );
         system.start();
         IdToken idToken = (IdToken)system.getComponent("idToken");
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");

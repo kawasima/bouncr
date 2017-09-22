@@ -1,6 +1,7 @@
 # Compiled class file
 *.class
 /target
+*-pom.xml
 
 # Log file
 *.log
@@ -31,3 +32,7 @@ src/dev/resources/*.jks
 src/dev/resources/*.p12
 package-*.json
 /node_modules
+
+# elm
+
+/elm-stuff

@@ -40,7 +40,8 @@ public class LdapClient extends SystemComponent {
                     env.put(Context.SECURITY_CREDENTIALS, component.password);
                     component.ldapContext = new InitialLdapContext(env, null);
                 } catch (NamingException e) {
-
+                    // FIXME
+                    throw new MisconfigurationException("", e);
                 }
             }
 

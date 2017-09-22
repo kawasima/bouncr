@@ -79,7 +79,13 @@ public class SignInController {
     @Inject
     private BouncrConfiguration config;
 
-    public HttpResponse signInForm(HttpRequest request, SignInForm form) {
+    public HttpResponse signInForm(HttpRequest request, SignInForm form, UserPermissionPrincipal principal) {
+        if (principal != null) {
+            return Optional.ofNullable(form.getUrl())
+                    .filter(url -> !url.isEmpty())
+                    .map(url -> HttpResponseUtils.redirect(url, SEE_OTHER))
+                    .orElse(UrlRewriter.redirect(MyController.class, "home", SEE_OTHER));
+        }
         String account = getAccountFromClientDN(request);
         if (account != null) {
             form.setAccount(account);
@@ -112,6 +118,10 @@ public class SignInController {
                     .set(HttpResponse::setCookies, Multimap.of("OIDC_SESSION_ID", cookie))
                     .build();
         }
+    }
+
+    private HttpResponse signInForm(HttpRequest request, SignInForm form) {
+        return signInForm(request, form ,null);
     }
 
     @Data
