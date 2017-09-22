@@ -154,7 +154,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new MetricsMiddleware<>());
         app.use(NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.StacktraceMiddleware"));
-        app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.TraceMiddleware"));
+        app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.TraceWebMiddleware"));
         app.use(new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
         app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.HttpStatusCatMiddleware"));
