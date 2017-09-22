@@ -35,7 +35,7 @@ Bouncer has following features:
 To build for production,
 
 ```
-mvn -P -dev package
+mvn -P \!dev package
 ```
 
 ## Developing
