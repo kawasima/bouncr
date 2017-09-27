@@ -66,7 +66,7 @@ public class RealmController {
 
         return templateEngine.render("admin/realm/new",
                 "realm", form,
-                "appliction", application,
+                "application", application,
                 "writeProtected", false,
                 "groups", groups,
                 "roles", roles);
