@@ -2,48 +2,45 @@ module GroupForm exposing (..)
 
 import Html exposing (Html, programWithFlags, button, div, text)
 import Html.Events exposing (onClick)
+import Types exposing (..)
+import Api exposing (..)
+import Rocket exposing (..)
 
 
 main : Program Flags Model Msg
 main =
     programWithFlags
-        { init = init
+        { init = init >> batchInit
         , view = view
-        , update = update
+        , update = update >> batchUpdate
         , subscriptions = subscriptions
         }
-
-
-type alias Flags =
-    { groupId : Maybe Int }
 
 
 
 -- MODEL
 
 
-type alias Model =
-    { groupId : Maybe Int }
-
-
-init : Flags -> ( Model, Cmd Msg )
+init : Flags -> ( Model, List (Cmd Msg) )
 init { groupId } =
-    ( { groupId = groupId }, Cmd.none )
+    { groupId = groupId
+    , selected = []
+    }
+        => []
 
 
 
 -- UPDATE
 
 
-type Msg
-    = NoOp
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, List (Cmd Msg) )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
+        GetGroupUsers ->
+            model => [ Api.getGroupUsers model ]
+
+        SetGroupUsers users ->
+            { model | selected = users }
 
 
 
