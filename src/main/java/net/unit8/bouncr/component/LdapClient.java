@@ -4,6 +4,8 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.FalteringEnvironmentException;
 import enkan.exception.MisconfigurationException;
+import net.jodah.failsafe.CircuitBreaker;
+import net.jodah.failsafe.Failsafe;
 
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
@@ -23,14 +25,16 @@ public class LdapClient extends SystemComponent {
     private String user;
     private String password;
     private String searchBase;
+    private BouncrConfiguration config;
 
-    LdapContext ldapContext;
+    private LdapContext ldapContext;
 
     @Override
     protected ComponentLifecycle lifecycle() {
         return new ComponentLifecycle<LdapClient>() {
             @Override
             public void start(LdapClient component) {
+                component.config = getDependency(BouncrConfiguration.class);
                 try {
                     Hashtable<String,String> env = new Hashtable<>();
                     env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -58,40 +62,41 @@ public class LdapClient extends SystemComponent {
         };
     }
 
+
     public boolean search(String account, String password) {
         String searchFilter = "(sAMAccountName=" + account + ")";
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-        NamingEnumeration<SearchResult> results = null;
-        try {
-            results = ldapContext.search(searchBase, searchFilter, searchControls);
-            if (results.hasMore()) {
-                SearchResult result = results.next();
-                String distinguishedName = result.getNameInNamespace();
-                Properties authEnv = new Properties();
-                authEnv.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-                authEnv.put(Context.PROVIDER_URL, getLdapUrl());
-                authEnv.put(Context.SECURITY_PRINCIPAL, distinguishedName);
-                authEnv.put(Context.SECURITY_CREDENTIALS, password);
-                InitialDirContext ctx = new InitialDirContext(authEnv);
-                return true;
-            }
-            return false;
-        } catch (AuthenticationException e) {
-            return false;
-        } catch (NamingException e) {
-            throw new MisconfigurationException("", e);
-        } finally {
-            if (results != null) {
-                try {
-                    while(results.hasMore());
-                    results.close();
-                } catch(NamingException ignore) {
-                }
-            }
-        }
-
+        return Failsafe.with(config.getLdapClientCircuitBreaker())
+                .get(() -> {
+                    NamingEnumeration<SearchResult> results = null;
+                    try {
+                        results = ldapContext.search(searchBase, searchFilter, searchControls);
+                        if (results.hasMore()) {
+                            SearchResult result = results.next();
+                            String distinguishedName = result.getNameInNamespace();
+                            Properties authEnv = new Properties();
+                            authEnv.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+                            authEnv.put(Context.PROVIDER_URL, getLdapUrl());
+                            authEnv.put(Context.SECURITY_PRINCIPAL, distinguishedName);
+                            authEnv.put(Context.SECURITY_CREDENTIALS, password);
+                            new InitialDirContext(authEnv);
+                            return true;
+                        }
+                        return false;
+                    } catch (AuthenticationException e) {
+                        return false;
+                    } finally {
+                        if (results != null) {
+                            try {
+                                while (results.hasMore()) ;
+                                results.close();
+                            } catch (NamingException ignore) {
+                            }
+                        }
+                    }
+                });
     }
 
     public String getLdapUrl() {

@@ -3,10 +3,15 @@ package net.unit8.bouncr.component;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
+import net.jodah.failsafe.CircuitBreaker;
+import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
 
+import javax.naming.NamingException;
+import java.net.SocketTimeoutException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.concurrent.TimeUnit;
 
 public class BouncrConfiguration extends SystemComponent {
     private boolean passwordEnabled = true;
@@ -19,6 +24,15 @@ public class BouncrConfiguration extends SystemComponent {
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private CertConfiguration certConfiguration;
     private SecureRandom secureRandom;
+    private RetryPolicy httpClientRetryPolicy = new RetryPolicy()
+            .retryOn(SocketTimeoutException.class)
+            .withBackoff(3, 10, TimeUnit.SECONDS);
+    private CircuitBreaker ldapClientCircuitBreaker = new CircuitBreaker()
+            .withFailureThreshold(5)
+            .withSuccessThreshold(3)
+            .withTimeout(5, TimeUnit.SECONDS)
+            .failOn(NamingException.class);
+
 
     @Override
     protected ComponentLifecycle lifecycle() {
@@ -104,6 +118,22 @@ public class BouncrConfiguration extends SystemComponent {
 
     public void setPasswordPolicy(PasswordPolicy passwordPolicy) {
         this.passwordPolicy = passwordPolicy;
+    }
+
+    public RetryPolicy getHttpClientRetryPolicy() {
+        return httpClientRetryPolicy;
+    }
+
+    public void setHttpClientRetryPolicy(RetryPolicy httpClientRetryPolicy) {
+        this.httpClientRetryPolicy = httpClientRetryPolicy;
+    }
+
+    public CircuitBreaker getLdapClientCircuitBreaker() {
+        return ldapClientCircuitBreaker;
+    }
+
+    public void setLdapClientCircuitBreaker(CircuitBreaker ldapClientCircuitBreaker) {
+        this.ldapClientCircuitBreaker = ldapClientCircuitBreaker;
     }
 
     public CertConfiguration getCertConfiguration() {

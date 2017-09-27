@@ -5,7 +5,7 @@ import net.unit8.bouncr.sign.IdToken;
 import net.unit8.bouncr.sign.IdTokenHeader;
 import net.unit8.bouncr.sign.IdTokenPayload;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.security.KeyPair;

@@ -1,10 +1,10 @@
 package net.unit8.bouncr.component;
 
 import enkan.system.EnkanSystem;
-import org.junit.Test;
 
 import static enkan.util.BeanBuilder.builder;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LdapClientTest {
     public void test() {

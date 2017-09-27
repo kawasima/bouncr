@@ -1,9 +1,7 @@
 package net.unit8.bouncr.component;
 
 import enkan.system.EnkanSystem;
-import org.junit.Test;
-
-import java.math.BigInteger;
+import org.junit.jupiter.api.Test;
 
 public class FlakeTest {
     @Test

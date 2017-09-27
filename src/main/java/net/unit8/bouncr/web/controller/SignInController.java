@@ -16,6 +16,7 @@ import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import lombok.Data;
+import net.jodah.failsafe.Failsafe;
 import net.unit8.bouncr.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -28,10 +29,7 @@ import net.unit8.bouncr.web.controller.data.OidcSession;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignInForm;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
+import okhttp3.*;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
@@ -46,6 +44,8 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
@@ -58,6 +58,14 @@ import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
 
 public class SignInController {
+    private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<HashMap<String, Object>>() {
+    };
+
+    private static final OkHttpClient OKHTTP = new OkHttpClient().newBuilder()
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build();
+
     @Inject
     private TemplateEngine templateEngine;
 
@@ -283,9 +291,8 @@ public class SignInController {
         OAuth2ProviderDto oauth2ProviderDto = beansConverter.createFrom(oauth2Provider, OAuth2ProviderDto.class);
         oauth2ProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
 
-        OkHttpClient okhttp = new OkHttpClient();
-        try {
-            InputStream in = okhttp.newCall(new Request.Builder()
+        HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
+            Response response =  OKHTTP.newCall(new Request.Builder()
                     .url(oauth2Provider.getTokenEndpoint())
                     .header("Authorization", "Basic " +
                             Base64.getUrlEncoder().encodeToString((oauth2Provider.getApiKey() + ":" + oauth2Provider.getApiSecret()).getBytes()))
@@ -293,39 +300,37 @@ public class SignInController {
                             "grant_type=authorization_code&code=" + params.get("code") +
                                     "&redirect_uri=" + oauth2ProviderDto.getRedirectUri()))
                     .build())
-                    .execute()
-                    .body()
-                    .byteStream();
-            TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {
-            };
-            ObjectMapper jsonMapper = new ObjectMapper();
-            HashMap<String, Object> map = jsonMapper.readValue(in, typeRef);
-            String encodedIdToken = (String) map.get("id_token");
-            String[] tokens = encodedIdToken.split("\\.", 3);
-            IdTokenPayload payload =idToken.decodePayload(tokens[1]);
-
-            if (payload.getSub() != null) {
-                User user = userDao.selectByOAuth2(oauth2Provider.getId(), payload.getSub());
-                if (user != null) {
-                    return signIn(user, request, params.get("url"));
-                } else {
-                    Invitation invitation = builder(new Invitation())
-                            .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
-                            .build();
-                    InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
-                    invitationDao.insert(invitation);
-                    invitationDao.insert(builder(new OidcInvitation())
-                            .set(OidcInvitation::setInvitationId, invitation.getId())
-                            .set(OidcInvitation::setOidcProviderId, oauth2Provider.getId())
-                            .set(OidcInvitation::setOidcSub, payload.getSub())
-                            .build());
-                    return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
-                }
+                    .execute();
+            if (response.code() == 503) throw new FalteringEnvironmentException();
+            try(InputStream in  = response.body().byteStream()) {
+                ObjectMapper jsonMapper = new ObjectMapper();
+                HashMap<String, Object> map = jsonMapper.readValue(in, GENERAL_JSON_REF);
+                return map;
             }
-            return signInForm(request, new SignInForm());
-        } catch (IOException e) {
-            throw new FalteringEnvironmentException(e);
+        });
+        String encodedIdToken = (String) res.get("id_token");
+        String[] tokens = encodedIdToken.split("\\.", 3);
+        IdTokenPayload payload =idToken.decodePayload(tokens[1]);
+
+        if (payload.getSub() != null) {
+            User user = userDao.selectByOAuth2(oauth2Provider.getId(), payload.getSub());
+            if (user != null) {
+                return signIn(user, request, params.get("url"));
+            } else {
+                Invitation invitation = builder(new Invitation())
+                        .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
+                        .build();
+                InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
+                invitationDao.insert(invitation);
+                invitationDao.insert(builder(new OidcInvitation())
+                        .set(OidcInvitation::setInvitationId, invitation.getId())
+                        .set(OidcInvitation::setOidcProviderId, oauth2Provider.getId())
+                        .set(OidcInvitation::setOidcSub, payload.getSub())
+                        .build());
+                return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
+            }
         }
+        return signInForm(request, new SignInForm());
     }
 
     @Transactional
