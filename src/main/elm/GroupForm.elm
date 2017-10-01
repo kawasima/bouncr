@@ -40,7 +40,7 @@ update msg model =
             model => [ Api.getGroupUsers model ]
 
         SetGroupUsers users ->
-            { model | selected = users }
+            { model | selected = users } => []
 
 
 

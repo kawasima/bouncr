@@ -10,4 +10,5 @@ import Rocket exposing ((=>))
 
 getGroupUsers : Model -> Cmd Msg
 getGroupUsers model =
-    Task.succeed []
+    -- Task.succeed []
+    Cmd.none
