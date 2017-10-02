@@ -78,7 +78,7 @@ public class UserController {
         String word = params.get("q");
         UserDao userDao = daoProvider.getDao(UserDao.class);
         SelectOptions options = SelectOptions.get();
-        return userDao.selectForIncrementalSearch(word + "%", principal, options);
+        return userDao.selectForIncrementalSearch(word, principal, options);
     }
 
     @RolesAllowed("CREATE_USER")
