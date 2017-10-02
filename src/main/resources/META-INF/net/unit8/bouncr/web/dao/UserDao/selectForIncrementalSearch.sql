@@ -1,5 +1,5 @@
 SELECT *
-FROM users
+FROM users U
 /*%if !principal.hasPermission("LIST_ANY_USERS") */
 JOIN memberships M ON M.user_id = U.user_id
 JOIN (SELECT IG.*
