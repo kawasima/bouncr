@@ -1,5 +1,7 @@
 module Types exposing (..)
 
+import Debounce exposing (Debounce)
+
 
 type alias Flags =
     { groupId : Maybe Int }
@@ -10,6 +12,7 @@ type alias Model =
     , selected : List User
     , searched : List User
     , query : String
+    , debounce : Debounce String
     }
 
 
@@ -33,3 +36,4 @@ type Msg
     | SetSearchedUsers (List User)
     | SearchUsers
     | SetQuery String
+    | DebounceMsg Debounce.Msg

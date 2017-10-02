@@ -1,8 +1,10 @@
-module GroupForm exposing (..)
+module GroupUsersSelecter exposing (..)
 
 import Html exposing (Html, programWithFlags, button, div, text, input)
 import Html.Events exposing (onClick, onInput)
 import Html.Attributes as Attrs
+import Time exposing (second)
+import Debounce exposing (Debounce)
 import Types exposing (..)
 import Api exposing (..)
 import Rocket exposing (..)
@@ -28,6 +30,7 @@ init { groupId } =
     , selected = []
     , searched = []
     , query = ""
+    , debounce = Debounce.init
     }
         => [ case groupId of
                 Just id ->
@@ -36,6 +39,22 @@ init { groupId } =
                 Nothing ->
                     Cmd.none
            ]
+
+
+debounceConfig : Debounce.Config Msg
+debounceConfig =
+    { strategy = Debounce.later (0.5 * second)
+    , transform = DebounceMsg
+    }
+
+
+debounceUpdate : Debounce.Msg -> Debounce String -> ( Debounce String, Cmd Msg )
+debounceUpdate msg deboune =
+    Debounce.update
+        debounceConfig
+        (Debounce.takeLast Api.searchUsers)
+        msg
+        deboune
 
 
 
@@ -64,7 +83,18 @@ update msg model =
             model => [ Api.searchUsers model.query ]
 
         SetQuery query ->
-            { model | query = query } => [ Api.searchUsers query ]
+            let
+                ( debounce, cmd ) =
+                    Debounce.push debounceConfig query model.debounce
+            in
+                { model | query = query, debounce = debounce } => [ cmd ]
+
+        DebounceMsg msg ->
+            let
+                ( debounce, cmd ) =
+                    debounceUpdate msg model.debounce
+            in
+                { model | debounce = debounce } => [ cmd ]
 
 
 
@@ -76,7 +106,6 @@ view model =
     div []
         [ text (toString model)
         , input [ onInput SetQuery, Attrs.value model.query ] []
-        , button [ onClick SearchUsers ] [ text "Incremental Searchだよ！" ]
         ]
 
 
