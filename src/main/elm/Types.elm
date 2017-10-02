@@ -6,8 +6,10 @@ type alias Flags =
 
 
 type alias Model =
-    { groupId : Maybe Int
+    { groupId : Maybe GroupId
     , selected : List User
+    , searched : List User
+    , query : String
     }
 
 
@@ -19,6 +21,15 @@ type alias User =
     }
 
 
+type alias GroupId =
+    Int
+
+
 type Msg
-    = GetGroupUsers
-    | SetGroupUsers (List User)
+    = NoOp
+    | FetchGroupUsers GroupId
+    | AddSelectedUser User
+    | AddSelectedUsers (List User)
+    | SetSearchedUsers (List User)
+    | SearchUsers
+    | SetQuery String

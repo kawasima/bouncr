@@ -1,14 +1,49 @@
 module Api exposing (..)
 
-import Http exposing (Error(..), Response, expectJson, expectString, expectStringResponse)
 import HttpBuilder exposing (..)
-import Json.Decode exposing (int, string, float, list, Decoder)
-import Json.Decode.Pipeline exposing (decode, required, optional, hardcoded)
+import Decoder
 import Types exposing (..)
 import Rocket exposing ((=>))
+import Debug
 
 
-getGroupUsers : Model -> Cmd Msg
-getGroupUsers model =
-    -- Task.succeed []
-    Cmd.none
+getGroupUsers : GroupId -> Cmd Msg
+getGroupUsers id =
+    let
+        toMsg result =
+            case result of
+                Err error ->
+                    toString error
+                        |> Debug.log
+                        |> always NoOp
+
+                Ok { data } ->
+                    AddSelectedUsers data
+    in
+        String.join "/" [ "admin", "api", "group", toString id, "users" ]
+            |> String.cons '/'
+            |> HttpBuilder.get
+            |> withHeaders [ "Accept" => "application/json" ]
+            |> withCredentials
+            |> attempt toMsg (jsonReader Decoder.users) stringReader
+
+
+searchUsers : String -> Cmd Msg
+searchUsers query =
+    let
+        toMsg result =
+            case result of
+                Err error ->
+                    toString error
+                        |> Debug.log
+                        |> always NoOp
+
+                Ok { data } ->
+                    SetSearchedUsers data
+    in
+        String.join "/" [ "admin", "api", "user", "search" ++ "?q=" ++ query ]
+            |> String.cons '/'
+            |> HttpBuilder.get
+            |> withHeaders [ "Accept" => "application/json" ]
+            |> withCredentials
+            |> attempt toMsg (jsonReader Decoder.users) stringReader

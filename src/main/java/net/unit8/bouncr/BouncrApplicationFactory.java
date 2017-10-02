@@ -27,6 +27,7 @@ import net.unit8.bouncr.web.controller.SignInController;
 import net.unit8.bouncr.web.controller.SignUpController;
 import net.unit8.bouncr.web.controller.admin.*;
 import net.unit8.bouncr.web.controller.api.OidcController;
+import net.unit8.bouncr.web.controller.api.GroupApiController;
 
 import java.util.*;
 import java.util.function.Function;
@@ -127,6 +128,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.scope("/api", api -> {
                     /* Routing for group apis */
                     api.post("/group/:id/users").to(net.unit8.bouncr.web.controller.api.admin.GroupController.class, "addUser");
+                    api.get("/group/:id/users").to(GroupApiController.class, "users");
+                    api.get("user/search").to(UserController.class, "search");
                 });
             });
 
