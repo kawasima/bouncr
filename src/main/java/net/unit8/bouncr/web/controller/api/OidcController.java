@@ -5,15 +5,14 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.middleware.session.KeyValueStore;
-import enkan.security.UserPrincipal;
 import enkan.util.CodecUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.sign.IdToken;
-import net.unit8.bouncr.sign.IdTokenHeader;
-import net.unit8.bouncr.sign.IdTokenPayload;
+import net.unit8.bouncr.sign.JsonWebToken;
+import net.unit8.bouncr.sign.JwtHeader;
+import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.component.StoreProvider;
@@ -24,13 +23,9 @@ import net.unit8.bouncr.web.entity.User;
 
 import javax.inject.Inject;
 
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
@@ -48,7 +43,7 @@ public class OidcController {
     private StoreProvider storeProvider;
 
     @Inject
-    private IdToken idToken;
+    private JsonWebToken jsonWebToken;
 
     @Inject
     private BouncrConfiguration config;
@@ -116,19 +111,19 @@ public class OidcController {
 
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(userId);
-        String idTokenSigned = idToken.sign(builder(new IdTokenPayload())
-                        .set(IdTokenPayload::setSub, user.getId().toString())
-                        .set(IdTokenPayload::setIss, "")
-                        .set(IdTokenPayload::setAud, oidcApplication.getClientId())
-                        .set(IdTokenPayload::setEmail, user.getEmail())
-                        .set(IdTokenPayload::setName, user.getName())
-                        .set(IdTokenPayload::setPreferredUsername, user.getAccount())
-                        .set(IdTokenPayload::setIat, (System.currentTimeMillis() / 1000) - 60)
-                        .set(IdTokenPayload::setExp, (System.currentTimeMillis() / 1000) + 3600)
+        String idTokenSigned = jsonWebToken.sign(builder(new JwtClaim())
+                        .set(JwtClaim::setSub, user.getId().toString())
+                        .set(JwtClaim::setIss, "")
+                        .set(JwtClaim::setAud, oidcApplication.getClientId())
+                        .set(JwtClaim::setEmail, user.getEmail())
+                        .set(JwtClaim::setName, user.getName())
+                        .set(JwtClaim::setPreferredUsername, user.getAccount())
+                        .set(JwtClaim::setIat, (System.currentTimeMillis() / 1000) - 60)
+                        .set(JwtClaim::setExp, (System.currentTimeMillis() / 1000) + 3600)
                         .build(),
-                builder(new IdTokenHeader())
-                        .set(IdTokenHeader::setAlg, "RS256")
-                        .set(IdTokenHeader::setKid, "")
+                builder(new JwtHeader())
+                        .set(JwtHeader::setAlg, "RS256")
+                        .set(JwtHeader::setKid, "")
                         .build(),
                 KeyUtils.decode(oidcApplication.getPrivateKey()));
 

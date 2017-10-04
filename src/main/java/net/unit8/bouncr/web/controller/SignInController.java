@@ -22,8 +22,8 @@ import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.LdapClient;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.sign.IdToken;
-import net.unit8.bouncr.sign.IdTokenPayload;
+import net.unit8.bouncr.sign.JsonWebToken;
+import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.controller.data.OidcSession;
 import net.unit8.bouncr.web.dao.*;
@@ -39,13 +39,11 @@ import org.seasar.doma.jdbc.UniqueConstraintException;
 
 import javax.inject.Inject;
 import javax.transaction.Transactional;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
@@ -82,7 +80,7 @@ public class SignInController {
     private LdapClient ldapClient;
 
     @Inject
-    private IdToken idToken;
+    private JsonWebToken jsonWebToken;
 
     @Inject
     private BouncrConfiguration config;
@@ -310,7 +308,7 @@ public class SignInController {
         });
         String encodedIdToken = (String) res.get("id_token");
         String[] tokens = encodedIdToken.split("\\.", 3);
-        IdTokenPayload payload =idToken.decodePayload(tokens[1]);
+        JwtClaim payload = jsonWebToken.decodePayload(tokens[1]);
 
         if (payload.getSub() != null) {
             User user = userDao.selectByOAuth2(oauth2Provider.getId(), payload.getSub());

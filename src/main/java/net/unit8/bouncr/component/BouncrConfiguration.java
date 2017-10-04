@@ -19,8 +19,7 @@ public class BouncrConfiguration extends SystemComponent {
     private long authorizationCodeExpires = 60L;
     private long oidcSessionExpires = 180L;
     private String tokenName = "BOUNCR_TOKEN";
-    private String idHeaderName = "X-Bouncr-Id";
-    private String permissionHeaderName = "X-Bouncr-Permissions";
+    private String backendHeaderName = "X-Bouncr-credential";
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private CertConfiguration certConfiguration;
     private SecureRandom secureRandom;
@@ -96,20 +95,8 @@ public class BouncrConfiguration extends SystemComponent {
         this.tokenName = tokenName;
     }
 
-    public String getIdHeaderName() {
-        return idHeaderName;
-    }
-
-    public void setIdHeaderName(String idHeaderName) {
-        this.idHeaderName = idHeaderName;
-    }
-
-    public String getPermissionHeaderName() {
-        return permissionHeaderName;
-    }
-
-    public void setPermissionHeaderName(String permissionHeaderName) {
-        this.permissionHeaderName = permissionHeaderName;
+    public String getBackendHeaderName() {
+        return backendHeaderName;
     }
 
     public PasswordPolicy getPasswordPolicy() {
@@ -151,4 +138,5 @@ public class BouncrConfiguration extends SystemComponent {
     public void setSecureRandom(SecureRandom secureRandom) {
         this.secureRandom = secureRandom;
     }
+
 }

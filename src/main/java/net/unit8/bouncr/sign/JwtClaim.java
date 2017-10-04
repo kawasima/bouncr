@@ -6,7 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-public class IdTokenPayload implements Serializable {
+public class JwtClaim implements Serializable {
     public String email;
     public String picture;
     public String sub;

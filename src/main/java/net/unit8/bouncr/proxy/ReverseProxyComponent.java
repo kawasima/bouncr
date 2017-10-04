@@ -38,11 +38,15 @@ import net.unit8.bouncr.cert.ReloadableTrustManager;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.sign.JsonWebToken;
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 import org.xnio.streams.ChannelInputStream;
 
-import javax.net.ssl.*;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -97,12 +101,13 @@ public class ReverseProxyComponent extends WebServerComponent {
                 RealmCache realmCache = getDependency(RealmCache.class);
                 ApplicationComponent app = getDependency(ApplicationComponent.class);
                 BouncrConfiguration config = getDependency(BouncrConfiguration.class);
+                JsonWebToken jwt = getDependency(JsonWebToken.class);
 
                 if (server == null) {
                     OptionMap options = buildOptionMap();
 
                     HttpHandler appHandler = createAdminApp((WebApplication) app.getApplication());
-                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(config, storeProvider.getStore(BOUNCR_TOKEN), realmCache);
+                    MultiAppProxyClient proxyClient = new MultiAppProxyClient(config, storeProvider.getStore(BOUNCR_TOKEN), realmCache, jwt);
                     ProxyHandler proxyHandler = new ProxyHandler(proxyClient, maxRequestTime, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded);
 
                     IdentityManager identityManager = new IdentityManager() {

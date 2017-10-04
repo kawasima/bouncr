@@ -1,5 +1,6 @@
 package net.unit8.bouncr.proxy;
 
+import enkan.exception.MisconfigurationException;
 import enkan.middleware.session.KeyValueStore;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
@@ -15,6 +16,8 @@ import io.undertow.util.HttpString;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
+import net.unit8.bouncr.sign.JsonWebToken;
+import net.unit8.bouncr.sign.JwtHeader;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.entity.Realm;
 import org.xnio.ChannelListener;
@@ -22,12 +25,16 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.Channel;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 
 /**
@@ -41,12 +48,18 @@ public class MultiAppProxyClient implements ProxyClient {
     private final KeyValueStore store;
     private final RealmCache realmCache;
     private final BouncrConfiguration config;
+    private final JsonWebToken jwt;
+    private final JwtHeader jwtHeader;
 
-    public MultiAppProxyClient(BouncrConfiguration config, KeyValueStore store, RealmCache realmCache) {
+    public MultiAppProxyClient(BouncrConfiguration config, KeyValueStore store, RealmCache realmCache, JsonWebToken jwt) {
         client = UndertowClient.getInstance();
         this.config = config;
         this.store = store;
         this.realmCache = realmCache;
+        this.jwt = jwt;
+        this.jwtHeader = builder(new JwtHeader())
+                .set(JwtHeader::setAlg, "none")
+                .build();
     }
 
     @Override
@@ -54,15 +67,28 @@ public class MultiAppProxyClient implements ProxyClient {
         return PROXY_TARGET;
     }
 
+
+    private String calculatePathTo(String path, Application application) {
+        String passTo = application.getUriToPass().getPath();
+        if (passTo != null && passTo.endsWith("/")) {
+            passTo = passTo.substring(0, passTo.length() - 1);
+        }
+        return passTo + path.substring(application.getVirtualPath().length(), path.length());
+    }
     @Override
     public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         Realm realm = realmCache.matches(exchange.getRequestPath());
         if (realm != null) {
             parseToken(exchange).ifPresent(token -> {
                 Optional<UserPermissionPrincipal> principal = authenticate(realm.getId(), token);
+
                 principal.ifPresent(p -> {
-                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getIdHeaderName()), p.getName());
-                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getPermissionHeaderName()), String.join(",", p.getPermissions()));
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("sub", p.getName());
+                    body.put("email", p.getEmail());
+                    body.put("permissions", p.getPermissions());
+                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
+                            jwt.sign(body, jwtHeader, null));
                 });
             });
         } else {
@@ -78,8 +104,9 @@ public class MultiAppProxyClient implements ProxyClient {
                 //this connection already has a client, re-use it
                 String path = exchange.getRequestPath();
                 if (path.startsWith(application.getVirtualPath())) {
-                    exchange.setRequestPath(path.substring(application.getVirtualPath().length(), path.length()));
-                    exchange.setRequestURI(path.substring(application.getVirtualPath().length(), path.length()));
+                    String passTo = calculatePathTo(path, application);
+                    exchange.setRequestPath(passTo);
+                    exchange.setRequestURI(passTo);
                 }
                 callback.completed(exchange, new ProxyConnection(existing, "/"));
                 return;
@@ -88,10 +115,16 @@ public class MultiAppProxyClient implements ProxyClient {
             }
         }
 
-        client.connect(new ConnectNotifier(callback, exchange),
-                application.getUriToPass(),
-                exchange.getIoThread(),
-                exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
+        try {
+            URI uri = application.getUriToPass();
+            client.connect(new ConnectNotifier(callback, exchange),
+                    new URI(uri.getScheme(), /*userInfo*/null, uri.getHost(), uri.getPort(),
+                            /*path*/null, /*query*/null, /*fragment*/null),
+                    exchange.getIoThread(),
+                    exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
+        } catch (URISyntaxException e) {
+            throw new MisconfigurationException("", application.getUriToPass(), e);
+        }
     }
 
     private Optional<String> parseToken(HttpServerExchange exchange) {
@@ -138,8 +171,9 @@ public class MultiAppProxyClient implements ProxyClient {
             Application application = realmCache.getApplication(realm);
             String path = exchange.getRequestPath();
             if (path.startsWith(application.getVirtualPath())) {
-                exchange.setRequestPath(path.substring(application.getVirtualPath().length(), path.length()));
-                exchange.setRequestURI(path.substring(application.getVirtualPath().length(), path.length()));
+                String passTo = calculatePathTo(path, application);
+                exchange.setRequestPath(passTo);
+                exchange.setRequestURI(passTo);
             }
             callback.completed(exchange, new ProxyConnection(connection, "/"));
         }

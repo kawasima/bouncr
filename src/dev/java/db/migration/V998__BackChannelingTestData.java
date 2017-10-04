@@ -10,33 +10,18 @@ import java.util.Arrays;
 
 import static org.jooq.impl.DSL.*;
 
-public class V11__InsertAdminUser implements JdbcMigration {
+public class V998__BackChannelingTestData implements JdbcMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "LIST_ANY_USERS", "CREATE_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
-            "LOCK_ANY_USER", "UNLOCK_ANY_USER",
-            "LIST_ANY_GROUPS", "CREATE_GROUP", "MODIFY_ANY_GROUP", "DELETE_ANY_GROUP",
-            "CREATE_MEMBERSHIP", "DELETE_MEMBERSHIP",
-            "LIST_ANY_APPLICATIONS", "CREATE_APPLICATION", "MODIFY_ANY_APPLICATION", "DELETE_ANY_APPLICATION",
-            "LIST_ANY_REALMS", "CREATE_REALM", "MODIFY_ANY_REALM", "DELETE_ANY_REALM",
-            "LIST_ANY_ROLES", "CREATE_ROLE", "MODIFY_ANY_ROLE", "DELETE_ANY_ROLE",
-            "LIST_ANY_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_ANY_PERMISSION", "DELETE_ANY_PERMISSION",
-            "LIST_OIDC_APPLICATIONS", "CREATE_OIDC_APPLICATION", "MODIFY_OIDC_APPLICATION", "DELETE_OIDC_APPLICATION",
-            "LIST_OIDC_PROVIDERS", "CREATE_OIDC_PROVIDER", "MODIFY_OIDC_PROVIDER", "DELETE_OIDC_PROVIDER",
-            "CREATE INVITATION"
+            "READ_ANY_THREAD", "CREATE_BOARD", "MODIFY_BOARD", "READ_ANY_COMMENT",
     };
 
     private static final String[] OTHER_PERMISSIONS = new String[]{
-            "LIST_USERS", "MODIFY_USER", "DELETE_USER",
-            "LOCK_USER", "UNLOCK_USER",
-            "LIST_GROUPS", "MODIFY_GROUP", "DELETE_GROUP",
-            "LIST_APPLICATIONS", "MODIFY_APPLICATION", "DELETE_APPLICATION",
-            "LIST_REALMS", "MODIFY_REALM", "DELETE_REALM",
-            "LIST_ROLES", "MODIFY_ROLE", "DELETE_ROLE",
-            "LIST_PERMISSIONS", "MODIFY_PERMISSION", "DELETE_PERMISSION",
+            "READ_BOARD", "READ_THREAD", "WRITE_THREAD", "DELETE_COMMENT"
     };
+
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
         try (ResultSet rs = stmt.getGeneratedKeys()) {
-            while(rs.next()) {
+            while (rs.next()) {
                 return rs.getLong(1);
             }
             throw new SQLException("Generated key is not found.");
@@ -84,6 +69,12 @@ public class V11__InsertAdminUser implements JdbcMigration {
                         field("write_protected")
                 )
                 .values("?", "?", "?")
+                .getSQL();
+
+        final String SELECT_GROUP = create
+                .select(field("group_id"))
+                .from(table("groups"))
+                .where(field("name").eq("?"))
                 .getSQL();
 
         final String INS_PERMISSION = create
@@ -157,63 +148,135 @@ public class V11__InsertAdminUser implements JdbcMigration {
              PreparedStatement stmtInsGroup = connection.prepareStatement(INS_GROUP, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsRealm = connection.prepareStatement(INS_REALM, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsApplication = connection.prepareStatement(INS_APPLICATION, Statement.RETURN_GENERATED_KEYS);
-             PreparedStatement stmtInsAssignment = connection.prepareStatement(INS_ASSIGNMENT)
-             ) {
-            stmtInsUser.setString(1, "admin");
-            stmtInsUser.setString(2, "Admin User");
-            stmtInsUser.setString(3, "admin@example.com");
+             PreparedStatement stmtInsAssignment = connection.prepareStatement(INS_ASSIGNMENT);
+             PreparedStatement stmtSelGroup = connection.prepareStatement(SELECT_GROUP);
+        ) {
+            stmtInsUser.setString(1, "user1");
+            stmtInsUser.setString(2, "user1");
+            stmtInsUser.setString(3, "user1@example.com");
             stmtInsUser.setBoolean(4, true);
             stmtInsUser.executeUpdate();
-            Long userId = fetchGeneratedKey(stmtInsUser);
+            Long user1Id = fetchGeneratedKey(stmtInsUser);
 
-            stmtInsPasswdCred.setLong(1, userId);
-            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
-            stmtInsPasswdCred.setString(3, "0123456789012345");
-            stmtInsPasswdCred.setDate(4, new Date(System.currentTimeMillis() / 1000));
-            stmtInsPasswdCred.executeUpdate();
+            stmtInsUser.setString(1, "user2");
+            stmtInsUser.setString(2, "user2");
+            stmtInsUser.setString(3, "user2@example.com");
+            stmtInsUser.setBoolean(4, true);
+            stmtInsUser.executeUpdate();
+            Long user2Id = fetchGeneratedKey(stmtInsUser);
 
-            stmtInsGroup.setString(1, "BOUNCR_ADMIN");
-            stmtInsGroup.setString(2, "Bouncr administrators");
-            stmtInsGroup.setBoolean(3, true);
+            stmtInsUser.setString(1, "user3");
+            stmtInsUser.setString(2, "user3");
+            stmtInsUser.setString(3, "user3@example.com");
+            stmtInsUser.setBoolean(4, true);
+            stmtInsUser.executeUpdate();
+            Long user3Id = fetchGeneratedKey(stmtInsUser);
+
+            Arrays.asList(user1Id, user2Id, user3Id).forEach(id -> {
+                try {
+                    stmtInsPasswdCred.setLong(1, id);
+                    stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
+                    stmtInsPasswdCred.setString(3, "0123456789012345");
+                    stmtInsPasswdCred.setDate(4, new Date(System.currentTimeMillis() / 1000));
+                    stmtInsPasswdCred.executeUpdate();
+                } catch(SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            stmtInsGroup.setString(1, "BC_DEFAULT");
+            stmtInsGroup.setString(2, "Default group for BackChanneling");
+            stmtInsGroup.setBoolean(3, false);
             stmtInsGroup.executeUpdate();
-            Long adminGroupId = fetchGeneratedKey(stmtInsGroup);
+            Long defaultGroupId = fetchGeneratedKey(stmtInsGroup);
 
-            stmtInsGroup.setString(1, "BOUNCR_USER");
-            stmtInsGroup.setString(2, "Bouncr users");
-            stmtInsGroup.setBoolean(3, true);
+            stmtInsGroup.setString(1, "BC_BOARD1");
+            stmtInsGroup.setString(2, "A group for default board1");
+            stmtInsGroup.setBoolean(3, false);
             stmtInsGroup.executeUpdate();
-            Long userGroupId = fetchGeneratedKey(stmtInsGroup);
+            Long board1GroupId = fetchGeneratedKey(stmtInsGroup);
 
-            stmtInsMembership.setLong(1, userId);
-            stmtInsMembership.setLong(2, adminGroupId);
+            stmtInsMembership.setLong(1, user1Id);
+            stmtInsMembership.setLong(2, defaultGroupId);
             stmtInsMembership.executeUpdate();
 
-            stmtInsMembership.setLong(1, userId);
-            stmtInsMembership.setLong(2, userGroupId);
+            stmtInsMembership.setLong(1, user1Id);
+            stmtInsMembership.setLong(2, board1GroupId);
             stmtInsMembership.executeUpdate();
 
-            stmtInsApplication.setString(1, "BOUNCR");
-            stmtInsApplication.setString(2, "Bouncer application");
-            stmtInsApplication.setString(3, "");
-            stmtInsApplication.setString(4, "/");
-            stmtInsApplication.setString(5, "/my");
-            stmtInsApplication.setBoolean(6, true);
+            stmtInsMembership.setLong(1, user2Id);
+            stmtInsMembership.setLong(2, defaultGroupId);
+            stmtInsMembership.executeUpdate();
+
+            stmtSelGroup.setString(1, "BOUNCR_USER");
+            try (ResultSet rs = stmtSelGroup.executeQuery()) {
+                if (rs.next()) {
+                    final Long bouncrUserGroup = rs.getLong(1);
+
+                    Arrays.asList(user1Id, user2Id, user3Id).forEach(id -> {
+                        try {
+                            stmtInsMembership.setLong(1, id);
+                            stmtInsMembership.setLong(2, bouncrUserGroup);
+                            stmtInsMembership.executeUpdate();
+                        } catch (SQLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
+            }
+
+            // --------------------------------------
+            // Application & Realms
+            // --------------------------------------
+
+            stmtInsApplication.setString(1, "BackChanneling");
+            stmtInsApplication.setString(2, "BackChanneling");
+            stmtInsApplication.setString(3, "http://localhost:3009/bc/");
+            stmtInsApplication.setString(4, "/bc");
+            stmtInsApplication.setString(5, "http://localhost:3000/bc/");
+            stmtInsApplication.setBoolean(6, false);
             stmtInsApplication.executeUpdate();
             Long applicationId = fetchGeneratedKey(stmtInsApplication);
 
-            stmtInsRealm.setString(1, "BOUNCR");
-            stmtInsRealm.setString(2, "^/(admin|my)($|/.*)");
+            stmtInsRealm.setString(1, "BC_OPEN");
+            stmtInsRealm.setString(2, "(?!api).*");
             stmtInsRealm.setLong(3, applicationId);
-            stmtInsRealm.setString(4, "Bouncr Application Realm");
-            stmtInsRealm.setBoolean(5, true);
+            stmtInsRealm.setString(4, "BackChannelingOpen Realm");
+            stmtInsRealm.setBoolean(5, false);
             stmtInsRealm.executeUpdate();
-            Long bouncrRealmId = fetchGeneratedKey(stmtInsRealm);
+            Long bcOpenRealmId = fetchGeneratedKey(stmtInsRealm);
 
-            stmtInsRole.setString(1, "BOUNCR_ADMIN");
-            stmtInsRole.setString(2, "Bouncer administrations");
-            stmtInsRole.setBoolean(3, true);
+            stmtInsRealm.setString(1, "BC_DEFAULT");
+            stmtInsRealm.setString(2, "api/board/default/.*");
+            stmtInsRealm.setLong(3, applicationId);
+            stmtInsRealm.setString(4, "BackChanneling default board");
+            stmtInsRealm.setBoolean(5, false);
+            stmtInsRealm.executeUpdate();
+            Long bcDefaultRealmId = fetchGeneratedKey(stmtInsRealm);
+
+            stmtInsRealm.setString(1, "BC_BOARD1");
+            stmtInsRealm.setString(2, "api/board/board1/.*");
+            stmtInsRealm.setLong(3, applicationId);
+            stmtInsRealm.setString(4, "BackChanneling board1");
+            stmtInsRealm.setBoolean(5, false);
+            stmtInsRealm.executeUpdate();
+            Long bcBoard1RealmId = fetchGeneratedKey(stmtInsRealm);
+
+            // --------------------------------------
+            // Role
+            // --------------------------------------
+            stmtInsRole.setString(1, "BC_ADMIN");
+            stmtInsRole.setString(2, "BackChanneling administrations");
+            stmtInsRole.setBoolean(3, false);
             stmtInsRole.executeUpdate();
             Long adminRoleId = fetchGeneratedKey(stmtInsRole);
+
+            stmtInsRole.setString(1, "BC_USER");
+            stmtInsRole.setString(2, "BackChanneling users");
+            stmtInsRole.setBoolean(3, false);
+            stmtInsRole.executeUpdate();
+            Long userRoleId = fetchGeneratedKey(stmtInsRole);
+
 
             Arrays.asList(ADMIN_PERMISSIONS).forEach(perm -> {
                 try {
@@ -237,33 +300,33 @@ public class V11__InsertAdminUser implements JdbcMigration {
                     stmtInsPermission.setString(2, "");
                     stmtInsPermission.setBoolean(3, true);
                     stmtInsPermission.executeUpdate();
+                    Long permissionId = fetchGeneratedKey(stmtInsPermission);
+
+                    stmtInsRolePermission.setLong(1, userRoleId);
+                    stmtInsRolePermission.setLong(2, permissionId);
+                    stmtInsRolePermission.executeUpdate();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
             });
 
-            stmtInsRole.setString(1, "BOUNCR_USER");
-            stmtInsRole.setString(2, "Bouncr users");
-            stmtInsRole.setBoolean(3, true);
-            stmtInsRole.executeUpdate();
-            Long myRoleId = fetchGeneratedKey(stmtInsRole);
-            stmtInsPermission.setString(1, "READ_USER");
-            stmtInsPermission.setString(2, "");
-            stmtInsPermission.setBoolean(3, true);
-            stmtInsPermission.executeUpdate();
-            Long readUserPermissionId = fetchGeneratedKey(stmtInsPermission);
-            stmtInsRolePermission.setLong(1, myRoleId);
-            stmtInsRolePermission.setLong(2, readUserPermissionId);
-            stmtInsRolePermission.executeUpdate();
 
-            stmtInsAssignment.setLong(1, adminGroupId);
-            stmtInsAssignment.setLong(2, adminRoleId);
-            stmtInsAssignment.setLong(3, bouncrRealmId);
+            // All users have the BC_USER role at other board.
+            stmtInsAssignment.setLong(1, defaultGroupId);
+            stmtInsAssignment.setLong(2, userRoleId);
+            stmtInsAssignment.setLong(3, bcOpenRealmId);
             stmtInsAssignment.executeUpdate();
 
-            stmtInsAssignment.setLong(1, userGroupId);
-            stmtInsAssignment.setLong(2, myRoleId);
-            stmtInsAssignment.setLong(3, bouncrRealmId);
+            // All users have the BC_USER role at default board.
+            stmtInsAssignment.setLong(1, defaultGroupId);
+            stmtInsAssignment.setLong(2, userRoleId);
+            stmtInsAssignment.setLong(3, bcDefaultRealmId);
+            stmtInsAssignment.executeUpdate();
+
+            // The users in the Board1 group have the BC_USER role at board1.
+            stmtInsAssignment.setLong(1, board1GroupId);
+            stmtInsAssignment.setLong(2, userRoleId);
+            stmtInsAssignment.setLong(3, bcBoard1RealmId);
             stmtInsAssignment.executeUpdate();
         }
     }

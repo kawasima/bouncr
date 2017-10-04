@@ -16,10 +16,9 @@ import net.unit8.bouncr.cert.CertificateProvider;
 import net.unit8.bouncr.cert.ReloadableTrustManager;
 import net.unit8.bouncr.component.*;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
-import net.unit8.bouncr.sign.IdToken;
+import net.unit8.bouncr.sign.JsonWebToken;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import java.security.SecureRandom;
 import java.security.Security;
 import java.time.Duration;
 
@@ -56,7 +55,7 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                         .set(ReloadableTrustManager::setTruststorePath, Env.getString("TRUSTSTORE_PATH", ""))
                         .set(ReloadableTrustManager::setTruststorePassword, Env.getString("TRUSTSTORE_PASSWORD", ""))
                         .build(),
-                "idToken", new IdToken(),
+                "jwt", new JsonWebToken(),
                 "realmCache", new RealmCache(),
                 "flyway", new FlywayMigration(),
                 "template", new FreemarkerTemplateEngine(),
@@ -74,10 +73,10 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                         .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))
                         .build()
         ).relationships(
-                component("http").using("app", "storeprovider", "realmCache", "trustManager", "config"),
+                component("http").using("app", "storeprovider", "realmCache", "trustManager", "config", "jwt"),
                 component("app").using(
                         "storeprovider", "datasource", "template", "doma", "jackson", "metrics",
-                        "realmCache", "config", "idToken", "certificate", "trustManager"),
+                        "realmCache", "config", "jwt", "certificate", "trustManager"),
                 component("storeprovider").using("config"),
                 component("realmCache").using("doma"),
                 component("doma").using("datasource", "flyway"),
