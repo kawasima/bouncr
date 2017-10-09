@@ -37,7 +37,7 @@ public class RealmCache extends SystemComponent {
 
     public Realm matches(String path) {
         return cache.stream()
-                .filter(realm -> Pattern.matches(realm.getUrl(), path))
+                .filter(realm -> realm.getPathPattern().matcher(path).matches())
                 .findAny()
                 .orElse(null);
     }

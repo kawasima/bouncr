@@ -239,7 +239,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             Long applicationId = fetchGeneratedKey(stmtInsApplication);
 
             stmtInsRealm.setString(1, "BC_OPEN");
-            stmtInsRealm.setString(2, "(?!api).*");
+            stmtInsRealm.setString(2, "(?!api/board/).*");
             stmtInsRealm.setLong(3, applicationId);
             stmtInsRealm.setString(4, "BackChannelingOpen Realm");
             stmtInsRealm.setBoolean(5, false);
