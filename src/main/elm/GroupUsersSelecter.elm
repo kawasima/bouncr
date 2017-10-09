@@ -1,11 +1,10 @@
 module GroupUsersSelecter exposing (..)
 
-import Html exposing (Html, programWithFlags, button, div, text, input)
-import Html.Events exposing (onClick, onInput)
-import Html.Attributes as Attrs
+import Html exposing (programWithFlags)
 import Time exposing (second)
 import Debounce exposing (Debounce)
 import Types exposing (..)
+import View exposing (view)
 import Api exposing (..)
 import Rocket exposing (..)
 
@@ -99,14 +98,6 @@ update msg model =
 
 
 -- VIEW
-
-
-view : Model -> Html Msg
-view model =
-    div []
-        [ text (toString model)
-        , input [ onInput SetQuery, Attrs.value model.query ] []
-        ]
 
 
 subscriptions : Model -> Sub Msg
