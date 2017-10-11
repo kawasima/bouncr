@@ -247,7 +247,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             Long bcOpenRealmId = fetchGeneratedKey(stmtInsRealm);
 
             stmtInsRealm.setString(1, "BC_DEFAULT");
-            stmtInsRealm.setString(2, "api/board/default/.*");
+            stmtInsRealm.setString(2, "api/board/default($|/.*)");
             stmtInsRealm.setLong(3, applicationId);
             stmtInsRealm.setString(4, "BackChanneling default board");
             stmtInsRealm.setBoolean(5, false);
@@ -255,7 +255,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             Long bcDefaultRealmId = fetchGeneratedKey(stmtInsRealm);
 
             stmtInsRealm.setString(1, "BC_BOARD1");
-            stmtInsRealm.setString(2, "api/board/board1/.*");
+            stmtInsRealm.setString(2, "api/board/board1($|/.*)");
             stmtInsRealm.setLong(3, applicationId);
             stmtInsRealm.setString(4, "BackChanneling board1");
             stmtInsRealm.setBoolean(5, false);
