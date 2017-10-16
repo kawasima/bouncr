@@ -17,25 +17,25 @@
 </div>
 
 <div class="form-group<#if oidcProvider.hasErrors("scope")> has-error</#if>">
-  <label for="scope">${t('field.sope')}</label>
+  <label for="scope">${t('field.scope')}</label>
   <input id="scope" class="form-control<#if oidcProvider.hasErrors("scope")> is-invalid</#if>" type="text" name="scope" value="${oidcProvider.scope!''}"/>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("scope")>${oidcProvider.getErrors("scope")?join(",")}</#if></span>
 </div>
 
 <div class="form-group<#if oidcProvider.hasErrors("responseType")> has-error</#if>">
-  <label for="responseType">${t('label.responseType')}</label>
+  <label for="responseType">${t('field.responseType')}</label>
   <input id="responseType" class="form-control<#if oidcProvider.hasErrors("responseType")> is-invalid</#if>" type="text" name="responseType" value="${oidcProvider.responseType!''}"/>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("responseType")>${oidcProvider.getErrors("responseType")?join(",")}</#if></span>
 </div>
 
 <div class="form-group<#if oidcProvider.hasErrors("authorizationEndpoint")> has-error</#if>">
-  <label for="authorizationEndpoint">${t('label.authorizationEndpoint')}</label>
+  <label for="authorizationEndpoint">${t('field.authorizationEndpoint')}</label>
   <input id="authorizationEndpoint" class="form-control<#if oidcProvider.hasErrors("authorizationEndpoint")> is-invalid</#if>" type="text" name="authorizationEndpoint" value="${oidcProvider.authorizationEndpoint!''}"/>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("authorizationEndpoint")>${oidcProvider.getErrors("authorizationEndpoint")?join(",")}</#if></span>
 </div>
 
 <div class="form-group<#if oidcProvider.hasErrors("tokenEndpoint")> has-error</#if>">
-  <label for="tokenEndpoint">${t('label.tokenEndpoint')}</label>
+  <label for="tokenEndpoint">${t('field.tokenEndpoint')}</label>
   <input id="tokenEndpoint" class="form-control<#if oidcProvider.hasErrors("tokenEndpoint")> is-invalid</#if>" type="text" name="tokenEndpoint" value="${oidcProvider.tokenEndpoint!''}"/>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("tokenEndpoint")>${oidcProvider.getErrors("tokenEndpoint")?join(",")}</#if></span>
 </div>

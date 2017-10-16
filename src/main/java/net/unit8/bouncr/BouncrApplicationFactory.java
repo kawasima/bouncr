@@ -105,7 +105,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.post("/oidcProvider/:id").to(OidcProviderController.class, "update");
                 ar.post("/oidcProvider/:id/delete").to(OidcProviderController.class, "delete");
 
-                /* Routing for oauth2 application actions */
+                /* Routing for oidc application actions */
                 ar.get("/oidcApp").to(OidcApplicationController.class, "list");
                 ar.get("/oidcApp/new").to(OidcApplicationController.class, "newForm");
                 ar.post("/oidcApp").to(OidcApplicationController.class, "create");
@@ -123,7 +123,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.get("/signIn").to(SignInController.class, "signInForm");
                 mr.post("/signIn").to(SignInController.class, "signInByPassword");
                 mr.post("/signIn/clientDN").to(SignInController.class, "signInByClientDN");
-                mr.get("/signIn/oauth/:id").to(SignInController.class, "signInByOAuth");
+                mr.get("/signIn/oidc/:id").to(SignInController.class, "signInByOidc");
+                mr.post("/signIn/oidc/:id").to(SignInController.class, "signInByOidcImplicit");
                 mr.post("/signOut").to(SignInController.class, "signOut");
 
 
@@ -139,9 +140,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.get("/invitation").to(InvitationController.class, "");
                 mr.post("/invitation").to(InvitationController.class, "");
 
-                /* OAuth */
-                mr.get("/oauth/authorize").to(OidcController.class, "authorize");
-                mr.post("/oauth/token").to(OidcController.class, "token");
+                /* OpenID Connect */
+                mr.get("/oidc/authorize").to(OidcController.class, "authorize");
+                mr.post("/oidc/token").to(OidcController.class, "token");
 
                 mr.get("/").to(MyController.class, "home");
 
@@ -166,7 +167,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new CookiesMiddleware());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oauth))|/admin)($|/.*)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin)($|/.*)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
                         HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));

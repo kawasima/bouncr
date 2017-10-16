@@ -3,6 +3,7 @@ package net.unit8.bouncr.web.controller.data;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.web.entity.ResponseType;
 
 import java.io.Serializable;
 import java.security.SecureRandom;
@@ -19,4 +20,5 @@ public class OidcSession implements Serializable {
 
     private String nonce;
     private String state;
+    private ResponseType responseType;
 }

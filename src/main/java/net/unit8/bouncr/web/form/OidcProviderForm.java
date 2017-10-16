@@ -11,6 +11,7 @@ import java.io.Serializable;
 public class OidcProviderForm extends FormBase {
     private Long id;
 
+    private String name;
     private String apiKey;
     private String apiSecret;
     private String scope;

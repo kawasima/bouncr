@@ -1,5 +1,5 @@
 <#import "../../layout/defaultLayout.ftl" as layout>
-<@layout.layout "List of users">
+<@layout.layout "Sign in by client authentication">
   <div class="container">
     <div class="card card-container">
       <img class="profile-img-card" class="profile-img-card" src="//ssl.gstatic.com/accounts/ui/avatar_2x.png"/>

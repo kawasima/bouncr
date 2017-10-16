@@ -18,16 +18,19 @@
         </#if>
         <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
 
-        <#list oauth2Providers>
+        <#list oidcProviders>
         <hr/>
 
-        <#items as oauth2Provider>
-        <a class="btn btn-lg" href="${oauth2Provider.authorizationUrl}">Sign in by ${oauth2Provider.name}</a>
+        <#items as oidcProvider>
+        <a class="btn btn-lg" href="${oidcProvider.authorizationUrl}">Sign in by ${oidcProvider.name}</a>
         </#items>
         </#list>
       </form>
+
+      <hr/>
+      <a href="${urlFor('net.unit8.bouncr.web.controller.SignUpController', 'newForm')}" class="text-center new-account">Create an account</a>
     </div>
-    <a href="${urlFor('net.unit8.bouncr.web.controller.SignUpController', 'newForm')}" class="text-center new-account">Create an account</a>
+
   </div>
 </@layout.layout>
 

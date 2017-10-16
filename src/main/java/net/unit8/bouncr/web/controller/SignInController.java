@@ -26,6 +26,7 @@ import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.controller.data.OidcSession;
+import net.unit8.bouncr.web.entity.ResponseType;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignInForm;
@@ -52,6 +53,7 @@ import static enkan.util.HttpResponseUtils.redirect;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
+import static net.unit8.bouncr.web.entity.ResponseType.ID_TOKEN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
 
@@ -98,15 +100,15 @@ public class SignInController {
             return templateEngine.render("my/signIn/clientdn",
                     "signin", form);
         } else {
-            OidcProviderDao oauth2ProviderDao = daoProvider.getDao(OidcProviderDao.class);
+            OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
             String oidcSessionId = UUID.randomUUID().toString();
             OidcSession oidcSession = OidcSession.create(config.getSecureRandom());
 
-            List<OAuth2ProviderDto> oauth2Providers = oauth2ProviderDao
+            List<OidcProviderDto> oidcProviders = oidcProviderDao
                     .selectAll()
                     .stream()
                     .map(p -> {
-                        OAuth2ProviderDto dto = beansConverter.createFrom(p, OAuth2ProviderDto.class);
+                        OidcProviderDto dto = beansConverter.createFrom(p, OidcProviderDto.class);
                         dto.setNonce(oidcSession.getNonce());
                         dto.setState(oidcSession.getState());
                         dto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
@@ -119,7 +121,7 @@ public class SignInController {
                     .set(Cookie::setPath, "/")
                     .build();
             return builder(templateEngine.render("my/signIn/index",
-                    "oauth2Providers", oauth2Providers,
+                    "oidcProviders", oidcProviders,
                     "signin", form))
                     .set(HttpResponse::setCookies, Multimap.of("OIDC_SESSION_ID", cookie))
                     .build();
@@ -131,7 +133,7 @@ public class SignInController {
     }
 
     @Data
-    public static class OAuth2ProviderDto implements Serializable {
+    public static class OidcProviderDto implements Serializable {
         private Long id;
         private String name;
         private String apiKey;
@@ -145,7 +147,7 @@ public class SignInController {
 
         public String getRedirectUri() {
             return redirectUriBase
-                    + "/my/signIn/oauth/" + id;
+                    + "/my/signIn/oidc/" + id;
         }
 
         public String getAuthorizationUrl() {
@@ -273,7 +275,41 @@ public class SignInController {
         }
     }
 
-    public HttpResponse signInByOAuth(HttpRequest request, Parameters params) {
+    private HttpResponse connectOpenIdToBoucrUser(String idToken, OidcProvider oidcProvider, HttpRequest request) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        String[] tokens = idToken.split("\\.", 3);
+        JwtClaim claim = jsonWebToken.decodePayload(tokens[1]);
+        // TODO Verify Nonce
+
+        if (claim.getSub() != null) {
+            User user = userDao.selectByOAuth2(oidcProvider.getId(), claim.getSub());
+            if (user != null) {
+                return signIn(user, request, request.getParams().get("url"));
+            } else {
+                Invitation invitation = builder(new Invitation())
+                        .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
+                        .build();
+                InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
+                invitationDao.insert(invitation);
+                invitationDao.insert(builder(new OidcInvitation())
+                        .set(OidcInvitation::setInvitationId, invitation.getId())
+                        .set(OidcInvitation::setOidcProviderId, oidcProvider.getId())
+                        .set(OidcInvitation::setOidcSub, claim.getSub())
+                        .build());
+                return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
+            }
+        }
+        return signInForm(request, new SignInForm());
+    }
+
+    public HttpResponse signInByOidcImplicit(HttpRequest request, Parameters params) {
+        String idToken = params.get("id_token");
+        OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
+        OidcProvider oidcProvider = oidcProviderDao.selectById(params.getLong("id"));
+        return connectOpenIdToBoucrUser(idToken, oidcProvider, request);
+    }
+
+    public HttpResponse signInByOidc(HttpRequest request, Parameters params) {
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         if (!Objects.equals(oidcSession.getState(), params.get("state"))) {
@@ -282,21 +318,24 @@ public class SignInController {
                     .build());
         }
 
+        OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
+        OidcProvider oidcProvider = oidcProviderDao.selectById(params.getLong("id"));
+        if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == ResponseType.TOKEN) {
+            return templateEngine.render("my/signIn/oidc_implicit",
+                    "oidcProvider", oidcProvider);
+        }
 
-        OidcProviderDao oauth2ProviderDao = daoProvider.getDao(OidcProviderDao.class);
-        UserDao userDao = daoProvider.getDao(UserDao.class);
-        OidcProvider oauth2Provider = oauth2ProviderDao.selectById(params.getLong("id"));
-        OAuth2ProviderDto oauth2ProviderDto = beansConverter.createFrom(oauth2Provider, OAuth2ProviderDto.class);
-        oauth2ProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
+        OidcProviderDto oidcProviderDto = beansConverter.createFrom(oidcProvider, OidcProviderDto.class);
+        oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             Response response =  OKHTTP.newCall(new Request.Builder()
-                    .url(oauth2Provider.getTokenEndpoint())
+                    .url(oidcProvider.getTokenEndpoint())
                     .header("Authorization", "Basic " +
-                            Base64.getUrlEncoder().encodeToString((oauth2Provider.getApiKey() + ":" + oauth2Provider.getApiSecret()).getBytes()))
+                            Base64.getUrlEncoder().encodeToString((oidcProvider.getApiKey() + ":" + oidcProvider.getApiSecret()).getBytes()))
                     .post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded"),
                             "grant_type=authorization_code&code=" + params.get("code") +
-                                    "&redirect_uri=" + oauth2ProviderDto.getRedirectUri()))
+                                    "&redirect_uri=" + oidcProviderDto.getRedirectUri()))
                     .build())
                     .execute();
             if (response.code() == 503) throw new FalteringEnvironmentException();
@@ -307,28 +346,7 @@ public class SignInController {
             }
         });
         String encodedIdToken = (String) res.get("id_token");
-        String[] tokens = encodedIdToken.split("\\.", 3);
-        JwtClaim payload = jsonWebToken.decodePayload(tokens[1]);
-
-        if (payload.getSub() != null) {
-            User user = userDao.selectByOAuth2(oauth2Provider.getId(), payload.getSub());
-            if (user != null) {
-                return signIn(user, request, params.get("url"));
-            } else {
-                Invitation invitation = builder(new Invitation())
-                        .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
-                        .build();
-                InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
-                invitationDao.insert(invitation);
-                invitationDao.insert(builder(new OidcInvitation())
-                        .set(OidcInvitation::setInvitationId, invitation.getId())
-                        .set(OidcInvitation::setOidcProviderId, oauth2Provider.getId())
-                        .set(OidcInvitation::setOidcSub, payload.getSub())
-                        .build());
-                return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
-            }
-        }
-        return signInForm(request, new SignInForm());
+        return connectOpenIdToBoucrUser(encodedIdToken, oidcProvider, request);
     }
 
     @Transactional

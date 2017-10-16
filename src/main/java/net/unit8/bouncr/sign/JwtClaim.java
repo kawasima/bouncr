@@ -17,5 +17,5 @@ public class JwtClaim implements Serializable {
     public String preferredUsername;
     public Long exp;
     public Long iat;
-    public Long nonce;
+    public String nonce;
 }

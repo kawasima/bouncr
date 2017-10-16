@@ -20,7 +20,9 @@ public class OidcProvider implements Serializable {
     private String apiKey;
     private String apiSecret;
     private String scope;
-    private String responseType;
+
+    @Column(name = "response_type")
+    private ResponseType responseType;
     private String tokenEndpoint;
     private String authorizationEndpoint;
 

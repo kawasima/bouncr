@@ -16,6 +16,7 @@ import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.web.entity.ResponseType;
 import net.unit8.bouncr.web.dao.OidcApplicationDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.OidcApplication;
@@ -23,16 +24,18 @@ import net.unit8.bouncr.web.entity.User;
 
 import javax.inject.Inject;
 
-import java.util.Base64;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
+import static enkan.util.HttpResponseUtils.RedirectStatusCode.FOUND;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.*;
+import static net.unit8.bouncr.web.entity.ResponseType.*;
 
 public class OidcController {
+
     @Inject
     private TemplateEngine templateEngine;
 
@@ -48,25 +51,74 @@ public class OidcController {
     @Inject
     private BouncrConfiguration config;
 
+    private String createIdToken(Long userId, OidcApplication oidcApplication, String nonce) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(userId);
+        return jsonWebToken.sign(builder(new JwtClaim())
+                        .set(JwtClaim::setSub, user.getId().toString())
+                        .set(JwtClaim::setIss, "")
+                        .set(JwtClaim::setAud, oidcApplication.getClientId())
+                        .set(JwtClaim::setEmail, user.getEmail())
+                        .set(JwtClaim::setName, user.getName())
+                        .set(JwtClaim::setPreferredUsername, user.getAccount())
+                        .set(JwtClaim::setIat, (System.currentTimeMillis() / 1000) - 60)
+                        .set(JwtClaim::setExp, (System.currentTimeMillis() / 1000) + 3600)
+                        .set(JwtClaim::setNonce, nonce)
+                        .build(),
+                builder(new JwtHeader())
+                        .set(JwtHeader::setAlg, "RS256")
+                        .set(JwtHeader::setKid, "")
+                        .build(),
+                KeyUtils.decode(oidcApplication.getPrivateKey()));
+    }
+
+    private String createAccessToken() {
+        KeyValueStore accessTokenStore = storeProvider.getStore(ACCESS_TOKEN);
+        String accessToken = RandomUtils.generateRandomString(16, config.getSecureRandom());
+        accessTokenStore.write(accessToken, accessToken);
+        return accessToken;
+    }
+
+    private String makeCallbackUrl(String baseUrl, Parameters params) {
+        String encoded = params.entrySet().stream()
+                .map(e -> e.getKey() + "=" + CodecUtils.urlEncode(e.getValue().toString()))
+                .collect(Collectors.joining("&"));
+        return baseUrl.contains("?") ? baseUrl + "&" + encoded : baseUrl + "?" + encoded;
+    }
+
     public HttpResponse authorize(Parameters params, UserPermissionPrincipal principal, HttpRequest request) {
         if (principal != null) {
+            Parameters responseParams = Parameters.of();
+            if (params.containsKey("state")) {
+                responseParams.put("state", params.get("state"));
+            }
+
             String clientId = params.get("client_id");
             OidcApplicationDao oidcApplicationDao = daoProvider.getDao(OidcApplicationDao.class);
             OidcApplication oidcApplication = oidcApplicationDao.selectByClientId(clientId);
             String redirectUrl = (String) params.getOrDefault("redirect_url", oidcApplication.getCallbackUrl());
 
-            KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
-            String code = RandomUtils.generateRandomString(16, config.getSecureRandom());
-            authorizationCodeStore.write(code, principal.getId());
+            Set<ResponseType> responseTypes = Arrays.stream(((String) params.getOrDefault("response_type", "code")).split("[ ,]+"))
+                    .map(rt -> ResponseType.of(rt))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
 
-            if (redirectUrl.contains("?")) {
-                redirectUrl += "&code=" + code;
-            } else {
-                redirectUrl += "?code=" + code;
+            if (responseTypes.contains(ID_TOKEN)) {
+                String nonce = params.get("nonce");
+                responseParams.put("id_token", createIdToken(principal.getId(), oidcApplication, nonce));
             }
-            redirectUrl += "&state=" + params.getOrDefault("state", "STATE")
-                    + "&session_state=session_state";
-            return HttpResponseUtils.redirect(redirectUrl, SEE_OTHER);
+            if (responseTypes.contains(TOKEN)) {
+                responseParams.put("access_token", createAccessToken());
+                responseParams.put("token_type", "bearer");
+                responseParams.put("expires_in", 3600);
+            }
+            if (responseTypes.contains(CODE)) {
+                KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
+                String code = RandomUtils.generateRandomString(16, config.getSecureRandom());
+                authorizationCodeStore.write(code, principal.getId());
+                responseParams.put("code", code);
+            }
+            return HttpResponseUtils.redirect(makeCallbackUrl(redirectUrl, responseParams), FOUND);
         } else {
             return HttpResponseUtils.redirect("/my/signIn?url=" + request.getUri() + "?" + CodecUtils.urlEncode(request.getQueryString()), SEE_OTHER);
         }
@@ -104,28 +156,10 @@ public class OidcController {
                     .set(HttpResponse::setStatus, 401)
                     .build();
         }
-
-        KeyValueStore accessTokenStore = storeProvider.getStore(ACCESS_TOKEN);
-        String accessToken = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        accessTokenStore.write(accessToken, accessToken);
-
-        UserDao userDao = daoProvider.getDao(UserDao.class);
-        User user = userDao.selectById(userId);
-        String idTokenSigned = jsonWebToken.sign(builder(new JwtClaim())
-                        .set(JwtClaim::setSub, user.getId().toString())
-                        .set(JwtClaim::setIss, "")
-                        .set(JwtClaim::setAud, oidcApplication.getClientId())
-                        .set(JwtClaim::setEmail, user.getEmail())
-                        .set(JwtClaim::setName, user.getName())
-                        .set(JwtClaim::setPreferredUsername, user.getAccount())
-                        .set(JwtClaim::setIat, (System.currentTimeMillis() / 1000) - 60)
-                        .set(JwtClaim::setExp, (System.currentTimeMillis() / 1000) + 3600)
-                        .build(),
-                builder(new JwtHeader())
-                        .set(JwtHeader::setAlg, "RS256")
-                        .set(JwtHeader::setKid, "")
-                        .build(),
-                KeyUtils.decode(oidcApplication.getPrivateKey()));
+        // Access Token
+        String nonce = params.get("nonce");
+        String idTokenSigned = createIdToken(userId, oidcApplication, nonce);
+        String accessToken = createAccessToken();
 
         HttpResponse response = HttpResponseUtils.response("{"
                 + "\"access_token\":\""+ accessToken + "\","
