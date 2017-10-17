@@ -24,7 +24,11 @@
 
 <div class="form-group<#if oidcProvider.hasErrors("responseType")> has-error</#if>">
   <label for="responseType">${t('field.responseType')}</label>
-  <input id="responseType" class="form-control<#if oidcProvider.hasErrors("responseType")> is-invalid</#if>" type="text" name="responseType" value="${oidcProvider.responseType!''}"/>
+  <select name="responseType" class="form-control<#if oidcProvider.hasErrors("responseType")> is-invalid</#if>">
+    <#list responseTypes as responseType>
+    <option value="${responseType.getName()}"<#if oidcProvider.responseType == responseType.getName()>selected="selected"</#if>>${responseType.getName()}</option>
+    </#list>
+  </select>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("responseType")>${oidcProvider.getErrors("responseType")?join(",")}</#if></span>
 </div>
 
@@ -39,4 +43,16 @@
   <input id="tokenEndpoint" class="form-control<#if oidcProvider.hasErrors("tokenEndpoint")> is-invalid</#if>" type="text" name="tokenEndpoint" value="${oidcProvider.tokenEndpoint!''}"/>
   <span class="invalid-feedback"><#if oidcProvider.hasErrors("tokenEndpoint")>${oidcProvider.getErrors("tokenEndpoint")?join(",")}</#if></span>
 </div>
+
+<div class="form-group<#if oidcProvider.hasErrors("tokenEndpointAuthMethod")> has-error</#if>">
+  <label for="tokenEndpoint">${t('field.tokenEndpointAuthMethod')}</label>
+  <select name="tokenEndpointAuthMethod" class="form-control<#if oidcProvider.hasErrors("tokenEndpointAuthMethod")> is-invalid</#if>">
+    <#list tokenEndpointAuthMethods as tokenEndpointAuthMethod>
+    <option value="${tokenEndpointAuthMethod.getValue()}"<#if oidcProvider.tokenEndpointAuthMethod == tokenEndpointAuthMethod.getValue()>selected="selected"</#if>>${tokenEndpointAuthMethod.getValue()}</option>
+    </#list>
+  </select>
+  <span class="invalid-feedback"><#if oidcProvider.hasErrors("tokenEndpoint")>${oidcProvider.getErrors("tokenEndpoint")?join(",")}</#if></span>
+</div>
+
+
 

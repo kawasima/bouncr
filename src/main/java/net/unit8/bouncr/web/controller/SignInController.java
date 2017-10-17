@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import enkan.collection.Headers;
 import enkan.collection.Multimap;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -140,8 +141,8 @@ public class SignInController {
         private String scope;
         private String state = RandomUtils.generateRandomString(8);
         private String responseType;
-        private String accessTokenEndpoint;
-        private String authorizationBaseUrl;
+        private String tokenEndpoint;
+        private String authorizationEndpoint;
         private String nonce = RandomUtils.generateRandomString(32);
         private String redirectUriBase;
 
@@ -151,7 +152,7 @@ public class SignInController {
         }
 
         public String getAuthorizationUrl() {
-            return authorizationBaseUrl + "?response_type=" + CodecUtils.urlEncode(responseType)
+            return authorizationEndpoint + "?response_type=" + CodecUtils.urlEncode(responseType)
                     + "&client_id=" + apiKey
                     + "&redirect_uri=" + CodecUtils.urlEncode(getRedirectUri())
                     + "&state=" + state
@@ -282,7 +283,7 @@ public class SignInController {
         // TODO Verify Nonce
 
         if (claim.getSub() != null) {
-            User user = userDao.selectByOAuth2(oidcProvider.getId(), claim.getSub());
+            User user = userDao.selectByOidc(oidcProvider.getId(), claim.getSub());
             if (user != null) {
                 return signIn(user, request, request.getParams().get("url"));
             } else {
@@ -296,7 +297,14 @@ public class SignInController {
                         .set(OidcInvitation::setOidcProviderId, oidcProvider.getId())
                         .set(OidcInvitation::setOidcSub, claim.getSub())
                         .build());
-                return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
+                if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
+                    return builder(templateEngine.render("my/signIn/oidc_implicit_json",
+                            "code", invitation.getCode()))
+                            .set(HttpResponse::setHeaders, Headers.of("Content-Type", "application/json"))
+                            .build();
+                } else {
+                    return UrlRewriter.redirect(SignUpController.class, "newForm?code=" + invitation.getCode(), SEE_OTHER);
+                }
             }
         }
         return signInForm(request, new SignInForm());
@@ -310,19 +318,18 @@ public class SignInController {
     }
 
     public HttpResponse signInByOidc(HttpRequest request, Parameters params) {
+        OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
+        OidcProvider oidcProvider = oidcProviderDao.selectById(params.getLong("id"));
+        if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == ResponseType.TOKEN) {
+            return templateEngine.render("my/signIn/oidc_implicit",
+                    "oidcProvider", oidcProvider);
+        }
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         if (!Objects.equals(oidcSession.getState(), params.get("state"))) {
             return signInForm(request, (SignInForm) builder(new SignInForm())
                     .set(SignInForm::setErrors, Multimap.of("account", "error.failToSignin"))
                     .build());
-        }
-
-        OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
-        OidcProvider oidcProvider = oidcProviderDao.selectById(params.getLong("id"));
-        if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == ResponseType.TOKEN) {
-            return templateEngine.render("my/signIn/oidc_implicit",
-                    "oidcProvider", oidcProvider);
         }
 
         OidcProviderDto oidcProviderDto = beansConverter.createFrom(oidcProvider, OidcProviderDto.class);

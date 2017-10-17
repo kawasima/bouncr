@@ -106,7 +106,7 @@ public class SignUpController {
 
                 invitationDao.selectOidcInvitations(invitation.getId())
                         .stream()
-                        .forEach(oidcInvitation -> userDao.connectToOAuth2Provider(user.getId(), oidcInvitation.getOidcProviderId(), oidcInvitation.getOidcSub()));
+                        .forEach(oidcInvitation -> userDao.connectToOidcProvider(user.getId(), oidcInvitation.getOidcProviderId(), oidcInvitation.getOidcSub()));
                 invitationDao.delete(invitation);
             }
 

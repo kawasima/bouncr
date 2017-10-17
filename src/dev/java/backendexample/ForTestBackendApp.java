@@ -2,19 +2,24 @@ package backendexample;
 
 import io.undertow.Undertow;
 import io.undertow.util.Headers;
+import net.unit8.bouncr.sign.JsonWebToken;
 
-public class ForTestBackentApp {
+import java.util.Base64;
+
+public class ForTestBackendApp {
     public static void main(String[] args) {
+        Base64.Decoder b64decoder = Base64.getUrlDecoder();
         final Undertow server = Undertow.builder()
                 .addHttpListener(8083, "localhost")
                 .setHandler(exchange -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-                    String user = exchange.getRequestHeaders().getFirst("X-Bouncr-Id");
-                    String permissions = exchange.getRequestHeaders().getFirst("X-Bouncr-Permissions");
+                    String credential = exchange.getRequestHeaders().getFirst("X-Bouncr-Credential");
+                    String[] tokens = credential.split("\\.", 3);
+                    String json = new String(b64decoder.decode(tokens[1]));
+
 
                     exchange.getResponseSender().send("Server1\n"
-                            + "User=" + user + "\n"
-                            + "Permissions=" + permissions + "\n"
+                            + "profile=" + json + "\n"
                     );
                 })
                 .build();

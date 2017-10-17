@@ -8,6 +8,8 @@ import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.web.dao.OidcProviderDao;
 import net.unit8.bouncr.web.entity.OidcProvider;
+import net.unit8.bouncr.web.entity.ResponseType;
+import net.unit8.bouncr.web.entity.TokenEndpointAuthMethod;
 import net.unit8.bouncr.web.form.OidcProviderForm;
 
 import javax.annotation.security.RolesAllowed;
@@ -40,7 +42,9 @@ public class OidcProviderController {
     public HttpResponse newForm() {
         OidcProviderForm oidcProvider = new OidcProviderForm();
         return templateEngine.render("admin/oidcProvider/new",
-                "oidcProvider", oidcProvider);
+                "oidcProvider", oidcProvider,
+                "responseTypes", ResponseType.values(),
+                "tokenEndpointAuthMethods", TokenEndpointAuthMethod.values());
     }
 
     @Transactional
@@ -48,13 +52,15 @@ public class OidcProviderController {
     public HttpResponse create(OidcProviderForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/oidcProvider/new",
-                    "oidcProvider", form);
+                    "oidcProvider", form,
+                    "responseTypes", ResponseType.values(),
+                    "tokenEndpointAuthMethods", TokenEndpointAuthMethod.values());
         } else {
             OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
             OidcProvider oidcProvider = beansConverter.createFrom(form, OidcProvider.class);
             oidcProviderDao.insert(oidcProvider);
 
-            return UrlRewriter.redirect(GroupController.class, "list", SEE_OTHER);
+            return UrlRewriter.redirect(OidcProviderController.class, "list", SEE_OTHER);
         }
     }
 
@@ -65,7 +71,9 @@ public class OidcProviderController {
         OidcProviderForm form = beansConverter.createFrom(oidcProvider, OidcProviderForm.class);
 
         return templateEngine.render("admin/oidcProvider/edit",
-                "oidcProvider", form);
+                "oidcProvider", form,
+                "responseTypes", ResponseType.values(),
+                "tokenEndpointAuthMethods", TokenEndpointAuthMethod.values());
     }
 
     @Transactional
@@ -73,13 +81,16 @@ public class OidcProviderController {
     public HttpResponse update(OidcProviderForm form) {
         if (form.hasErrors()) {
             return templateEngine.render("admin/oidcProvider/edit",
-                    "oidcProvider", form);
+                    "oidcProvider", form,
+                    "responseTypes", ResponseType.values(),
+                    "tokenEndpointAuthMethods", TokenEndpointAuthMethod.values());
         } else {
             OidcProviderDao oidcProviderDao = daoProvider.getDao(OidcProviderDao.class);
             OidcProvider oidcProvider = oidcProviderDao.selectById(form.getId());
             beansConverter.copy(form, oidcProvider);
+            oidcProviderDao.update(oidcProvider);
 
-            return UrlRewriter.redirect(GroupController.class, "list", SEE_OTHER);
+            return UrlRewriter.redirect(OidcProviderController.class, "list", SEE_OTHER);
         }
     }
 }

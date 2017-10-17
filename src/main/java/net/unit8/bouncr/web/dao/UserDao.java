@@ -66,7 +66,7 @@ public interface UserDao {
     int delete(User user);
 
     @Select
-    User selectByOAuth2(Long oauth2ProviderId, String oauth2UserName);
+    User selectByOidc(Long oidcProviderId, String sub);
 
     @Select
     OtpKey selectOtpKeyById(Long id);
@@ -86,7 +86,7 @@ public interface UserDao {
     int lock(Long id);
 
     @Insert(sqlFile = true)
-    int connectToOAuth2Provider(Long id, Long oauth2ProviderId, String oauth2UserName);
+    int connectToOidcProvider(Long id, Long oidcProviderId, String sub);
 
     @Delete(sqlFile = true)
     int unlock(Long id);
