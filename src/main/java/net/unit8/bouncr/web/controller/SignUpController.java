@@ -3,9 +3,11 @@ package net.unit8.bouncr.web.controller;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
+import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
@@ -14,7 +16,9 @@ import net.unit8.bouncr.web.dao.PasswordCredentialDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignUpForm;
+import net.unit8.bouncr.web.service.SignInService;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.Collections;
@@ -33,17 +37,27 @@ public class SignUpController {
     private BeansConverter beansConverter;
 
     @Inject
+    private StoreProvider storeProvider;
+
+    @Inject
     private BouncrConfiguration config;
+
+    private SignInService signInService;
+
+    @PostConstruct
+    public void initialize() {
+        signInService = new SignInService(daoProvider, storeProvider, config);
+    }
 
     public HttpResponse newForm(Parameters params) {
         String code = params.get("code");
         List<GroupInvitation> groupInvitations = Collections.emptyList();
-        List<OidcInvitation> oauth2Invitations = Collections.emptyList();
+        List<OidcInvitation> oidcInvitations = Collections.emptyList();
         if (code != null) {
             InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
             Invitation invitation = invitationDao.selectByCode(code);
-            invitationDao.selectGroupInvitations(invitation.getId());
-            invitationDao.selectOidcInvitations(invitation.getId());
+            groupInvitations = invitationDao.selectGroupInvitations(invitation.getId());
+            oidcInvitations = invitationDao.selectOidcInvitations(invitation.getId());
         }
         SignUpForm form = new SignUpForm();
         form.setCode(code);
@@ -51,14 +65,14 @@ public class SignUpController {
                 "signUp", form,
                 "passwordEnabled", config.isPasswordEnabled(),
                 "groupInvitations", groupInvitations,
-                "oauth2Invitations", oauth2Invitations);
+                "oidcInvitations", oidcInvitations);
     }
 
     @Transactional
-    public HttpResponse create(SignUpForm form) {
+    public HttpResponse create(SignUpForm form, HttpRequest request) {
         if (form.hasErrors()) {
             List<GroupInvitation> groupInvitations = Collections.emptyList();
-            List<OidcInvitation> oauth2Invitations = Collections.emptyList();
+            List<OidcInvitation> oidcInvitations = Collections.emptyList();
             if (form.getCode() != null && !form.getCode().isEmpty()) {
                 InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
                 Invitation invitation = invitationDao.selectByCode(form.getCode());
@@ -69,7 +83,7 @@ public class SignUpController {
                     "signUp", form,
                     "passwordEnabled", config.isPasswordEnabled(),
                     "groupInvitations", groupInvitations,
-                    "oauth2Invitations", oauth2Invitations);
+                    "oidcInvitations", oidcInvitations);
         } else {
             User user = beansConverter.createFrom(form, User.class);
             user.setWriteProtected(false);
@@ -79,7 +93,7 @@ public class SignUpController {
             Group bouncrUserGroup = groupDao.selectByName("BOUNCR_USER");
             groupDao.addUser(bouncrUserGroup, user);
 
-            if (config.isPasswordEnabled()) {
+            if (config.isPasswordEnabled() && !form.isPasswordDisabled()) {
                 PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
                 String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
                 passwordCredentialDao.insert(builder(new PasswordCredential())
@@ -110,7 +124,7 @@ public class SignUpController {
                 invitationDao.delete(invitation);
             }
 
-            return templateEngine.render("my/signUp/complete");
+            return signInService.signIn(user, request, "/my");
         }
     }
 }

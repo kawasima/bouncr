@@ -9,9 +9,6 @@ public interface PasswordCredentialDao {
     @Insert
     int insert(PasswordCredential passwordCredential);
 
-    @Update
-    int update(PasswordCredential passwordCredential);
-
     @Delete
     int delete(PasswordCredential passwordCredential);
 }

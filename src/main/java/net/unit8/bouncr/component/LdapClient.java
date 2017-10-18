@@ -30,6 +30,7 @@ public class LdapClient extends SystemComponent {
     private String user;
     private String password;
     private String searchBase;
+    private AuthMethod authMethod = AuthMethod.NONE;
     private BouncrConfiguration config;
     private Class<? extends SocketFactory> socketFactoryClass;
 
@@ -46,9 +47,11 @@ public class LdapClient extends SystemComponent {
                     Hashtable<String,String> env = new Hashtable<>();
                     env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
                     env.put(Context.PROVIDER_URL, component.getLdapUrl());
-                    env.put(Context.SECURITY_AUTHENTICATION, "simple");
-                    env.put(Context.SECURITY_PRINCIPAL, component.user);
-                    env.put(Context.SECURITY_CREDENTIALS, component.password);
+                    env.put(Context.SECURITY_AUTHENTICATION, authMethod.getValue());
+                    if (authMethod != AuthMethod.NONE) {
+                        env.put(Context.SECURITY_PRINCIPAL, component.user);
+                        env.put(Context.SECURITY_CREDENTIALS, component.password);
+                    }
                     if (Objects.equals(component.scheme, "ldaps")) {
                         env.put(Context.SECURITY_PROTOCOL, "ssl");
                         env.put("java.naming.ldap.factory.socket", component.socketFactoryClass.getName());
@@ -141,5 +144,23 @@ public class LdapClient extends SystemComponent {
 
     public void setSocketFactoryClass(Class<? extends SocketFactory> socketFactoryClass) {
         this.socketFactoryClass = socketFactoryClass;
+    }
+
+    public void setAuthMethod(AuthMethod authMethod) {
+        this.authMethod = authMethod;
+    }
+
+    enum AuthMethod {
+        NONE("none"),
+        SIMPLE("simple");
+
+        private final String value;
+        AuthMethod(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
     }
 }

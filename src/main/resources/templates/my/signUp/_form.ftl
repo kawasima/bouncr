@@ -29,7 +29,7 @@
     <div class="col">
       <div class="form-check">
         <label class="form-check-label">
-          <input class="form-check-input" name="passwordDisabled" type="checkbox" value="true">
+          <input id="password-disabled" class="form-check-input" name="passwordDisabled" type="checkbox" value="true">
           ${t('label.disablePassword')}
         </label>
       </div>
@@ -38,10 +38,18 @@
 </div>
 </#if>
 
-<#list oauth2Invitations>
+<#list oidcInvitations>
 <div class="form-group">
-  <#items as oauth2Invitation>
-  <button class="btn" type="button">${oauth2Invitation.oidcProviderId}</button>
+  <#items as oidcInvitation>
+  <button class="btn" type="button">${oidcInvitation.oidcProviderId}</button>
   </#items>
 </div>
 </#list>
+
+<script>
+document
+  .querySelector("#password-disabled")
+  .addEventListener("change", function(e) {
+    document.querySelector("#password").disabled = "disabled";
+  });
+</script>

@@ -16,8 +16,6 @@ public class MainWithLdapClient {
         system.setComponent("ldap", builder(new LdapClient())
                 .set(LdapClient::setPort, 10636)
                 .set(LdapClient::setScheme, "ldaps")
-                .set(LdapClient::setUser, "")
-                .set(LdapClient::setPassword, "")
                 .set(LdapClient::setSocketFactoryClass, BouncrSSLSocketFactory.class)
                 .build());
         system.relationships(

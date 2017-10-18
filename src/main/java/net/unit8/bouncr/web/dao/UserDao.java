@@ -14,6 +14,7 @@ import org.seasar.doma.jdbc.builder.SelectBuilder;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A data access object for user entity.
@@ -37,20 +38,22 @@ public interface UserDao {
     @Select(ensureResult = true)
     User selectByAccount(String account);
 
+    @Select
+    Optional<User> selectOptionallyByAccount(String account);
+
     default User selectByPassword(String account, String password) {
-        User user = selectByAccount(account);
-        Config config = Config.get(this);
-        SelectBuilder builder = SelectBuilder.newInstance(config);
-        PasswordCredential credential = builder.sql("SELECT * ")
-                .sql("FROM password_credentials ")
-                .sql("WHERE user_id = ").param(Long.class, user.getId())
-                .getEntitySingleResult(PasswordCredential.class);
-        if (Arrays.equals(
-                credential.getPassword(),
-                PasswordUtils.pbkdf2(password, credential.getSalt(), 100))) {
-            return user;
-        }
-        return null;
+        return selectOptionallyByAccount(account)
+                .filter(user -> {
+                Config config = Config.get(this);
+                SelectBuilder builder = SelectBuilder.newInstance(config);
+                PasswordCredential credential = builder.sql("SELECT * ")
+                        .sql("FROM password_credentials ")
+                        .sql("WHERE user_id = ").param(Long.class, user.getId())
+                        .getEntitySingleResult(PasswordCredential.class);
+                return (credential != null && Arrays.equals(
+                        credential.getPassword(),
+                        PasswordUtils.pbkdf2(password, credential.getSalt(), 100)));
+        }).orElse(null);
     }
 
     @Select
