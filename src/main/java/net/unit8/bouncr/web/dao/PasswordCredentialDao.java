@@ -11,4 +11,7 @@ public interface PasswordCredentialDao {
 
     @Delete
     int delete(PasswordCredential passwordCredential);
+
+    @Update
+    int update(PasswordCredential passwordCredential);
 }

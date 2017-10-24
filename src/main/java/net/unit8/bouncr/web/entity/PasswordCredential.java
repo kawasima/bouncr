@@ -25,6 +25,8 @@ public class PasswordCredential implements Serializable {
 
     private String salt;
 
+    private boolean initial;
+
     @EventDateTime
     private LocalDateTime createdAt;
 }
