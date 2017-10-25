@@ -19,7 +19,7 @@ public class V10__CreatePasswordCredentials implements JdbcMigration {
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("password", SQLDataType.VARBINARY(256).nullable(false)))
                     .column(field("salt", SQLDataType.VARCHAR(16).nullable(false)))
-                    .column(field("initial", SQLDataType.BOOLEAN.nullable(false).defaultValue(true)))
+                    .column(field("initial", SQLDataType.BOOLEAN.nullable(false).defaultValue(field("true", SQLDataType.BOOLEAN))))
                     .column(field("created_at", SQLDataType.TIMESTAMP.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id")),
