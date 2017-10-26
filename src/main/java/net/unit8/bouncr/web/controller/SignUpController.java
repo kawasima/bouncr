@@ -124,7 +124,8 @@ public class SignUpController {
                 invitationDao.delete(invitation);
             }
 
-            return signInService.signIn(user, request, "/my");
+            String token = signInService.signIn(user, request);
+            return signInService.responseSignedIn(token, request, "/my");
         }
     }
 }

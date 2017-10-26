@@ -47,8 +47,9 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                         field("user_id"),
                         field("password"),
                         field("salt"),
+                        field("initial"),
                         field("created_at"))
-                .values(param(), param(), param(), param(Date.class))
+                .values(param(), param(), param(), param(), param(Date.class))
                 .getSQL();
 
         final String INS_GROUP = create
@@ -177,7 +178,8 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                     stmtInsPasswdCred.setLong(1, id);
                     stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
                     stmtInsPasswdCred.setString(3, "0123456789012345");
-                    stmtInsPasswdCred.setDate(4, new Date(System.currentTimeMillis() / 1000));
+                    stmtInsPasswdCred.setBoolean(4, false);
+                    stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis() / 1000));
                     stmtInsPasswdCred.executeUpdate();
                 } catch(SQLException e) {
                     throw new RuntimeException(e);

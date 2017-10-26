@@ -9,6 +9,7 @@ import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.PasswordPolicy;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
@@ -106,6 +107,7 @@ public class UserController {
                 .set(PasswordCredential::setId, user.getId())
                 .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
                 .set(PasswordCredential::setSalt, salt)
+                .set(PasswordCredential::setInitial, true)
                 .build());
 
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
@@ -138,11 +140,13 @@ public class UserController {
         userDao.update(user);
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
+        passwordCredentialDao.deleteById(user.getId());
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         passwordCredentialDao.insert(builder(new PasswordCredential())
                 .set(PasswordCredential::setId, user.getId())
                 .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
                 .set(PasswordCredential::setSalt, salt)
+                .set(PasswordCredential::setInitial, true)
                 .build());
 
         return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);

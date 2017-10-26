@@ -17,8 +17,10 @@ import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.ChangePasswordForm;
 import net.unit8.bouncr.web.form.TwoFactorAuthForm;
+import net.unit8.bouncr.web.service.PasswordCredentialService;
 import org.seasar.doma.jdbc.SelectOptions;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -42,6 +44,13 @@ public class MyController {
 
     @Inject
     private BouncrConfiguration config;
+
+    private PasswordCredentialService passwordCredentialService;
+
+    @PostConstruct
+    private void initialize() {
+        passwordCredentialService = new PasswordCredentialService(daoProvider, config);
+    }
 
     public HttpResponse home(UserPermissionPrincipal principal, HttpRequest request) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
@@ -73,41 +82,35 @@ public class MyController {
         User user = userDao.selectById(principal.getId());
 
         ChangePasswordForm form = new ChangePasswordForm();
-        OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
-        String twofaSecret = null;
-        if (otpKey != null) {
-            twofaSecret = Base32Utils.encode(otpKey.getKey());
-        }
         return templateEngine.render("my/account",
                 "user", user,
                 "changePassword", form,
-                "twofaSecret", twofaSecret);
+                "twofaSecret", twoFactorAuthenticationSecret(user));
     }
 
     @Transactional
     public HttpResponse changePassword(ChangePasswordForm form, UserPermissionPrincipal principal, HttpRequest request) {
+        passwordCredentialService.validateBasedOnPasswordPolicy(form, "newPassword");
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectById(principal.getId());
+
         if (form.hasErrors()) {
             return templateEngine.render("my/account",
-                    "user", form);
+                    "user", user,
+                    "changePassword", form,
+                    "twofaSecret", twoFactorAuthenticationSecret(user));
         } else {
-            UserDao userDao = daoProvider.getDao(UserDao.class);
-            User user = userDao.selectByPassword(principal.getName(), form.getOldPassword());
-            if (user == null) {
+            User credUser = userDao.selectByPassword(principal.getName(), form.getOldPassword());
+            if (credUser == null) {
                 form = new ChangePasswordForm();
                 return templateEngine.render("my/account",
                         "message", "error.oldPasswordMismatch",
-                        "user", form);
+                        "user", user,
+                        "changePassword", form,
+                        "twofaSecret", twoFactorAuthenticationSecret(user));
             }
 
-            PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
-            String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-            passwordCredentialDao.update(builder(new PasswordCredential())
-                            .set(PasswordCredential::setId, user.getId())
-                            .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getNewPassword(), salt, 100))
-                            .set(PasswordCredential::setSalt, salt)
-                            .build());
-            userDao.update(user);
-
+            passwordCredentialService.changePassword(user, form.getNewPassword());
             AuditDao auditDao = daoProvider.getDao(AuditDao.class);
             auditDao.insertUserAction(ActionType.CHANGE_PASSWORD, user.getAccount(), request.getRemoteAddr());
 
@@ -142,5 +145,16 @@ public class MyController {
         }
 
         return UrlRewriter.redirect(MyController.class, "account", SEE_OTHER);
+    }
+
+    private String twoFactorAuthenticationSecret(User user) {
+        String twofaSecret = null;
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
+
+        if (otpKey != null) {
+            twofaSecret = Base32Utils.encode(otpKey.getKey());
+        }
+        return twofaSecret;
     }
 }

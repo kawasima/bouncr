@@ -6,9 +6,15 @@ import org.seasar.doma.*;
 
 @Dao(config = DomaConfig.class)
 public interface PasswordCredentialDao {
+    @Select
+    PasswordCredential selectById(Long userId);
+
     @Insert
     int insert(PasswordCredential passwordCredential);
 
     @Delete
     int delete(PasswordCredential passwordCredential);
+
+    @Delete(sqlFile = true)
+    int deleteById(Long userId);
 }

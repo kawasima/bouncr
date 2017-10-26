@@ -11,9 +11,11 @@ import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
 public class BouncrConfiguration extends SystemComponent {
+    private Clock clock = Clock.systemDefaultZone();
     private boolean passwordEnabled = true;
     private long tokenExpires = 1800L;
     private long authorizationCodeExpires = 60L;
@@ -91,12 +93,24 @@ public class BouncrConfiguration extends SystemComponent {
         return tokenName;
     }
 
+    /**
+     * Set the bouncr token name.
+     *
+     * It's set to the cookie header.
+     * The default value is "BOUNCR_TOKEN".
+     *
+     * @param tokenName the Bouncr token name
+     */
     public void setTokenName(String tokenName) {
         this.tokenName = tokenName;
     }
 
     public String getBackendHeaderName() {
         return backendHeaderName;
+    }
+
+    public void setBackendHeaderName(String backendHeaderName) {
+        this.backendHeaderName = backendHeaderName;
     }
 
     public PasswordPolicy getPasswordPolicy() {
@@ -139,4 +153,11 @@ public class BouncrConfiguration extends SystemComponent {
         this.secureRandom = secureRandom;
     }
 
+    public Clock getClock() {
+        return clock;
+    }
+
+    public void setClock(Clock clock) {
+        this.clock = clock;
+    }
 }

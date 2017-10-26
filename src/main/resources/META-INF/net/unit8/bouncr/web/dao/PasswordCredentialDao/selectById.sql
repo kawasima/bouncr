@@ -1,3 +1,3 @@
 SELECT *
 FROM password_credentials
-WHERE user_id = /*id*/1
+WHERE user_id = /*userId*/1

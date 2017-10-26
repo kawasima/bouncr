@@ -62,8 +62,9 @@ public class V11__InsertAdminUser implements JdbcMigration {
                         field("user_id"),
                         field("password"),
                         field("salt"),
+                        field("initial"),
                         field("created_at"))
-                .values(param(), param(), param(), param(Date.class))
+                .values(param(), param(), param(), param(), param(Date.class))
                 .getSQL();
 
         final String INS_GROUP = create
@@ -162,14 +163,15 @@ public class V11__InsertAdminUser implements JdbcMigration {
             stmtInsUser.setString(1, "admin");
             stmtInsUser.setString(2, "Admin User");
             stmtInsUser.setString(3, "admin@example.com");
-            stmtInsUser.setBoolean(4, true);
+            stmtInsUser.setBoolean(4, false);
             stmtInsUser.executeUpdate();
             Long userId = fetchGeneratedKey(stmtInsUser);
 
             stmtInsPasswdCred.setLong(1, userId);
             stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
             stmtInsPasswdCred.setString(3, "0123456789012345");
-            stmtInsPasswdCred.setDate(4, new Date(System.currentTimeMillis() / 1000));
+            stmtInsPasswdCred.setBoolean(4, true);
+            stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis() / 1000));
             stmtInsPasswdCred.executeUpdate();
 
             stmtInsGroup.setString(1, "BOUNCR_ADMIN");

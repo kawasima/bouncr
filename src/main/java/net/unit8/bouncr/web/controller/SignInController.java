@@ -11,14 +11,12 @@ import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.exception.FalteringEnvironmentException;
-import enkan.util.BeanBuilder;
 import enkan.util.CodecUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import lombok.Data;
 import net.jodah.failsafe.Failsafe;
-import net.unit8.bouncr.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.LdapClient;
@@ -27,38 +25,36 @@ import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.controller.data.OidcSession;
-import net.unit8.bouncr.web.entity.ResponseType;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
+import net.unit8.bouncr.web.form.ForceChangePasswordForm;
 import net.unit8.bouncr.web.form.SignInForm;
+import net.unit8.bouncr.web.service.PasswordCredentialService;
 import net.unit8.bouncr.web.service.SignInService;
 import okhttp3.*;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.seasar.doma.jdbc.NoResultException;
-import org.seasar.doma.jdbc.SelectOptions;
-import org.seasar.doma.jdbc.UniqueConstraintException;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
-import static enkan.util.HttpResponseUtils.redirect;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
-import static net.unit8.bouncr.web.entity.ResponseType.ID_TOKEN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
+import static net.unit8.bouncr.web.entity.ResponseType.ID_TOKEN;
+import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.EXPIRED;
+import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.INITIAL;
 
 public class SignInController {
     private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<HashMap<String, Object>>() {
@@ -91,10 +87,12 @@ public class SignInController {
     private BouncrConfiguration config;
 
     private SignInService signInService;
+    private PasswordCredentialService passwordCredentialService;
 
     @PostConstruct
-    public void initialize() {
+    private void initialize() {
         signInService = new SignInService(daoProvider, storeProvider, config);
+        passwordCredentialService = new PasswordCredentialService(daoProvider, config);
     }
 
     public HttpResponse signInForm(HttpRequest request, SignInForm form, UserPermissionPrincipal principal) {
@@ -142,31 +140,32 @@ public class SignInController {
         return signInForm(request, form ,null);
     }
 
-    @Data
-    public static class OidcProviderDto implements Serializable {
-        private Long id;
-        private String name;
-        private String apiKey;
-        private String scope;
-        private String state = RandomUtils.generateRandomString(8);
-        private String responseType;
-        private String tokenEndpoint;
-        private String authorizationEndpoint;
-        private String nonce = RandomUtils.generateRandomString(32);
-        private String redirectUriBase;
+    private HttpResponse forceToChangePasswordForm(ForceChangePasswordForm form) {
+        return templateEngine.render("my/signIn/force_to_change_password",
+                "changePassword", form);
+    }
 
-        public String getRedirectUri() {
-            return redirectUriBase
-                    + "/my/signIn/oidc/" + id;
-        }
+    public HttpResponse forceToChangePassword(ForceChangePasswordForm form, HttpRequest request) {
+        passwordCredentialService.validateBasedOnPasswordPolicy(form, "oldPassword");
 
-        public String getAuthorizationUrl() {
-            return authorizationEndpoint + "?response_type=" + CodecUtils.urlEncode(responseType)
-                    + "&client_id=" + apiKey
-                    + "&redirect_uri=" + CodecUtils.urlEncode(getRedirectUri())
-                    + "&state=" + state
-                    + "&scope=" + scope
-                    + "&nonce=" + nonce;
+        if (form.hasErrors()) {
+            return templateEngine.render("my/signIn/force_to_change_password",
+                    "changePassword", form);
+        } else {
+            UserDao userDao = daoProvider.getDao(UserDao.class);
+            User user = userDao.selectByPassword(form.getAccount(), form.getOldPassword());
+            if (user == null) {
+                return templateEngine.render("my/account",
+                        "message", "error.oldPasswordMismatch",
+                        "user", form);
+            }
+
+            passwordCredentialService.changePassword(user, form.getNewPassword());
+            AuditDao auditDao = daoProvider.getDao(AuditDao.class);
+            auditDao.insertUserAction(ActionType.CHANGE_PASSWORD, user.getAccount(), request.getRemoteAddr());
+
+            String token = signInService.signIn(user, request);
+            return signInService.responseSignedIn(token, request, form.getUrl());
         }
     }
 
@@ -186,25 +185,25 @@ public class SignInController {
         }
 
         if (user != null) {
-            OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
-            if (otpKey != null) {
-                Set<String> codeSet = new OneTimePasswordGenerator(30)
-                        .generateTotpSet(otpKey.getKey(), 5)
-                        .stream()
-                        .map(n -> String.format(Locale.US, "%06d", n))
-                        .collect(Collectors.toSet());
-
-                if (!codeSet.contains(form.getCode())) {
-                    return templateEngine.render("my/signIn/2fa",
-                            "signin", form);
-                }
+            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+            if (status == EXPIRED || status == INITIAL) {
+                ForceChangePasswordForm changePasswordForm = new ForceChangePasswordForm();
+                changePasswordForm.setAccount(form.getAccount());
+                changePasswordForm.setOldPassword(form.getPassword());
+                return forceToChangePasswordForm(changePasswordForm);
             }
+        }
+
+        if (user != null && !signInService.validateOtpKey(user, form.getCode())) {
+            return templateEngine.render("my/signIn/2fa",
+                    "signin", form);
         }
 
         signInService.recordSignIn(user, request, form);
 
         if (user != null) {
-            return signInService.signIn(user, request, form.getUrl());
+            String token = signInService.signIn(user, request);
+            return signInService.responseSignedIn(token, request, form.getUrl());
         } else {
             form.setErrors(Multimap.of("account", "error.failToSignin"));
             return signInForm(request, form);
@@ -220,7 +219,8 @@ public class SignInController {
         auditDao.insertUserAction(user != null?USER_SIGNIN:USER_FAILED_SIGNIN, form.getAccount(), request.getRemoteAddr());
 
         if (user != null) {
-            return signInService.signIn(user, request, form.getUrl());
+            String token = signInService.signIn(user, request);
+            return signInService.responseSignedIn(token, request, form.getUrl());
         } else {
             return templateEngine.render("my/signIn/clientdn",
                     "signin", form);
@@ -236,7 +236,8 @@ public class SignInController {
         if (claim.getSub() != null) {
             User user = userDao.selectByOidc(oidcProvider.getId(), claim.getSub());
             if (user != null) {
-                return signInService.signIn(user, request, request.getParams().get("url"));
+                String token = signInService.signIn(user, request);
+                return signInService.responseSignedIn(token, request, request.getParams().get("url"));
             } else {
                 Invitation invitation = builder(new Invitation())
                         .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
@@ -332,5 +333,33 @@ public class SignInController {
         return some(request.getHeaders().get("X-Client-DN"),
                 clientDN -> new X500Name(clientDN).getRDNs(BCStyle.CN)[0],
                 cn -> IETFUtils.valueToString(cn.getFirst().getValue())).orElse(null);
+    }
+
+    @Data
+    public static class OidcProviderDto implements Serializable {
+        private Long id;
+        private String name;
+        private String apiKey;
+        private String scope;
+        private String state = RandomUtils.generateRandomString(8);
+        private String responseType;
+        private String tokenEndpoint;
+        private String authorizationEndpoint;
+        private String nonce = RandomUtils.generateRandomString(32);
+        private String redirectUriBase;
+
+        public String getRedirectUri() {
+            return redirectUriBase
+                    + "/my/signIn/oidc/" + id;
+        }
+
+        public String getAuthorizationUrl() {
+            return authorizationEndpoint + "?response_type=" + CodecUtils.urlEncode(responseType)
+                    + "&client_id=" + apiKey
+                    + "&redirect_uri=" + CodecUtils.urlEncode(getRedirectUri())
+                    + "&state=" + state
+                    + "&scope=" + scope
+                    + "&nonce=" + nonce;
+        }
     }
 }

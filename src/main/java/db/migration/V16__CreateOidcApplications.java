@@ -31,6 +31,19 @@ public class V16__CreateOidcApplications implements JdbcMigration {
                     .getSQL();
 
             stmt.execute(ddl);
+
+            ddl = create.createTable(table("oidc_application_scopes"))
+                    .column(field("oidc_application_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("permission_id", SQLDataType.BIGINT.nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("oidc_application_id"), field("permission_id")),
+                            constraint().foreignKey(field("oidc_application_id"))
+                                    .references(table("oidc_applications"), field("oidc_application_id")),
+                            constraint().foreignKey(field("permission_id"))
+                                    .references(table("permissions"), field("permission_id"))
+                    )
+                    .getSQL();
+            stmt.execute(ddl);
         }
     }
 }

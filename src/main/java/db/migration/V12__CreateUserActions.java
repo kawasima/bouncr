@@ -1,11 +1,13 @@
 package db.migration;
 
+import net.unit8.bouncr.web.entity.ActionType;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 
 import static org.jooq.impl.DSL.*;
@@ -13,8 +15,8 @@ import static org.jooq.impl.DSL.*;
 public class V12__CreateUserActions implements JdbcMigration {
     @Override
     public void migrate(Connection connection) throws Exception {
+        DSLContext create = DSL.using(connection);
         try(Statement stmt = connection.createStatement()) {
-            DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("actions"))
                     .column(field("action_id", SQLDataType.BIGINT.identity(true)))
                     .column(field("name", SQLDataType.VARCHAR(100).nullable(false)))
@@ -35,6 +37,22 @@ public class V12__CreateUserActions implements JdbcMigration {
                             constraint().primaryKey(field("user_action_id"))
                     ).getSQL();
             stmt.execute(ddl);
+        }
+
+        try (PreparedStatement stmt = connection.prepareStatement(create
+                .insertInto(table("actions"))
+                .columns(
+                        field("action_id"),
+                        field("name")
+                )
+                .values("?", "?")
+                .getSQL())) {
+            for (ActionType actionType : ActionType.values()) {
+                stmt.setLong(1, actionType.getId());
+                stmt.setString(2, actionType.getName());
+                stmt.executeUpdate();
+            }
+            connection.commit();
         }
     }
 }

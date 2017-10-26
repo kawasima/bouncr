@@ -122,6 +122,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             r.scope("/my", mr-> {
                 mr.get("/signIn").to(SignInController.class, "signInForm");
                 mr.post("/signIn").to(SignInController.class, "signInByPassword");
+                mr.post("/signIn/changePassword").to(SignInController.class, "forceToChangePassword");
                 mr.post("/signIn/clientDN").to(SignInController.class, "signInByClientDN");
                 mr.get("/signIn/oidc/:id").to(SignInController.class, "signInByOidc");
                 mr.post("/signIn/oidc/:id").to(SignInController.class, "signInByOidcImplicit");

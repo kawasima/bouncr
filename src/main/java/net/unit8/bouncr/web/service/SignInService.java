@@ -6,32 +6,31 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
-import static enkan.util.BeanBuilder.builder;
 import enkan.util.HttpResponseUtils;
+import net.unit8.bouncr.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.web.dao.AuditDao;
-import net.unit8.bouncr.web.dao.PermissionDao;
-import net.unit8.bouncr.web.dao.UserDao;
-import net.unit8.bouncr.web.dao.UserSessionDao;
-import net.unit8.bouncr.web.entity.PermissionWithRealm;
-import net.unit8.bouncr.web.entity.User;
-import net.unit8.bouncr.web.entity.UserSession;
+import net.unit8.bouncr.web.dao.*;
+import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignInForm;
 import org.seasar.doma.jdbc.NoResultException;
 import org.seasar.doma.jdbc.SelectOptions;
 import org.seasar.doma.jdbc.UniqueConstraintException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.HttpResponseUtils.redirect;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
+import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.*;
 
 public class SignInService {
     private final DomaProvider daoProvider;
@@ -76,7 +75,7 @@ public class SignInService {
         }
     }
 
-    public HttpResponse signIn(User user, HttpRequest request, String redirectUrl) {
+    public String signIn(User user, HttpRequest request) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         String token = UUID.randomUUID().toString();
 
@@ -93,7 +92,10 @@ public class SignInService {
                 .build());
 
         storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
+        return token;
+    }
 
+    public HttpResponse responseSignedIn(String token, HttpRequest request, String redirectUrl) {
         Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
         tokenCookie.setPath("/");
         tokenCookie.setHttpOnly(true);
@@ -112,6 +114,44 @@ public class SignInService {
         }
     }
 
+    /**
+     * Check whether the given otp key is valid.
+     *
+     * @param user the user entity
+     * @param code otp key inputted by the user
+     * @return true if otp key is valid or the user doesn't activate the 2-factor authentication
+     */
+    public boolean validateOtpKey(User user, String code) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        OtpKey otpKey = userDao.selectOtpKeyById(user.getId());
+        if (otpKey == null) return true;
+
+        Set<String> codeSet = new OneTimePasswordGenerator(30)
+                .generateTotpSet(otpKey.getKey(), 5)
+                .stream()
+                .map(n -> String.format(Locale.US, "%06d", n))
+                .collect(Collectors.toSet());
+
+        return codeSet.contains(code);
+    }
+
+    public PasswordCredentialStatus validatePasswordCredentialAttributes(User user) {
+        PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
+        PasswordCredential passwordCredential = passwordCredentialDao.selectById(user.getId());
+
+        if (passwordCredential.getInitial()) {
+            return INITIAL;
+        }
+
+        if (config.getPasswordPolicy().getExpires() != null) {
+            Instant createdAt = passwordCredential.getCreatedAt().toInstant(ZoneId.systemDefault().getRules().getOffset(Instant.now()));
+            return (createdAt.plus(config.getPasswordPolicy().getExpires()).isBefore(config.getClock().instant()))?
+                    EXPIRED : VALID;
+        }
+
+        return VALID;
+    }
+
     private Map<Long, UserPermissionPrincipal> getPermissionsByRealm(User user, PermissionDao permissionDao) {
         return permissionDao
                 .selectByUserId(user.getId())
@@ -127,5 +167,11 @@ public class SignInService {
                                 e.getValue().stream()
                                         .map(PermissionWithRealm::getPermission)
                                         .collect(Collectors.toSet()))));
+    }
+
+    public enum PasswordCredentialStatus {
+        VALID,
+        INITIAL,
+        EXPIRED
     }
 }

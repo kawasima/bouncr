@@ -4,11 +4,13 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 
 import java.time.Duration;
+import java.util.regex.Pattern;
 
 public class PasswordPolicy extends SystemComponent {
     private Duration expires;
     private int minLength = 8;
     private int maxLength = 128;
+    private Pattern pattern = Pattern.compile("[\\p{Punct}\\p{Alnum}]+");
     private int numOfTrialsUntilLock = 10;
 
     @Override
@@ -48,6 +50,14 @@ public class PasswordPolicy extends SystemComponent {
 
     public void setMaxLength(int maxLength) {
         this.maxLength = maxLength;
+    }
+
+    public Pattern getPattern() {
+        return pattern;
+    }
+
+    public void setPattern(Pattern pattern) {
+        this.pattern = pattern;
     }
 
     public int getNumOfTrialsUntilLock() {
