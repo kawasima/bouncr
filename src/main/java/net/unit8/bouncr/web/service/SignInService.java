@@ -53,7 +53,7 @@ public class SignInService {
     public void recordSignIn(User user, HttpRequest request, SignInForm form) {
         AuditDao auditDao = daoProvider.getDao(AuditDao.class);
         auditDao.insertUserAction(user != null ? USER_SIGNIN : USER_FAILED_SIGNIN,
-                form.getAccount(),
+                Optional.ofNullable(form.getAccount()).orElse("(anonymous)"),
                 request.getRemoteAddr());
 
         if (user == null) {

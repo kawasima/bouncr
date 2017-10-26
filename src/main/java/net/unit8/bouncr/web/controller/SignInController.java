@@ -146,7 +146,7 @@ public class SignInController {
     }
 
     public HttpResponse forceToChangePassword(ForceChangePasswordForm form, HttpRequest request) {
-        passwordCredentialService.validateBasedOnPasswordPolicy(form, "oldPassword");
+        passwordCredentialService.validateBasedOnPasswordPolicy(form, "newPassword");
 
         if (form.hasErrors()) {
             return templateEngine.render("my/signIn/force_to_change_password",
