@@ -10,10 +10,10 @@
   <span class="invalid-feedback"><#if group.hasErrors("description")>${group.getErrors("description")?join(",")}</#if></span>
 </div>
 
-<div id="elm-group-users-selecter"></div>
-<script src="/admin/assets/js/group-users-selecter.js"></script>
+<div id="group-users-selector"></div>
+<script src="/admin/assets/js/group-users-selector.js"></script>
 <script type="text/javascript">
-  var app = Elm.GroupUsersSelecter.embed(document.getElementById('elm-group-users-selecter'), {groupId: ${group.id!'null'}});
+  var app = Elm.GroupUsersSelector.embed(document.getElementById('group-users-selector'), {groupId: ${group.id!'null'}});
 </script>
 
 <select name="userId[]" class="selectpicker" multiple>

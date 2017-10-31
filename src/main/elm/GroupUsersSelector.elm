@@ -1,4 +1,4 @@
-module GroupUsersSelecter exposing (..)
+module GroupUsersSelector exposing (..)
 
 import Html exposing (programWithFlags)
 import Time exposing (second)
