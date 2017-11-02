@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.NotBlank;
+import java.util.List;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -21,4 +22,6 @@ public class OidcApplicationForm extends FormBase {
 
     @NotBlank
     private String description;
+
+    private List<Long> permissionId;
 }

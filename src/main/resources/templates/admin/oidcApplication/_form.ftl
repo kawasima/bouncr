@@ -22,3 +22,13 @@
   <span class="invalid-feedback"><#if oidcApplication.hasErrors("callbackUrl")>${oidcApplication.getErrors("callbackUrl")?join(",")}</#if></span>
 </div>
 
+<div class="form-group">
+  <label for="permissionId">Scopes</label>
+  <select class="form-control" name="permissionId[]" multiple>
+    <#list permissions as permission>
+    <option value="${permission.id}"<#if oidcApplication.permissionId?has_content && oidcApplication.permissionId?seq_contains(permission.id)> selected</#if>>${permission.name}</option>
+    </#list>
+  </select>
+</div>
+
+

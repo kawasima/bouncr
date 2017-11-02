@@ -8,10 +8,10 @@
         <input type="hidden" name="oldPassword" value="${changePassword.oldPassword}" class="form-control"/>
 
         <input type="password" name="newPassword" class="form-control" placeholder="${t('field.password')}"/>
-        <#if changePassword.hasErrors('account')>
+        <#if changePassword.hasErrors('newPassword')>
         <div class="alert alert-danger" role="alert">
-        <#list changePassword.getErrors('account') as err>
-        ${t(err)}
+        <#list changePassword.getErrors('newPassword') as err>
+        ${err}
         </#list>
         </div>
         </#if>

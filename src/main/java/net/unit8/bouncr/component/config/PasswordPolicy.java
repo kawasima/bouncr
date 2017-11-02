@@ -1,32 +1,18 @@
-package net.unit8.bouncr.component;
+package net.unit8.bouncr.component.config;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.util.regex.Pattern;
 
-public class PasswordPolicy extends SystemComponent {
+public class PasswordPolicy implements Serializable {
     private Duration expires;
     private int minLength = 8;
     private int maxLength = 128;
     private Pattern pattern = Pattern.compile("[\\p{Punct}\\p{Alnum}]+");
     private int numOfTrialsUntilLock = 10;
-
-    @Override
-    protected ComponentLifecycle lifecycle() {
-        return new ComponentLifecycle<PasswordPolicy>() {
-            @Override
-            public void start(PasswordPolicy policy) {
-
-            }
-
-            @Override
-            public void stop(PasswordPolicy policy) {
-
-            }
-        };
-    }
 
     public Duration getExpires() {
         return expires;

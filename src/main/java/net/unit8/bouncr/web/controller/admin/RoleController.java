@@ -47,14 +47,18 @@ public class RoleController {
                 "roles", roles);
     }
 
-    @RolesAllowed("CREATE_ROLE")
-    public HttpResponse newForm(RoleForm form) {
+    private HttpResponse responseNewForm(RoleForm form) {
         PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
         List<Permission> permissions = permissionDao.selectAll();
         return templateEngine.render("admin/role/new",
                 "role", form,
                 "permissions", permissions,
                 "rolePermissionIds", Collections.emptyList());
+    }
+
+    @RolesAllowed("CREATE_ROLE")
+    public HttpResponse newForm() {
+        return responseNewForm(new RoleForm());
     }
 
     @RolesAllowed({"MODIFY_ROLE", "MODIFY_ANY_ROLE"})
@@ -81,12 +85,7 @@ public class RoleController {
     @RolesAllowed("CREATE_ROLE")
     public HttpResponse create(RoleForm form) {
         if (form.hasErrors()) {
-            PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
-            List<Permission> permissions = permissionDao.selectAll();
-            return templateEngine.render("admin/role/new",
-                    "rolePermissionIds", form.getPermissionId(),
-                    "permissions", permissions,
-                    "role", form);
+            return responseNewForm(form);
         } else {
             RoleDao roleDao = daoProvider.getDao(RoleDao.class);
             Role role = beansConverter.createFrom(form, Role.class);

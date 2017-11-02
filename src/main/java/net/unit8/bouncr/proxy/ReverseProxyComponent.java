@@ -249,7 +249,6 @@ public class ReverseProxyComponent extends WebServerComponent {
                     HttpResponse response = application.handle(request);
                     exchange.setStatusCode(response.getStatus());
                     setResponseHeaders(response.getHeaders(), exchange);
-
                     exchange.startBlocking();
                     setBody(exchange.getResponseSender(), response.getBody());
                 } catch (ServiceUnavailableException ex) {

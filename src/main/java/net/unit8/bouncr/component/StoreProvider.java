@@ -4,6 +4,7 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.middleware.session.JCacheStore;
 import enkan.middleware.session.KeyValueStore;
+import net.unit8.bouncr.component.config.KvsSettings;
 
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.AccessedExpiryPolicy;
@@ -26,18 +27,22 @@ public class StoreProvider extends SystemComponent {
             @Override
             public void start(StoreProvider provider) {
                 BouncrConfiguration config = getDependency(BouncrConfiguration.class);
-                Factory<ExpiryPolicy> expiryPolicyFactory = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getTokenExpires()));
-                provider.bouncrTokenStore = new JCacheStore(expiryPolicyFactory);
+                KvsSettings settings = config.getKeyValueStoreSettings();
+                provider.bouncrTokenStore = settings
+                        .getBouncrTokenStoreFactory()
+                        .apply(getAllDependencies());
 
-                provider.authorizationCodeStore = new JCacheStore(
-                        AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getAuthorizationCodeExpires()))
-                );
-                provider.accessTokenStore = new JCacheStore();
+                provider.authorizationCodeStore = settings
+                        .getAuthorizationCodeStoreFactory()
+                        .apply(getAllDependencies());
 
-                provider.oidcSessionStore = new JCacheStore(
-                        AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, config.getOidcSessionExpires()))
-                );
+                provider.accessTokenStore = settings
+                        .getAccessTokenStoreFactory()
+                        .apply(getAllDependencies());
 
+                provider.oidcSessionStore = settings
+                        .getOidcSessionStoreFactory()
+                        .apply(getAllDependencies());
             }
 
             @Override

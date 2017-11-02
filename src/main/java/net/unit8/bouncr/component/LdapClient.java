@@ -4,9 +4,7 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.FalteringEnvironmentException;
 import enkan.exception.MisconfigurationException;
-import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.Failsafe;
-import org.bouncycastle.est.jcajce.SSLSocketFactoryCreator;
 
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
@@ -18,7 +16,6 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import javax.net.SocketFactory;
-import javax.net.ssl.SSLSocketFactory;
 import java.util.Hashtable;
 import java.util.Objects;
 import java.util.Properties;
@@ -30,6 +27,7 @@ public class LdapClient extends SystemComponent {
     private String user;
     private String password;
     private String searchBase;
+    private String accountAttribute = "sAMAccountName";
     private AuthMethod authMethod = AuthMethod.NONE;
     private BouncrConfiguration config;
     private Class<? extends SocketFactory> socketFactoryClass;
@@ -58,9 +56,7 @@ public class LdapClient extends SystemComponent {
                     }
                     component.ldapContext = new InitialLdapContext(env, null);
                 } catch (NamingException e) {
-                    // FIXME
-                    e.printStackTrace();
-                    throw new MisconfigurationException("", e);
+                    throw new MisconfigurationException("ldap.CANNOT_CONNECT_TO_SERVER", e);
                 }
             }
 
@@ -79,7 +75,7 @@ public class LdapClient extends SystemComponent {
 
 
     public boolean search(String account, String password) {
-        String searchFilter = "(sAMAccountName=" + account + ")";
+        String searchFilter = "(" + accountAttribute + "=" + account + ")";
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
@@ -150,7 +146,11 @@ public class LdapClient extends SystemComponent {
         this.authMethod = authMethod;
     }
 
-    enum AuthMethod {
+    public void setAccountAttribute(String accountAttribute) {
+        this.accountAttribute = accountAttribute;
+    }
+
+    public enum AuthMethod {
         NONE("none"),
         SIMPLE("simple");
 

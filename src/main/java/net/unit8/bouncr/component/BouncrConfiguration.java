@@ -3,15 +3,22 @@ package net.unit8.bouncr.component;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
+import lombok.Getter;
+import lombok.Setter;
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
+import net.unit8.bouncr.component.config.KvsSettings;
+import net.unit8.bouncr.component.config.PasswordPolicy;
 
 import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class BouncrConfiguration extends SystemComponent {
@@ -24,7 +31,14 @@ public class BouncrConfiguration extends SystemComponent {
     private String backendHeaderName = "X-Bouncr-credential";
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private CertConfiguration certConfiguration;
+    @Getter
+    @Setter
+    private KvsSettings keyValueStoreSettings = new KvsSettings();
     private SecureRandom secureRandom;
+    private MessageResource messageResource = new MessageResource(new HashSet<>(Arrays.asList(
+            Locale.ENGLISH,
+            Locale.JAPANESE))
+    );
     private RetryPolicy httpClientRetryPolicy = new RetryPolicy()
             .retryOn(SocketTimeoutException.class)
             .withBackoff(3, 10, TimeUnit.SECONDS);
@@ -159,5 +173,13 @@ public class BouncrConfiguration extends SystemComponent {
 
     public void setClock(Clock clock) {
         this.clock = clock;
+    }
+
+    public MessageResource getMessageResource() {
+        return messageResource;
+    }
+
+    public void setMessageResource(MessageResource messageResource) {
+        this.messageResource = messageResource;
     }
 }

@@ -15,6 +15,7 @@ import enkan.system.EnkanSystem;
 import net.unit8.bouncr.cert.CertificateProvider;
 import net.unit8.bouncr.cert.ReloadableTrustManager;
 import net.unit8.bouncr.component.*;
+import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
 import net.unit8.bouncr.sign.JsonWebToken;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;

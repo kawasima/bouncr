@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.dao;
 
 import net.unit8.bouncr.web.DomaConfig;
 import net.unit8.bouncr.web.entity.OidcApplication;
+import net.unit8.bouncr.web.entity.Permission;
 import org.seasar.doma.*;
 
 import java.util.List;
@@ -17,12 +18,21 @@ public interface OidcApplicationDao {
     @Select(ensureResult = true)
     OidcApplication selectByClientId(String clientId);
 
+    @Select
+    List<Permission> selectPermissionsById(Long id);
+
     @Insert
-    int insert(OidcApplication oauth2Application);
+    int insert(OidcApplication oidcApplication);
+
+    @Insert(sqlFile = true)
+    int addScope(OidcApplication oidcApplication, Permission permission);
 
     @Update
-    int update(OidcApplication oauth2Application);
+    int update(OidcApplication oidcApplication);
 
     @Delete
-    int delete(OidcApplication oauth2Application);
+    int delete(OidcApplication oidcApplication);
+
+    @Delete(sqlFile = true)
+    int clearScopes(OidcApplication oidcApplication);
 }

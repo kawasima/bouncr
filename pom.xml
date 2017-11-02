@@ -11,7 +11,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <enkan.version>0.2.1</enkan.version>
+        <enkan.version>0.3.0</enkan.version>
     </properties>
 
     <repositories>

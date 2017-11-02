@@ -4,6 +4,7 @@ import enkan.Application;
 import enkan.Endpoint;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
+import enkan.data.ContentNegotiable;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.endpoint.ResourceEndpoint;
@@ -173,7 +174,10 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                         HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
 
-        app.use(new ContentNegotiationMiddleware());
+        app.use(builder(new ContentNegotiationMiddleware())
+                .set(ContentNegotiationMiddleware::setAllowedLanguages,
+                        new HashSet<>(Arrays.asList("en", "ja")))
+                .build());
         // Kotowari
         app.use(new ResourceMiddleware());
         app.use(builder(new RenderTemplateMiddleware())

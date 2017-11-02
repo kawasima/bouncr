@@ -6,7 +6,7 @@
   <#if message??>
   <div class="alert alert-danger" role="alert">${t(message)}</div>
   </#if>
-  <form action="${urlFor('changePassword')}" method="post">
+  <form action="${urlFor('changePassword')}" method="post" class="mb-5">
     <div class="form-group<#if changePassword.hasErrors("oldPassword")> has-error</#if>">
       <label for="old-password">${t('field.oldPassword')}</label>
       <input id="old-password" class="form-control<#if changePassword.hasErrors("oldPassword")> is-invalid</#if>" type="password" name="oldPassword" value=""/>

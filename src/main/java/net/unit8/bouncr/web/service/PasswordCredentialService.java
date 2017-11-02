@@ -2,6 +2,7 @@ package net.unit8.bouncr.web.service;
 
 import enkan.component.doma2.DomaProvider;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.MessageResource;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.PasswordCredentialDao;
@@ -10,7 +11,7 @@ import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.form.FormBase;
 
 import java.lang.reflect.Field;
-import java.text.MessageFormat;
+import java.util.Locale;
 import java.util.Optional;
 
 import static enkan.util.BeanBuilder.builder;
@@ -48,20 +49,21 @@ public class PasswordCredentialService {
         int passwordLen = some(password, p -> p.length()).orElse(0);
         int maxLen = config.getPasswordPolicy().getMaxLength();
         int minLen = config.getPasswordPolicy().getMinLength();
+        MessageResource messageResource = config.getMessageResource();
         if (passwordLen > maxLen) {
-            MessageFormat fmt = new MessageFormat("length must be {0} and {1}");
-            form.getErrors().put(passwordPropertyName, fmt.format(new Object[]{minLen, maxLen}));
+            form.getErrors().put(passwordPropertyName,
+                    messageResource.renderMessage(Locale.getDefault(), "error.passwordLength", minLen, maxLen));
         }
 
-        if (passwordLen < config.getPasswordPolicy().getMinLength()) {
-            MessageFormat fmt = new MessageFormat("length must be {0} and {1}");
-            form.getErrors().put(passwordPropertyName, fmt.format(new Object[]{minLen, maxLen}));
+        if (passwordLen < minLen) {
+            form.getErrors().put(passwordPropertyName,
+                    messageResource.renderMessage(Locale.getDefault(), "error.passwordLength", minLen, maxLen));
         }
 
         Optional.ofNullable(config.getPasswordPolicy().getPattern()).ifPresent(p -> {
             if (!p.matcher(password).matches()) {
-                MessageFormat fmt = new MessageFormat("contains unavailable characters");
-                form.getErrors().put(passwordPropertyName, fmt.format(new Object[]{}));
+                form.getErrors().put(passwordPropertyName,
+                        messageResource.renderMessage(Locale.getDefault(), "error.mismatchPasswordPattern"));
             }
         });
     }

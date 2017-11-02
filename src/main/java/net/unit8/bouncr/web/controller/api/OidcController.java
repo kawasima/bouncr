@@ -20,6 +20,7 @@ import net.unit8.bouncr.web.controller.data.AccessToken;
 import net.unit8.bouncr.web.dao.OidcApplicationDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.OidcApplication;
+import net.unit8.bouncr.web.entity.Permission;
 import net.unit8.bouncr.web.entity.ResponseType;
 import net.unit8.bouncr.web.entity.User;
 import net.unit8.bouncr.web.service.OAuthService;
@@ -90,21 +91,23 @@ public class OidcController {
                 KeyUtils.decode(oidcApplication.getPrivateKey()));
     }
 
-    private String createAccessToken(String account, String clientId) {
+    private String createAccessToken(String account, String clientId, List<Permission> permissions) {
         KeyValueStore accessTokenStore = storeProvider.getStore(ACCESS_TOKEN);
         String tokenString = RandomUtils.generateRandomString(16, config.getSecureRandom());
         AccessToken accessToken = builder(new AccessToken())
                 .set(AccessToken::setActive, true)
                 .set(AccessToken::setClientId, clientId)
-                //.set(AccessToken::setScope, )
+                .set(AccessToken::setScope, permissions.stream()
+                        .map(p -> p.getName())
+                        .collect(Collectors.joining(" ")))
                 .set(AccessToken::setSub, account)
                 .build();
         accessTokenStore.write(tokenString, accessToken);
         return tokenString;
     }
 
-    private String createAccessToken(User user, String clientId) {
-        return createAccessToken(user.getAccount(), clientId);
+    private String createAccessToken(User user, String clientId, List<Permission> permissions) {
+        return createAccessToken(some(user, User::getAccount).orElse(null), clientId, permissions);
     }
 
     private String makeCallbackUrl(String baseUrl, Parameters params) {
@@ -144,7 +147,7 @@ public class OidcController {
                 responseParams.put("id_token", createIdToken(principal.getId(), oidcApplication, nonce));
             }
             if (responseTypes.contains(TOKEN)) {
-                responseParams.put("access_token", createAccessToken(principal.getName(), clientId));
+                responseParams.put("access_token", createAccessToken(principal.getName(), clientId, Collections.emptyList()));
                 responseParams.put("token_type", "bearer");
                 responseParams.put("expires_in", 3600);
             }
@@ -182,12 +185,13 @@ public class OidcController {
         String grantType = params.get("grant_type");
         UserDao userDao = daoProvider.getDao(UserDao.class);
 
-        User user = null;
+        User user;
         if (Objects.equals(grantType, "client_credentials")) {
-            String account = some(request.getHeaders().get("X-Client-DN"),
+            user = some(request.getHeaders().get("X-Client-DN"),
                     clientDN -> new X500Name(clientDN).getRDNs(BCStyle.CN)[0],
-                    cn -> IETFUtils.valueToString(cn.getFirst().getValue())).orElse(null);
-            user = userDao.selectByAccount(account);
+                    cn -> IETFUtils.valueToString(cn.getFirst().getValue()),
+                    account -> userDao.selectByAccount(account)
+            ).orElse(null);
         } else if (Objects.equals(grantType, "code")) {
             KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
             Long userId = (Long) authorizationCodeStore.read(params.get("code"));
@@ -210,7 +214,8 @@ public class OidcController {
             return oauthService.errorResponse(UNAUTHORIZED_CLIENT);
         }
         // Access Token
-        String token = createAccessToken(user, clientId);
+        List<Permission> permissions = oidcApplicationDao.selectPermissionsById(oidcApplication.getId());
+        String token = createAccessToken(user, clientId, permissions);
         String nonce = params.get("nonce");
         String idTokenSigned = createIdToken(user.getId(), oidcApplication, nonce);
 
@@ -224,6 +229,13 @@ public class OidcController {
                 res -> contentType(res, "application/json")).orElse(null);
     }
 
+    /**
+     * Introspect endpoint.
+     *
+     * @param request
+     * @param params
+     * @return
+     */
     public HttpResponse introspect(HttpRequest request, Parameters params) {
         String token = params.get("token");
         KeyValueStore accessTokenStore = storeProvider.getStore(ACCESS_TOKEN);
