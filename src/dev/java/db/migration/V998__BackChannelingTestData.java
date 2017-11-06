@@ -12,15 +12,15 @@ import static org.jooq.impl.DSL.*;
 
 public class V998__BackChannelingTestData implements JdbcMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "create-board", "read-board", "modify-board",
-            "read-any-thread", "read-thread", "write-any-thread", "write-thread",
-            "delete-any-comment", "delete-comment"
+            "CREATE_BOARD", "READ_BOARD", "MODIFY_BOARD",
+            "READ_ANY_THREAD", "READ_THREAD", "WRITE_ANY_THREAD", "WRITE_THREAD",
+            "DELETE_ANY_COMMENT", "DELETE_COMMENT"
     };
 
     private static final String[] OTHER_PERMISSIONS = new String[]{
-            "read-board",
-            "read-thread", "write-thread",
-            "delete-comment"
+            "READ_BOARD",
+            "READ_THREAD", "WRITE_THREAD",
+            "DELETE_COMMENT"
     };
 
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
