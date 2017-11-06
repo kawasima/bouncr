@@ -12,11 +12,17 @@ import static org.jooq.impl.DSL.*;
 
 public class V998__BackChannelingTestData implements JdbcMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "READ_ANY_THREAD", "CREATE_BOARD", "MODIFY_BOARD", "READ_ANY_COMMENT",
+            "create-board", "read-board", "modify-board",
+            "create-thread", "read-any-thread", "read-thread", "write-any-thread", "write-thread",
+            "add-watcher", "remove-watcher",
+            "read-any-comment", "delete-any-comment", "delete-comment"
     };
 
     private static final String[] OTHER_PERMISSIONS = new String[]{
-            "READ_BOARD", "READ_THREAD", "WRITE_THREAD", "DELETE_COMMENT"
+            "read-board",
+            "create-thread", "read-thread", "write-thread",
+            "add-watcher", "remove-watcher",
+            "delete-comment"
     };
 
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
@@ -88,6 +94,12 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                 .values("?", "?", "?")
                 .getSQL();
 
+        final String SELECT_PERMISSION = create
+                .select(field("permission_id"))
+                .from(table("permissions"))
+                .where(field("name").eq("?"))
+                .getSQL();
+
         final String INS_ROLE_PERMISSION = create
                 .insertInto(table("role_permissions"))
                 .columns(
@@ -143,6 +155,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
         try (PreparedStatement stmtInsUser = connection.prepareStatement(INS_USER, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsPasswdCred = connection.prepareStatement(INS_PASSWD_CRED);
              PreparedStatement stmtInsPermission = connection.prepareStatement(INS_PERMISSION, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement stmtSelPermission = connection.prepareStatement(SELECT_PERMISSION);
              PreparedStatement stmtInsRole = connection.prepareStatement(INS_ROLE, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsRolePermission = connection.prepareStatement(INS_ROLE_PERMISSION);
              PreparedStatement stmtInsMembership = connection.prepareStatement(INS_MEMBERSHIP, Statement.RETURN_GENERATED_KEYS);
@@ -298,11 +311,22 @@ public class V998__BackChannelingTestData implements JdbcMigration {
 
             Arrays.asList(OTHER_PERMISSIONS).forEach(perm -> {
                 try {
-                    stmtInsPermission.setString(1, perm);
-                    stmtInsPermission.setString(2, "");
-                    stmtInsPermission.setBoolean(3, true);
-                    stmtInsPermission.executeUpdate();
-                    Long permissionId = fetchGeneratedKey(stmtInsPermission);
+                    Long permissionId = 0L;
+                    if (Arrays.asList(ADMIN_PERMISSIONS).contains(perm)) {
+                        stmtSelPermission.setString(1, perm);
+                        try (ResultSet rs = stmtSelPermission.executeQuery()) {
+                            // the name column of the permission table is unique, only one data can not be get
+                            if (rs.next()) {
+                                permissionId = rs.getLong("permission_id");
+                            }
+                        }
+                    } else {
+                        stmtInsPermission.setString(1, perm);
+                        stmtInsPermission.setString(2, "");
+                        stmtInsPermission.setBoolean(3, true);
+                        stmtInsPermission.executeUpdate();
+                        permissionId = fetchGeneratedKey(stmtInsPermission);
+                    }
 
                     stmtInsRolePermission.setLong(1, userRoleId);
                     stmtInsRolePermission.setLong(2, permissionId);
