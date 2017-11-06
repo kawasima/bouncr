@@ -13,15 +13,13 @@ import static org.jooq.impl.DSL.*;
 public class V998__BackChannelingTestData implements JdbcMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
             "create-board", "read-board", "modify-board",
-            "create-thread", "read-any-thread", "read-thread", "write-any-thread", "write-thread",
-            "add-watcher", "remove-watcher",
-            "read-any-comment", "delete-any-comment", "delete-comment"
+            "read-any-thread", "read-thread", "write-any-thread", "write-thread",
+            "delete-any-comment", "delete-comment"
     };
 
     private static final String[] OTHER_PERMISSIONS = new String[]{
             "read-board",
-            "create-thread", "read-thread", "write-thread",
-            "add-watcher", "remove-watcher",
+            "read-thread", "write-thread",
             "delete-comment"
     };
 
