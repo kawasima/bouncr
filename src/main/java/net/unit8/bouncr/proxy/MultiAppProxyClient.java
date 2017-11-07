@@ -85,8 +85,10 @@ public class MultiAppProxyClient implements ProxyClient {
                 principal.ifPresent(p -> {
                     Map<String, Object> body = new HashMap<>();
                     body.put("sub", p.getName());
-                    body.put("email", p.getEmail());
                     body.put("permissions", p.getPermissions());
+                    p.getProfiles().forEach((k, v) -> {
+                        body.put(k, v);
+                    });
                     exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
                             jwt.sign(body, jwtHeader, null));
                 });

@@ -49,5 +49,11 @@
       <a href="${urlFor('net.unit8.bouncr.web.controller.admin.InvitationController', 'list')}">Invitation</a>
     </li>
     </#if>
+
+    <#if hasAnyPermissions(userPrincipal, "LIST_USER_PROFILE_FIELDS")>
+    <li class="list-group-item">
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.UserProfileController', 'list')}">User profile</a>
+    </li>
+    </#if>
   </ul>
 </@layout.layout>

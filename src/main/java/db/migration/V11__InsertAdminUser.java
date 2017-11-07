@@ -22,6 +22,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
             "LIST_ANY_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_ANY_PERMISSION", "DELETE_ANY_PERMISSION",
             "LIST_OIDC_APPLICATIONS", "CREATE_OIDC_APPLICATION", "MODIFY_OIDC_APPLICATION", "DELETE_OIDC_APPLICATION",
             "LIST_OIDC_PROVIDERS", "CREATE_OIDC_PROVIDER", "MODIFY_OIDC_PROVIDER", "DELETE_OIDC_PROVIDER",
+            "LIST_USER_PROFILE_FIELDS", "CREATE_USER_PROFILE_FIELD", "MODIFY_USER_PROFILE_FIELD", "DELETE_USER_PROFILE_FIELD",
             "CREATE INVITATION"
     };
 
@@ -170,8 +171,8 @@ public class V11__InsertAdminUser implements JdbcMigration {
             stmtInsPasswdCred.setLong(1, userId);
             stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
             stmtInsPasswdCred.setString(3, "0123456789012345");
-            stmtInsPasswdCred.setBoolean(4, true);
-            stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis() / 1000));
+            stmtInsPasswdCred.setBoolean(4, false);
+            stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis()));
             stmtInsPasswdCred.executeUpdate();
 
             stmtInsGroup.setString(1, "BOUNCR_ADMIN");

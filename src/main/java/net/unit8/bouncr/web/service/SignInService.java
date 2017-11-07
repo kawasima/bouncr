@@ -91,7 +91,10 @@ public class SignInService {
                 .set(UserSession::setCreatedAt, LocalDateTime.now())
                 .build());
 
-        storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, permissionDao)));
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        List<UserProfile> userProfiles = userProfileFieldDao.selectValuesByUserId(user.getId());
+
+        storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, userProfiles, permissionDao)));
         return token;
     }
 
@@ -152,7 +155,11 @@ public class SignInService {
         return VALID;
     }
 
-    private Map<Long, UserPermissionPrincipal> getPermissionsByRealm(User user, PermissionDao permissionDao) {
+    private Map<Long, UserPermissionPrincipal> getPermissionsByRealm(User user, List<UserProfile> userProfiles, PermissionDao permissionDao) {
+        Map<String, Object> profileMap = userProfiles.stream()
+                .collect(Collectors.toMap(UserProfile::getJsonName, UserProfile::getValue));
+        profileMap.put("email", user.getEmail());
+        profileMap.put("name", user.getName());
         return permissionDao
                 .selectByUserId(user.getId())
                 .stream()
@@ -163,7 +170,7 @@ public class SignInService {
                         new UserPermissionPrincipal(
                                 user.getId(),
                                 user.getAccount(),
-                                user.getEmail(),
+                                profileMap,
                                 e.getValue().stream()
                                         .map(PermissionWithRealm::getPermission)
                                         .collect(Collectors.toSet()))));

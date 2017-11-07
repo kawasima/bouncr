@@ -114,8 +114,13 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.post("/oidcApp/:id").to(OidcApplicationController.class, "update");
                 ar.post("/oidcApp/:id/delete").to(OidcApplicationController.class, "delete");
 
+                ar.get("/userProfile").to(UserProfileController.class, "list");
+                ar.get("/userProfile/new").to(UserProfileController.class, "newForm");
+                ar.post("/userProfile").to(UserProfileController.class, "create");
+                ar.get("/userProfile/:id/edit").to(UserProfileController.class, "edit");
+                ar.post("/userProfile/:id").to(UserProfileController.class, "update");
+
                 ar.get("/invitation/new").to(InvitationController.class, "newForm");
-                ar.get("/invitation/").to(InvitationController.class, "create");
                 ar.get("/invitation/").to(InvitationController.class, "create");
             });
 

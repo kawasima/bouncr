@@ -10,12 +10,8 @@ import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
-import net.unit8.bouncr.web.dao.GroupDao;
-import net.unit8.bouncr.web.dao.PasswordCredentialDao;
-import net.unit8.bouncr.web.dao.UserDao;
-import net.unit8.bouncr.web.entity.Group;
-import net.unit8.bouncr.web.entity.PasswordCredential;
-import net.unit8.bouncr.web.entity.User;
+import net.unit8.bouncr.web.dao.*;
+import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.UserForm;
 import org.seasar.doma.jdbc.SelectOptions;
 
@@ -23,9 +19,11 @@ import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
-import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
+import static enkan.util.BeanBuilder.*;
+import static enkan.util.HttpResponseUtils.RedirectStatusCode.*;
 
 /**
  * A controller for user actions.
@@ -62,11 +60,15 @@ public class UserController {
         User user = userDao.selectById(params.getLong("id"));
         boolean isLock = userDao.isLock(user.getAccount());
 
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        List<UserProfile> userProfiles = userProfileFieldDao.selectValuesByUserId(user.getId());
+
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectByUserId(user.getId());
 
         return templateEngine.render("admin/user/show",
                 "user", user,
+                "userProfiles", userProfiles,
                 "groups", groups,
                 "isLock", isLock);
     }
@@ -79,24 +81,42 @@ public class UserController {
         return userDao.selectForIncrementalSearch(word, principal, options);
     }
 
+    private HttpResponse responseNewForm(UserForm form) {
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        List<UserProfileField> userProfileFields = userProfileFieldDao.selectAll();
+        return templateEngine.render("admin/user/new",
+                "user", form,
+                "userProfileFields", userProfileFields);
+    }
     @RolesAllowed("CREATE_USER")
     public HttpResponse newUser() {
-        UserForm user = new UserForm();
-        return templateEngine.render("admin/user/new",
-                "user", user);
+        return responseNewForm(new UserForm());
     }
 
     @RolesAllowed("CREATE_USER")
     @Transactional
     public HttpResponse create(UserForm form) {
         if (form.hasErrors()) {
-            return templateEngine.render("admin/user/new",
-                    "user", form);
+            return responseNewForm(form);
         }
         User user = beansConverter.createFrom(form, User.class);
         user.setWriteProtected(false);
         UserDao userDao = daoProvider.getDao(UserDao.class);
         userDao.insert(user);
+
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        List<UserProfileField> userProfileFields = userProfileFieldDao.selectAll();
+
+        UserProfileValueDao userProfileValueDao = daoProvider.getDao(UserProfileValueDao.class);
+        userProfileFields.stream()
+                .forEach(userProfileField -> {
+                    UserProfileValue userProfileValue = builder(new UserProfileValue())
+                            .set(UserProfileValue::setUserId, user.getId())
+                            .set(UserProfileValue::setUserProfileFieldId, userProfileField.getId())
+                            .set(UserProfileValue::setValue, form.getProfiles().get(userProfileField.getName()))
+                            .build();
+                    userProfileValueDao.insert(userProfileValue);
+                });
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
@@ -119,8 +139,18 @@ public class UserController {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(params.getLong("id"));
         UserForm form = beansConverter.createFrom(user, UserForm.class);
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        Map<String, String> profiles = userProfileFieldDao.selectValuesByUserId(user.getId()).stream()
+                .collect(Collectors.toMap(
+                        UserProfile::getName,
+                        UserProfile::getValue));
+        form.setProfiles(profiles);
+
+        List<UserProfileField> userProfileFields = userProfileFieldDao.selectAll();
+
         return templateEngine.render("admin/user/edit",
                 "user", form,
+                "userProfileFields", userProfileFields,
                 "userId", user.getId());
     }
 
@@ -135,6 +165,23 @@ public class UserController {
         User user = userDao.selectById(params.getLong("id"));
         beansConverter.copy(form, user);
         userDao.update(user);
+
+        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
+        List<UserProfileField> userProfileFields = userProfileFieldDao.selectAll();
+
+        UserProfileValueDao userProfileValueDao = daoProvider.getDao(UserProfileValueDao.class);
+        userProfileFields.stream()
+                .forEach(userProfileField -> {
+                    UserProfileValue userProfileValue = builder(new UserProfileValue())
+                            .set(UserProfileValue::setUserId, user.getId())
+                            .set(UserProfileValue::setUserProfileFieldId, userProfileField.getId())
+                            .set(UserProfileValue::setValue, form.getProfiles().get(userProfileField.getName()))
+                            .build();
+                    int res = userProfileValueDao.update(userProfileValue);
+                    if (res == 0) {
+                        userProfileValueDao.insert(userProfileValue);
+                    }
+                });
 
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
         passwordCredentialDao.deleteById(user.getId());
