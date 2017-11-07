@@ -26,3 +26,13 @@
   <input id="password" class="form-control<#if user.hasErrors("password")> is-invalid</#if>" type="password" name="password" value=""/>
   <span class="invalid-feedback"><#if user.hasErrors("password")>${user.getErrors("password")?join(",")}</#if></span>
 </div>
+
+<#list userProfileFields>
+<#items as userProfileField>
+<div class="form-group<#if user.hasErrors("password")> has-error</#if>">
+  <label for="${userProfileField.name}">${userProfileField.name}</label>
+  <input id="${userProfileField.name}" class="form-control<#if user.hasErrors("password")> is-invalid</#if>" type="text" name="profiles[${userProfileField.name}]" value=""/>
+  <span class="invalid-feedback"><#if user.hasErrors("password")>${user.getErrors("password")?join(",")}</#if></span>
+</div>
+</#items>
+</#list>

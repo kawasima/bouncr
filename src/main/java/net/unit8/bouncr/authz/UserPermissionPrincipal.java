@@ -3,6 +3,8 @@ package net.unit8.bouncr.authz;
 import enkan.security.UserPrincipal;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -12,14 +14,14 @@ import java.util.Set;
  */
 public class UserPermissionPrincipal implements UserPrincipal, Serializable {
     private final Long id;
-    private final String email;
     private final String account;
+    private final Map<String, Object> profiles;
     private final Set<String> permissions;
 
-    public UserPermissionPrincipal(Long id, String account, String email, Set<String> permissions) {
+    public UserPermissionPrincipal(Long id, String account, Map<String, Object> profiles, Set<String> permissions) {
         this.id = id;
         this.account = account;
-        this.email = email;
+        this.profiles = profiles;
         this.permissions = permissions;
     }
 
@@ -38,8 +40,8 @@ public class UserPermissionPrincipal implements UserPrincipal, Serializable {
         return permissions;
     }
 
-    public String getEmail() {
-        return email;
+    public Map<String, Object> getProfiles() {
+        return profiles;
     }
 
     public Long getId() {

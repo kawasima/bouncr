@@ -179,7 +179,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                     stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
                     stmtInsPasswdCred.setString(3, "0123456789012345");
                     stmtInsPasswdCred.setBoolean(4, false);
-                    stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis() / 1000));
+                    stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis()));
                     stmtInsPasswdCred.executeUpdate();
                 } catch(SQLException e) {
                     throw new RuntimeException(e);

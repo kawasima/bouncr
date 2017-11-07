@@ -21,6 +21,14 @@
             <br/>
             <i class="fa fa-envelope-o" aria-hidden="true"></i>${user.email}
           </p>
+          <#list userProfiles>
+          <p>
+            <#items as userProfile>
+            ${userProfile.name}: ${userProfile.value}
+            <br/>
+            </#items>
+          </p>
+          </#list>
         </div>
       </div>
     </div>

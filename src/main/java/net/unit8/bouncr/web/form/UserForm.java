@@ -5,7 +5,9 @@ import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
+import java.util.Map;
 
 /**
  * @author kawasima
@@ -17,6 +19,7 @@ public class UserForm extends FormBase {
 
     @NotBlank
     @Size(max = 100)
+    @Pattern(regexp = "[\\p{Alnum}_]+")
     private String account;
 
     @NotBlank
@@ -31,4 +34,6 @@ public class UserForm extends FormBase {
     @NotBlank
     @Size(min = 8, max = 256)
     private String password;
+
+    private Map<String, String> profiles;
 }
