@@ -21,7 +21,7 @@ public class V21__CreateUserProfiles implements JdbcMigration {
                     .column(field("json_name", SQLDataType.VARCHAR(100).nullable(true)))
                     .column(field("is_required", SQLDataType.BOOLEAN.nullable(false)))
                     .column(field("is_identity", SQLDataType.BOOLEAN.nullable(false)))
-                    .column(field("regexp", SQLDataType.VARCHAR(255).nullable(true)))
+                    .column(field("regular_expression", SQLDataType.VARCHAR(255).nullable(true)))
                     .column(field("min_length", SQLDataType.SMALLINT.nullable(true)))
                     .column(field("max_length", SQLDataType.SMALLINT.nullable(true)))
                     .column(field("position", SQLDataType.TINYINT.nullable(false)))
