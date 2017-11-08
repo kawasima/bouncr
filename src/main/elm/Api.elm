@@ -1,6 +1,8 @@
 module Api exposing (..)
 
+import Http
 import HttpBuilder exposing (..)
+import Json.Decode
 import Decoder
 import Types exposing (..)
 import Rocket exposing ((=>))
@@ -14,11 +16,11 @@ type Method
     | Delete
 
 
-request : Method -> List String -> List ( String, String ) -> RequestBuilder
-request method paths params =
+request : Method -> List String -> RequestBuilder ()
+request method paths =
     let
         url_ =
-            url paths params
+            url paths
     in
         case method of
             Get ->
@@ -34,44 +36,37 @@ request method paths params =
                 HttpBuilder.delete url_
 
 
-getGroupUsers : GroupId -> Cmd Msg
+getGroupUsers : Id -> Cmd Msg
 getGroupUsers id =
-    request Get [ "admin", "api", "group", toString id, "users" ] []
+    request Get [ "admin", "api", "group", toString id, "users" ]
         |> withBase
-        |> attempt (noOp AddSelectedUsers) (jsonReader Decoder.users) stringReader
+        |> withDecoder (Decoder.users Selected)
+        |> send FetchedGroupUsers
 
 
 searchUsers : String -> Cmd Msg
 searchUsers query =
-    request Get [ "admin", "api", "user", "search" ] [ "q" => query ]
+    request Get [ "admin", "api", "user", "search" ]
         |> withBase
-        |> attempt (noOp SetSearchedUsers) (jsonReader Decoder.users) stringReader
+        |> withQueryParams [ "q" => query ]
+        |> withDecoder (Decoder.users Searched)
+        |> send FetchedSearchedUsers
 
 
-url : List String -> List ( String, String ) -> String
-url paths params =
-    let
-        base =
-            String.join "/" paths
-                |> String.cons '/'
-    in
-        HttpBuilder.url base params
+url : List String -> String
+url paths =
+    String.join "/" paths
+        |> String.cons '/'
 
 
-withBase : RequestBuilder -> RequestBuilder
+withBase : RequestBuilder a -> RequestBuilder a
 withBase builder =
     builder
         |> withHeaders [ "Accept" => "application/json" ]
         |> withCredentials
 
 
-noOp : (a -> Msg) -> Result (Error b) (Response a) -> Msg
-noOp toMsg result =
-    case result of
-        Err error ->
-            toString error
-                |> Debug.log
-                |> always NoOp
-
-        Ok { data } ->
-            toMsg data
+withDecoder : Json.Decode.Decoder a -> RequestBuilder igonore -> RequestBuilder a
+withDecoder decoder builder =
+    builder
+        |> withExpect (Http.expectJson decoder)

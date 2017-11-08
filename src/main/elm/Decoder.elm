@@ -5,11 +5,12 @@ import Json.Decode.Pipeline exposing (decode, required, optional, hardcoded)
 import Types exposing (..)
 
 
-users : Decoder (List User)
-users =
+users : UserState -> Decoder (List User)
+users state =
     decode User
         |> required "id" int
         |> required "account" string
         |> required "name" string
         |> required "email" string
+        |> hardcoded state
         |> list

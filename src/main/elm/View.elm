@@ -1,6 +1,7 @@
 module View exposing (view)
 
 import Types exposing (..)
+import Dict
 import StyleSheet exposing (Styles(..), Element, styleSheet)
 import Html exposing (Html)
 import Element exposing (column, row, text)
@@ -29,7 +30,7 @@ userSearch model =
         []
         [ Input.text None
             []
-            { onChange = SetQuery
+            { onChange = InputQuery
             , value = model.query
             , label = labelAbove <| text "User Search"
             , options = []
@@ -37,7 +38,9 @@ userSearch model =
         , column None
             []
           <|
-            List.map searchedUser model.searched
+            List.map searchedUser <|
+                Dict.values <|
+                    Dict.filter (\_ user -> user.state == Searched) model.users
         ]
 
 
