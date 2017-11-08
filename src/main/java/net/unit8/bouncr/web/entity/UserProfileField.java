@@ -19,7 +19,7 @@ public class UserProfileField implements Serializable {
     private boolean isRequired;
     private boolean isIdentity;
 
-    private String regexp;
+    private String regularExpression;
     private Integer maxLength;
     private Integer minLength;
 
