@@ -12,7 +12,7 @@ import java.io.Serializable;
  * @author kawasima
  */
 @Entity
-@Table(name = "GROUPS")
+@Table(name = "groups")
 @Data
 @EqualsAndHashCode
 public class Group implements Serializable {

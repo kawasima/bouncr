@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * @author kawasima
  */
 @Entity
-@Table(name = "REALMS")
+@Table(name = "realms")
 @Data
 @EqualsAndHashCode
 public class Realm implements Serializable {

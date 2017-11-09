@@ -11,7 +11,7 @@ import java.net.URI;
  * @author kawasima
  */
 @Entity
-@Table(name = "APPLICATIONS")
+@Table(name = "applications")
 @Data
 @EqualsAndHashCode
 public class Application implements Serializable {

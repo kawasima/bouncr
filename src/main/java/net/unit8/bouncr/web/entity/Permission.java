@@ -12,7 +12,7 @@ import java.io.Serializable;
  * @author kawasima
  */
 @Entity
-@Table(name = "PERMISSIONS")
+@Table(name = "permissions")
 @Data
 @EqualsAndHashCode
 public class Permission implements Serializable {
