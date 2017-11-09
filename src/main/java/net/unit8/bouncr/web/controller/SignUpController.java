@@ -8,6 +8,7 @@ import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
@@ -100,16 +101,20 @@ public class SignUpController {
                         .set(PasswordCredential::setId, user.getId())
                         .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
                         .set(PasswordCredential::setSalt, salt)
+                        .set(PasswordCredential::setInitial, false)
                         .build());
             }
 
 
-            if (form.getCode() != null) {
+            if (!form.getCode().isEmpty()) {
                 InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
                 Invitation invitation = invitationDao.selectByCode(form.getCode());
                 if (invitation == null) {
                     return templateEngine.render("my/signUp/new",
-                            "signUp", form);
+                            "passwordEnabled", config.isPasswordEnabled(),
+                            "signUp", form,
+                            "groupInvitations", Collections.emptyList(),
+                            "oidcInvitations", Collections.emptyList());
                 }
                 invitationDao.selectGroupInvitations(invitation.getId())
                         .stream()
@@ -125,6 +130,8 @@ public class SignUpController {
             }
 
             String token = signInService.signIn(user, request);
+
+            config.getHookRepo().runHook(HookPoint.AFTER_SIGNUP, user);
             return signInService.responseSignedIn(token, request, "/my");
         }
     }

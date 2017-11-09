@@ -2,7 +2,7 @@
 <@layout.layout "New OAuth2 application">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Administration</a></li>
-    <li class="breadcrumb-item"><a href="${urlFor('list')}">Invitation</a></li>
+    <li class="breadcrumb-item"><a href="${urlFor('newForm')}">Invitation</a></li>
     <li class="breadcrumb-item active">New</li>
   </ol>
    <h1>New Invitation</h1>

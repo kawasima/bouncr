@@ -46,7 +46,7 @@
 
     <#if hasAnyPermissions(userPrincipal, "CREATE_INVITATION")>
     <li class="list-group-item">
-      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.InvitationController', 'list')}">Invitation</a>
+      <a href="${urlFor('net.unit8.bouncr.web.controller.admin.InvitationController', 'newForm')}">Invitation</a>
     </li>
     </#if>
 
