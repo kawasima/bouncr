@@ -100,6 +100,7 @@ public class SignUpController {
                         .set(PasswordCredential::setId, user.getId())
                         .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(form.getPassword(), salt, 100))
                         .set(PasswordCredential::setSalt, salt)
+                        .set(PasswordCredential::setInitial, false)
                         .build());
             }
 
