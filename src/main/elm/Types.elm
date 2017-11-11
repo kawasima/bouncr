@@ -22,14 +22,15 @@ type alias User =
     , account : String
     , name : String
     , email : String
-    , state : UserState
+    , state : State
     }
 
 
-type UserState
+type State
     = Searched
     | ReadySelected
     | Selected
+    | ReadyTrashed
     | Trashed
 
 
@@ -46,3 +47,9 @@ type Msg
       -- | SetSearchedUsers (List User)
     | InputQuery String
     | DebounceMsg Debounce.Msg
+    | CheckSearchedUser Id
+    | UncheckSearchedUser Id
+    | CheckSelectedUser Id
+    | UncheckSelectedUser Id
+    | SelectUsers
+    | TrashUsers

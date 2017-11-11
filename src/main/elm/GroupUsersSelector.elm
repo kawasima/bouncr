@@ -89,7 +89,12 @@ update msg model =
                 => []
 
         FetchedSearchedUsers (Ok users) ->
-            { model | users = insertUsers users model.users }
+            { model
+                | users =
+                    model.users
+                        |> Dict.map (\_ user -> transitState [ Searched => Trashed ] user)
+                        |> insertUsers users
+            }
                 => []
 
         InputQuery query ->
@@ -106,6 +111,54 @@ update msg model =
             in
                 { model | debounce = debounce } => [ cmd ]
 
+        CheckSearchedUser id ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.update id (Maybe.map (transitState [ Searched => ReadySelected ]))
+            }
+                => []
+
+        UncheckSearchedUser id ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.update id (Maybe.map (transitState [ ReadySelected => Searched ]))
+            }
+                => []
+
+        CheckSelectedUser id ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.update id (Maybe.map (transitState [ Selected => ReadyTrashed ]))
+            }
+                => []
+
+        UncheckSelectedUser id ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.update id (Maybe.map (transitState [ ReadyTrashed => Selected ]))
+            }
+                => []
+
+        SelectUsers ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.map (\id user -> transitState [ ReadySelected => Selected ] user)
+            }
+                => []
+
+        TrashUsers ->
+            { model
+                | users =
+                    model.users
+                        |> Dict.map (\id user -> transitState [ ReadyTrashed => Trashed ] user)
+            }
+                => []
+
 
 {-| Insert users for fetched groupUsers and fetched searchedUsers
 -}
@@ -119,24 +172,21 @@ insertUser new users =
     let
         replace : User -> User
         replace old =
-            case ( old.state, new.state ) of
-                ( Trashed, Searched ) ->
+            case old.state of
+                Trashed ->
                     new
 
-                ( Searched, Searched ) ->
+                Searched ->
                     new
 
-                ( ReadySelected, Searched ) ->
-                    new
+                ReadySelected ->
+                    { new | state = ReadySelected }
 
-                ( Selected, Searched ) ->
+                Selected ->
                     { new | state = Selected }
 
-                ( _, Selected ) ->
-                    new
-
-                _ ->
-                    crash "TODO : These branches is not in use."
+                ReadyTrashed ->
+                    { new | state = ReadyTrashed }
     in
         Dict.update new.id
             (\maybe ->
@@ -148,6 +198,19 @@ insertUser new users =
                         replace user |> Just
             )
             users
+
+
+transitState : List ( State, State ) -> User -> User
+transitState transitions user =
+    List.foldl
+        (\( before, after ) user ->
+            if before == user.state then
+                { user | state = after }
+            else
+                user
+        )
+        user
+        transitions
 
 
 subscriptions : Model -> Sub Msg
