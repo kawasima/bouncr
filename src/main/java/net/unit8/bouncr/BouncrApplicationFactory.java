@@ -122,6 +122,12 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
                 ar.get("/invitation/new").to(InvitationController.class, "newForm");
                 ar.post("/invitation/").to(InvitationController.class, "create");
+
+                /* Admin api */
+                ar.scope("/api", api -> {
+                    /* Routing for group apis */
+                    api.post("/group/:id/users").to(net.unit8.bouncr.web.controller.api.admin.GroupController.class, "addUser");
+                });
             });
 
             /* My page */
