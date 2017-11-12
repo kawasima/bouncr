@@ -15,9 +15,3 @@
 <script type="text/javascript">
   var app = Elm.GroupUsersSelector.embed(document.getElementById('group-users-selector'), {groupId: ${group.id!'null'}});
 </script>
-
-<select name="userId[]" class="selectpicker" multiple>
-  <#list users as user>
-  <option value="${user.id}"<#if userIds?seq_contains(user.id)> selected</#if>>${user.name}</option>
-  </#list>
-</select>

@@ -2,7 +2,7 @@ module View exposing (view)
 
 import Types exposing (..)
 import Dict
-import StyleSheet exposing (Styles(..), Element, styleSheet, Attribute)
+import StyleSheet exposing (Styles(..), Element, styleSheet, Attribute, Variation(..))
 import Html exposing (Html)
 import Html.Attributes
 import Element exposing (column, row, text, node, el, empty, decorativeImage)
@@ -26,37 +26,30 @@ root model =
         [ userSearch model
         , panel model
         , selectedUsers model
+        , hiddenSelects model
         ]
 
 
 panel : Model -> Element Msg
 panel { users } =
     column None
-        []
-        [ icon
-            (if Dict.values users |> List.any (\user -> user.state == ReadySelected) then
-                IconChecked
-             else
-                IconUnchecked
-            )
+        [ verticalSpread, spacing 30 ]
+        [ icon Button
             [ verticalCenter
+            , vary Enable <| containsState ReadySelected users
             , onClick
-                (if Dict.values users |> List.any (\user -> user.state == ReadySelected) then
+                (if containsState ReadySelected users then
                     SelectUsers
                  else
                     NoOp
                 )
             ]
             "fa-users fa-2x"
-        , icon
-            (if Dict.values users |> List.any (\user -> user.state == ReadyTrashed) then
-                IconChecked
-             else
-                IconUnchecked
-            )
+        , icon Button
             [ verticalCenter
+            , vary Danger <| containsState ReadyTrashed users
             , onClick
-                (if Dict.values users |> List.any (\user -> user.state == ReadyTrashed) then
+                (if containsState ReadyTrashed users then
                     TrashUsers
                  else
                     NoOp
@@ -64,6 +57,11 @@ panel { users } =
             ]
             "fa-trash-o fa-2x"
         ]
+
+
+containsState : State -> Dict.Dict Id User -> Bool
+containsState state users =
+    Dict.values users |> List.any (\user -> user.state == state)
 
 
 userSearch : Model -> Element Msg
@@ -105,17 +103,10 @@ searchedUser data =
                 crash "This branch is not used."
         ]
         [ icon
-            (case data.state of
-                ReadySelected ->
-                    IconChecked
-
-                Searched ->
-                    IconUnchecked
-
-                _ ->
-                    crash "This branch is not used."
-            )
-            [ verticalCenter ]
+            Icon
+            [ verticalCenter
+            , vary Enable (data.state == ReadySelected)
+            ]
             "fa-users fa-2x"
         , user data
         ]
@@ -152,18 +143,10 @@ selectedUser data =
             _ ->
                 crash "This branch is not used."
         ]
-        [ icon
-            (case data.state of
-                ReadyTrashed ->
-                    IconChecked
-
-                Selected ->
-                    IconUnchecked
-
-                _ ->
-                    crash "This branch is not used."
-            )
-            [ verticalCenter ]
+        [ icon Icon
+            [ verticalCenter
+            , vary Enable (data.state == ReadyTrashed)
+            ]
             "fa-trash-o fa-2x"
         , user data
         ]
@@ -189,6 +172,24 @@ user { account, name, email, id } =
                 ]
             ]
         ]
+
+
+hiddenSelects : Model -> Element msg
+hiddenSelects { users } =
+    users
+        |> Dict.filter (\_ user -> user.state == Selected || user.state == ReadyTrashed)
+        |> Dict.map
+            (\_ user ->
+                Html.option
+                    [ Html.Attributes.value <| toString user.id
+                    , Html.Attributes.selected True
+                    ]
+                    []
+            )
+        |> Dict.values
+        |> Html.select [ Html.Attributes.name "userId[]", Html.Attributes.multiple True ]
+        |> Element.html
+        |> el None [ hidden ]
 
 
 icon : Styles -> List (Attribute msg) -> String -> Element msg
