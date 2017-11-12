@@ -153,7 +153,7 @@ public class SignInService {
         PasswordCredentialDao passwordCredentialDao = daoProvider.getDao(PasswordCredentialDao.class);
         PasswordCredential passwordCredential = passwordCredentialDao.selectById(user.getId());
 
-        if (passwordCredential.getInitial()) {
+        if (passwordCredential.isInitial()) {
             return INITIAL;
         }
 
