@@ -8,7 +8,7 @@ import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.util.HttpResponseUtils;
 import net.unit8.bouncr.authn.OneTimePasswordGenerator;
-import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.authz.UserPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.web.dao.*;
@@ -92,9 +92,20 @@ public class SignInService {
                 .build());
 
         UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
-        List<UserProfile> userProfiles = userProfileFieldDao.selectValuesByUserId(user.getId());
 
-        storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, userProfiles, permissionDao)));
+        Map<String, Object> profileMap = userProfileFieldDao.selectValuesByUserId(user.getId())
+                .stream()
+                .collect(Collectors.toMap(UserProfile::getJsonName, UserProfile::getValue));
+        profileMap.put("email", user.getEmail());
+        profileMap.put("name", user.getName());
+
+        storeProvider.getStore(BOUNCR_TOKEN).write(token,
+                new UserPrincipal(
+                        user.getId(),
+                        user.getAccount(),
+                        profileMap,
+                        getPermissionsByRealm(user, permissionDao))
+        );
         return token;
     }
 
@@ -148,18 +159,14 @@ public class SignInService {
 
         if (config.getPasswordPolicy().getExpires() != null) {
             Instant createdAt = passwordCredential.getCreatedAt().toInstant(ZoneId.systemDefault().getRules().getOffset(Instant.now()));
-            return (createdAt.plus(config.getPasswordPolicy().getExpires()).isBefore(config.getClock().instant()))?
+            return (createdAt.plus(config.getPasswordPolicy().getExpires()).isBefore(config.getClock().instant())) ?
                     EXPIRED : VALID;
         }
 
         return VALID;
     }
 
-    private Map<Long, UserPermissionPrincipal> getPermissionsByRealm(User user, List<UserProfile> userProfiles, PermissionDao permissionDao) {
-        Map<String, Object> profileMap = userProfiles.stream()
-                .collect(Collectors.toMap(UserProfile::getJsonName, UserProfile::getValue));
-        profileMap.put("email", user.getEmail());
-        profileMap.put("name", user.getName());
+    private Map<Long, Set<String>> getPermissionsByRealm(User user, PermissionDao permissionDao) {
         return permissionDao
                 .selectByUserId(user.getId())
                 .stream()
@@ -167,13 +174,10 @@ public class SignInService {
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e ->
-                        new UserPermissionPrincipal(
-                                user.getId(),
-                                user.getAccount(),
-                                profileMap,
-                                e.getValue().stream()
-                                        .map(PermissionWithRealm::getPermission)
-                                        .collect(Collectors.toSet()))));
+                        e.getValue().stream()
+                                .map(PermissionWithRealm::getPermission)
+                                .collect(Collectors.toSet())
+                ));
     }
 
     public enum PasswordCredentialStatus {
