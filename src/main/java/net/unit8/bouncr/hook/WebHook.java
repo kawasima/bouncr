@@ -5,8 +5,8 @@ import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import okhttp3.*;
 
-import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,25 +24,28 @@ public class WebHook<T> implements Hook<T> {
             .retryIf(res -> Stream.of(res)
                     .map(Response.class::cast)
                     .map(Response::code)
-                    .filter(code -> code >= 500)
-                    .findAny()
-                    .isPresent());
+                    .anyMatch(code -> code >= 500));
 
     private RetryPolicy notIdempotent = new RetryPolicy()
             .withBackoff(3, 10, TimeUnit.SECONDS)
             .retryIf(res -> Stream.of(res)
                     .map(Response.class::cast)
                     .map(Response::code)
-                    .filter(code -> code >= 500)
-                    .findAny()
-                    .isPresent());
+                    .anyMatch(code -> code >= 500));
 
     private final String method;
     private final String url;
+    private Map<String, String> headers = null;
 
     public WebHook(String url, String method) {
         this.url = url;
         this.method = method;
+    }
+
+    public WebHook(String url, String method, Map<String, String> headers) {
+        this.url = url;
+        this.method = method;
+        this.headers = headers;
     }
 
     @Override
@@ -55,12 +58,15 @@ public class WebHook<T> implements Hook<T> {
                 })
                 .get(() -> {
                     RequestBody body = RequestBody.create(JSON, mapper.writeValueAsString(object));
-                    Request request = new Request.Builder()
+                    Request.Builder requestBuilder;
+                    requestBuilder = new Request.Builder()
                             .url(url)
                             .header("content-type", "application/json")
-                            .method(method, body)
-                            .build();
-                    return client.newCall(request).execute();
+                            .method(method, body);
+                    if (headers != null) {
+                        headers.forEach(requestBuilder::addHeader);
+                    }
+                    return client.newCall(requestBuilder.build()).execute();
                 });
     }
 }
