@@ -180,7 +180,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new CookiesMiddleware());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin)($|/.*)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin(?!(/api)))($|/.*)"), authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
                         HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
