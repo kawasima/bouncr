@@ -19,7 +19,6 @@ public class GroupController {
     @Inject
     private DomaProvider daoProvider;
 
-    @RolesAllowed({"MODIFY_GROUP", "MODIFY_ANY_GROUP"})
     @Transactional
     public int addUser(Parameters params, User user) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
