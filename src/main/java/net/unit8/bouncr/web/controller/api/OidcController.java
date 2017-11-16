@@ -192,7 +192,7 @@ public class OidcController {
                     cn -> IETFUtils.valueToString(cn.getFirst().getValue()),
                     account -> userDao.selectByAccount(account)
             ).orElse(null);
-        } else if (Objects.equals(grantType, "code")) {
+        } else if (Objects.equals(grantType, "authorization_code")) {
             KeyValueStore authorizationCodeStore = storeProvider.getStore(AUTHORIZATION_CODE);
             Long userId = (Long) authorizationCodeStore.read(params.get("code"));
             if (userId == null) {
