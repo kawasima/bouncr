@@ -9,6 +9,8 @@ import kotowari.component.TemplateEngine;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
+import net.unit8.bouncr.sign.JsonWebToken;
+import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.GroupDao;
@@ -43,6 +45,9 @@ public class SignUpController {
     @Inject
     private BouncrConfiguration config;
 
+    @Inject
+    private JsonWebToken jsonWebToken;
+
     private SignInService signInService;
 
     @PostConstruct
@@ -54,14 +59,19 @@ public class SignUpController {
         String code = params.get("code");
         List<GroupInvitation> groupInvitations = Collections.emptyList();
         List<OidcInvitation> oidcInvitations = Collections.emptyList();
+
+        SignUpForm form = new SignUpForm();
+        form.setCode(code);
+
         if (code != null) {
             InvitationDao invitationDao = daoProvider.getDao(InvitationDao.class);
             Invitation invitation = invitationDao.selectByCode(code);
             groupInvitations = invitationDao.selectGroupInvitations(invitation.getId());
             oidcInvitations = invitationDao.selectOidcInvitations(invitation.getId());
+            JwtClaim claim = jsonWebToken.decodePayload(oidcInvitations.get(0).getOidcPayload());
+            form.setName(claim.getName());
+            form.setEmail(claim.getEmail());
         }
-        SignUpForm form = new SignUpForm();
-        form.setCode(code);
         return templateEngine.render("my/signUp/new",
                 "signUp", form,
                 "passwordEnabled", config.isPasswordEnabled(),
@@ -125,7 +135,8 @@ public class SignUpController {
 
                 invitationDao.selectOidcInvitations(invitation.getId())
                         .stream()
-                        .forEach(oidcInvitation -> userDao.connectToOidcProvider(user.getId(), oidcInvitation.getOidcProviderId(), oidcInvitation.getOidcSub()));
+                        .forEach(oidcInvitation -> userDao.connectToOidcProvider(user.getId(), oidcInvitation.getOidcProviderId(),
+                                jsonWebToken.decodePayload(oidcInvitation.getOidcPayload()).getSub()));
                 invitationDao.delete(invitation);
             }
 
