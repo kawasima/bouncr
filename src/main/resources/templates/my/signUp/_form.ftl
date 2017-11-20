@@ -38,11 +38,13 @@
 </div>
 </#if>
 
-<#list oidcInvitations>
+<#list groupInvitations>
 <div class="form-group">
-  <#items as oidcInvitation>
-  <button class="btn" type="button">${oidcInvitation.oidcProviderId}</button>
-  </#items>
+    <ul>
+      <#items as groupInvitation>
+        <li>${groupInvitation.groupId}</li>
+      </#items>
+    </ul>
 </div>
 </#list>
 
