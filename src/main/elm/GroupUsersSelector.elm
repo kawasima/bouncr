@@ -92,7 +92,7 @@ update msg model =
             { model
                 | users =
                     model.users
-                        |> Dict.map (\_ user -> transitState [ Searched => Trashed ] user)
+                        |> Dict.map (\_ user -> transitState [ Searched => Retained ] user)
                         |> insertUsers users
             }
                 => []
@@ -115,7 +115,14 @@ update msg model =
             { model
                 | users =
                     model.users
-                        |> Dict.update id (Maybe.map (transitState [ Searched => ReadySelected ]))
+                        |> Dict.update id
+                            (Maybe.map
+                                (transitState
+                                    [ Searched => ReadySelected
+                                    , Retained => ReadySelected
+                                    ]
+                                )
+                            )
             }
                 => []
 
@@ -155,7 +162,7 @@ update msg model =
             { model
                 | users =
                     model.users
-                        |> Dict.map (\id user -> transitState [ ReadyTrashed => Trashed ] user)
+                        |> Dict.map (\id user -> transitState [ ReadyTrashed => Retained ] user)
             }
                 => []
 
@@ -173,7 +180,7 @@ insertUser new users =
         replace : User -> User
         replace old =
             case old.state of
-                Trashed ->
+                Retained ->
                     new
 
                 Searched ->

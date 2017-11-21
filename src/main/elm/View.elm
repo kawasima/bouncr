@@ -8,7 +8,7 @@ import Html.Attributes
 import Element exposing (column, row, text, node, el, empty, decorativeImage)
 import Element.Attributes as Attrs exposing (..)
 import Element.Events exposing (onInput, on, targetValue, onClick)
-import Element.Input as Input exposing (labelAbove)
+import Element.Input as Input exposing (labelAbove, placeholder)
 import Gravatar
 import Debug exposing (crash, log)
 
@@ -21,11 +21,15 @@ view model =
 
 root : Model -> Element Msg
 root model =
-    row None
-        []
+    column None
+        [ spacing 10 ]
         [ userSearch model
-        , panel model
-        , selectedUsers model
+        , row None
+            [ spacing 10, center ]
+            [ searchedUsers model
+            , panel model
+            , selectedUsers model
+            ]
         , hiddenSelects model
         ]
 
@@ -44,7 +48,7 @@ panel { users } =
                     NoOp
                 )
             ]
-            "fa-users fa-2x"
+            "fa-arrow-right fa-2x"
         , icon Button
             [ verticalCenter
             , vary Danger <| containsState ReadyTrashed users
@@ -55,7 +59,7 @@ panel { users } =
                     NoOp
                 )
             ]
-            "fa-trash-o fa-2x"
+            "fa-arrow-left fa-2x"
         ]
 
 
@@ -66,32 +70,39 @@ containsState state users =
 
 userSearch : Model -> Element Msg
 userSearch model =
+    Input.text Input
+        [ paddingXY 12 8 ]
+        { onChange = InputQuery
+        , value = model.query
+        , label =
+            placeholder
+                { text = "search query..."
+                , label = labelAbove <| text "User Search"
+                }
+        , options = []
+        }
+
+
+searchedUsers : Model -> Element Msg
+searchedUsers model =
     column None
-        []
-        [ Input.text None
-            []
-            { onChange = InputQuery
-            , value = model.query
-            , label = labelAbove <| text "User Search"
-            , options = []
-            }
-        , column None
-            []
-          <|
-            List.map searchedUser <|
-                Dict.values <|
-                    Dict.filter
-                        (\_ user ->
-                            user.state == Searched || user.state == ReadySelected
-                        )
-                        model.users
-        ]
+        [ spacing 5, padding 5, minWidth <| px 300 ]
+    <|
+        List.map searchedUser <|
+            Dict.values <|
+                Dict.filter
+                    (\_ user ->
+                        (user.state == Searched)
+                            || (user.state == ReadySelected)
+                            || (user.state == Retained)
+                    )
+                    model.users
 
 
 searchedUser : User -> Element Msg
 searchedUser data =
-    row None
-        [ spacing 5
+    row UserCard
+        [ vary Enable (data.state == ReadySelected)
         , case data.state of
             ReadySelected ->
                 onClick <| UncheckSearchedUser data.id
@@ -99,40 +110,33 @@ searchedUser data =
             Searched ->
                 onClick <| CheckSearchedUser data.id
 
+            Retained ->
+                onClick <| CheckSearchedUser data.id
+
             _ ->
                 crash "This branch is not used."
         ]
-        [ icon
-            Icon
-            [ verticalCenter
-            , vary Enable (data.state == ReadySelected)
-            ]
-            "fa-users fa-2x"
-        , user data
-        ]
+        [ user data ]
 
 
 selectedUsers : Model -> Element Msg
 selectedUsers model =
     column None
-        []
-        [ column None
-            []
-          <|
-            List.map selectedUser <|
-                Dict.values <|
-                    Dict.filter
-                        (\_ user ->
-                            user.state == Selected || user.state == ReadyTrashed
-                        )
-                        model.users
-        ]
+        [ spacing 5, padding 5, minWidth <| px 300 ]
+    <|
+        List.map selectedUser <|
+            Dict.values <|
+                Dict.filter
+                    (\_ user ->
+                        user.state == Selected || user.state == ReadyTrashed
+                    )
+                    model.users
 
 
 selectedUser : User -> Element Msg
 selectedUser data =
-    row None
-        [ spacing 5
+    row UserCard
+        [ vary Enable (data.state == ReadyTrashed)
         , case data.state of
             Selected ->
                 onClick <| CheckSelectedUser data.id
@@ -141,24 +145,18 @@ selectedUser data =
                 onClick <| UncheckSelectedUser data.id
 
             _ ->
-                crash "This branch is not used."
+                crash "This branch is not used.2"
         ]
-        [ icon Icon
-            [ verticalCenter
-            , vary Enable (data.state == ReadyTrashed)
-            ]
-            "fa-trash-o fa-2x"
-        , user data
-        ]
+        [ user data ]
 
 
 user : User -> Element msg
 user { account, name, email, id } =
     row None
-        [ spacing 5 ]
+        [ spacing 5, padding 5 ]
         [ gravatar 32 email
         , column None
-            []
+            [ spacing 5 ]
             [ row None [ spacing 5 ] [ text name ]
             , row None
                 [ spacing 5 ]

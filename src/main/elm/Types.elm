@@ -31,7 +31,7 @@ type State
     | ReadySelected
     | Selected
     | ReadyTrashed
-    | Trashed
+    | Retained
 
 
 type alias Id =
