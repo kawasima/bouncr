@@ -18,6 +18,7 @@ public class ReplMain {
         //System.setProperty("truststore.path", "src/dev/resources/bouncr_clients.jks");
         //System.setProperty("truststore.password", "password");
         Class.forName("net.unit8.bouncr.authz.UserPermissionPrincipal");
+        Class.forName("net.unit8.bouncr.authz.UserPrincipal");
         Class.forName("net.unit8.bouncr.sign.JwtHeader");
         Class.forName("net.unit8.bouncr.sign.JwtClaim");
         PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.BouncrEnkanSystem");

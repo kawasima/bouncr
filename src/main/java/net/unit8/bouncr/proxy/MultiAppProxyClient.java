@@ -14,6 +14,7 @@ import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HttpString;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
+import net.unit8.bouncr.authz.UserPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.sign.JsonWebToken;
@@ -75,6 +76,7 @@ public class MultiAppProxyClient implements ProxyClient {
         }
         return passTo + path.substring(application.getVirtualPath().length(), path.length());
     }
+
     @Override
     public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         Realm realm = realmCache.matches(exchange.getRequestPath());
@@ -147,8 +149,8 @@ public class MultiAppProxyClient implements ProxyClient {
     }
 
     private Optional<UserPermissionPrincipal> authenticate(Long realmId, String token) {
-        return some((Map<Long, UserPermissionPrincipal>) store.read(token),
-                permsByRealm -> permsByRealm.get(realmId));
+        return some((UserPrincipal) store.read(token),
+                user -> new UserPermissionPrincipal(user.getId(), user.getName(), user.getProfiles(), user.getPermissions(realmId)));
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
