@@ -252,6 +252,20 @@
                         <configuration>
                             <mainClass>backendexample.ReplMain</mainClass>
                         </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-elm</id>
+                                <phase>generate-sources</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>elm-make</executable>
+                                    <arguments>
+                                        <argument>src/main/elm/GroupUsersSelector.elm</argument>
+                                        <argument>--output=src/main/resources/public/admin/assets/js/group-users-selector.js</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
