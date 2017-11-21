@@ -230,7 +230,7 @@ public class SignInController {
     private HttpResponse connectOpenIdToBoucrUser(String idToken, OidcProvider oidcProvider, HttpRequest request) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         String[] tokens = idToken.split("\\.", 3);
-        JwtClaim claim = jsonWebToken.decodePayload(tokens[1]);
+        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<JwtClaim>() {});
         // TODO Verify Nonce
 
         if (claim.getSub() != null) {
