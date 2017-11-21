@@ -82,7 +82,8 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 component("realmCache").using("doma"),
                 component("doma").using("datasource", "flyway"),
                 component("flyway").using("datasource"),
-                component("certificate").using("flake", "config")
+                component("certificate").using("flake", "config"),
+                component("jwt").using("config")
         );
     }
 }

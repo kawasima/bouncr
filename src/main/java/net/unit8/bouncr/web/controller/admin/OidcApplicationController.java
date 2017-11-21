@@ -111,7 +111,6 @@ public class OidcApplicationController {
 
             oidcApplicationDao.insert(oidcApplication);
 
-            oidcApplicationDao.clearScopes(oidcApplication);
             PermissionDao permissionDao = daoProvider.getDao(PermissionDao.class);
             some(form.getPermissionId(),
                     pids ->pids.stream()

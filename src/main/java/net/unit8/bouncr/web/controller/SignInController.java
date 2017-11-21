@@ -247,7 +247,7 @@ public class SignInController {
                 invitationDao.insert(builder(new OidcInvitation())
                         .set(OidcInvitation::setInvitationId, invitation.getId())
                         .set(OidcInvitation::setOidcProviderId, oidcProvider.getId())
-                        .set(OidcInvitation::setOidcSub, claim.getSub())
+                        .set(OidcInvitation::setOidcPayload, tokens[1])
                         .build());
                 if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
                     return builder(templateEngine.render("my/signIn/oidc_implicit_json",

@@ -21,7 +21,7 @@ public interface InvitationDao {
     List<GroupInvitation> selectGroupInvitations(Long invitationId);
 
     @Select
-    List<OidcInvitation> selectOidcInvitations(Long invitationId);
+    OidcInvitation selectOidcInvitation(Long invitationId);
 
     @Insert
     int insert(Invitation invitation);
