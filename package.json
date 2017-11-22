@@ -1,0 +1,14 @@
+{
+  "name": "bouncr",
+  "version": "0.1.0-SNAPSHOT",
+  "main": "index.js",
+  "author": "kawasima",
+  "license": "EPL",
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "uglify-es": "^3.1.10"
+  },
+  "scripts": {
+    "build:elm": "elm-make src/main/elm/GroupUsersSelector.elm --output=src/main/resources/public/admin/assets/js/group-users-selector.js"
+  }
+}

@@ -258,10 +258,10 @@
                                 <phase>generate-sources</phase>
                                 <goals><goal>exec</goal></goals>
                                 <configuration>
-                                    <executable>elm-make</executable>
+                                    <executable>yarn</executable>
                                     <arguments>
-                                        <argument>src/main/elm/GroupUsersSelector.elm</argument>
-                                        <argument>--output=src/main/resources/public/admin/assets/js/group-users-selector.js</argument>
+                                        <argument>run</argument>
+                                        <argument>build:elm</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
