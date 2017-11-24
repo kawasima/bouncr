@@ -12,13 +12,13 @@ import java.io.Serializable;
  * @author kawasima
  */
 @Entity
-@Table(name = "USERS")
+@Table(name = "users")
 @Data
 @EqualsAndHashCode
 public class User implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "USER_ID")
+    @Column(name = "user_id")
     private Long id;
 
     private String account;

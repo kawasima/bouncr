@@ -11,13 +11,13 @@ import java.net.URI;
  * @author kawasima
  */
 @Entity
-@Table(name = "APPLICATIONS")
+@Table(name = "applications")
 @Data
 @EqualsAndHashCode
 public class Application implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "APPLICATION_ID")
+    @Column(name = "application_id")
     private Long id;
 
     private String name;

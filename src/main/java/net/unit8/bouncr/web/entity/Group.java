@@ -12,13 +12,13 @@ import java.io.Serializable;
  * @author kawasima
  */
 @Entity
-@Table(name = "GROUPS")
+@Table(name = "groups")
 @Data
 @EqualsAndHashCode
 public class Group implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "GROUP_ID")
+    @Column(name = "group_id")
     private Long id;
 
     private String name;
