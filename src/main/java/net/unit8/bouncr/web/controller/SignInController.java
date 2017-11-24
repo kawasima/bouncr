@@ -230,7 +230,7 @@ public class SignInController {
     private HttpResponse connectOpenIdToBoucrUser(String idToken, OidcProvider oidcProvider, HttpRequest request) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         String[] tokens = idToken.split("\\.", 3);
-        JwtClaim claim = jsonWebToken.decodePayload(tokens[1]);
+        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<JwtClaim>() {});
         // TODO Verify Nonce
 
         if (claim.getSub() != null) {
@@ -247,7 +247,7 @@ public class SignInController {
                 invitationDao.insert(builder(new OidcInvitation())
                         .set(OidcInvitation::setInvitationId, invitation.getId())
                         .set(OidcInvitation::setOidcProviderId, oidcProvider.getId())
-                        .set(OidcInvitation::setOidcSub, claim.getSub())
+                        .set(OidcInvitation::setOidcPayload, tokens[1])
                         .build());
                 if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
                     return builder(templateEngine.render("my/signIn/oidc_implicit_json",

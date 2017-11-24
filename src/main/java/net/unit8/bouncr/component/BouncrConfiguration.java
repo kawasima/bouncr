@@ -1,5 +1,6 @@
 package net.unit8.bouncr.component;
 
+import enkan.collection.Multimap;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
@@ -8,8 +9,11 @@ import lombok.Setter;
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
+import net.unit8.bouncr.hook.Hook;
+import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
@@ -48,6 +52,8 @@ public class BouncrConfiguration extends SystemComponent {
             .withTimeout(5, TimeUnit.SECONDS)
             .failOn(NamingException.class);
 
+    @Getter
+    private HookRepository hookRepo = new HookRepository();
 
     @Override
     protected ComponentLifecycle lifecycle() {
@@ -182,4 +188,6 @@ public class BouncrConfiguration extends SystemComponent {
     public void setMessageResource(MessageResource messageResource) {
         this.messageResource = messageResource;
     }
+
+
 }

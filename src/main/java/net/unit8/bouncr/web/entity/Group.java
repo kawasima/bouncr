@@ -18,7 +18,7 @@ import java.io.Serializable;
 public class Group implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "GROUP_ID")
+    @Column(name = "group_id")
     private Long id;
 
     private String name;

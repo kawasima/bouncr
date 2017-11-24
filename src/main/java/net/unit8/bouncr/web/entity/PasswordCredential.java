@@ -18,14 +18,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode
 public class PasswordCredential implements Serializable {
     @Id
-    @Column(name = "USER_ID")
+    @Column(name = "user_id")
     private Long id;
 
     private byte[] password;
 
     private String salt;
 
-    private Boolean initial;
+    private boolean initial;
     @EventDateTime
     private LocalDateTime createdAt;
 }

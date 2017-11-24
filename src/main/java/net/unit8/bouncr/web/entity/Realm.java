@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 public class Realm implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "REALM_ID")
+    @Column(name = "realm_id")
     private Long id;
 
     private String name;

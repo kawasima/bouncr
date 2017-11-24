@@ -17,5 +17,5 @@ public class OidcInvitation implements Serializable {
     private Long invitationId;
 
     private Long oidcProviderId;
-    private String oidcSub;
+    private String oidcPayload;
 }
