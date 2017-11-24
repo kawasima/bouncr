@@ -4,6 +4,7 @@
     <div class="card card-container">
       <img class="profile-img-card" class="profile-img-card" src="//ssl.gstatic.com/accounts/ui/avatar_2x.png"/>
       <form class="form-signin" method="post">
+        <#if passwordEnabled>
         <input type="text" name="account" class="form-control" placeholder="${t('field.account')}" value="${signin.account!''}"/>
         <input type="password" name="password" class="form-control" placeholder="${t('field.password')}"/>
         <#if signin.hasErrors('account')>
@@ -17,6 +18,7 @@
         <input type="hidden" name="url" value="${signin.url}">
         </#if>
         <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
+        </#if>
 
         <#list oidcProviders>
         <hr/>

@@ -41,6 +41,9 @@ public interface UserDao {
     @Select
     Optional<User> selectOptionallyByAccount(String account);
 
+    @Select
+    Optional<User> selectOptionallyByEmail(String email);
+
     default User selectByPassword(String account, String password) {
         return selectOptionallyByAccount(account)
                 .filter(user -> {

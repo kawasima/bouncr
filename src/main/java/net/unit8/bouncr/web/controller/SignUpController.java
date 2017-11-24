@@ -1,8 +1,10 @@
 package net.unit8.bouncr.web.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
+import enkan.data.ContentNegotiable;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
@@ -20,6 +22,7 @@ import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.SignUpForm;
 import net.unit8.bouncr.web.service.SignInService;
+import net.unit8.bouncr.web.service.UserValidationService;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -50,10 +53,12 @@ public class SignUpController {
     private JsonWebToken jsonWebToken;
 
     private SignInService signInService;
+    private UserValidationService userValidationService;
 
     @PostConstruct
     public void initialize() {
         signInService = new SignInService(daoProvider, storeProvider, config);
+        userValidationService = new UserValidationService(daoProvider, config);
     }
 
     public HttpResponse newForm(Parameters params) {
@@ -69,7 +74,7 @@ public class SignUpController {
             Invitation invitation = invitationDao.selectByCode(code);
             groupInvitations = invitationDao.selectGroupInvitations(invitation.getId());
             oidcInvitation = invitationDao.selectOidcInvitation(invitation.getId());
-            JwtClaim claim = jsonWebToken.decodePayload(oidcInvitation.getOidcPayload());
+            JwtClaim claim = jsonWebToken.decodePayload(oidcInvitation.getOidcPayload(), new TypeReference<JwtClaim>() {});
             form.setName(claim.getName());
             form.setEmail(claim.getEmail());
         }
@@ -82,6 +87,7 @@ public class SignUpController {
 
     @Transactional
     public HttpResponse create(SignUpForm form, HttpRequest request) {
+        userValidationService.validate(form, ContentNegotiable.class.cast(request).getLocale());
         if (form.hasErrors()) {
             List<GroupInvitation> groupInvitations = Collections.emptyList();
             List<OidcInvitation> oidcInvitations = Collections.emptyList();
@@ -97,9 +103,10 @@ public class SignUpController {
                     "groupInvitations", groupInvitations,
                     "oidcInvitations", oidcInvitations);
         } else {
+            UserDao userDao = daoProvider.getDao(UserDao.class);
+
             User user = beansConverter.createFrom(form, User.class);
             user.setWriteProtected(false);
-            UserDao userDao = daoProvider.getDao(UserDao.class);
             userDao.insert(user);
             GroupDao groupDao = daoProvider.getDao(GroupDao.class);
             Group bouncrUserGroup = groupDao.selectByName("BOUNCR_USER");
@@ -136,7 +143,7 @@ public class SignUpController {
 
                 Optional.ofNullable(invitationDao.selectOidcInvitation(invitation.getId()))
                         .ifPresent(oidcInvitation -> userDao.connectToOidcProvider(user.getId(), oidcInvitation.getOidcProviderId(),
-                                jsonWebToken.decodePayload(oidcInvitation.getOidcPayload()).getSub()));
+                                jsonWebToken.decodePayload(oidcInvitation.getOidcPayload(), new TypeReference<JwtClaim>() {}).getSub()));
                 invitationDao.delete(invitation);
             }
 

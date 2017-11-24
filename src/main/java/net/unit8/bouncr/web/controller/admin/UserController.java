@@ -3,6 +3,8 @@ package net.unit8.bouncr.web.controller.admin;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
+import enkan.data.ContentNegotiable;
+import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
@@ -13,8 +15,11 @@ import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.*;
 import net.unit8.bouncr.web.entity.*;
 import net.unit8.bouncr.web.form.UserForm;
+import net.unit8.bouncr.web.service.SignInService;
+import net.unit8.bouncr.web.service.UserValidationService;
 import org.seasar.doma.jdbc.SelectOptions;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
@@ -42,6 +47,14 @@ public class UserController {
 
     @Inject
     private BouncrConfiguration config;
+
+    private UserValidationService userValidationService;
+
+    @PostConstruct
+    public void initialize() {
+        userValidationService = new UserValidationService(daoProvider, config);
+    }
+
 
     @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
     public HttpResponse list(UserPrincipal principal) {
@@ -95,7 +108,8 @@ public class UserController {
 
     @RolesAllowed("CREATE_USER")
     @Transactional
-    public HttpResponse create(UserForm form) {
+    public HttpResponse create(UserForm form, HttpRequest request) {
+        userValidationService.validate(form, ContentNegotiable.class.cast(request).getLocale());
         if (form.hasErrors()) {
             return responseNewForm(form);
         }
@@ -156,7 +170,8 @@ public class UserController {
 
     @RolesAllowed({"MODIFY_USER", "MODIFY_ANY_USER"})
     @Transactional
-    public HttpResponse update(UserForm form, Parameters params) {
+    public HttpResponse update(UserForm form, Parameters params, HttpRequest request) {
+        userValidationService.validate(form, ContentNegotiable.class.cast(request).getLocale());
         if (form.hasErrors()) {
             return templateEngine.render("admin/user/edit",
                     "user", form);

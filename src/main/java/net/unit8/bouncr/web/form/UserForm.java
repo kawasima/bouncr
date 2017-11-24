@@ -14,7 +14,7 @@ import java.util.Map;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class UserForm extends FormBase {
+public class UserForm extends FormBase implements UserRegisterForm {
     private Long id;
 
     @NotBlank

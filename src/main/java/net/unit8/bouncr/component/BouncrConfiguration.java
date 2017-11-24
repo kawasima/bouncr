@@ -1,6 +1,5 @@
 package net.unit8.bouncr.component;
 
-import enkan.collection.Multimap;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
@@ -9,12 +8,11 @@ import lombok.Setter;
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
-import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
-import net.unit8.bouncr.hook.Hook;
 import net.unit8.bouncr.hook.HookRepository;
 
+import javax.naming.CommunicationException;
 import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.security.NoSuchAlgorithmException;
@@ -32,7 +30,7 @@ public class BouncrConfiguration extends SystemComponent {
     private long authorizationCodeExpires = 60L;
     private long oidcSessionExpires = 180L;
     private String tokenName = "BOUNCR_TOKEN";
-    private String backendHeaderName = "X-Bouncr-credential";
+    private String backendHeaderName = "X-Bouncr-Credential";
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private CertConfiguration certConfiguration;
     @Getter
@@ -51,6 +49,9 @@ public class BouncrConfiguration extends SystemComponent {
             .withSuccessThreshold(3)
             .withTimeout(5, TimeUnit.SECONDS)
             .failOn(NamingException.class);
+    private RetryPolicy ldapRetryPolicy = new RetryPolicy()
+            .retryOn(CommunicationException.class)
+            .withBackoff(3, 10, TimeUnit.SECONDS);
 
     @Getter
     private HookRepository hookRepo = new HookRepository();
@@ -60,10 +61,10 @@ public class BouncrConfiguration extends SystemComponent {
         return new ComponentLifecycle<BouncrConfiguration>() {
             @Override
             public void start(BouncrConfiguration component) {
-                certConfiguration = new CertConfiguration();
-                if (secureRandom == null) {
+                component.certConfiguration = new CertConfiguration();
+                if (component.secureRandom == null) {
                     try {
-                        secureRandom = SecureRandom.getInstance("NativePRNGNonBlocking");
+                        component.secureRandom = SecureRandom.getInstance("NativePRNGNonBlocking");
                     } catch (NoSuchAlgorithmException e) {
                         throw new UnreachableException();
                     }
@@ -72,7 +73,6 @@ public class BouncrConfiguration extends SystemComponent {
 
             @Override
             public void stop(BouncrConfiguration component) {
-
             }
         };
     }
@@ -155,6 +155,14 @@ public class BouncrConfiguration extends SystemComponent {
 
     public void setLdapClientCircuitBreaker(CircuitBreaker ldapClientCircuitBreaker) {
         this.ldapClientCircuitBreaker = ldapClientCircuitBreaker;
+    }
+
+    public RetryPolicy getLdapRetryPolicy() {
+        return ldapRetryPolicy;
+    }
+
+    public void setLdapRetryPolicy(RetryPolicy ldapRetryPolicy) {
+        this.ldapRetryPolicy = ldapRetryPolicy;
     }
 
     public CertConfiguration getCertConfiguration() {

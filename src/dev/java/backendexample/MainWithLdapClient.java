@@ -11,12 +11,14 @@ import net.unit8.bouncr.ssl.BouncrSSLSocketFactory;
 public class MainWithLdapClient {
     public static void main(String[] args) {
         EnkanSystem system = new BouncrEnkanSystem().create();
-        BouncrSSLSocketFactory.setTruststorePath("src/dev/resources/bouncr.jks");
-        BouncrSSLSocketFactory.setTruststorePassword("password");
         system.setComponent("ldap", builder(new LdapClient())
                 .set(LdapClient::setPort, 10636)
                 .set(LdapClient::setScheme, "ldaps")
-                .set(LdapClient::setSocketFactoryClass, BouncrSSLSocketFactory.class)
+                .set(LdapClient::setSocketFactoryClassProvider, () -> {
+                    BouncrSSLSocketFactory.setTruststorePath("src/dev/resources/bouncr.jks");
+                    BouncrSSLSocketFactory.setTruststorePassword("password");
+                    return BouncrSSLSocketFactory.class;
+                })
                 .build());
         system.relationships(
                 component("ldap").using("config"),

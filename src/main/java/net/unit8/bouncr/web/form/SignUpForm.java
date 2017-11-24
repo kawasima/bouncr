@@ -3,16 +3,14 @@ package net.unit8.bouncr.web.form;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import javax.validation.constraints.AssertTrue;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.*;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class SignUpForm extends FormBase {
+public class SignUpForm extends FormBase implements UserRegisterForm {
     @NotBlank
     @Size(max = 100)
+    @Pattern(regexp = "[\\p{Alnum}_]+", message = "{account.Pattern.messages}")
     private String account;
 
     @NotBlank

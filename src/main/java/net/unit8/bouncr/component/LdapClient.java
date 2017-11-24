@@ -6,10 +6,7 @@ import enkan.exception.FalteringEnvironmentException;
 import enkan.exception.MisconfigurationException;
 import net.jodah.failsafe.Failsafe;
 
-import javax.naming.AuthenticationException;
-import javax.naming.Context;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
+import javax.naming.*;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
@@ -19,6 +16,9 @@ import javax.net.SocketFactory;
 import java.util.Hashtable;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.function.Supplier;
+
+import static enkan.util.ThreadingUtils.some;
 
 public class LdapClient extends SystemComponent {
     private String host = "localhost";
@@ -30,7 +30,7 @@ public class LdapClient extends SystemComponent {
     private String accountAttribute = "sAMAccountName";
     private AuthMethod authMethod = AuthMethod.NONE;
     private BouncrConfiguration config;
-    private Class<? extends SocketFactory> socketFactoryClass;
+    private Supplier<Class<? extends SocketFactory>> socketFactoryClassProvider;
 
     private LdapContext ldapContext;
 
@@ -52,7 +52,7 @@ public class LdapClient extends SystemComponent {
                     }
                     if (Objects.equals(component.scheme, "ldaps")) {
                         env.put(Context.SECURITY_PROTOCOL, "ssl");
-                        env.put("java.naming.ldap.factory.socket", component.socketFactoryClass.getName());
+                        env.put("java.naming.ldap.factory.socket", component.socketFactoryClassProvider.get().getName());
                     }
                     component.ldapContext = new InitialLdapContext(env, null);
                 } catch (NamingException e) {
@@ -79,7 +79,9 @@ public class LdapClient extends SystemComponent {
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-        return Failsafe.with(config.getLdapClientCircuitBreaker())
+        return Failsafe
+                .with(config.getLdapClientCircuitBreaker())
+                .with(config.getLdapRetryPolicy())
                 .get(() -> {
                     NamingEnumeration<SearchResult> results = null;
                     try {
@@ -92,10 +94,23 @@ public class LdapClient extends SystemComponent {
                             authEnv.put(Context.PROVIDER_URL, getLdapUrl());
                             authEnv.put(Context.SECURITY_PRINCIPAL, distinguishedName);
                             authEnv.put(Context.SECURITY_CREDENTIALS, password);
-                            new InitialDirContext(authEnv);
-                            return true;
+                            if (Objects.equals(scheme, "ldaps")) {
+                                authEnv.put(Context.SECURITY_PROTOCOL, "ssl");
+                                authEnv.put("java.naming.ldap.factory.socket", socketFactoryClassProvider.get().getName());
+                            }
+
+                            InitialDirContext authCtx = null;
+                            try {
+                                authCtx = new InitialDirContext(authEnv);
+                                return true;
+                            } finally {
+                                if (authCtx != null) authCtx.close();
+                            }
                         }
                         return false;
+                    } catch (CommunicationException e) {
+                        ldapContext.reconnect(null);
+                        throw e;
                     } catch (AuthenticationException e) {
                         return false;
                     } finally {
@@ -138,8 +153,8 @@ public class LdapClient extends SystemComponent {
         this.searchBase = searchBase;
     }
 
-    public void setSocketFactoryClass(Class<? extends SocketFactory> socketFactoryClass) {
-        this.socketFactoryClass = socketFactoryClass;
+    public void setSocketFactoryClassProvider(Supplier<Class<? extends SocketFactory>> socketFactoryClassProvider) {
+        this.socketFactoryClassProvider = socketFactoryClassProvider;
     }
 
     public void setAuthMethod(AuthMethod authMethod) {

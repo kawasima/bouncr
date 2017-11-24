@@ -129,6 +129,7 @@ public class SignInController {
                     .set(Cookie::setPath, "/")
                     .build();
             return builder(templateEngine.render("my/signIn/index",
+                    "passwordEnabled", config.isPasswordEnabled(),
                     "oidcProviders", oidcProviders,
                     "signin", form))
                     .set(HttpResponse::setCookies, Multimap.of("OIDC_SESSION_ID", cookie))
