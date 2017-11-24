@@ -11,13 +11,13 @@ import java.util.regex.Pattern;
  * @author kawasima
  */
 @Entity
-@Table(name = "REALMS")
+@Table(name = "realms")
 @Data
 @EqualsAndHashCode
 public class Realm implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "REALM_ID")
+    @Column(name = "realm_id")
     private Long id;
 
     private String name;

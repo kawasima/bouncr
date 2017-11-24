@@ -13,12 +13,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity(listener = EventDateTimeEntityListener.class)
-@Table(name = "PASSWORD_CREDENTIALS")
+@Table(name = "password_credentials")
 @Data
 @EqualsAndHashCode
 public class PasswordCredential implements Serializable {
     @Id
-    @Column(name = "USER_ID")
+    @Column(name = "user_id")
     private Long id;
 
     private byte[] password;
