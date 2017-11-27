@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 public class BouncrConfiguration extends SystemComponent {
     private Clock clock = Clock.systemDefaultZone();
     private boolean passwordEnabled = true;
+    private boolean signUpEnabled = true;
     private long tokenExpires = 1800L;
     private long authorizationCodeExpires = 60L;
     private long oidcSessionExpires = 180L;
@@ -83,6 +84,14 @@ public class BouncrConfiguration extends SystemComponent {
 
     public void setPasswordEnabled(boolean passwordEnabled) {
         this.passwordEnabled = passwordEnabled;
+    }
+
+    public boolean isSignUpEnabled() {
+        return signUpEnabled;
+    }
+
+    public void setSignUpEnabled(boolean signUpEnabled) {
+        this.signUpEnabled = signUpEnabled;
     }
 
     public long getTokenExpires() {

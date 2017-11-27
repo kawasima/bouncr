@@ -83,6 +83,7 @@ public class MyController {
 
         ChangePasswordForm form = new ChangePasswordForm();
         return templateEngine.render("my/account",
+                "passwordEnabled", config.isPasswordEnabled(),
                 "user", user,
                 "changePassword", form,
                 "twofaSecret", twoFactorAuthenticationSecret(user));
@@ -96,6 +97,7 @@ public class MyController {
 
         if (form.hasErrors()) {
             return templateEngine.render("my/account",
+                    "passwordEnabled", config.isPasswordEnabled(),
                     "user", user,
                     "changePassword", form,
                     "twofaSecret", twoFactorAuthenticationSecret(user));
@@ -104,6 +106,7 @@ public class MyController {
             if (credUser == null) {
                 form = new ChangePasswordForm();
                 return templateEngine.render("my/account",
+                        "passwordEnabled", config.isPasswordEnabled(),
                         "message", "error.oldPasswordMismatch",
                         "user", user,
                         "changePassword", form,

@@ -130,6 +130,7 @@ public class SignInController {
                     .build();
             return builder(templateEngine.render("my/signIn/index",
                     "passwordEnabled", config.isPasswordEnabled(),
+                    "signUpEnabled", config.isSignUpEnabled(),
                     "oidcProviders", oidcProviders,
                     "signin", form))
                     .set(HttpResponse::setCookies, Multimap.of("OIDC_SESSION_ID", cookie))
@@ -157,6 +158,7 @@ public class SignInController {
             User user = userDao.selectByPassword(form.getAccount(), form.getOldPassword());
             if (user == null) {
                 return templateEngine.render("my/account",
+                        "passwordEnabled", config.isPasswordEnabled(),
                         "message", "error.oldPasswordMismatch",
                         "user", form);
             }
