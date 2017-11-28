@@ -77,6 +77,18 @@ public class MyController {
                 "userActions", userActions);
     }
 
+    public HttpResponse application(UserPermissionPrincipal principal) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectByAccount(principal.getName());
+
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        List<Application> applications = applicationDao.selectByUserId(user.getId());
+
+        return templateEngine.render("my/application",
+                "user", user,
+                "applications", applications);
+    }
+
     public HttpResponse account(UserPermissionPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(principal.getId());

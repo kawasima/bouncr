@@ -121,7 +121,7 @@ public class SignInService {
                     .set(HttpResponse::setCookies, cookies)
                     .build();
         } else {
-            return builder(redirect(Optional.ofNullable(redirectUrl).orElse("/my"),
+            return builder(redirect(Optional.ofNullable(redirectUrl).orElse("/my/application"),
                     HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
                     .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
                     .build();
