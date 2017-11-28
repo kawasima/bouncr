@@ -30,7 +30,9 @@
       </form>
 
       <hr/>
+      <#if signUpEnabled>
       <a href="${urlFor('net.unit8.bouncr.web.controller.SignUpController', 'newForm')}" class="text-center new-account">Create an account</a>
+      </#if>
     </div>
 
   </div>

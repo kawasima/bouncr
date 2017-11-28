@@ -2,6 +2,7 @@
 <@layout.layout "Account">
   <h1>Account</h1>
 
+  <#if passwordEnabled>
   <h2>Change password</h2>
   <#if message??>
   <div class="alert alert-danger" role="alert">${t(message)}</div>
@@ -21,6 +22,7 @@
 
     <button type="submit" class="btn btn-primary">Update password</button>
   </form>
+  </#if>
 
   <h2>Two-factor authentication</h2>
 
