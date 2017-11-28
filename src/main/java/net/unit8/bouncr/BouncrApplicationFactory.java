@@ -158,6 +158,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.post("/oidc/token").to(OidcController.class, "token");
 
                 mr.get("/").to(MyController.class, "home");
+                mr.get("/application").to(MyController.class, "application");
 
             });
 

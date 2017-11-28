@@ -32,6 +32,7 @@
         <#if hasAnyPermissions(userPrincipal, "LIST_ANY_USERS", "LIST_USERS")>
           <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.admin.IndexController', 'home')}">Admin</a>
         </#if>
+        <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.MyController', 'application')}">${t('label.applications')}</a>
         <a class="dropdown-item" href="${urlFor('net.unit8.bouncr.web.controller.MyController', 'account')}">${t('label.account')}</a>
         <form name="signout" method="post" action="/my/signOut">
           <button class="dropdown-item" type="submit">${t('label.signout')}</button>

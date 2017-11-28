@@ -2,7 +2,7 @@
 <@layout.layout "Home">
   <div class="jumbotron mt-3">
     <div class="container">
-      <h1>Hello, ${user.name}</p>
+      <h1>Hello, ${user.name}</h1>
 
       <h2>Your available applications</h2>
       <#list applications>
