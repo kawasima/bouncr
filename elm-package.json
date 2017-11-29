@@ -2,7 +2,7 @@
     "version": "1.0.0",
     "summary": "bouncr forms",
     "repository": "https://github.com/kawasima/bouncr.git",
-    "license": "EPL",
+    "license": "EPL-1.0",
     "source-directories": [
         "src/main/elm"
     ],
