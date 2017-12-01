@@ -252,6 +252,20 @@
                         <configuration>
                             <mainClass>backendexample.ReplMain</mainClass>
                         </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-elm</id>
+                                <phase>generate-sources</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>yarn</executable>
+                                    <arguments>
+                                        <argument>run</argument>
+                                        <argument>build:elm</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

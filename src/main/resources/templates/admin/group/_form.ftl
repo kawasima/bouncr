@@ -10,8 +10,8 @@
   <span class="invalid-feedback"><#if group.hasErrors("description")>${group.getErrors("description")?join(",")}</#if></span>
 </div>
 
-<select name="userId[]" class="selectpicker" multiple>
-  <#list users as user>
-  <option value="${user.id}"<#if userIds?seq_contains(user.id)> selected</#if>>${user.name}</option>
-  </#list>
-</select>
+<div id="group-users-selector"></div>
+<script src="/admin/assets/js/group-users-selector.js"></script>
+<script type="text/javascript">
+  var app = Elm.GroupUsersSelector.embed(document.getElementById('group-users-selector'), {groupId: ${group.id!'null'}});
+</script>

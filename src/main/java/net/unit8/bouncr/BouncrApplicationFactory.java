@@ -127,6 +127,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.scope("/api", api -> {
                     /* Routing for group apis */
                     api.post("/group/:id/users").to(net.unit8.bouncr.web.controller.api.admin.GroupController.class, "addUser");
+                    api.get("/group/:id/users").to(net.unit8.bouncr.web.controller.api.admin.GroupController.class, "users");
+                    api.get("user/search").to(UserController.class, "search");
                 });
             });
 
