@@ -110,11 +110,15 @@ public class OidcController {
         return createAccessToken(some(user, User::getAccount).orElse(null), clientId, permissions);
     }
 
-    private String makeCallbackUrl(String baseUrl, Parameters params) {
+    private String makeCallbackUrl(String baseUrl, Parameters params, Set<ResponseType> responseTypes) {
         String encoded = params.entrySet().stream()
                 .map(e -> e.getKey() + "=" + CodecUtils.urlEncode(e.getValue().toString()))
                 .collect(Collectors.joining("&"));
-        return baseUrl.contains("?") ? baseUrl + "&" + encoded : baseUrl + "?" + encoded;
+        if (responseTypes.contains(ID_TOKEN) || responseTypes.contains(TOKEN)) {
+            return baseUrl + "#" + encoded;
+        } else {
+            return baseUrl.contains("?") ? baseUrl + "&" + encoded : baseUrl + "?" + encoded;
+        }
     }
 
     /**
@@ -157,7 +161,7 @@ public class OidcController {
                 authorizationCodeStore.write(code, principal.getId());
                 responseParams.put("code", code);
             }
-            return HttpResponseUtils.redirect(makeCallbackUrl(redirectUrl, responseParams), FOUND);
+            return HttpResponseUtils.redirect(makeCallbackUrl(redirectUrl, responseParams, responseTypes), FOUND);
         } else {
             return HttpResponseUtils.redirect("/my/signIn?url=" + request.getUri() + "?" + CodecUtils.urlEncode(request.getQueryString()), SEE_OTHER);
         }

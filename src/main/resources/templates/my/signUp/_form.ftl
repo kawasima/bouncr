@@ -36,6 +36,9 @@
     </div>
   </div>
 </div>
+<#else>
+<input type="hidden" name="passwordDisabled" value="${(!passwordEnabled)?string}">
+<input type="hidden" name="password">
 </#if>
 
 <#list groupInvitations>
