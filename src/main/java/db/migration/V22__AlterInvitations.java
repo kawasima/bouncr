@@ -27,6 +27,7 @@ public class V22__AlterInvitations implements JdbcMigration {
                 if (m.find()) {
                     m.appendReplacement(sb, " change " + m.group(1) + " ");
                     m.appendTail(sb);
+                    sb.append(" text not null");
                     ddl = sb.toString();
                 }
             }

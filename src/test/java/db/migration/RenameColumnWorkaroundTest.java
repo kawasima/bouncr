@@ -27,6 +27,7 @@ public class RenameColumnWorkaroundTest {
             if (m.find()) {
                 m.appendReplacement(sb, " change " + m.group(1) + " ");
                 m.appendTail(sb);
+                sb.append(" text not null");
                 ddl = sb.toString();
             }
         }
