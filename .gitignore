@@ -35,4 +35,5 @@ package-*.json
 
 # elm
 
+yarn.lock
 /elm-stuff

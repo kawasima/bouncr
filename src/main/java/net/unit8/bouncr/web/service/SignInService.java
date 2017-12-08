@@ -24,12 +24,11 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
-import static enkan.util.HttpResponseUtils.redirect;
-import static enkan.util.ThreadingUtils.some;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
-import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
-import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
+import static enkan.util.BeanBuilder.*;
+import static enkan.util.HttpResponseUtils.*;
+import static enkan.util.ThreadingUtils.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.*;
+import static net.unit8.bouncr.web.entity.ActionType.*;
 import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.*;
 
 public class SignInService {
