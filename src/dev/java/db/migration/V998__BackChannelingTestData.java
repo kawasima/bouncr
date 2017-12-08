@@ -7,17 +7,25 @@ import org.jooq.impl.DSL;
 
 import java.sql.*;
 import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.jooq.impl.DSL.*;
 
 public class V998__BackChannelingTestData implements JdbcMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
             "CREATE_BOARD", "READ_BOARD", "MODIFY_BOARD",
-            "READ_ANY_THREAD", "READ_THREAD", "WRITE_ANY_THREAD", "WRITE_THREAD",
-            "DELETE_ANY_COMMENT", "DELETE_COMMENT"
+            "READ_ANY_THREAD", "WRITE_ANY_THREAD",
+            "DELETE_ANY_COMMENT"
     };
 
-    private static final String[] OTHER_PERMISSIONS = new String[]{
+    private static final String[] BOARD_ADMIN_PERMISSIONS = new String[]{
+            "READ_BOARD", "MODIFY_BOARD",
+            "READ_ANY_THREAD", "WRITE_ANY_THREAD",
+            "DELETE_ANY_COMMENT"
+    };
+
+    private static final String[] USER_PERMISSIONS = new String[]{
             "READ_BOARD",
             "READ_THREAD", "WRITE_THREAD",
             "DELETE_COMMENT"
@@ -192,22 +200,34 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                     stmtInsPasswdCred.setBoolean(4, false);
                     stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis()));
                     stmtInsPasswdCred.executeUpdate();
-                } catch(SQLException e) {
+                } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
             });
 
-            stmtInsGroup.setString(1, "BC_DEFAULT");
+            stmtInsGroup.setString(1, "BC_USER");
             stmtInsGroup.setString(2, "Default group for BackChanneling");
             stmtInsGroup.setBoolean(3, false);
             stmtInsGroup.executeUpdate();
             Long defaultGroupId = fetchGeneratedKey(stmtInsGroup);
+
+            stmtInsGroup.setString(1, "BC_ADMIN");
+            stmtInsGroup.setString(2, "Admin group for BackChanneling");
+            stmtInsGroup.setBoolean(3, false);
+            stmtInsGroup.executeUpdate();
+            Long adminGroupId = fetchGeneratedKey(stmtInsGroup);
 
             stmtInsGroup.setString(1, "BC_BOARD1");
             stmtInsGroup.setString(2, "A group for default board1");
             stmtInsGroup.setBoolean(3, false);
             stmtInsGroup.executeUpdate();
             Long board1GroupId = fetchGeneratedKey(stmtInsGroup);
+
+            stmtInsGroup.setString(1, "BC_ADMIN_BOARD1");
+            stmtInsGroup.setString(2, "Admin group for default board1");
+            stmtInsGroup.setBoolean(3, false);
+            stmtInsGroup.executeUpdate();
+            Long adminBoard1GroupId = fetchGeneratedKey(stmtInsGroup);
 
             stmtInsMembership.setLong(1, user1Id);
             stmtInsMembership.setLong(2, defaultGroupId);
@@ -219,6 +239,22 @@ public class V998__BackChannelingTestData implements JdbcMigration {
 
             stmtInsMembership.setLong(1, user2Id);
             stmtInsMembership.setLong(2, defaultGroupId);
+            stmtInsMembership.executeUpdate();
+
+            stmtInsMembership.setLong(1, user3Id);
+            stmtInsMembership.setLong(2, defaultGroupId);
+            stmtInsMembership.executeUpdate();
+
+            stmtInsMembership.setLong(1, user3Id);
+            stmtInsMembership.setLong(2, board1GroupId);
+            stmtInsMembership.executeUpdate();
+
+            stmtInsMembership.setLong(1, user3Id);
+            stmtInsMembership.setLong(2, adminGroupId);
+            stmtInsMembership.executeUpdate();
+
+            stmtInsMembership.setLong(1, user3Id);
+            stmtInsMembership.setLong(2, adminBoard1GroupId);
             stmtInsMembership.executeUpdate();
 
             stmtSelGroup.setString(1, "BOUNCR_USER");
@@ -284,6 +320,12 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             stmtInsRole.executeUpdate();
             Long adminRoleId = fetchGeneratedKey(stmtInsRole);
 
+            stmtInsRole.setString(1, "BC_BOARD_ADMIN");
+            stmtInsRole.setString(2, "BackChanneling board administrations");
+            stmtInsRole.setBoolean(3, false);
+            stmtInsRole.executeUpdate();
+            Long boardAdminRoleId = fetchGeneratedKey(stmtInsRole);
+
             stmtInsRole.setString(1, "BC_USER");
             stmtInsRole.setString(2, "BackChanneling users");
             stmtInsRole.setBoolean(3, false);
@@ -291,14 +333,31 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             Long userRoleId = fetchGeneratedKey(stmtInsRole);
 
 
+            Stream.of(Stream.of(ADMIN_PERMISSIONS), Stream.of(BOARD_ADMIN_PERMISSIONS), Stream.of(USER_PERMISSIONS))
+                    .flatMap(s -> s)
+                    .distinct().collect(Collectors.toList())
+                    .forEach(perm -> {
+                        try {
+                            stmtInsPermission.setString(1, perm);
+                            stmtInsPermission.setString(2, "");
+                            stmtInsPermission.setBoolean(3, true);
+                            stmtInsPermission.executeUpdate();
+                            Long permissionId = fetchGeneratedKey(stmtInsPermission);
+                        } catch (SQLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+
             Arrays.asList(ADMIN_PERMISSIONS).forEach(perm -> {
                 try {
-                    stmtInsPermission.setString(1, perm);
-                    stmtInsPermission.setString(2, "");
-                    stmtInsPermission.setBoolean(3, true);
-                    stmtInsPermission.executeUpdate();
-                    Long permissionId = fetchGeneratedKey(stmtInsPermission);
-
+                    Long permissionId = 0L;
+                    stmtSelPermission.setString(1, perm);
+                    try (ResultSet rs = stmtSelPermission.executeQuery()) {
+                        // the name column of the permission table is unique, only one data can not be get
+                        if (rs.next()) {
+                            permissionId = rs.getLong("permission_id");
+                        }
+                    }
                     stmtInsRolePermission.setLong(1, adminRoleId);
                     stmtInsRolePermission.setLong(2, permissionId);
                     stmtInsRolePermission.executeUpdate();
@@ -307,25 +366,34 @@ public class V998__BackChannelingTestData implements JdbcMigration {
                 }
             });
 
-            Arrays.asList(OTHER_PERMISSIONS).forEach(perm -> {
+            Arrays.asList(BOARD_ADMIN_PERMISSIONS).forEach(perm -> {
                 try {
                     Long permissionId = 0L;
-                    if (Arrays.asList(ADMIN_PERMISSIONS).contains(perm)) {
-                        stmtSelPermission.setString(1, perm);
-                        try (ResultSet rs = stmtSelPermission.executeQuery()) {
-                            // the name column of the permission table is unique, only one data can not be get
-                            if (rs.next()) {
-                                permissionId = rs.getLong("permission_id");
-                            }
+                    stmtSelPermission.setString(1, perm);
+                    try (ResultSet rs = stmtSelPermission.executeQuery()) {
+                        // the name column of the permission table is unique, only one data can not be get
+                        if (rs.next()) {
+                            permissionId = rs.getLong("permission_id");
                         }
-                    } else {
-                        stmtInsPermission.setString(1, perm);
-                        stmtInsPermission.setString(2, "");
-                        stmtInsPermission.setBoolean(3, true);
-                        stmtInsPermission.executeUpdate();
-                        permissionId = fetchGeneratedKey(stmtInsPermission);
                     }
+                    stmtInsRolePermission.setLong(1, boardAdminRoleId);
+                    stmtInsRolePermission.setLong(2, permissionId);
+                    stmtInsRolePermission.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
+            Arrays.asList(USER_PERMISSIONS).forEach(perm -> {
+                try {
+                    Long permissionId = 0L;
+                    stmtSelPermission.setString(1, perm);
+                    try (ResultSet rs = stmtSelPermission.executeQuery()) {
+                        // the name column of the permission table is unique, only one data can not be get
+                        if (rs.next()) {
+                            permissionId = rs.getLong("permission_id");
+                        }
+                    }
                     stmtInsRolePermission.setLong(1, userRoleId);
                     stmtInsRolePermission.setLong(2, permissionId);
                     stmtInsRolePermission.executeUpdate();
@@ -335,7 +403,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             });
 
 
-            // All users have the BC_USER role at other board.
+            // All users have the BC_USER role at boards list.
             stmtInsAssignment.setLong(1, defaultGroupId);
             stmtInsAssignment.setLong(2, userRoleId);
             stmtInsAssignment.setLong(3, bcOpenRealmId);
@@ -350,6 +418,18 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             // The users in the Board1 group have the BC_USER role at board1.
             stmtInsAssignment.setLong(1, board1GroupId);
             stmtInsAssignment.setLong(2, userRoleId);
+            stmtInsAssignment.setLong(3, bcBoard1RealmId);
+            stmtInsAssignment.executeUpdate();
+
+            // The users in the admin group have the BC_ADMIN role at boards list.
+            stmtInsAssignment.setLong(1, adminGroupId);
+            stmtInsAssignment.setLong(2, adminRoleId);
+            stmtInsAssignment.setLong(3, bcOpenRealmId);
+            stmtInsAssignment.executeUpdate();
+
+            // The users in the board1 admin group have the BC_BOARD_ADMIN role at board1.
+            stmtInsAssignment.setLong(1, adminBoard1GroupId);
+            stmtInsAssignment.setLong(2, boardAdminRoleId);
             stmtInsAssignment.setLong(3, bcBoard1RealmId);
             stmtInsAssignment.executeUpdate();
         }
