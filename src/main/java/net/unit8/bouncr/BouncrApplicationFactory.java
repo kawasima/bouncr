@@ -192,7 +192,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                         new HashSet<>(Arrays.asList("en", "ja")))
                 .build());
         // Kotowari
-        app.use(new ResourceMiddleware());
+        app.use(builder(new ResourceMiddleware())
+                .set(ResourceMiddleware::setUriPrefix, null)
+                .build());
         app.use(builder(new RenderTemplateMiddleware())
                 .set(RenderTemplateMiddleware::setUserFunctions, userFunctions())
                 .build());

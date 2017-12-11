@@ -7,6 +7,7 @@ import enkan.collection.Multimap;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.component.doma2.DomaProvider;
+import enkan.component.ldaptive.LdapClient;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
@@ -19,7 +20,6 @@ import lombok.Data;
 import net.jodah.failsafe.Failsafe;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.component.LdapClient;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
@@ -35,6 +35,7 @@ import okhttp3.*;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.ldaptive.LdapException;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -182,8 +183,12 @@ public class SignInController {
         User user= userDao.selectByPassword(form.getAccount(), form.getPassword());
 
         if (user == null && ldapClient != null) {
-            if (ldapClient.search(form.getAccount(), form.getPassword())) {
-                user = userDao.selectByAccount(form.getAccount());
+            try {
+                if (ldapClient.search(form.getAccount(), form.getPassword())) {
+                    user = userDao.selectByAccount(form.getAccount());
+                }
+            } catch (LdapException e) {
+                throw new FalteringEnvironmentException(e);
             }
         }
 

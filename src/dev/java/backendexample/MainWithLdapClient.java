@@ -1,24 +1,27 @@
 package backendexample;
 
+import enkan.component.ldaptive.LdapClient;
 import enkan.system.EnkanSystem;
-
-import static enkan.component.ComponentRelationship.component;
-import static enkan.util.BeanBuilder.builder;
 import net.unit8.bouncr.BouncrEnkanSystem;
-import net.unit8.bouncr.component.LdapClient;
-import net.unit8.bouncr.ssl.BouncrSSLSocketFactory;
+import org.ldaptive.ssl.KeyStoreCredentialConfig;
+import org.ldaptive.ssl.SslConfig;
+
+import static enkan.component.ComponentRelationship.*;
+import static enkan.util.BeanBuilder.*;
 
 public class MainWithLdapClient {
     public static void main(String[] args) {
+        KeyStoreCredentialConfig keyStoreConfig = new KeyStoreCredentialConfig();
+        keyStoreConfig.setTrustStore("file:./src/dev/resources/bouncr.jks");
+        keyStoreConfig.setTrustStorePassword("password");
+
+
         EnkanSystem system = new BouncrEnkanSystem().create();
         system.setComponent("ldap", builder(new LdapClient())
                 .set(LdapClient::setPort, 10636)
                 .set(LdapClient::setScheme, "ldaps")
-                .set(LdapClient::setSocketFactoryClassProvider, () -> {
-                    BouncrSSLSocketFactory.setTruststorePath("src/dev/resources/bouncr.jks");
-                    BouncrSSLSocketFactory.setTruststorePassword("password");
-                    return BouncrSSLSocketFactory.class;
-                })
+                .set(LdapClient::setSearchBase, "ou=users,dc=example,dc=com")
+                .set(LdapClient::setSslConfig, new SslConfig(keyStoreConfig))
                 .build());
         system.relationships(
                 component("ldap").using("config"),
