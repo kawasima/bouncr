@@ -106,7 +106,7 @@ public class MultiAppProxyClient implements ProxyClient {
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
-                String path = exchange.getRequestPath();
+                String path = exchange.getRequestURI();
                 if (path.startsWith(application.getVirtualPath())) {
                     String passTo = calculatePathTo(path, application);
                     exchange.setRequestPath(passTo);
@@ -173,7 +173,7 @@ public class MultiAppProxyClient implements ProxyClient {
             exchange.setRelativePath("/");
             Realm realm = realmCache.matches(exchange.getRequestPath());
             Application application = realmCache.getApplication(realm);
-            String path = exchange.getRequestPath();
+            String path = exchange.getRequestURI();
             if (path.startsWith(application.getVirtualPath())) {
                 String passTo = calculatePathTo(path, application);
                 exchange.setRequestPath(passTo);
