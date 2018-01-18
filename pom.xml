@@ -6,7 +6,7 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -218,7 +218,7 @@
                 <dependency>
                     <groupId>com.hazelcast</groupId>
                     <artifactId>hazelcast</artifactId>
-                    <version>3.8.4</version>
+                    <version>3.9.2</version>
                 </dependency>
             </dependencies>
 
