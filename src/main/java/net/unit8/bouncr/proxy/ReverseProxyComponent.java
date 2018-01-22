@@ -108,7 +108,13 @@ public class ReverseProxyComponent extends WebServerComponent {
 
                     HttpHandler appHandler = createAdminApp((WebApplication) app.getApplication());
                     MultiAppProxyClient proxyClient = new MultiAppProxyClient(config, storeProvider.getStore(BOUNCR_TOKEN), realmCache, jwt);
-                    ProxyHandler proxyHandler = new ProxyHandler(proxyClient, maxRequestTime, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded);
+                    ProxyHandler proxyHandler = ProxyHandler.builder()
+                            .setProxyClient(proxyClient)
+                            .setMaxRequestTime(maxRequestTime)
+                            .setRewriteHostHeader(rewriteHostHeader)
+                            .setReuseXForwarded(reuseXForwarded)
+                            .setNext(ResponseCodeHandler.HANDLE_404)
+                            .build();
 
                     IdentityManager identityManager = new IdentityManager() {
                         @Override

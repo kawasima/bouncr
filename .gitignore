@@ -37,3 +37,6 @@ package-*.json
 
 yarn.lock
 /elm-stuff
+
+# h2
+*.mv.db
