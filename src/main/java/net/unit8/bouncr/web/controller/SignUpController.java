@@ -150,7 +150,7 @@ public class SignUpController {
             String token = signInService.signIn(user, request);
 
             config.getHookRepo().runHook(HookPoint.AFTER_SIGNUP, user);
-            return signInService.responseSignedIn(token, request, "/my");
+            return signInService.responseSignedIn(token, request);
         }
     }
 }
