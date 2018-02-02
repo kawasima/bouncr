@@ -19,6 +19,7 @@ public class MessageResource {
     }
 
     public ResourceBundle getBundle(Locale locale) {
+        if (locale == null) locale = Locale.getDefault();
         String language = locale.getLanguage();
         if (!bundles.containsKey(language)) {
             language = "en";
