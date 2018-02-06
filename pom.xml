@@ -6,13 +6,13 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr</artifactId>
-    <version>0.1.3-SNAPSHOT</version>
+    <version>0.1.3</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.5.0</enkan.version>
+        <enkan.version>0.6.0-beta1</enkan.version>
     </properties>
 
     <repositories>
@@ -124,7 +124,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.16.18</version>
+            <version>1.16.20</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

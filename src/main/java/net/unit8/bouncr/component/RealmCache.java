@@ -9,12 +9,14 @@ import net.unit8.bouncr.web.dao.RealmDao;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.entity.Realm;
 
+import javax.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class RealmCache extends SystemComponent {
+    @Inject
     private DomaProvider domaProvider;
     private List<Realm> cache;
     private List<Application> applications;
@@ -24,7 +26,6 @@ public class RealmCache extends SystemComponent {
         return new ComponentLifecycle<RealmCache>() {
             @Override
             public void start(RealmCache realmCache) {
-                realmCache.domaProvider = getDependency(DomaProvider.class);
                 realmCache.refresh();
             }
 
@@ -61,5 +62,14 @@ public class RealmCache extends SystemComponent {
                     return realm;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public String toString() {
+        return "#RealmCache {\n"
+                + "  \"cache\": " + cache + ","
+                + "  \"applications\": " + applications + ","
+                + "  \"dependencies\": " + dependenciesToString()
+                + "\n}";
     }
 }

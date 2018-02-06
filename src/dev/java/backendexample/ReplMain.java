@@ -4,7 +4,7 @@ import enkan.system.command.MetricsCommandRegister;
 import enkan.system.devel.DevelCommandRegister;
 import enkan.system.repl.PseudoRepl;
 import enkan.system.repl.ReplBoot;
-import enkan.system.repl.pseudo.ReplClient;
+import enkan.system.repl.client.ReplClient;
 import kotowari.system.KotowariCommandRegister;
 
 /**
@@ -27,7 +27,7 @@ public class ReplMain {
                 new DevelCommandRegister(),
                 new MetricsCommandRegister());
 
-        new ReplClient().start(repl.getPort().get());
+        new ReplClient().start(repl.getPort());
 
     }
 }
