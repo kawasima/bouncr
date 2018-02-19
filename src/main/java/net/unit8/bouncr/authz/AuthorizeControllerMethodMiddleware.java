@@ -22,7 +22,7 @@ import static enkan.util.BeanBuilder.builder;
  * @author kawasima
  */
 @Middleware(name = "authorizeControllerMethod", dependencies = "routing")
-public class AuthorizeControllerMethodMiddleware extends AbstractWebMiddleware {
+public class AuthorizeControllerMethodMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
     @Override
     public HttpResponse handle(HttpRequest request, MiddlewareChain chain) {
         Method m = ((Routable) request).getControllerMethod();

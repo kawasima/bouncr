@@ -6,13 +6,13 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.6.0-beta1</enkan.version>
+        <enkan.version>0.6.0-beta3</enkan.version>
     </properties>
 
     <repositories>
@@ -221,8 +221,8 @@
                     <version>3.9.2</version>
                 </dependency>
             </dependencies>
-
         </profile>
+
         <profile>
             <id>dev</id>
             <activation>
@@ -299,6 +299,44 @@
                     <groupId>mysql</groupId>
                     <artifactId>mysql-connector-java</artifactId>
                     <version>5.1.44</version>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>integration-test</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <id>add-integration-test-source</id>
+                                <phase>generate-test-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/integration/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <dependency>
+                    <groupId>com.codeborne</groupId>
+                    <artifactId>selenide</artifactId>
+                    <version>4.10.01</version>
+                    <scope>test</scope>
                 </dependency>
             </dependencies>
         </profile>

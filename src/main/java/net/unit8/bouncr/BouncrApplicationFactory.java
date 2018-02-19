@@ -4,7 +4,6 @@ import enkan.Application;
 import enkan.Endpoint;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
-import enkan.data.ContentNegotiable;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.endpoint.ResourceEndpoint;
@@ -166,20 +165,20 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         }).compile();
 
         // Enkan
-        app.use(new DefaultCharsetMiddleware());
+        app.use(new DefaultCharsetMiddleware<>());
         app.use(new MetricsMiddleware<>());
         app.use(NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.StacktraceMiddleware"));
         app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.TraceWebMiddleware"));
         app.use(new TraceMiddleware<>());
-        app.use(new ContentTypeMiddleware());
+        app.use(new ContentTypeMiddleware<>());
         app.use(envIn("development"), new LazyLoadMiddleware<>("enkan.middleware.devel.HttpStatusCatMiddleware"));
-        app.use(new ParamsMiddleware());
-        app.use(new MultipartParamsMiddleware());
-        app.use(new MethodOverrideMiddleware());
-        app.use(new NormalizationMiddleware());
-        app.use(new NestedParamsMiddleware());
-        app.use(new CookiesMiddleware());
+        app.use(new ParamsMiddleware<>());
+        app.use(new MultipartParamsMiddleware<>());
+        app.use(new MethodOverrideMiddleware<>());
+        app.use(new NormalizationMiddleware<>());
+        app.use(new NestedParamsMiddleware<>());
+        app.use(new CookiesMiddleware<>());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
         app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin(?!(/api)))($|/.*)"), authenticated().negate()),
@@ -187,27 +186,27 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                         HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
                                 HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
 
-        app.use(builder(new ContentNegotiationMiddleware())
+        app.use(builder(new ContentNegotiationMiddleware<>())
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,
                         new HashSet<>(Arrays.asList("en", "ja")))
                 .build());
         // Kotowari
-        app.use(builder(new ResourceMiddleware())
-                .set(ResourceMiddleware::setUriPrefix, null)
+        app.use(builder(new ResourceMiddleware<>())
+                .set(ResourceMiddleware::setUriPrefix, (String) null)
                 .build());
-        app.use(builder(new RenderTemplateMiddleware())
+        app.use(builder(new RenderTemplateMiddleware<>())
                 .set(RenderTemplateMiddleware::setUserFunctions, userFunctions())
                 .build());
-        app.use(new I18nMiddleware());
-        app.use(new RoutingMiddleware(routes));
-        app.use(new AuthorizeControllerMethodMiddleware());
+        app.use(new I18nMiddleware<>());
+        app.use(new RoutingMiddleware<>(routes));
+        app.use(new AuthorizeControllerMethodMiddleware<>());
         app.use(new DomaTransactionMiddleware<>());
-        app.use(new FormMiddleware());
-        app.use(builder(new SerDesMiddleware())
+        app.use(new FormMiddleware<>());
+        app.use(builder(new SerDesMiddleware<>())
                 .set(SerDesMiddleware::setBodyWriters, new ToStringBodyWriter())
                 .build());
-        app.use(new ValidateBodyMiddleware());
-        app.use(new ControllerInvokerMiddleware(injector));
+        app.use(new ValidateBodyMiddleware<>());
+        app.use(new ControllerInvokerMiddleware<>(injector));
 
         return app;
     }

@@ -20,14 +20,14 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
  * @author kawasima
  */
 @Middleware(name = "ClientAuthenticate", dependencies = {"authenticate"})
-public class ClientAuthenticateMiddleware extends AbstractWebMiddleware {
+public class ClientAuthenticateMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
     private boolean isAuthenticated(PrincipalAvailable request) {
         return request.getPrincipal() != null;
     }
 
     @Override
-    public HttpResponse handle(HttpRequest request, MiddlewareChain chain) {
-        request = MixinUtils.mixin(request, new Class[]{PrincipalAvailable.class});
+    public HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
+        request = MixinUtils.mixin(request, PrincipalAvailable.class);
         String clientDN = request.getHeaders().get("X-Client-DN");
         if (!isAuthenticated((PrincipalAvailable) request) && clientDN != null) {
             RDN cn = new X500Name(clientDN).getRDNs(BCStyle.CN)[0];

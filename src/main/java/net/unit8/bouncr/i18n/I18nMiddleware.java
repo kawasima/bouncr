@@ -14,21 +14,15 @@ import kotowari.data.TemplatedHttpResponse;
 import net.unit8.bouncr.component.BouncrConfiguration;
 
 import javax.inject.Inject;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Locale;
-import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 
 @Middleware(name = "i18n", dependencies = "contentNegotiation")
-public class I18nMiddleware extends AbstractWebMiddleware {
+public class I18nMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
     @Inject
     private BouncrConfiguration config;
 
     @Override
-    public HttpResponse handle(HttpRequest request, MiddlewareChain chain) {
+    public HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
         ContentNegotiable negotiable = ContentNegotiable.class.cast(MixinUtils.mixin(request, ContentNegotiable.class));
         HttpResponse response = castToHttpResponse(chain.next(request));
         if (TemplatedHttpResponse.class.isInstance(response)) {

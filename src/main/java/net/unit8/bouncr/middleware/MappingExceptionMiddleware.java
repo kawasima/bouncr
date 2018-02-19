@@ -12,9 +12,9 @@ import javax.ws.rs.core.MediaType;
 import static enkan.util.BeanBuilder.*;
 
 @enkan.annotation.Middleware(name = "mappingException")
-public class MappingExceptionMiddleware <RES> implements Middleware<HttpRequest, RES> {
+public class MappingExceptionMiddleware <RES, NRES> implements Middleware<HttpRequest, RES, HttpRequest, NRES> {
     @Override
-    public RES handle(HttpRequest request, MiddlewareChain chain) {
+    public RES handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
         try {
             return (RES) chain.next(request);
         } catch (Throwable e) {

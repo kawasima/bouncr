@@ -31,7 +31,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Date;
 
-public class CertificateProvider extends SystemComponent {
+public class CertificateProvider extends SystemComponent<CertificateProvider> {
     private BouncrConfiguration config;
     private Flake flake;
 

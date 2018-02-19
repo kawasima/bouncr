@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author kawasima
  */
-public class StoreProvider extends SystemComponent {
+public class StoreProvider extends SystemComponent<StoreProvider> {
     private KeyValueStore bouncrTokenStore;
     private KeyValueStore authorizationCodeStore;
     private KeyValueStore accessTokenStore;

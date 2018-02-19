@@ -69,7 +69,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
  *
  * @author kawasima
  */
-public class ReverseProxyComponent extends WebServerComponent {
+public class ReverseProxyComponent extends WebServerComponent<ReverseProxyComponent> {
     private static IoCallback callback = new IoCallback() {
         @Override
         public void onComplete(HttpServerExchange exchange, Sender sender) {

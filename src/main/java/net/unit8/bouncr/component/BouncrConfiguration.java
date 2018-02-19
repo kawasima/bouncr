@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class BouncrConfiguration extends SystemComponent {
+public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private Clock clock = Clock.systemDefaultZone();
     private boolean passwordEnabled = true;
     private boolean signUpEnabled = true;
