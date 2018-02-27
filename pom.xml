@@ -218,7 +218,7 @@
                 <dependency>
                     <groupId>com.hazelcast</groupId>
                     <artifactId>hazelcast</artifactId>
-                    <version>3.9.2</version>
+                    <version>3.9.3</version>
                 </dependency>
             </dependencies>
         </profile>
@@ -370,7 +370,6 @@
                 </plugins>
             </build>
         </profile>
-
     </profiles>
 
 </project>
