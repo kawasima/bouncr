@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class RealmCache extends SystemComponent {
+public class RealmCache extends SystemComponent<RealmCache> {
     @Inject
     private DomaProvider domaProvider;
     private List<Realm> cache;
@@ -31,7 +31,8 @@ public class RealmCache extends SystemComponent {
 
             @Override
             public void stop(RealmCache realmCache) {
-                realmCache.domaProvider = null;
+                realmCache.applications.clear();
+                realmCache.cache.clear();
             }
         };
     }
