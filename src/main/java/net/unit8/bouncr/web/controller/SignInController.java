@@ -126,15 +126,22 @@ public class SignInController {
                     .collect(Collectors.toList());
 
             storeProvider.getStore(OIDC_SESSION).write(oidcSessionId, oidcSession);
-            Cookie cookie = builder(Cookie.create("OIDC_SESSION_ID", oidcSessionId))
+
+            Multimap<String, Cookie> cookies = Multimap.of("OIDC_SESSION_ID", builder(Cookie.create("OIDC_SESSION_ID", oidcSessionId))
                     .set(Cookie::setPath, "/")
-                    .build();
+                    .build());
+            Optional.ofNullable(form.getUrl())
+                    .filter(url -> !url.isEmpty())
+                    .ifPresent(url -> cookies.put("REDIRECT_URL", builder(Cookie.create("REDIRECT_URL", url))
+                            .set(Cookie::setPath, "/")
+                            .build()));
+
             return builder(templateEngine.render("my/signIn/index",
                     "passwordEnabled", config.isPasswordEnabled(),
                     "signUpEnabled", config.isSignUpEnabled(),
                     "oidcProviders", oidcProviders,
                     "signin", form))
-                    .set(HttpResponse::setCookies, Multimap.of("OIDC_SESSION_ID", cookie))
+                    .set(HttpResponse::setCookies, cookies)
                     .build();
         }
     }
@@ -169,7 +176,7 @@ public class SignInController {
             auditDao.insertUserAction(ActionType.CHANGE_PASSWORD, user.getAccount(), request.getRemoteAddr());
 
             String token = signInService.signIn(user, request);
-            return signInService.responseSignedIn(token, request, form.getUrl());
+            return signInService.responseSignedIn(token, request);
         }
     }
 
@@ -211,7 +218,7 @@ public class SignInController {
 
         if (user != null) {
             String token = signInService.signIn(user, request);
-            return signInService.responseSignedIn(token, request, form.getUrl());
+            return signInService.responseSignedIn(token, request);
         } else {
             form.setErrors(Multimap.of("account", "error.failToSignin"));
             return signInForm(request, form);
@@ -228,7 +235,7 @@ public class SignInController {
 
         if (user != null) {
             String token = signInService.signIn(user, request);
-            return signInService.responseSignedIn(token, request, form.getUrl());
+            return signInService.responseSignedIn(token, request);
         } else {
             return templateEngine.render("my/signIn/clientdn",
                     "signin", form);
@@ -245,7 +252,7 @@ public class SignInController {
             User user = userDao.selectByOidc(oidcProvider.getId(), claim.getSub());
             if (user != null) {
                 String token = signInService.signIn(user, request);
-                return signInService.responseSignedIn(token, request, request.getParams().get("url"));
+                return signInService.responseSignedIn(token, request);
             } else {
                 Invitation invitation = builder(new Invitation())
                         .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
@@ -327,11 +334,15 @@ public class SignInController {
                     storeProvider.getStore(BOUNCR_TOKEN).delete(token);
                 }
         );
-        Cookie expire = builder(Cookie.create(config.getTokenName(), ""))
+        Cookie tokenExpire = builder(Cookie.create(config.getTokenName(), ""))
                 .set(Cookie::setPath, "/")
                 .set(Cookie::setMaxAge, -1)
                 .build();
-        Multimap<String, Cookie> cookies = Multimap.of(config.getTokenName(), expire);
+        Cookie redirectExpire = builder(Cookie.create("REDIRECT_URL", ""))
+                .set(Cookie::setPath, "/")
+                .set(Cookie::setMaxAge, -1)
+                .build();
+        Multimap<String, Cookie> cookies = Multimap.of(config.getTokenName(), tokenExpire, "REDIRECT_URL", redirectExpire);
         return builder(UrlRewriter.redirect(SignInController.class, "signInForm", SEE_OTHER))
                 .set(HttpResponse::setCookies, cookies)
                 .build();

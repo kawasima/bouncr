@@ -108,20 +108,22 @@ public class SignInService {
         return token;
     }
 
-    public HttpResponse responseSignedIn(String token, HttpRequest request, String redirectUrl) {
+    public HttpResponse responseSignedIn(String token, HttpRequest request) {
         Cookie tokenCookie = Cookie.create(config.getTokenName(), token);
         tokenCookie.setPath("/");
         tokenCookie.setHttpOnly(true);
 
+        String redirectUrl = some(request.getCookies().get("REDIRECT_URL"), Cookie::getValue)
+                .filter(s -> !s.isEmpty())
+                .orElse("/my");
         if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
             Multimap<String, Cookie> cookies = Multimap.of(tokenCookie.getName(), tokenCookie);
-            return builder(HttpResponse.of("{\"url\":\"" + Optional.ofNullable(redirectUrl).orElse("/my") + "\"}"))
+            return builder(HttpResponse.of("{\"url\":\"" + redirectUrl + "\"}"))
                     .set(HttpResponse::setHeaders, Headers.of("Content-Type", "application/json"))
                     .set(HttpResponse::setCookies, cookies)
                     .build();
         } else {
-            return builder(redirect(Optional.ofNullable(redirectUrl).orElse("/my"),
-                    HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
+            return builder(redirect(redirectUrl, HttpResponseUtils.RedirectStatusCode.SEE_OTHER))
                     .set(HttpResponse::setCookies, Multimap.of(tokenCookie.getName(), tokenCookie))
                     .build();
         }
