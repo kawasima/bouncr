@@ -1,6 +1,5 @@
 package net.unit8.bouncr.web.entity;
 
-import lombok.Data;
 import net.unit8.bouncr.web.EventDateTime;
 import net.unit8.bouncr.web.EventDateTimeEntityListener;
 import org.seasar.doma.*;
@@ -10,7 +9,6 @@ import java.time.LocalDateTime;
 
 @Entity(listener = EventDateTimeEntityListener.class)
 @Table(name = "invitations")
-@Data
 public class Invitation implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,4 +20,36 @@ public class Invitation implements Serializable {
 
     @EventDateTime
     private LocalDateTime invitedAt;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public LocalDateTime getInvitedAt() {
+        return invitedAt;
+    }
+
+    public void setInvitedAt(LocalDateTime invitedAt) {
+        this.invitedAt = invitedAt;
+    }
 }

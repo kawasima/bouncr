@@ -25,16 +25,6 @@ public class BouncrAdminTest {
 
     @BeforeAll
     public static void createSystem() {
-        tryReflection(() -> {
-            /*
-            Class.forName("net.unit8.bouncr.authz.UserPermissionPrincipal");
-            Class.forName("net.unit8.bouncr.authz.UserPrincipal");
-            Class.forName("net.unit8.bouncr.sign.JwtHeader");
-            Class.forName("net.unit8.bouncr.sign.JwtClaim");
-            */
-            return true;
-        });
-
         port = Env.getInt("PORT", 3000);
         system = ReflectionUtils.tryReflection(() -> {
             Class<?> enkanSystemFactoryClass = Class.forName("net.unit8.bouncr.BouncrEnkanSystem");

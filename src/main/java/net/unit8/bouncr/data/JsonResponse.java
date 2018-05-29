@@ -32,7 +32,7 @@ public class JsonResponse extends DefaultHttpResponse {
 
     public static JsonResponse badRequest(Multimap<String, Object> invalidParams) {
         try {
-            JsonResponse response = new JsonResponse(400, Headers.of("Content-Type", "application/json"));
+            JsonResponse response = new JsonResponse(400, Headers.of("Content-Type", "application/problem+json"));
             String json = mapper.writeValueAsString(Map.of(
                     "type", "about:blank",
                     "title", "Malformed request",
@@ -48,7 +48,7 @@ public class JsonResponse extends DefaultHttpResponse {
 
     public static JsonResponse unauthenticated(String detail) {
         try {
-            JsonResponse response = new JsonResponse(401, Headers.of("Content-Type", "application/json"));
+            JsonResponse response = new JsonResponse(401, Headers.of("Content-Type", "application/problem+json"));
             String json = mapper.writeValueAsString(Map.of(
                     "type", "about:blank",
                     "title", "Unauthenticated",

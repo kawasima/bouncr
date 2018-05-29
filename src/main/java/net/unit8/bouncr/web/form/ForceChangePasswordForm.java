@@ -1,12 +1,7 @@
 package net.unit8.bouncr.web.form;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import javax.validation.constraints.NotBlank;
 
-@Data
-@EqualsAndHashCode(callSuper = true)
 public class ForceChangePasswordForm extends FormBase {
     @NotBlank
     private String account;
@@ -18,4 +13,36 @@ public class ForceChangePasswordForm extends FormBase {
     private String oldPassword;
 
     private String url;
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public String getNewPassword() {
+        return newPassword;
+    }
+
+    public void setNewPassword(String newPassword) {
+        this.newPassword = newPassword;
+    }
+
+    public String getOldPassword() {
+        return oldPassword;
+    }
+
+    public void setOldPassword(String oldPassword) {
+        this.oldPassword = oldPassword;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
 }

@@ -1,8 +1,5 @@
 package net.unit8.bouncr.web.form;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.List;
@@ -10,8 +7,6 @@ import java.util.List;
 /**
  * @author kawasima
  */
-@Data
-@EqualsAndHashCode(callSuper = false)
 public class RoleForm extends FormBase {
     private Long id;
 
@@ -24,4 +19,36 @@ public class RoleForm extends FormBase {
     private String description;
 
     private List<Long> permissionId;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public List<Long> getPermissionId() {
+        return permissionId;
+    }
+
+    public void setPermissionId(List<Long> permissionId) {
+        this.permissionId = permissionId;
+    }
 }

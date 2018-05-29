@@ -1,16 +1,28 @@
 package net.unit8.bouncr.web.form;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.Email;
 import java.util.List;
 
-@Data
-@EqualsAndHashCode(callSuper = true)
 public class InvitationForm extends FormBase {
     @Email
     private String email;
 
     private List<Long> groupIds;
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public List<Long> getGroupIds() {
+        return groupIds;
+    }
+
+    public void setGroupIds(List<Long> groupIds) {
+        this.groupIds = groupIds;
+    }
 }

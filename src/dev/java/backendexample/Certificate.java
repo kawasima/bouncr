@@ -3,8 +3,6 @@ package backendexample;
 
 import enkan.system.EnkanSystem;
 import enkan.util.BeanBuilder;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import net.unit8.bouncr.cert.CertificateProvider;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;

@@ -1,7 +1,5 @@
 package net.unit8.bouncr.ssl;
 
-import lombok.Data;
-
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -37,10 +35,25 @@ public class BouncrSSLSocketFactory extends SSLSocketFactory {
         }
     }
 
-    @Data
     static class KeyStoreInfo implements Serializable {
         private String truststorePath;
         private String truststorePassword;
+
+        public String getTruststorePath() {
+            return truststorePath;
+        }
+
+        public void setTruststorePath(String truststorePath) {
+            this.truststorePath = truststorePath;
+        }
+
+        public String getTruststorePassword() {
+            return truststorePassword;
+        }
+
+        public void setTruststorePassword(String truststorePassword) {
+            this.truststorePassword = truststorePassword;
+        }
     }
 
     public static void setTruststorePath(String truststorePath) {

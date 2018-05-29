@@ -16,7 +16,6 @@ import enkan.util.CodecUtils;
 import enkan.util.HttpResponseUtils;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
-import lombok.Data;
 import net.jodah.failsafe.Failsafe;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -387,7 +386,6 @@ public class SignInController {
                 cn -> IETFUtils.valueToString(cn.getFirst().getValue())).orElse(null);
     }
 
-    @Data
     public static class OidcProviderDto implements Serializable {
         private Long id;
         private String name;
@@ -412,6 +410,86 @@ public class SignInController {
                     + "&state=" + state
                     + "&scope=" + scope
                     + "&nonce=" + nonce;
+        }
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getScope() {
+            return scope;
+        }
+
+        public void setScope(String scope) {
+            this.scope = scope;
+        }
+
+        public String getState() {
+            return state;
+        }
+
+        public void setState(String state) {
+            this.state = state;
+        }
+
+        public String getResponseType() {
+            return responseType;
+        }
+
+        public void setResponseType(String responseType) {
+            this.responseType = responseType;
+        }
+
+        public String getTokenEndpoint() {
+            return tokenEndpoint;
+        }
+
+        public void setTokenEndpoint(String tokenEndpoint) {
+            this.tokenEndpoint = tokenEndpoint;
+        }
+
+        public String getAuthorizationEndpoint() {
+            return authorizationEndpoint;
+        }
+
+        public void setAuthorizationEndpoint(String authorizationEndpoint) {
+            this.authorizationEndpoint = authorizationEndpoint;
+        }
+
+        public String getNonce() {
+            return nonce;
+        }
+
+        public void setNonce(String nonce) {
+            this.nonce = nonce;
+        }
+
+        public String getRedirectUriBase() {
+            return redirectUriBase;
+        }
+
+        public void setRedirectUriBase(String redirectUriBase) {
+            this.redirectUriBase = redirectUriBase;
         }
     }
 }

@@ -1,8 +1,5 @@
 package net.unit8.bouncr.web.form;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -12,8 +9,6 @@ import java.util.Map;
 /**
  * @author kawasima
  */
-@Data
-@EqualsAndHashCode(callSuper = false)
 public class UserForm extends FormBase implements UserRegisterForm {
     private Long id;
 
@@ -36,4 +31,54 @@ public class UserForm extends FormBase implements UserRegisterForm {
     private String password;
 
     private Map<String, String> profiles;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    @Override
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Map<String, String> getProfiles() {
+        return profiles;
+    }
+
+    public void setProfiles(Map<String, String> profiles) {
+        this.profiles = profiles;
+    }
 }

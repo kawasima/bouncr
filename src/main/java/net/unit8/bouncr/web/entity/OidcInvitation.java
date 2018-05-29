@@ -1,13 +1,11 @@
 package net.unit8.bouncr.web.entity;
 
-import lombok.Data;
 import org.seasar.doma.*;
 
 import java.io.Serializable;
 
 @Entity
 @Table(name = "oidc_invitations")
-@Data
 public class OidcInvitation implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,4 +16,36 @@ public class OidcInvitation implements Serializable {
 
     private Long oidcProviderId;
     private String oidcPayload;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getInvitationId() {
+        return invitationId;
+    }
+
+    public void setInvitationId(Long invitationId) {
+        this.invitationId = invitationId;
+    }
+
+    public Long getOidcProviderId() {
+        return oidcProviderId;
+    }
+
+    public void setOidcProviderId(Long oidcProviderId) {
+        this.oidcProviderId = oidcProviderId;
+    }
+
+    public String getOidcPayload() {
+        return oidcPayload;
+    }
+
+    public void setOidcPayload(String oidcPayload) {
+        this.oidcPayload = oidcPayload;
+    }
 }

@@ -3,8 +3,6 @@ package net.unit8.bouncr.component;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
-import lombok.Getter;
-import lombok.Setter;
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
@@ -34,8 +32,6 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private String backendHeaderName = "X-Bouncr-Credential";
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private CertConfiguration certConfiguration;
-    @Getter
-    @Setter
     private KvsSettings keyValueStoreSettings = new KvsSettings();
     private SecureRandom secureRandom;
     private MessageResource messageResource = new MessageResource(new HashSet<>(Arrays.asList(
@@ -54,7 +50,6 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
             .retryOn(CommunicationException.class)
             .withBackoff(3, 10, TimeUnit.SECONDS);
 
-    @Getter
     private HookRepository hookRepo = new HookRepository();
 
     @Override
@@ -210,5 +205,15 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
         this.messageResource = messageResource;
     }
 
+    public KvsSettings getKeyValueStoreSettings() {
+        return keyValueStoreSettings;
+    }
 
+    public void setKeyValueStoreSettings(KvsSettings keyValueStoreSettings) {
+        this.keyValueStoreSettings = keyValueStoreSettings;
+    }
+
+    public HookRepository getHookRepo() {
+        return hookRepo;
+    }
 }
