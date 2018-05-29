@@ -46,26 +46,20 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         // Routing
         Routes routes = Routes.define(r -> {
             r.scope("/admin", ar -> {
-                ar.get("/").to(IndexController.class, "home");
-                /* Routing for user actions */
                 ar.get("/user").to(UserController.class, "list");
-                ar.get("/user/new").to(UserController.class, "newUser");
                 ar.post("/user").to(UserController.class, "create");
                 ar.get("/user/:id").to(UserController.class, "show");
-                ar.get("/user/:id/edit").to(UserController.class, "edit");
                 ar.post("/user/:id/lock").to(UserController.class, "lock");
                 ar.post("/user/:id/unlock").to(UserController.class, "unlock");
-                ar.post("/user/:id").to(UserController.class, "update");
-                ar.post("/user/:id/delete").to(UserController.class, "delete");
+                ar.put("/user/:id").to(UserController.class, "update");
+                ar.delete("/user/:id").to(UserController.class, "delete");
 
                 /* Routing for group actions */
                 ar.get("/group").to(GroupController.class, "list");
-                ar.get("/group/new").to(GroupController.class, "newForm");
                 ar.post("/group").to(GroupController.class, "create");
                 ar.get("/group/:id").to(GroupController.class, "show");
-                ar.get("/group/:id/edit").to(GroupController.class, "edit");
-                ar.post("/group/:id").to(GroupController.class, "update");
-                ar.post("/group/:id/delete").to(GroupController.class, "delete");
+                ar.put("/group/:id").to(GroupController.class, "update");
+                ar.delete("/group/:id").to(GroupController.class, "delete");
 
                 /* Routing for application actions */
                 ar.get("/application").to(ApplicationController.class, "list");
@@ -134,7 +128,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             /* My page */
             r.scope("/my", mr-> {
                 mr.get("/signIn").to(SignInController.class, "signInForm");
-                mr.post("/signIn").to(SignInController.class, "signInByPassword");
+                //mr.post("/signIn").to(SignInController.class, "signInByPassword");
+                mr.post("/signIn").to(SignInController.class, "signInByPassword2");
                 mr.post("/signIn/changePassword").to(SignInController.class, "forceToChangePassword");
                 mr.post("/signIn/clientDN").to(SignInController.class, "signInByClientDN");
                 mr.get("/signIn/oidc/:id").to(SignInController.class, "signInByOidc");
@@ -145,6 +140,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 mr.get("/signUp").to(SignUpController.class, "newForm");
                 mr.post("/signUp").to(SignUpController.class, "create");
 
+                mr.get("/actions").to(MyController.class, "userActions");
+                mr.get("/sessions").to(MyController.class, "userSessions");
+                mr.get("/applications").to(MyController.class, "applications");
                 mr.get("/account").to(MyController.class, "account");
                 mr.post("/account").to(MyController.class, "changePassword");
                 mr.post("/session/:id/revoke").to(MyController.class, "revokeSession");
@@ -179,12 +177,21 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new NormalizationMiddleware<>());
         app.use(new NestedParamsMiddleware<>());
         app.use(new CookiesMiddleware<>());
+        app.use(builder(new CorsMiddleware<>())
+                .set(CorsMiddleware::setHeaders, new HashSet<>(Arrays.asList(
+                        "Origin", "Accept", "X-Requested-With", "Content-Type",
+                        "Access-Control-Request-Method", "Access-Control-Request-Headers",
+                        "X-Bouncr-Token")))
+                .build());
 
         app.use(new AuthenticationMiddleware<>(Collections.singletonList(injector.inject(new BouncrStoreBackend()))));
-        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin(?!(/api)))($|/.*)"), authenticated().negate()),
+        app.use(and(path("^(/my(?!(/signIn|/signUp|/assets|/oidc))|/admin(?!(/api)))($|/.*)"),
+                authenticated().negate()),
                 (Endpoint<HttpRequest, HttpResponse>) req ->
-                        HttpResponseUtils.redirect("/my/signIn?url=" + req.getUri(),
-                                HttpResponseUtils.RedirectStatusCode.TEMPORARY_REDIRECT));
+                        builder(HttpResponse.of(""))
+                                .set(HttpResponse::setStatus, 401)
+                                .set(HttpResponse::setContentType, "application/json")
+                                .build());
 
         app.use(builder(new ContentNegotiationMiddleware<>())
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,

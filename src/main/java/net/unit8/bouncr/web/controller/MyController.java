@@ -10,6 +10,7 @@ import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.data.JsonResponse;
 import net.unit8.bouncr.util.Base32Utils;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
@@ -76,6 +77,33 @@ public class MyController {
                 "applications", applications,
                 "userActions", userActions);
     }
+
+    public JsonResponse applications(UserPermissionPrincipal principal) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectByAccount(principal.getName());
+        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
+        List<Application> applications = applicationDao.selectByUserId(user.getId());
+        return JsonResponse.fromEntity(applications);
+    }
+
+    public JsonResponse userActions(UserPermissionPrincipal principal) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectByAccount(principal.getName());
+        AuditDao auditDao = daoProvider.getDao(AuditDao.class);
+        List<UserAction> userActions = auditDao
+                .selectForConditionalSearch(null, null, user.getAccount(),
+                        SelectOptions.get().limit(10));
+        return JsonResponse.fromEntity(userActions);
+    }
+
+    public JsonResponse userSessions(UserPermissionPrincipal principal) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        User user = userDao.selectByAccount(principal.getName());
+        UserSessionDao userSessionDao = daoProvider.getDao(UserSessionDao.class);
+        List<UserSession> userSessions = userSessionDao.selectByUserId(user.getId());
+        return JsonResponse.fromEntity(userSessions);
+    }
+
 
     public HttpResponse account(UserPermissionPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);

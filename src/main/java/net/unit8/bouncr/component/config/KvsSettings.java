@@ -5,12 +5,18 @@ import enkan.middleware.session.JCacheStore;
 import enkan.middleware.session.KeyValueStore;
 import lombok.Data;
 
+import javax.cache.Caching;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.spi.CachingProvider;
 import java.io.Serializable;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 

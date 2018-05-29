@@ -6,6 +6,7 @@ import enkan.component.doma2.DomaProvider;
 import enkan.data.HttpResponse;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.data.JsonResponse;
 import net.unit8.bouncr.web.dao.ApplicationDao;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.form.ApplicationForm;
@@ -33,27 +34,10 @@ public class ApplicationController {
     private DomaProvider daoProvider;
 
     @RolesAllowed({"LIST_APPLICATIONS", "LIST_ANY_APPLICATIONS"})
-    public HttpResponse list() {
+    public JsonResponse list() {
         ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
         List<Application> applications = applicationDao.selectAll();
-        return templateEngine.render("admin/application/list",
-                "applications", applications);
-    }
-
-    @RolesAllowed("CREATE_APPLICATION")
-    public HttpResponse newForm() {
-        ApplicationForm application = new ApplicationForm();
-        return templateEngine.render("admin/application/new",
-                "application", application);
-    }
-
-    @RolesAllowed({"MODIFY_APPLICATION", "MODIFY_ANY_APPLICATION"})
-    public HttpResponse edit(Parameters params) {
-        ApplicationDao applicationDao = daoProvider.getDao(ApplicationDao.class);
-        Application application = applicationDao.selectById(params.getLong("id"));
-        ApplicationForm form = beansConverter.createFrom(application, ApplicationForm.class);
-        return templateEngine.render("admin/application/edit",
-                "application", form);
+        return JsonResponse.fromEntity(applications);
     }
 
     @RolesAllowed("CREATE_APPLICATION")

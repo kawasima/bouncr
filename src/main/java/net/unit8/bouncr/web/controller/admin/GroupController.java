@@ -7,6 +7,7 @@ import enkan.data.HttpResponse;
 import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
+import net.unit8.bouncr.data.JsonResponse;
 import net.unit8.bouncr.web.dao.GroupDao;
 import net.unit8.bouncr.web.dao.UserDao;
 import net.unit8.bouncr.web.entity.Group;
@@ -19,6 +20,7 @@ import javax.inject.Inject;
 import javax.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
@@ -41,37 +43,28 @@ public class GroupController {
     private BeansConverter beansConverter;
 
     @RolesAllowed({"LIST_GROUPS","LIST_ANY_GROUPS"})
-    public HttpResponse list(UserPrincipal principal) {
+    public JsonResponse list(UserPrincipal principal) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         SelectOptions options = SelectOptions.get();
         List<Group> groups = groupDao.selectByPrincipalScope(principal, options);
-
-        return templateEngine.render("admin/group/list",
-                "groups", groups);
+        return JsonResponse.fromEntity(groups);
     }
 
     @RolesAllowed({"LIST_GROUPS", "LIST_ANY_GROUPS"})
-    public HttpResponse show(UserPrincipal principal, Parameters params) {
+    public JsonResponse show(UserPrincipal principal, Parameters params) {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         Group group = groupDao.selectById(params.getLong("id"));
 
         UserDao userDao = daoProvider.getDao(UserDao.class);
         List<User> users = userDao.selectByGroupId(group.getId());
 
-        return templateEngine.render("admin/group/show",
-                "group", group,
-                "users", users);
-    }
-
-    @RolesAllowed("CREATE_GROUP")
-    public HttpResponse newForm() {
-        GroupForm group = new GroupForm();
-        UserDao userDao = daoProvider.getDao(UserDao.class);
-        List<User> users = userDao.selectAll();
-        return templateEngine.render("admin/group/new",
-                "group", group,
-                "users", users,
-                "userIds", Collections.emptyList());
+        return JsonResponse.fromEntity(Map.of(
+                "id", group.getId(),
+                "name", group.getName(),
+                "description", group.getDescription(),
+                "writeProtected", group.getWriteProtected(),
+                "users", users
+        ));
     }
 
     @RolesAllowed("CREATE_GROUP")

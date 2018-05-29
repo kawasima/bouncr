@@ -2,12 +2,12 @@ package net.unit8.bouncr.util;
 
 import enkan.exception.UnreachableException;
 
-import javax.xml.bind.DatatypeConverter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Locale;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.joining;
 
 public class DigestUtils {
 
@@ -29,8 +29,10 @@ public class DigestUtils {
             md = MessageDigest.getInstance("MD5");
             md.update(text.getBytes());
             byte[] digest = md.digest();
-            return DatatypeConverter
-                    .printHexBinary(digest).toLowerCase(Locale.US);
+            return IntStream.range(0, digest.length * 2)
+                    .map(i -> (digest[i / 2] >> ((i & 0x01) == 0 ? 4 : 0)) & 0x0F)
+                    .mapToObj(Integer::toHexString)
+                    .collect(joining());
         } catch (NoSuchAlgorithmException e) {
             throw new UnreachableException(e);
         }

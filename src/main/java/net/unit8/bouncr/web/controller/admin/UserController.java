@@ -10,6 +10,7 @@ import enkan.security.UserPrincipal;
 import kotowari.component.TemplateEngine;
 import kotowari.routing.UrlRewriter;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.data.JsonResponse;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.web.dao.*;
@@ -55,20 +56,18 @@ public class UserController {
         userValidationService = new UserValidationService(daoProvider, config);
     }
 
-
     @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
-    public HttpResponse list(UserPrincipal principal) {
+    public List<User> list(UserPrincipal principal) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
 
         SelectOptions options = SelectOptions.get();
         List<User> users = userDao.selectByPrincipalScope(principal, options);
 
-        return templateEngine.render("admin/user/list",
-                "users", users);
+        return users;
     }
 
     @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
-    public HttpResponse show(UserPrincipal principal, Parameters params) {
+    public JsonResponse show(UserPrincipal principal, Parameters params) {
         UserDao userDao = daoProvider.getDao(UserDao.class);
         User user = userDao.selectById(params.getLong("id"));
         boolean isLock = userDao.isLock(user.getAccount());
@@ -79,11 +78,16 @@ public class UserController {
         GroupDao groupDao = daoProvider.getDao(GroupDao.class);
         List<Group> groups = groupDao.selectByUserId(user.getId());
 
-        return templateEngine.render("admin/user/show",
-                "user", user,
-                "userProfiles", userProfiles,
+        return JsonResponse.fromEntity(Map.of(
+                "id", user.getId(),
+                "name", user.getName(),
+                "account", user.getAccount(),
+                "email", user.getEmail(),
+                "writeProtected", user.getWriteProtected(),
+                "profiles", userProfiles,
                 "groups", groups,
-                "isLock", isLock);
+                "isLock", isLock
+        ));
     }
 
     @RolesAllowed({"LIST_USERS", "LIST_ANY_USERS"})
@@ -94,24 +98,12 @@ public class UserController {
         return userDao.selectForIncrementalSearch(word, principal, options);
     }
 
-    private HttpResponse responseNewForm(UserForm form) {
-        UserProfileFieldDao userProfileFieldDao = daoProvider.getDao(UserProfileFieldDao.class);
-        List<UserProfileField> userProfileFields = userProfileFieldDao.selectAll();
-        return templateEngine.render("admin/user/new",
-                "user", form,
-                "userProfileFields", userProfileFields);
-    }
-    @RolesAllowed("CREATE_USER")
-    public HttpResponse newUser() {
-        return responseNewForm(new UserForm());
-    }
-
     @RolesAllowed("CREATE_USER")
     @Transactional
-    public HttpResponse create(UserForm form, HttpRequest request) {
+    public JsonResponse create(UserForm form, HttpRequest request) {
         userValidationService.validate(form, ContentNegotiable.class.cast(request).getLocale());
         if (form.hasErrors()) {
-            return responseNewForm(form);
+            return JsonResponse.badRequest(form.getErrors());
         }
         User user = beansConverter.createFrom(form, User.class);
         user.setWriteProtected(false);
@@ -145,7 +137,7 @@ public class UserController {
         Group bouncrUserGroup = groupDao.selectByName("BOUNCR_USER");
         groupDao.addUser(bouncrUserGroup, user);
 
-        return UrlRewriter.redirect(UserController.class, "list", SEE_OTHER);
+        return JsonResponse.fromEntity(user);
     }
 
     @RolesAllowed({"MODIFY_USER", "MODIFY_ANY_USER"})

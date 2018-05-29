@@ -21,6 +21,7 @@ import net.jodah.failsafe.Failsafe;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.data.JsonResponse;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
@@ -46,16 +47,13 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
-import static enkan.util.HttpResponseUtils.RedirectStatusCode.SEE_OTHER;
-import static enkan.util.ThreadingUtils.some;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
-import static net.unit8.bouncr.web.entity.ActionType.USER_FAILED_SIGNIN;
-import static net.unit8.bouncr.web.entity.ActionType.USER_SIGNIN;
-import static net.unit8.bouncr.web.entity.ResponseType.ID_TOKEN;
-import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.EXPIRED;
-import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.INITIAL;
+import static enkan.util.BeanBuilder.*;
+import static enkan.util.HttpResponseUtils.RedirectStatusCode.*;
+import static enkan.util.ThreadingUtils.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.*;
+import static net.unit8.bouncr.web.entity.ActionType.*;
+import static net.unit8.bouncr.web.entity.ResponseType.*;
+import static net.unit8.bouncr.web.service.SignInService.PasswordCredentialStatus.*;
 
 public class SignInController {
     private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<HashMap<String, Object>>() {
@@ -170,6 +168,52 @@ public class SignInController {
 
             String token = signInService.signIn(user, request);
             return signInService.responseSignedIn(token, request, form.getUrl());
+        }
+    }
+
+    @Transactional
+    public JsonResponse signInByPassword2(HttpRequest request, SignInForm form) {
+        UserDao userDao = daoProvider.getDao(UserDao.class);
+        if (userDao.isLock(form.getAccount())) {
+            //form.setErrors(Multimap.of("account", "error.accountLocked"));
+            return JsonResponse.unauthenticated("accountLocked");
+        }
+        User user= userDao.selectByPassword(form.getAccount(), form.getPassword());
+
+        if (user == null && ldapClient != null) {
+            try {
+                if (ldapClient.search(form.getAccount(), form.getPassword())) {
+                    user = userDao.selectByAccount(form.getAccount());
+                }
+            } catch (LdapException e) {
+                return JsonResponse.serverError(e);
+            }
+        }
+
+        if (user != null) {
+            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+            if (status == EXPIRED || status == INITIAL) {
+                ForceChangePasswordForm changePasswordForm = new ForceChangePasswordForm();
+                changePasswordForm.setAccount(form.getAccount());
+                changePasswordForm.setOldPassword(form.getPassword());
+                return JsonResponse.fromEntity(changePasswordForm);
+            }
+        }
+
+        if (user != null && !signInService.validateOtpKey(user, form.getCode())) {
+            return JsonResponse.fromEntity(form);
+        }
+
+        signInService.recordSignIn(user, request, form);
+
+        if (user != null) {
+            String token = signInService.signIn(user, request);
+            return JsonResponse.fromEntity(Map.of(
+                    "token", token
+            ));
+        } else {
+            //form.setErrors(Multimap.of("account", "error.failToSignin"));
+            return JsonResponse.unauthenticated("failToSignin");
         }
     }
 

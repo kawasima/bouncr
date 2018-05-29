@@ -4,6 +4,7 @@ import enkan.component.BeansConverter;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.security.AuthBackend;
+import enkan.util.ThreadingUtils;
 import net.unit8.bouncr.authz.UserPermissionPrincipal;
 import net.unit8.bouncr.authz.UserPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -13,6 +14,7 @@ import net.unit8.bouncr.web.entity.Realm;
 
 import javax.inject.Inject;
 import java.security.Principal;
+import java.util.Objects;
 
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
@@ -29,14 +31,29 @@ public class BouncrStoreBackend implements AuthBackend<HttpRequest, UserPermissi
     @Inject
     private BouncrConfiguration config;
 
+    private String parseTokenFromCookie(HttpRequest request) {
+        Cookie tokenCookie = request.getCookies().get(config.getTokenName());
+        return tokenCookie != null ? tokenCookie.getValue() : null;
+    }
+
+    private String parseTokenFromHeader(HttpRequest request) {
+        return request.getHeaders().get("X-Bouncr-Token");
+    }
+
     @Override
-    public UserPermissionPrincipal parse(HttpRequest httpRequest) {
-        Cookie tokenCookie = httpRequest.getCookies().get(config.getTokenName());
-        Realm realm = realmCache.matches(httpRequest.getUri());
-        if (tokenCookie != null && realm != null) {
-            UserPrincipal user = beans.createFrom(storeProvider.getStore(BOUNCR_TOKEN).read(tokenCookie.getValue()), UserPrincipal.class);
-            if (user != null) {
-                return new UserPermissionPrincipal(user.getId(), user.getName(), user.getProfiles(), user.getPermissions(realm.getId()));
+    public UserPermissionPrincipal parse(HttpRequest request) {
+        String token = parseTokenFromCookie(request);
+        if (token == null) {
+            token = parseTokenFromHeader(request);
+        }
+
+        if (token != null) {
+            Realm realm = realmCache.matches(request.getUri());
+            if (realm != null) {
+                UserPrincipal user = beans.createFrom(storeProvider.getStore(BOUNCR_TOKEN).read(token), UserPrincipal.class);
+                if (user != null) {
+                    return new UserPermissionPrincipal(user.getId(), user.getName(), user.getProfiles(), user.getPermissions(realm.getId()));
+                }
             }
         }
         return null;
