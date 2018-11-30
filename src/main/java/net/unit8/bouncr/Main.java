@@ -13,7 +13,7 @@ public class Main {
         String enkanSystemFactoryName = Env.getString("ENKAN_SYSTEM_FACTORY", DEFAULT_ENKAN_SYSTEM_FACTORY);
         final EnkanSystem system = ReflectionUtils.tryReflection(() -> {
             Class<?> enkanSystemFactoryClass = Class.forName(enkanSystemFactoryName);
-            EnkanSystemFactory enkanSystemFactory = (EnkanSystemFactory) enkanSystemFactoryClass.newInstance();
+            EnkanSystemFactory enkanSystemFactory = (EnkanSystemFactory) enkanSystemFactoryClass.getConstructor().newInstance();
             return enkanSystemFactory.create();
         });
 

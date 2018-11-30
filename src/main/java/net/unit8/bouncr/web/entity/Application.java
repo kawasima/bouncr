@@ -1,7 +1,6 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
-
+import javax.persistence.*;
 import java.io.Serializable;
 import java.net.URI;
 
@@ -18,9 +17,17 @@ public class Application implements Serializable {
 
     private String name;
     private String description;
+
+    @Column(name = "pass_to")
     private String passTo;
+
+    @Column(name = "virtual_path")
     private String virtualPath;
+
+    @Column(name = "top_page")
     private String topPage;
+
+    @Column(name = "write_protected")
     private Boolean writeProtected;
 
     public URI getUriToPass() {

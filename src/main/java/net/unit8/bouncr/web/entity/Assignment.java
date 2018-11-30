@@ -1,44 +1,43 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.Entity;
-import org.seasar.doma.Id;
-import org.seasar.doma.Table;
-
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.io.Serializable;
 
 @Entity
 @Table(name = "assignments")
 public class Assignment implements Serializable {
     @Id
-    private Long groupId;
+    private Group group;
 
     @Id
-    private Long roleId;
+    private Role role;
 
     @Id
-    private Long realmId;
+    private Realm realm;
 
-    public Long getGroupId() {
-        return groupId;
+    public Group getGroup() {
+        return group;
     }
 
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
+    public void setGroup(Group group) {
+        this.group = group;
     }
 
-    public Long getRoleId() {
-        return roleId;
+    public Role getRole() {
+        return role;
     }
 
-    public void setRoleId(Long roleId) {
-        this.roleId = roleId;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
-    public Long getRealmId() {
-        return realmId;
+    public Realm getRealm() {
+        return realm;
     }
 
-    public void setRealmId(Long realmId) {
-        this.realmId = realmId;
+    public void setRealm(Realm realm) {
+        this.realm = realm;
     }
 }

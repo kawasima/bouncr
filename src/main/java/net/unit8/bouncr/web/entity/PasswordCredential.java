@@ -1,21 +1,18 @@
 package net.unit8.bouncr.web.entity;
 
 import net.unit8.bouncr.web.EventDateTime;
-import net.unit8.bouncr.web.EventDateTimeEntityListener;
-import org.seasar.doma.Column;
-import org.seasar.doma.Entity;
-import org.seasar.doma.Id;
-import org.seasar.doma.Table;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Entity(listener = EventDateTimeEntityListener.class)
+@Entity
 @Table(name = "password_credentials")
 public class PasswordCredential implements Serializable {
     @Id
     @Column(name = "user_id")
-    private Long id;
+    @OneToOne
+    private User user;
 
     private byte[] password;
 
@@ -25,12 +22,12 @@ public class PasswordCredential implements Serializable {
     @EventDateTime
     private LocalDateTime createdAt;
 
-    public Long getId() {
-        return id;
+    public User getUser() {
+        return user;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public byte[] getPassword() {

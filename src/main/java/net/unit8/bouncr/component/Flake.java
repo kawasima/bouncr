@@ -35,6 +35,7 @@ public class Flake extends SystemComponent {
                             throw new MisconfigurationException("", e);
                         }
                     })
+                    .filter(Objects::nonNull)
                     .findAny()
                     .orElseThrow(() -> new MisconfigurationException(""));
         } catch (SocketException e) {

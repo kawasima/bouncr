@@ -1,13 +1,12 @@
 package net.unit8.bouncr.web.entity;
 
 import net.unit8.bouncr.web.EventDateTime;
-import net.unit8.bouncr.web.EventDateTimeEntityListener;
-import org.seasar.doma.*;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Entity(listener = EventDateTimeEntityListener.class)
+@Entity
 @Table(name = "invitations")
 public class Invitation implements Serializable {
     @Id

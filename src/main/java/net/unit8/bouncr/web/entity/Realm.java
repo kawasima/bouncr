@@ -1,7 +1,6 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
-
+import javax.persistence.*;
 import java.io.Serializable;
 import java.util.regex.Pattern;
 
@@ -19,7 +18,12 @@ public class Realm implements Serializable {
     private String name;
     private String url;
     private String description;
-    private Long applicationId;
+
+    @ManyToOne
+    @JoinColumn(name = "application_id", referencedColumnName = "application_id")
+    private Application application;
+
+    @Column(name = "write_protected")
     private Boolean writeProtected;
 
     @Transient
@@ -57,12 +61,12 @@ public class Realm implements Serializable {
         this.description = description;
     }
 
-    public Long getApplicationId() {
-        return applicationId;
+    public Application getApplication() {
+        return application;
     }
 
-    public void setApplicationId(Long applicationId) {
-        this.applicationId = applicationId;
+    public void setApplication(Application application) {
+        this.application = application;
     }
 
     public Boolean getWriteProtected() {

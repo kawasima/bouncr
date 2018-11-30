@@ -1,7 +1,6 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
-
+import javax.persistence.*;
 import java.io.Serializable;
 
 @Entity
@@ -12,9 +11,11 @@ public class OidcInvitation implements Serializable {
     @Column(name = "oidc_invitation_id")
     private Long id;
 
-    private Long invitationId;
+    @OneToOne
+    private Invitation invitation;
 
-    private Long oidcProviderId;
+    @OneToOne
+    private OidcProvider oidcProvider;
     private String oidcPayload;
 
     public Long getId() {
@@ -25,20 +26,20 @@ public class OidcInvitation implements Serializable {
         this.id = id;
     }
 
-    public Long getInvitationId() {
-        return invitationId;
+    public Invitation getInvitation() {
+        return invitation;
     }
 
-    public void setInvitationId(Long invitationId) {
-        this.invitationId = invitationId;
+    public void setInvitation(Invitation invitation) {
+        this.invitation = invitation;
     }
 
-    public Long getOidcProviderId() {
-        return oidcProviderId;
+    public OidcProvider getOidcProvider() {
+        return oidcProvider;
     }
 
-    public void setOidcProviderId(Long oidcProviderId) {
-        this.oidcProviderId = oidcProviderId;
+    public void setOidcProvider(OidcProvider oidcProvider) {
+        this.oidcProvider = oidcProvider;
     }
 
     public String getOidcPayload() {

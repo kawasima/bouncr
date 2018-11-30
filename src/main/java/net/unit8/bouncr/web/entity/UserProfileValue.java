@@ -1,9 +1,9 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.Entity;
-import org.seasar.doma.Id;
-import org.seasar.doma.Table;
-
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
 import java.io.Serializable;
 
 @Entity
@@ -12,7 +12,8 @@ public class UserProfileValue implements Serializable {
     @Id
     private Long userProfileFieldId;
     @Id
-    private Long userId;
+    @OneToOne
+    private User user;
     private String value;
 
     public Long getUserProfileFieldId() {
@@ -23,12 +24,12 @@ public class UserProfileValue implements Serializable {
         this.userProfileFieldId = userProfileFieldId;
     }
 
-    public Long getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public String getValue() {

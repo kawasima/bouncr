@@ -1,7 +1,6 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
-
+import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 

@@ -1,27 +1,26 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.Column;
-import org.seasar.doma.Entity;
-import org.seasar.doma.Id;
-import org.seasar.doma.Table;
-
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.io.Serializable;
 
 @Entity
 @Table(name = "otp_keys")
 public class OtpKey implements Serializable {
     @Id
-    private Long userId;
+    private User user;
 
     @Column(name = "otp_key")
     private byte[] key;
 
-    public Long getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public byte[] getKey() {

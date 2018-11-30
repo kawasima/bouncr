@@ -1,8 +1,10 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * The entity of groups.
@@ -20,6 +22,13 @@ public class Group implements Serializable {
     private String name;
     private String description;
     private Boolean writeProtected;
+
+    @ManyToMany
+    @JoinTable(name = "membership",
+            joinColumns = @JoinColumn(name = "group_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<User> users;
 
     public Long getId() {
         return id;
@@ -51,5 +60,13 @@ public class Group implements Serializable {
 
     public void setWriteProtected(Boolean writeProtected) {
         this.writeProtected = writeProtected;
+    }
+
+    public List<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<User> users) {
+        this.users = users;
     }
 }

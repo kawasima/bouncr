@@ -2,22 +2,23 @@ package net.unit8.bouncr.component;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
-import enkan.component.doma2.DomaProvider;
+import enkan.component.jpa.EntityManagerProvider;
 import enkan.exception.MisconfigurationException;
-import net.unit8.bouncr.web.dao.ApplicationDao;
-import net.unit8.bouncr.web.dao.RealmDao;
 import net.unit8.bouncr.web.entity.Application;
 import net.unit8.bouncr.web.entity.Realm;
 
 import javax.inject.Inject;
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class RealmCache extends SystemComponent<RealmCache> {
     @Inject
-    private DomaProvider domaProvider;
+    private EntityManagerProvider entityManagerProvider;
     private List<Realm> cache;
     private List<Application> applications;
 
@@ -46,16 +47,22 @@ public class RealmCache extends SystemComponent<RealmCache> {
 
     public Application getApplication(Realm realm) {
         return applications.stream()
-                .filter(app -> app.getId().equals(realm.getApplicationId()))
+                .filter(app -> app.equals(realm.getApplication()))
                 .findFirst()
-                .orElseThrow(() -> new MisconfigurationException("bouncr.APPLICATION_NOT_FOUND", realm.getApplicationId()));
+                .orElseThrow(() -> new MisconfigurationException("bouncr.APPLICATION_NOT_FOUND", realm.getApplication().getId()));
     }
 
     public synchronized void refresh() {
-        RealmDao realmDao = domaProvider.getDao(RealmDao.class);
-        ApplicationDao applicationDao = domaProvider.getDao(ApplicationDao.class);
-        applications = applicationDao.selectAll();
-        cache = realmDao.selectAll()
+        EntityManager em = entityManagerProvider.createEntityManager();
+
+        CriteriaBuilder builder = em.getCriteriaBuilder();
+        CriteriaQuery<Application> query = builder.createQuery(Application.class);
+        query.from(Application.class);
+        applications = em.createQuery(query).getResultList();
+
+        CriteriaQuery<Realm> realmQuery = builder.createQuery(Realm.class);
+        Root<Realm> realmRoot = realmQuery.from(Realm.class);
+        cache = em.createQuery(realmQuery).getResultList()
                 .stream()
                 .map(realm -> {
                     Application app = getApplication(realm);

@@ -6,14 +6,15 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr</artifactId>
-    <version>0.1.4-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>9</maven.compiler.source>
-        <maven.compiler.target>9</maven.compiler.target>
-        <maven.compiler.release>9</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.6.0-beta3</enkan.version>
+        <enkan.version>0.6.0</enkan.version>
+        <kotowari-restful.version>0.1.0-SNAPSHOT</kotowari-restful.version>
     </properties>
 
     <repositories>
@@ -73,18 +74,13 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-system</artifactId>
-            <version>${enkan.version}</version>
+            <artifactId>kotowari-restful</artifactId>
+            <version>${kotowari-restful.version}</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>kotowari</artifactId>
-            <version>${enkan.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-doma2</artifactId>
-            <version>${enkan.version}</version>
+            <artifactId>enkan-component-eclipselink</artifactId>
+            <version>0.7.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -94,16 +90,11 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-HikariCP</artifactId>
-            <version>${enkan.version}</version>
+            <version>0.7.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-flyway</artifactId>
-            <version>${enkan.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-freemarker</artifactId>
             <version>${enkan.version}</version>
         </dependency>
         <dependency>
@@ -115,11 +106,23 @@
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-bouncr</artifactId>
             <version>0.3.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-ldaptive</artifactId>
             <version>0.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

@@ -4,24 +4,31 @@ import enkan.Env;
 import enkan.collection.OptionMap;
 import enkan.component.ApplicationComponent;
 import enkan.component.builtin.HmacEncoder;
-import enkan.component.doma2.DomaProvider;
+import enkan.component.eclipselink.EclipseLinkEntityManagerProvider;
 import enkan.component.flyway.FlywayMigration;
-import enkan.component.freemarker.FreemarkerTemplateEngine;
 import enkan.component.hikaricp.HikariCPComponent;
 import enkan.component.jackson.JacksonBeansConverter;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
+import kotowari.restful.component.BeansValidator;
 import net.unit8.bouncr.cert.CertificateProvider;
 import net.unit8.bouncr.cert.ReloadableTrustManager;
-import net.unit8.bouncr.component.*;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.Flake;
+import net.unit8.bouncr.component.RealmCache;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.proxy.ReverseProxyComponent;
 import net.unit8.bouncr.sign.JsonWebToken;
+import net.unit8.bouncr.web.entity.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.eclipse.persistence.config.PersistenceUnitProperties;
 
 import java.security.Security;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
@@ -40,6 +47,7 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
 
     @Override
     public EnkanSystem create() {
+        Map<String, Object> jpaProperties = new HashMap<>(Map.of(PersistenceUnitProperties.SESSION_CUSTOMIZER, CaseConvertCustomizer.class.getName()));
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),
                 "config", builder(new BouncrConfiguration())
@@ -47,8 +55,20 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(10))
                                 .build())
                         .build(),
-                "doma", new DomaProvider(),
+                "jpa", builder(new EclipseLinkEntityManagerProvider())
+//                        .set(EclipseLinkEntityManagerProvider::setJpaProperties, jpaProperties)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Application.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Realm.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, User.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Membership.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Group.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Role.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Permission.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, RolePermission.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Assignment.class)
+                        .build(),
                 "jackson", new JacksonBeansConverter(),
+                "validator", new BeansValidator(),
                 "storeprovider", new StoreProvider(),
                 "flake", new Flake(),
                 "certificate", new CertificateProvider(),
@@ -59,7 +79,6 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
                 "jwt", new JsonWebToken(),
                 "realmCache", new RealmCache(),
                 "flyway", new FlywayMigration(),
-                "template", new FreemarkerTemplateEngine(),
                 "metrics", new MetricsComponent(),
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),
@@ -76,11 +95,11 @@ public class BouncrEnkanSystem implements EnkanSystemFactory {
         ).relationships(
                 component("http").using("app", "storeprovider", "realmCache", "trustManager", "config", "jwt"),
                 component("app").using(
-                        "storeprovider", "datasource", "template", "doma", "jackson", "metrics",
+                        "storeprovider", "datasource", "jpa", "jackson", "metrics", "validator",
                         "realmCache", "config", "jwt", "certificate", "trustManager"),
                 component("storeprovider").using("config"),
-                component("realmCache").using("doma"),
-                component("doma").using("datasource", "flyway"),
+                component("realmCache").using("jpa"),
+                component("jpa").using("datasource", "flyway"),
                 component("flyway").using("datasource"),
                 component("certificate").using("flake", "config"),
                 component("jwt").using("config")

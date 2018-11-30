@@ -1,7 +1,6 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.*;
-
+import javax.persistence.*;
 import java.io.Serializable;
 
 @Entity
@@ -11,8 +10,12 @@ public class GroupInvitation implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "group_invitation_id")
     private Long id;
-    private Long invitationId;
-    private Long groupId;
+
+    @OneToOne
+    private Invitation invitation;
+
+    @OneToOne
+    private Group group;
 
     public Long getId() {
         return id;
@@ -22,19 +25,19 @@ public class GroupInvitation implements Serializable {
         this.id = id;
     }
 
-    public Long getInvitationId() {
-        return invitationId;
+    public Invitation getInvitation() {
+        return invitation;
     }
 
-    public void setInvitationId(Long invitationId) {
-        this.invitationId = invitationId;
+    public void setInvitation(Invitation invitation) {
+        this.invitation = invitation;
     }
 
-    public Long getGroupId() {
-        return groupId;
+    public Group getGroup() {
+        return group;
     }
 
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
+    public void setGroup(Group group) {
+        this.group = group;
     }
 }

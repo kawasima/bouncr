@@ -1,11 +1,8 @@
 package net.unit8.bouncr.web.entity;
 
-import org.seasar.doma.Domain;
-
 import java.util.Objects;
 import java.util.stream.Stream;
 
-@Domain(valueType = Long.class, factoryMethod = "of", accessorMethod = "getId")
 public enum ActionType {
     USER_SIGNIN(1L, "user.signin"),
     USER_FAILED_SIGNIN(2L, "user.failed_signin"),
