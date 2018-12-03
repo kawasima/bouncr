@@ -1,6 +1,8 @@
 package net.unit8.bouncr.web.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -31,6 +33,7 @@ public class User implements Serializable {
             joinColumns = @JoinColumn(name="user_id"),
             inverseJoinColumns = @JoinColumn(name = "group_id"))
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonManagedReference
     private List<Group> groups;
 
     public Long getId() {
@@ -71,6 +74,14 @@ public class User implements Serializable {
 
     public void setWriteProtected(Boolean writeProtected) {
         this.writeProtected = writeProtected;
+    }
+
+    public List<Group> getGroups() {
+        return groups;
+    }
+
+    public void setGroups(List<Group> groups) {
+        this.groups = groups;
     }
 
     @Override

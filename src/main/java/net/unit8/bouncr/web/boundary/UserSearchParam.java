@@ -5,6 +5,7 @@ import java.io.Serializable;
 public class UserSearchParam implements Serializable {
     private Long groupId;
     private String q;
+    private String embed;
     private Integer limit = 10;
     private Integer offset = 0;
 
@@ -38,5 +39,13 @@ public class UserSearchParam implements Serializable {
 
     public void setOffset(Integer offset) {
         this.offset = offset;
+    }
+
+    public String getEmbed() {
+        return embed;
+    }
+
+    public void setEmbed(String embed) {
+        this.embed = embed;
     }
 }

@@ -1,5 +1,6 @@
 package net.unit8.bouncr.web.resource;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import enkan.component.jpa.EntityManagerProvider;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
@@ -15,8 +16,11 @@ import net.unit8.bouncr.web.entity.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class UsersResourceTest {
     private EntityManager em;
     private EnkanSystem system;
+    private static final Logger LOG = LoggerFactory.getLogger(UsersResourceTest.class);
+
     @BeforeEach
     public void setup() {
         system = new BouncrEnkanSystem().create();
@@ -40,12 +46,15 @@ public class UsersResourceTest {
     }
 
     @Test
-    public void findDefaultUsers() {
+    public void findDefaultUsers() throws Exception {
         UsersResource resource = new UsersResource();
         UserSearchParam params = builder(new UserSearchParam())
                 .set(UserSearchParam::setGroupId, 1L)
+                .set(UserSearchParam::setEmbed, "(groups)")
                 .build();
         List<User> users = resource.handleOk(params, em);
+        ObjectMapper mapper = new ObjectMapper();
+        LOG.debug("{}\n{}", users, mapper.writeValueAsString(users));
         assertThat(users).hasSize(1);
     }
 
