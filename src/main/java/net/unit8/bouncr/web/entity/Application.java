@@ -3,6 +3,7 @@ package net.unit8.bouncr.web.entity;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.net.URI;
+import java.util.List;
 
 /**
  * @author kawasima
@@ -29,6 +30,8 @@ public class Application implements Serializable {
 
     @Column(name = "write_protected")
     private Boolean writeProtected;
+
+    private List<Realm> realms;
 
     public URI getUriToPass() {
         return URI.create(passTo);
@@ -88,5 +91,13 @@ public class Application implements Serializable {
 
     public void setWriteProtected(Boolean writeProtected) {
         this.writeProtected = writeProtected;
+    }
+
+    public List<Realm> getRealms() {
+        return realms;
+    }
+
+    public void setRealms(List<Realm> realms) {
+        this.realms = realms;
     }
 }

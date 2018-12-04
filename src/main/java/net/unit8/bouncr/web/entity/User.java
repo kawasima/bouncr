@@ -3,6 +3,11 @@ package net.unit8.bouncr.web.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import net.unit8.bouncr.json.IndirectListFilter;
+import org.eclipse.persistence.queries.FetchGroup;
+import org.eclipse.persistence.queries.FetchGroupTracker;
+import org.eclipse.persistence.sessions.Session;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -15,7 +20,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "users")
-public class User implements Serializable {
+public class User implements Serializable, FetchGroupTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
@@ -25,6 +30,7 @@ public class User implements Serializable {
     private String name;
     private String email;
 
+    @JsonProperty("write_protected")
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
@@ -32,8 +38,8 @@ public class User implements Serializable {
     @JoinTable(name = "memberships",
             joinColumns = @JoinColumn(name="user_id"),
             inverseJoinColumns = @JoinColumn(name = "group_id"))
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonManagedReference
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<Group> groups;
 
     public Long getId() {
@@ -94,5 +100,45 @@ public class User implements Serializable {
                 ", writeProtected=" + writeProtected +
                 ", groups=" + groups +
                 '}';
+    }
+
+    @Override
+    public FetchGroup _persistence_getFetchGroup() {
+        return null;
+    }
+
+    @Override
+    public void _persistence_setFetchGroup(FetchGroup group) {
+
+    }
+
+    @Override
+    public boolean _persistence_isAttributeFetched(String attribute) {
+        return false;
+    }
+
+    @Override
+    public void _persistence_resetFetchGroup() {
+
+    }
+
+    @Override
+    public boolean _persistence_shouldRefreshFetchGroup() {
+        return false;
+    }
+
+    @Override
+    public void _persistence_setShouldRefreshFetchGroup(boolean shouldRefreshFetchGroup) {
+
+    }
+
+    @Override
+    public Session _persistence_getSession() {
+        return null;
+    }
+
+    @Override
+    public void _persistence_setSession(Session session) {
+
     }
 }

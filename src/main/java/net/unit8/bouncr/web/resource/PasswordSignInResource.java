@@ -25,10 +25,10 @@ import static kotowari.restful.DecisionPoint.POST;
 public class PasswordSignInResource {
     @Decision(IS_AUTHORIZED)
     public Problem authenticate(PasswordSignInRequest passwordSignInRequest, RestContext context, EntityManager em) {
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<PasswordCredential> query = builder.createQuery(PasswordCredential.class);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
         Root<PasswordCredential> root = query.from(PasswordCredential.class);
-        query.where(builder.equal(root.get("account"), passwordSignInRequest.getAccount()));
+        query.where(cb.equal(root.get("account"), passwordSignInRequest.getAccount()));
         PasswordCredential passwordCredential = em.createQuery(query).getSingleResult();
 
         if (passwordCredential != null) {

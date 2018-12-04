@@ -1,16 +1,12 @@
 package net.unit8.bouncr.web.resource;
 
 import enkan.component.BeansConverter;
-import enkan.data.DefaultHttpRequest;
-import enkan.util.Predicates;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
-import kotowari.restful.data.DefaultResouruce;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.sf.ehcache.pool.sizeof.filter.ResourceSizeOfFilter;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.web.boundary.CreateUserRequest;
@@ -30,9 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static enkan.util.ThreadingUtils.some;
-import static kotowari.restful.DecisionPoint.HANDLE_OK;
-import static kotowari.restful.DecisionPoint.MALFORMED;
-import static kotowari.restful.DecisionPoint.POST;
+import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
 public class UsersResource {
@@ -59,35 +53,22 @@ public class UsersResource {
 
         List<ResourceField> embedEntities = some(params.getEmbed(), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
-        Predicate criteria = builder.conjunction();
+        EntityGraph<User> userGraph = em.createEntityGraph(User.class);
+        userGraph.addAttributeNodes("name", "account", "email", "writeProtected");
+
         if (params.getGroupId() != null) {
-            Subquery<Group> sq = query.subquery(Group.class);
-            Root<Group> group = sq.from(Group.class);
-            Join<User, Group> sqUser = group.join("users");
-            sq.select(group)
-                    .where(
-                            builder.equal(sqUser, user),
-                            builder.equal(group.get("id"), params.getGroupId())
-                    );
-            criteria = builder.and(criteria, builder.exists(sq));
+            Join<Group, User> groups = user.join("groups");
+            query.where(builder.equal(groups.get("id"), params.getGroupId()));
         }
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
-            query.distinct(true);
-            user.fetch("groups");
+            userGraph.addAttributeNodes("groups");
+            //userGraph.addSubgraph("groups");
         }
-        query.where(criteria);
         return em.createQuery(query)
+                .setHint("javax.persistence.fetchgraph", userGraph)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
-                .getResultList()
-                .stream()
-                .map(u -> {
-                    if (!((IndirectList)u.getGroups()).isInstantiated()) {
-                        u.setGroups(null);
-                    }
-                    return u;
-                })
-                .collect(Collectors.toList());
+                .getResultList();
     }
 
     @Decision(POST)
