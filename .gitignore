@@ -1,6 +1,6 @@
 # Compiled class file
 *.class
-/target
+target
 *-pom.xml
 
 # Log file
@@ -31,7 +31,7 @@ hs_err_pid*
 src/dev/resources/*.jks
 src/dev/resources/*.p12
 package-*.json
-/node_modules
+node_modules
 /build
 
 # elm

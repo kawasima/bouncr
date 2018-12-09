@@ -2,6 +2,9 @@
 
 User "1" -- "*" Membership
 Membership "*" -- "1" Group
+User "1" -- "0..1" PasswordCredential
+User "1" -- "*" UserProfileValue
+UserProfileValue "*" -- "1" UserProfileField
 
 Role "1" -- "*" RolePermission
 RolePermission "*" -- "1" Permission
@@ -13,9 +16,71 @@ Assign "*" -- "1" Realm
 Assign "*" -- "1" Group
 
 class User {
-  VARCHAR name
+  account
+  name
+  email
 }
 
+class Group {
+  name
+  description
+}
+
+class Role {
+  name
+  description
+}
+
+class Permission {
+  name
+  description
+}
+
+class Realm {
+  name
+  description
+  application_id
+}
+
+class Application {
+  name
+  description
+  pass_to
+}
+
+class Realm {
+  name
+  description
+}
+
+class UserProfileValue {
+  user_profile_value_id
+  user_profile_field_id
+  value
+}
+
+class UserProfileField {
+  user_profile_field_id
+  name
+  json_name
+  is_required
+  is_identity
+  regular_expression
+  max_length
+  min_length
+  position
+}
+
+class PasswordCredential {
+  password
+  salt
+  createdAt
+}
+
+class UserAction {
+  actor
+  action_id
+}
 note as N1
 SELECT permissions.id
 FROM permissions
