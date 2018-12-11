@@ -1,11 +1,8 @@
 package net.unit8.bouncr.api;
 
 import enkan.Application;
-import enkan.Endpoint;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
-import enkan.data.HttpRequest;
-import enkan.data.HttpResponse;
 import enkan.endpoint.ResourceEndpoint;
 import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
@@ -26,11 +23,7 @@ import net.unit8.bouncr.api.resource.me.PasswordCredentialResource;
 import net.unit8.bouncr.api.resource.me.UserActionsResource;
 import net.unit8.bouncr.api.resource.me.UserSessionsResource;
 import net.unit8.bouncr.util.DigestUtils;
-import org.bouncycastle.crypto.util.PrivateKeyFactory;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
@@ -38,7 +31,7 @@ import java.util.*;
 import java.util.function.Function;
 
 import static enkan.util.BeanBuilder.builder;
-import static enkan.util.Predicates.*;
+import static enkan.util.Predicates.NONE;
 
 /**
  * The factory for Bouncr application.
@@ -52,16 +45,16 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         // Routing
         Routes routes = Routes.define(r -> {
-            r.scope("/api", ar -> {
+            r.scope("/bouncr/api", ar -> {
                 ar.all("/users").to(UsersResource.class);
                 ar.all("/user/:account").to(UserResource.class);
                 ar.all("/groups").to(GroupsResource.class);
                 ar.all("/group/:name").to(GroupResource.class);
                 ar.all("/applications").to(ApplicationsResource.class);
                 ar.all("/application/:name").to(ApplicationResource.class);
-                ar.all("/application/:name/realms").to(UsersResource.class);
-                ar.all("/application/:name/realm/:realmName").to(UsersResource.class);
-                ar.all("/assignments");
+                ar.all("/application/:name/realms").to(RealmsResource.class);
+                ar.all("/application/:name/realm/:realmName").to(RealmResource.class);
+                ar.all("/assignments").to(AssignmentsResource.class);
                 ar.all("/roles").to(RolesResource.class);
                 ar.all("/role/:name").to(RoleResource.class);
                 ar.all("/permissions").to(PermissionResource.class);
@@ -115,14 +108,6 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         } catch (Exception ioe) {
             throw new RuntimeException(ioe);
         }
-
-        app.use(and(path("^(/api(?!(/sign_in|/sign_up|/oidc)))"),
-                authenticated().negate()),
-                (Endpoint<HttpRequest, HttpResponse>) req ->
-                        builder(HttpResponse.of(""))
-                                .set(HttpResponse::setStatus, 401)
-                                .set(HttpResponse::setContentType, "application/json")
-                                .build());
 
         app.use(builder(new ContentNegotiationMiddleware<>())
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,

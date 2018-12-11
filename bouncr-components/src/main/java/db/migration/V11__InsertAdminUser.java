@@ -197,15 +197,15 @@ public class V11__InsertAdminUser implements JdbcMigration {
 
             stmtInsApplication.setString(1, "BOUNCR");
             stmtInsApplication.setString(2, "Bouncer application");
-            stmtInsApplication.setString(3, "");
-            stmtInsApplication.setString(4, "");
-            stmtInsApplication.setString(5, "/bouncr");
+            stmtInsApplication.setString(3, "http://localhost:3005/bouncr/api");
+            stmtInsApplication.setString(4, "/bouncr/api");
+            stmtInsApplication.setString(5, "/bouncr/api");
             stmtInsApplication.setBoolean(6, true);
             stmtInsApplication.executeUpdate();
             Long applicationId = fetchGeneratedKey(stmtInsApplication);
 
             stmtInsRealm.setString(1, "BOUNCR");
-            stmtInsRealm.setString(2, "(bouncr)($|/.*)");
+            stmtInsRealm.setString(2, ".*");
             stmtInsRealm.setLong(3, applicationId);
             stmtInsRealm.setString(4, "Bouncr Application Realm");
             stmtInsRealm.setBoolean(5, true);

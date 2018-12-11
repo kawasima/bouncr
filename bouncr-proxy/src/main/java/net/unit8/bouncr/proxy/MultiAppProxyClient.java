@@ -30,10 +30,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.Channel;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -80,15 +77,13 @@ public class MultiAppProxyClient implements ProxyClient {
         Realm realm = realmCache.matches(exchange.getRequestPath());
         if (realm != null) {
             parseToken(exchange).ifPresent(token -> {
-                Optional<UserPermissionPrincipal> principal = authenticate(realm.getId(), token);
+                Optional<HashMap<String, Object>> userCache = authenticate(token);
 
-                principal.ifPresent(p -> {
-                    Map<String, Object> body = new HashMap<>();
-                    body.put("sub", p.getName());
-                    body.put("permissions", p.getPermissions());
-                    p.getProfiles().forEach((k, v) -> {
-                        body.put(k, v);
-                    });
+                userCache.ifPresent(u -> {
+                    Set<String> permissions = ((Map<Long, Set<String>>)u.remove("permissionsByRealm")).get(realm.getId());
+
+                    Map<String, Object> body = new HashMap<>(u);
+                    body.put("permissions", Optional.ofNullable(permissions).orElse(Collections.EMPTY_SET));
                     exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
                             jwt.sign(body, jwtHeader, (byte[]) null));
                 });
@@ -146,9 +141,8 @@ public class MultiAppProxyClient implements ProxyClient {
         }
     }
 
-    private Optional<UserPermissionPrincipal> authenticate(Long realmId, String token) {
-        return ThreadingUtils.some((UserPermissionPrincipal) store.read(token),
-                user -> new UserPermissionPrincipal(user.getName(), user.getProfiles(), user.getPermissions()));
+    private Optional<HashMap<String, Object>> authenticate(String token) {
+        return Optional.ofNullable((HashMap<String, Object>) store.read(token));
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {

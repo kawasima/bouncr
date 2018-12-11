@@ -1,0 +1,289 @@
+openapi: 3.0.0
+info:
+  version: 0.2.0
+  title: Bouncr API Specification
+  license:
+    name: EPL 2.0
+paths:
+  /sign_in:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordSignInRequest'
+      responses:
+        201:
+          description: Sign in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSession'
+
+  /users:
+    get:
+      summary: Fetch users
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: number
+      - in: query
+        name: offset
+        schema:
+          type: number
+      responses:
+        200:
+          description: ???
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+    post:
+      summary: Create a user
+      operationId: craeteUser
+      parameters:
+      - in: header
+        name: X-Bouncr-Credentials
+        schema:
+          $ref: '#/components/schemas/BouncrCredentials'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        201:
+          description: Create successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /user/{account}:
+    parameters:
+    - name: account
+      in: path
+      schema:
+        type: string
+    get:
+      summary: Fetch a user by a given account
+      responses:
+        200:
+          description: ???
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      responses:
+        204:
+          description: Updated a user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstraintsProblem'
+    delete:
+      responses:
+        204:
+          description: Delete a user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /groups:
+    get:
+      summary: Find groups
+      responses:
+        200:
+          description: ???
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Groups'
+    post:
+      summary: Create a group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreateRequest'
+components:
+  schemas:
+    PasswordSignInRequest:
+      type: object
+      properties:
+        account:
+          type: string
+        password:
+          type: string
+    UserSession:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        token:
+          type: string
+    Users:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        account:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+    Groups:
+      type: array
+      items:
+        $ref: '#/components/schemas/Group'
+    Group:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+    Roles:
+      type: array
+      items:
+        $ref: '#/components/schemas/Role'
+    Role:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+    Permissions:
+      type: array
+      items:
+        $ref: '#/components/schemas/Permission'
+    Permission:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+    Applications:
+      type: array
+      items:
+        $ref: '#/components/schemas/Application'
+    Application:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        pass_to:
+          type: string
+        virtual_path:
+          type: string
+    Realms:
+      type: array
+      items:
+        $ref: '#/components/schemas/Realm'
+    Realm:
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+    UserCreateRequest:
+      type: object
+      properties:
+        account:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+    GroupCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    RoleCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    PermissionCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    ApplicationCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    RealmCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    ConstraintsProblem:
+      type: object
+      properties:
+        violations:
+          type: array
+          items:
+            schema:
+              $ref: '#/components/schemas/ConstraintsViolation'
+    ConstraintsViolation:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+
+

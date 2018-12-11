@@ -1,14 +1,45 @@
 package net.unit8.bouncr.api.boundary;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
-public class AssignmentsRequest {
-    @JsonProperty("role")
-    private String roleName;
+public class AssignmentsRequest implements Serializable {
+    private IdObject group;
+    private IdObject role;
+    private IdObject realm;
 
-    @JsonProperty("group")
-    private String groupName;
+    public IdObject getGroup() {
+        return group;
+    }
 
-    @JsonProperty("realm")
-    private String realmName;
+    public void setGroup(IdObject group) {
+        this.group = group;
+    }
+
+    public IdObject getRole() {
+        return role;
+    }
+
+    public void setRole(IdObject role) {
+        this.role = role;
+    }
+
+    public IdObject getRealm() {
+        return realm;
+    }
+
+    public void setRealm(IdObject realm) {
+        this.realm = realm;
+    }
+
+    public static class IdObject implements Serializable {
+        private Long id;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+    }
 }

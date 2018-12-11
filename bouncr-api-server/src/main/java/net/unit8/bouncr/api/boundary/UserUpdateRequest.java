@@ -6,22 +6,11 @@ import java.io.Serializable;
 
 public class UserUpdateRequest implements Serializable {
     @NotBlank
-    private String account;
-
-    @NotBlank
     private String name;
 
     @NotBlank
     @Email
     private String email;
-
-    public String getAccount() {
-        return account;
-    }
-
-    public void setAccount(String account) {
-        this.account = account;
-    }
 
     public String getName() {
         return name;

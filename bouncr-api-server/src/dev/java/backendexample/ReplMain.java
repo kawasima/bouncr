@@ -12,6 +12,10 @@ import kotowari.system.KotowariCommandRegister;
  * @author kawasima
  */
 public class ReplMain {
+    static {
+        System.setProperty("hazelcast.jcache.provider.type", "client");
+    }
+
     public static void main(String[] args) throws Exception {
         PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.api.BouncrApiEnkanSystemFactory");
         ReplBoot.start(repl,

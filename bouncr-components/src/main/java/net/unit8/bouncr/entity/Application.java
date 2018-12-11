@@ -1,6 +1,14 @@
 package net.unit8.bouncr.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import net.unit8.bouncr.json.IndirectListFilter;
+import org.eclipse.persistence.indirection.IndirectList;
+import org.eclipse.persistence.queries.FetchGroup;
+import org.eclipse.persistence.queries.FetchGroupTracker;
+import org.eclipse.persistence.sessions.Session;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -12,7 +20,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "applications")
-public class Application implements Serializable {
+public class Application implements Serializable, FetchGroupTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "application_id")
@@ -37,6 +45,9 @@ public class Application implements Serializable {
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
+    @OneToMany(mappedBy = "application")
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
+    @JsonManagedReference("realms")
     private List<Realm> realms;
 
     public URI getUriToPass() {
@@ -105,5 +116,45 @@ public class Application implements Serializable {
 
     public void setRealms(List<Realm> realms) {
         this.realms = realms;
+    }
+
+    @Override
+    public FetchGroup _persistence_getFetchGroup() {
+        return null;
+    }
+
+    @Override
+    public void _persistence_setFetchGroup(FetchGroup group) {
+
+    }
+
+    @Override
+    public boolean _persistence_isAttributeFetched(String attribute) {
+        return false;
+    }
+
+    @Override
+    public void _persistence_resetFetchGroup() {
+
+    }
+
+    @Override
+    public boolean _persistence_shouldRefreshFetchGroup() {
+        return false;
+    }
+
+    @Override
+    public void _persistence_setShouldRefreshFetchGroup(boolean shouldRefreshFetchGroup) {
+
+    }
+
+    @Override
+    public Session _persistence_getSession() {
+        return null;
+    }
+
+    @Override
+    public void _persistence_setSession(Session session) {
+
     }
 }

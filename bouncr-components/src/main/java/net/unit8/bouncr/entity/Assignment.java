@@ -11,17 +11,17 @@ import java.io.Serializable;
 @Table(name = "assignments")
 public class Assignment implements Serializable, FetchGroupTracker {
     @Id
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "group_id")
     private Group group;
 
     @Id
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
 
     @Id
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "realm_id")
     private Realm realm;
 

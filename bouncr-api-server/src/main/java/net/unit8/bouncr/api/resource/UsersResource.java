@@ -41,6 +41,11 @@ public class UsersResource {
     @Inject
     private BeansValidator validator;
 
+    @Decision(IS_AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
     @Decision(value = IS_ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
@@ -77,9 +82,10 @@ public class UsersResource {
 
     @Decision(HANDLE_OK)
     public List<User> handleOk(UserSearchParams params, EntityManager em) {
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<User> query = builder.createQuery(User.class);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> user = query.from(User.class);
+        query.orderBy(cb.asc(user.get("id")));
 
         List<ResourceField> embedEntities = some(params.getEmbed(), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
@@ -88,7 +94,7 @@ public class UsersResource {
 
         if (params.getGroupId() != null) {
             Join<Group, User> groups = user.join("groups");
-            query.where(builder.equal(groups.get("id"), params.getGroupId()));
+            query.where(cb.equal(groups.get("id"), params.getGroupId()));
         }
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
             userGraph.addAttributeNodes("groups");

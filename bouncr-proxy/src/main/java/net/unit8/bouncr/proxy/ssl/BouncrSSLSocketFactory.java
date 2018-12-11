@@ -1,4 +1,4 @@
-package net.unit8.bouncr.ssl;
+package net.unit8.bouncr.proxy.ssl;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLContext;

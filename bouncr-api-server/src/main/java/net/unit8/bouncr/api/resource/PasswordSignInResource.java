@@ -60,7 +60,6 @@ public class PasswordSignInResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePasswordSignInRequest(PasswordSignInRequest passwordSignInRequest, RestContext context) {
-        //PasswordSignInRequest passwordSignInRequest = converter.createFrom(params, PasswordSignInRequest.class);
         Set<ConstraintViolation<PasswordSignInRequest>> violations = validator.validate(passwordSignInRequest);
         if (violations.isEmpty()) {
             context.putValue(passwordSignInRequest);
@@ -69,7 +68,11 @@ public class PasswordSignInResource {
     }
 
     @Decision(IS_AUTHORIZED)
-    public boolean authenticate(PasswordSignInRequest passwordSignInRequest, HttpRequest request, RestContext context, final EntityManager em) {
+    public boolean authenticate(PasswordSignInRequest passwordSignInRequest,
+                                HttpRequest request,
+                                UserPermissionPrincipal principal,
+                                RestContext context,
+                                final EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> userQuery = cb.createQuery(User.class);
         Root<User> userRoot = userQuery.from(User.class);
@@ -134,7 +137,17 @@ public class PasswordSignInResource {
         tx.required(() -> {
             em.persist(userSession);
         });
-        storeProvider.getStore(BOUNCR_TOKEN).write(token, new HashMap<>(getPermissionsByRealm(user, em)));
+        HashMap<String, Object> profileMap = new HashMap<>(user.getUserProfileValues()
+                .stream()
+                .collect(Collectors.toMap(v -> v.getUserProfileField().getJsonName(), UserProfileValue::getValue)));
+        profileMap.put("iss", "bouncr");
+        profileMap.put("uid", Long.toString(user.getId()));
+        profileMap.put("sub", user.getAccount());
+        profileMap.put("email", user.getEmail());
+        profileMap.put("name", user.getName());
+        profileMap.put("permissionsByRealm", getPermissionsByRealm(user, em));
+
+        storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
         context.putValue(userSession);
         return userSession;
     }
@@ -145,7 +158,7 @@ public class PasswordSignInResource {
     }
 
 
-    protected Map<Long, UserPermissionPrincipal> getPermissionsByRealm(User user, EntityManager em) {
+    protected Map<Long, Set<String>> getPermissionsByRealm(User user, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
         Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);
@@ -169,13 +182,10 @@ public class PasswordSignInResource {
                 .stream()
                 .collect(Collectors.toMap(
                         e -> e.getKey().getId(),
-                        e -> new UserPermissionPrincipal(
-                                user.getAccount(),
-                                null,
-                                e.getValue().stream()
+                        e -> e.getValue().stream()
                                 .flatMap(v -> v.getRole().getPermissions().stream())
                                 .map(p -> p.getName())
-                                .collect(Collectors.toSet()))));
+                                .collect(Collectors.toSet())));
     }
 
 }

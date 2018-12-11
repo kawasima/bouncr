@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
@@ -22,6 +23,7 @@ import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static enkan.util.ThreadingUtils.some;
@@ -39,6 +41,32 @@ public class UserResource {
     public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context) {
         Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
+    @Decision(IS_AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = IS_ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("LIST_USERS") || p.hasPermission("LIST_ANY_USERS"))
+                .isPresent();
+    }
+
+    @Decision(value = IS_ALLOWED, method= "PUT")
+    public boolean isPutAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("MODIFY_USER") || p.hasPermission("MODIFY_ANY_USER"))
+                .isPresent();
+    }
+
+    @Decision(value = IS_ALLOWED, method= "DELETE")
+    public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("DELETE_USER") || p.hasPermission("DELETE_ANY_USER"))
+                .isPresent();
     }
 
     @Decision(EXISTS)
@@ -69,7 +97,6 @@ public class UserResource {
 
     @Decision(HANDLE_OK)
     public User handleOk(User user, Parameters params, EntityManager em) {
-        em.detach(user);
         List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
         if (!embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
@@ -84,13 +111,15 @@ public class UserResource {
     public User update(UserUpdateRequest updateRequest, User user, EntityManager em) {
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> converter.copy(updateRequest, user));
+        em.detach(user);
         return user;
     }
 
     @Decision(DELETE)
-    public User delete(User user, EntityManager em) {
+    public Void delete(User user, EntityManager em) {
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> em.remove(user));
-        return user;
+        em.detach(user);
+        return null;
     }
 }

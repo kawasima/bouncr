@@ -48,9 +48,10 @@ public class GroupsResource {
 
     @Decision(HANDLE_OK)
     public List<Group> handleOk(GroupSearchParams params, EntityManager em) {
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<Group> query = builder.createQuery(Group.class);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Group> query = cb.createQuery(Group.class);
         Root<Group> groupRoot = query.from(Group.class);
+        query.orderBy(cb.asc(groupRoot.get("id")));
 
         List<ResourceField> embedEntities = some(params.getEmbed(), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
@@ -58,7 +59,7 @@ public class GroupsResource {
         groupGraph.addAttributeNodes("name", "description", "writeProtected");
 
         if (params.getQ() != null) {
-            query.where(builder.like(groupRoot.get("name"), '%' + params.getQ() + '%'));
+            query.where(cb.like(groupRoot.get("name"), '%' + params.getQ() + '%'));
         }
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("users"))) {
             groupGraph.addAttributeNodes("users");

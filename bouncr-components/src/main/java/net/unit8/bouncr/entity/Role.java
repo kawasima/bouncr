@@ -1,8 +1,6 @@
 package net.unit8.bouncr.entity;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -26,13 +24,16 @@ public class Role implements Serializable {
     @Column(name ="write_protected")
     private Boolean writeProtected;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "role_permissions",
             joinColumns = @JoinColumn(name="role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
     @JsonManagedReference
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<Permission> permissions;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    private List<Assignment> assignments;
 
     public Long getId() {
         return id;

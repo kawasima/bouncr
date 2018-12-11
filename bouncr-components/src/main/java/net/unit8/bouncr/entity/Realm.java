@@ -1,7 +1,10 @@
 package net.unit8.bouncr.entity;
 
+import com.fasterxml.jackson.annotation.*;
+
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -19,13 +22,20 @@ public class Realm implements Serializable {
     private String url;
     private String description;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", referencedColumnName = "application_id")
+    @JsonBackReference("realms")
     private Application application;
 
+    @JsonProperty("write_protected")
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "realm")
+    private List<Assignment> assignments;
+
+    @JsonIgnore
     @Transient
     private transient Pattern pathPattern;
 

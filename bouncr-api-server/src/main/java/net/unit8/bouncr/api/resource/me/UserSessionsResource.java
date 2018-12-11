@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import static kotowari.restful.DecisionPoint.HANDLE_OK;
+import static kotowari.restful.DecisionPoint.IS_AUTHORIZED;
 import static kotowari.restful.DecisionPoint.MALFORMED;
 
 public class UserSessionsResource {
@@ -30,6 +31,11 @@ public class UserSessionsResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Decision(IS_AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
 
     @Decision(MALFORMED)
     public Problem validate(Parameters params, RestContext context) {
@@ -47,7 +53,7 @@ public class UserSessionsResource {
         CriteriaQuery<UserSession> query = cb.createQuery(UserSession.class);
         Root<UserSession> userSessionRoot = query.from(UserSession.class);
         Join<User, UserSession> userJoin = userSessionRoot.join("user");
-        query.where(cb.equal(userJoin.get("name"), principal.getName()));
+        query.where(cb.equal(userJoin.get("id"), principal.getId()));
 
         return em.createQuery(query)
                 .setFirstResult(params.getOffset())

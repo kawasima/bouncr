@@ -24,7 +24,7 @@ public class UserSessionResource {
         CriteriaQuery<UserSession> query = cb.createQuery(UserSession.class);
         Root<UserSession> userSessionRoot = query.from(UserSession.class);
         Join<User, UserSession> userJoin = userSessionRoot.join("user");
-        query.where(cb.equal(userJoin.get("name"), principal.getName()),
+        query.where(cb.equal(userJoin.get("id"), principal.getId()),
                 cb.equal(userSessionRoot.get("id"), params.getLong("userSessionId")));
 
         return em.createQuery(query).getResultStream()

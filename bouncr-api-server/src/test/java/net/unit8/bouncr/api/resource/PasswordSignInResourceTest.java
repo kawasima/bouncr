@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.persistence.EntityManager;
 import java.util.Map;
+import java.util.Set;
 
 public class PasswordSignInResourceTest {
     private EntityManager em;
@@ -36,7 +37,7 @@ public class PasswordSignInResourceTest {
     public void permissionsByRealm() {
         PasswordSignInResource resource = new PasswordSignInResource();
         User user = em.find(User.class, 1L);
-        Map<Long, UserPermissionPrincipal> permissionsByRealm = resource.getPermissionsByRealm(user, em);
+        Map<Long, Set<String>> permissionsByRealm = resource.getPermissionsByRealm(user, em);
         System.out.println(permissionsByRealm);
     }
 }

@@ -1,9 +1,10 @@
 package net.unit8.bouncr.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * The entity of permissions.
@@ -24,6 +25,14 @@ public class Permission implements Serializable {
     @JsonProperty("write_protected")
     @Column(name = "write_protected")
     private Boolean writeProtected;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "role_permissions",
+            joinColumns = @JoinColumn(name="permission_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JsonBackReference
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
+    private List<Role> roles;
 
     public Long getId() {
         return id;
@@ -55,5 +64,13 @@ public class Permission implements Serializable {
 
     public void setWriteProtected(Boolean writeProtected) {
         this.writeProtected = writeProtected;
+    }
+
+    public List<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<Role> roles) {
+        this.roles = roles;
     }
 }

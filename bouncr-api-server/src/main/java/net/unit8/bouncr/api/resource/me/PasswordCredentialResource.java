@@ -1,13 +1,12 @@
 package net.unit8.bouncr.api.resource.me;
 
+import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.OtpKey;
-import net.unit8.bouncr.entity.PasswordCredential;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 
@@ -51,7 +50,8 @@ public class PasswordCredentialResource {
     }
 
     @Decision(PUT)
-    public PasswordCredential update(PasswordCredentialUpdateRequest updateRequest, UserPermissionPrincipal principal, EntityManager em) {
+    public PasswordCredential update(PasswordCredentialUpdateRequest updateRequest, UserPermissionPrincipal principal, HttpRequest request,
+                                     EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<PasswordCredential> passwordCredentialQuery = cb.createQuery(PasswordCredential.class);
         Root<PasswordCredential> passwordCredentialRoot = passwordCredentialQuery.from(PasswordCredential.class);
@@ -67,9 +67,17 @@ public class PasswordCredentialResource {
                 PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 100));
         passwordCredential.setCreatedAt(LocalDateTime.now());
 
-
+        UserAction userAction = builder(new UserAction())
+                .set(UserAction::setActionType, ActionType.CHANGE_PASSWORD)
+                .set(UserAction::setActor, principal.getName())
+                .set(UserAction::setActorIp, request.getRemoteAddr())
+                .set(UserAction::setCreatedAt, LocalDateTime.now())
+                .build();
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.merge(passwordCredential));
+        tx.required(() -> {
+            em.merge(passwordCredential);
+            em.persist(userAction);
+        });
         em.detach(passwordCredential);
         return passwordCredential;
     }

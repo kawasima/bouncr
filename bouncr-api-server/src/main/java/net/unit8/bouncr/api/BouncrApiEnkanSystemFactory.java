@@ -58,6 +58,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         .set(EclipseLinkEntityManagerProvider::registerClass, Assignment.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileField.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileValue.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordCredential.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserSession.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserAction.class)
                         .build(),
@@ -73,7 +74,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         "password", Env.get("JDBC_PASSWORD"))),
                 "app", new ApplicationComponent("net.unit8.bouncr.api.BouncrApplicationFactory"),
                 "http", builder(new JettyComponent())
-                        .set(JettyComponent::setPort, Env.getInt("PORT", 3000))
+                        .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
                         .build()
         ).relationships(
                 component("http").using("app"),
