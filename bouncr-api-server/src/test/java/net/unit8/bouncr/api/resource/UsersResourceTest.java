@@ -70,14 +70,12 @@ public class UsersResourceTest {
     @Test
     public void post() {
         UsersResource resource = new UsersResource();
-        User user = builder(new User())
-                .set(User::setAccount, "fuga")
-                .set(User::setName, "hoge")
-                .set(User::setEmail, "hoge@example.com")
-                .set(User::setWriteProtected, true)
+        UserCreateRequest user = builder(new UserCreateRequest())
+                .set(UserCreateRequest::setAccount, "fuga")
+                .set(UserCreateRequest::setName, "hoge")
+                .set(UserCreateRequest::setEmail, "hoge@example.com")
                 .build();
         resource.doPost(user, em);
-        assertThat(user.getId()).isNotNull();
     }
 
     @Test

@@ -6,85 +6,82 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.RoleUpdateRequest;
-import net.unit8.bouncr.entity.Role;
+import net.unit8.bouncr.api.boundary.OidcApplicationCreateRequest;
+import net.unit8.bouncr.entity.OidcApplication;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import javax.validation.ConstraintViolation;
+
 import java.util.Optional;
+import java.util.Set;
 
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
-public class RoleResource {
+public class OidcApplicationResource {
     @Inject
     private BeansConverter converter;
 
     @Inject
     private BeansValidator validator;
 
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem validateCreateRequest(OidcApplicationCreateRequest createRequest, RestContext context) {
+        Set<ConstraintViolation<OidcApplicationCreateRequest>> violations = validator.validate(createRequest);
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
     @Decision(IS_AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = IS_ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_ROLES") || p.hasPermission("LIST_ANY_ROLES"))
+                .filter(p -> p.hasPermission("LIST_OIDC_APPLICATIONS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = IS_ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_ANY_ROLE") || p.hasPermission("MODIFY_ROLE"))
+                .filter(p -> p.hasPermission("MODIFY_OIDC_APPLICATION"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = IS_ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_ANY_ROLE") || p.hasPermission("DELETE_ROLE"))
+                .filter(p -> p.hasPermission("DELETE_OIDC_APPLICATION"))
                 .isPresent();
     }
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Role> query = cb.createQuery(Role.class);
-        Root<Role> roleRoot = query.from(Role.class);
-        query.where(cb.equal(roleRoot.get("name"), params.get("name")));
-
-        Role role = em.createQuery(query).getResultStream().findAny().orElse(null);
-        if (role != null) {
-            context.putValue(role);
+        CriteriaQuery<OidcApplication> query = cb.createQuery(OidcApplication.class);
+        Root<OidcApplication> oidcApplicationRoot = query.from(OidcApplication.class);
+        query.where(cb.equal(oidcApplicationRoot.get("name"), params.get("name")));
+        OidcApplication oidcApplication = em.createQuery(query).getResultStream().findAny().orElse(null);
+        if (oidcApplication != null) {
+            context.putValue(oidcApplication);
         }
-        return role != null;
-    }
-
-    @Decision(HANDLE_OK)
-    public Role handleOk(Role role) {
-        return role;
-    }
-
-    @Decision(PUT)
-    public Role update(RoleUpdateRequest updateRequest, Role role, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> converter.copy(updateRequest, role));
-        em.detach(role);
-        return role;
+        return oidcApplication != null;
     }
 
     @Decision(DELETE)
-    public Void delete(Role role, EntityManager em) {
+    public Void delete(OidcApplication oidcApplication, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(role));
+        tx.required(() -> em.remove(oidcApplication));
+        em.detach(oidcApplication);
         return null;
     }
 }

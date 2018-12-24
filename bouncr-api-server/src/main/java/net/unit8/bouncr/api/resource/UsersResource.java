@@ -24,7 +24,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
-import java.net.http.HttpRequest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -47,25 +46,22 @@ public class UsersResource {
     }
 
     @Decision(value = IS_ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_USERS") || p.hasPermission("LIST_ANY_USERS"))
                 .isPresent();
     }
 
     @Decision(value = IS_ALLOWED, method= "POST")
-    public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_USER"))
+                .filter(p -> p.hasPermission("CREATE_USER") || p.hasPermission("CREATE_ANY_USER"))
                 .isPresent();
     }
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateUserCreateRequest(UserCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<UserCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(createRequest, User.class));
-        }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
@@ -108,7 +104,9 @@ public class UsersResource {
     }
 
     @Decision(POST)
-    public User doPost(User user, EntityManager em) {
+    public User doPost(UserCreateRequest createRequest, EntityManager em) {
+        User user = converter.createFrom(createRequest, User.class);
+        user.setWriteProtected(false);
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> em.persist(user));
         return user;

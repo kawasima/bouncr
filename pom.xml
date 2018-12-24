@@ -14,7 +14,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.6.0</enkan.version>
+        <enkan.version>0.7.0-SNAPSHOT</enkan.version>
         <kotowari-restful.version>0.1.0-SNAPSHOT</kotowari-restful.version>
     </properties>
 

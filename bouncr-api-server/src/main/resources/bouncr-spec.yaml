@@ -2,8 +2,12 @@ openapi: 3.0.0
 info:
   version: 0.2.0
   title: Bouncr API Specification
+  description: |
+    Bouncr is a reverse proxy with authenticate and authorization.
   license:
     name: EPL 2.0
+servers:
+- url: http://localhost:3000/bouncr/api
 paths:
   /sign_in:
     post:
@@ -21,20 +25,22 @@ paths:
                 $ref: '#/components/schemas/UserSession'
 
   /users:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
     get:
       summary: Fetch users
       parameters:
       - in: query
         name: limit
         schema:
-          type: number
+          type: integer
       - in: query
         name: offset
         schema:
-          type: number
+          type: integer
       responses:
         200:
-          description: ???
+          description: Fetch successfully
           content:
             application/json:
               schema:
@@ -42,11 +48,6 @@ paths:
     post:
       summary: Create a user
       operationId: craeteUser
-      parameters:
-      - in: header
-        name: X-Bouncr-Credentials
-        schema:
-          $ref: '#/components/schemas/BouncrCredentials'
       requestBody:
         content:
           application/json:
@@ -61,10 +62,13 @@ paths:
                 $ref: '#/components/schemas/User'
   /user/{account}:
     parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
     - name: account
       in: path
+      required: true
       schema:
         type: string
+      example: user1
     get:
       summary: Fetch a user by a given account
       responses:
@@ -81,7 +85,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserUpdateRequest'
         400:
           description: invalid request
           content:
@@ -97,6 +101,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
   /groups:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
     get:
       summary: Find groups
       responses:
@@ -113,15 +119,286 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/GroupCreateRequest'
+      responses:
+        201:
+          description: Created successful.
+  /group/{name}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      in: path
+      description: The name of the group
+      required: true
+      schema:
+        type: string
+      example: group1
+    get:
+      summary: Find a group
+      operationId: findGroup
+      responses:
+        200:
+          description: Find a group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        404:
+          description: The name of the group is not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      summary: Update a group
+      operationId: updateGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupUpdateRequest'
+      responses:
+        204:
+          description: Updating a group is successful
+    delete:
+      summary: Delete a group
+      operationId: deleteGroup
+      responses:
+        204:
+          description: Deleting a group is successful
+  /applications:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      operationId: findApplications
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Applications'
+    post:
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationCreateRequest'
+      responses:
+        201:
+          description: Creating an application is successful
+        400:
+          description: The request for creating an application is malformed
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/ConstraintsProblem'
+  /application/{name}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      required: true
+      in: path
+      schema:
+        type: string
+    get:
+      operationId: findApplication
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        404:
+          description: Application is not found by the given name
+    put:
+      operationId: updateApplication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUpdateRequest'
+      responses:
+        204:
+          description: Updating the application is successful
+    delete:
+      operationId: deleteApplication
+      responses:
+        204:
+          description: Deleting the application is successful
+  /application/{name}/realms:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      required: true
+      in: path
+      schema:
+        type: string
+    get:
+      operationId: findRealms
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Realms'
+    post:
+      operationId: createRealm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RealmCreateRequest'
+      responses:
+        201:
+          description: Creating a realm is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Realm'
+  /application/{name}/realm/{realm_name}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      required: true
+      in: path
+      schema:
+        type: string
+    - name: realm_name
+      required: true
+      in: path
+      schema:
+        type: string
+    get:
+      operationId: findRealm
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Realm'
+        404:
+          description: The realm is not found by the given name
+    put:
+      operationId: updateRealm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RealmUpdateRequest'
+      responses:
+        204:
+          description: Updating the realm is successful
+    delete:
+      operationId: deleteRealm
+      responses:
+        204:
+          description: Deleting the realm is successful
+  /roles:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      operationId: findRoles
+    post:
+      operationId: createRole
+  /role/{name}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      required: true
+      in: path
+      schema:
+        type: string
+    get:
+      operationId: findRole
+    put:
+      operationId: updateRole
+    delete:
+      operationId: deleteRole
+  /permissions:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      operationId: findPermissions
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permissions'
+    post:
+      operationId: createPermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateRequest'
+      responses:
+        201:
+          description: Creating a permission is successful
+  /permission/{name}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: name
+      required: true
+      in: path
+      schema:
+        type: string
+    get:
+      operationId: findPermission
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+    put:
+      operationId: updatePermission
+    delete:
+      operationId: deletePermission
+  /assignments:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentsRequest'
+      responses:
+        201:
+          description: Creating assignments is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignments'
+    delete:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentsRequest'
+      responses:
+        204:
+          description: Deleting assignments is successful
 components:
   schemas:
     PasswordSignInRequest:
       type: object
+      x-json-spec: 'PasswordSignInRequest'
       properties:
         account:
           type: string
         password:
           type: string
+      example:
+        account: user1
+        password: user1
     UserSession:
       type: object
       properties:
@@ -130,12 +407,17 @@ components:
           format: int64
         token:
           type: string
+      example:
+        id: 1
+        token: 000000-0000-0000-000000
     Users:
       type: array
+      x-json-spec: 'Users'
       items:
         $ref: '#/components/schemas/User'
     User:
       type: object
+      x-json-spec: 'User'
       properties:
         id:
           type: number
@@ -150,6 +432,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Group'
+      example:
+        id: 1
+        account: user1
+        name: Test User1
+        email: user1@exapmle.com
+        groups:
+        - id: 1
+          name: group1
+          description: This is a group1
+        - id: 2
+          name: group2
+          description: This is a group2
     Groups:
       type: array
       items:
@@ -158,7 +452,7 @@ components:
       type: object
       properties:
         id:
-          type: number
+          type: integer
           format: int64
         name:
           type: string
@@ -226,9 +520,55 @@ components:
           type: string
         url:
           type: string
-    UserCreateRequest:
+    Assignments:
+      type: array
+      items:
+        $ref: '#/components/schemas/Assignment'
+    Assignment:
       type: object
       properties:
+        group:
+          $ref: '#/components/schemas/Group'
+        role:
+          $ref: '#/components/schemas/Role'
+        realm:
+          $ref: '#/components/schemas/Realm'
+    AssignmentsRequest:
+      type: array
+      items:
+        type: object
+        properties:
+          group:
+            type: object
+            properties:
+              id:
+                type: integer
+          role:
+            type: object
+            properties:
+              id:
+                type: integer
+          realm:
+            type: object
+            properties:
+              id:
+                type: integer
+    UserCreateRequest:
+      type: object
+      x-json-spec: UserCreateRequest
+      properties:
+        account:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+    UserUpdateRequest:
+      type: object
+      x-json-spec: UserUpdateRequest
+      properties:
+        id:
+          type: integer
         account:
           type: string
         name:
@@ -242,9 +582,27 @@ components:
           type: string
         description:
           type: string
+    GroupUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
     RoleCreateRequest:
       type: object
       properties:
+        name:
+          type: string
+        description:
+          type: string
+    RoleUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
         name:
           type: string
         description:
@@ -256,6 +614,15 @@ components:
           type: string
         description:
           type: string
+    PermissionUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
     ApplicationCreateRequest:
       type: object
       properties:
@@ -263,9 +630,31 @@ components:
           type: string
         description:
           type: string
+        pass_to:
+          type: string
+    ApplicationUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        pass_to:
+          type: string
     RealmCreateRequest:
       type: object
       properties:
+        name:
+          type: string
+        description:
+          type: string
+    RealmUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
         name:
           type: string
         description:
@@ -276,8 +665,7 @@ components:
         violations:
           type: array
           items:
-            schema:
-              $ref: '#/components/schemas/ConstraintsViolation'
+            $ref: '#/components/schemas/ConstraintsViolation'
     ConstraintsViolation:
       type: object
       properties:
@@ -285,5 +673,25 @@ components:
           type: string
         value:
           type: string
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+  parameters:
+    BouncrCredential:
+      name: X-Bouncr-Credential
+      in: header
+      schema:
+        type: string
+        x-json-spec: BouncrCredential
 
 

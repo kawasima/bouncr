@@ -4,7 +4,11 @@ import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
+import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.Problem;
+import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
+import net.unit8.bouncr.api.service.PasswordPolicyService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.util.PasswordUtils;
@@ -16,25 +20,38 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
+import javax.validation.ConstraintViolation;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
-import static kotowari.restful.DecisionPoint.DELETE;
-import static kotowari.restful.DecisionPoint.POST;
-import static kotowari.restful.DecisionPoint.PUT;
+import static kotowari.restful.DecisionPoint.*;
 
 public class PasswordCredentialResource {
     @Inject
     private BouncrConfiguration config;
+
+    @Inject
+    private BeansValidator validator;
+
+    @Decision(value = MALFORMED, method = {"POST", "PUT"})
+    public Problem validate(PasswordCredentialUpdateRequest request, RestContext context, EntityManager em) {
+        PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
+        Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(request);
+        Problem problem = Problem.fromViolations(violations);
+        Problem.Violation passwordPolicyViolation = passwordPolicyService.validate(request.getNewPassword());
+
+        return problem;
+    }
 
     @Decision(POST)
     public PasswordCredential create(PasswordCredentialUpdateRequest createRequest, UserPermissionPrincipal principal, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
-        query.where(cb.equal(userRoot.get("name"), principal.getName()));
+        query.where(cb.equal(userRoot.get("account"), principal.getName()));
         User user = em.createQuery(query).getResultStream().findAny().orElseThrow();
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         PasswordCredential passwordCredential = builder(new PasswordCredential())
@@ -57,7 +74,7 @@ public class PasswordCredentialResource {
         Root<PasswordCredential> passwordCredentialRoot = passwordCredentialQuery.from(PasswordCredential.class);
         Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
 
-        passwordCredentialQuery.where(cb.equal(userJoin.get("name"), principal.getName()));
+        passwordCredentialQuery.where(cb.equal(userJoin.get("account"), principal.getName()));
         PasswordCredential passwordCredential = em.createQuery(passwordCredentialQuery)
                 .getResultStream()
                 .findAny()

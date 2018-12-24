@@ -15,6 +15,8 @@ import net.unit8.bouncr.entity.Role;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
+import java.util.stream.Collectors;
+
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.DELETE;
 import static kotowari.restful.DecisionPoint.IS_AUTHORIZED;
@@ -49,28 +51,33 @@ public class AssignmentsResource {
     @Decision(POST)
     public Void doPost(AssignmentsRequest assignmentsRequest, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            Assignment assignment = builder(new Assignment())
-                    .set(Assignment::setGroup, em.find(Group.class, assignmentsRequest.getGroup().getId()))
-                    .set(Assignment::setRole,  em.find(Role.class,  assignmentsRequest.getRole().getId()))
-                    .set(Assignment::setRealm, em.find(Realm.class, assignmentsRequest.getRealm().getId()))
-                    .build();
-            em.persist(assignment);
-        });
+        tx.required(() -> assignmentsRequest.stream()
+                .map(assignmentRequest -> {
+                    Assignment assignment = builder(new Assignment())
+                            .set(Assignment::setGroup, em.find(Group.class, assignmentRequest.getGroup().getId()))
+                            .set(Assignment::setRole,  em.find(Role.class,  assignmentRequest.getRole().getId()))
+                            .set(Assignment::setRealm, em.find(Realm.class, assignmentRequest.getRealm().getId()))
+                            .build();
+                    em.persist(assignment);
+                    return assignment;
+                })
+                .collect(Collectors.toList()));
         return null;
     }
 
     @Decision(DELETE)
     public Void delete(AssignmentsRequest assignmentsRequest, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            Assignment assignment = builder(new Assignment())
-                    .set(Assignment::setGroup, em.find(Group.class, assignmentsRequest.getGroup().getId()))
-                    .set(Assignment::setRole,  em.find(Role.class, assignmentsRequest.getRole().getId()))
-                    .set(Assignment::setRealm, em.find(Realm.class, assignmentsRequest.getRealm().getId()))
-                    .build();
-            em.remove(assignment);
-        });
+        tx.required(() -> assignmentsRequest.stream()
+                .map(assignmentRequest -> {
+                    Assignment assignment = builder(new Assignment())
+                            .set(Assignment::setGroup, em.find(Group.class, assignmentRequest.getGroup().getId()))
+                            .set(Assignment::setRole,  em.find(Role.class, assignmentRequest.getRole().getId()))
+                            .set(Assignment::setRealm, em.find(Realm.class, assignmentRequest.getRealm().getId()))
+                            .build();
+                    em.remove(assignment);
+                    return assignment;
+                }).collect(Collectors.toList()));
         return null;
     }
 }

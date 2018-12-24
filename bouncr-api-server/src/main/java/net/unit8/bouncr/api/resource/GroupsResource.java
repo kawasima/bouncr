@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
@@ -10,6 +11,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
+import net.unit8.bouncr.api.boundary.GroupCreateRequest;
 import net.unit8.bouncr.api.boundary.GroupSearchParams;
 import net.unit8.bouncr.entity.Group;
 
@@ -22,6 +24,7 @@ import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static enkan.util.ThreadingUtils.some;
@@ -37,13 +40,40 @@ public class GroupsResource {
 
     @Decision(value = MALFORMED, method = "GET")
     public Problem validateSearchParams(Parameters params, RestContext context) {
-        GroupSearchParams userSearchParam = converter.createFrom(params, GroupSearchParams.class);
-        Set<ConstraintViolation<GroupSearchParams>> violations = validator.validate(userSearchParam);
+        GroupSearchParams groupSearchParams = converter.createFrom(params, GroupSearchParams.class);
+        Set<ConstraintViolation<GroupSearchParams>> violations = validator.validate(groupSearchParams);
         if (violations.isEmpty()) {
-            context.putValue(userSearchParam);
+            context.putValue(groupSearchParams);
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
 
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem vaidateCreateRequest(GroupCreateRequest createRequest, RestContext context) {
+        Set<ConstraintViolation<GroupCreateRequest>> violations = validator.validate(createRequest);
+        if (violations.isEmpty()) {
+            context.putValue(createRequest);
+        }
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
+    @Decision(IS_AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = IS_ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
+                .isPresent();
+    }
+
+    @Decision(value = IS_ALLOWED, method= "POST")
+    public boolean isPutAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("CREATE_GROUP") || p.hasPermission("CREATE_ANY_GROUP"))
+                .isPresent();
     }
 
     @Decision(HANDLE_OK)
@@ -72,7 +102,8 @@ public class GroupsResource {
     }
 
     @Decision(POST)
-    public Group doPost(Group group, EntityManager em) {
+    public Group doPost(GroupCreateRequest createRequest, EntityManager em) {
+        Group group = converter.createFrom(createRequest, Group.class);
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> em.persist(group));
         return group;
