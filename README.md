@@ -10,7 +10,7 @@ Bouncer has following features:
     - Various types of credentials
         - Password
         - LDAP
-        - OpenID Connect 
+        - OpenID Connect
         - Client certificate
     - Two factor authentication (using by Google authenticator)
 - Authorization (based on Group - Role - Permission)
@@ -39,7 +39,7 @@ mvn -P \!dev package
 ```
 
 ## Developing
-   
+
 To begin developing, start with a REPL.
 
 ```sh
@@ -62,9 +62,24 @@ modified files and reset the server.
 enkan> /reset
 ```
 
+## Docker
+
+You can build the docker image of the api server and the proxy server using by jib.
+
+```
+% cd bouncr-api-server
+% mvn -P\!dev,postgresql,hazelcast compile jib:dockerBuild
+```
+
+```
+% cd bouncr-proxy
+% mvn -P\!dev,postgresql,hazelcast compile jib:dockerBuild
+```
+
+`docker-compose.yml` can run the api server and the proxy server with Hazelcast and Postgresql database.
+
 ## License
 
-Copyright © 2017 kawasima
+Copyright © 2017-2018 kawasima
 
 Distributed under the Eclipse Public License, the same as Clojure.
-
