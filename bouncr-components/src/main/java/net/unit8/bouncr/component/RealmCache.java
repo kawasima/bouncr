@@ -32,8 +32,12 @@ public class RealmCache extends SystemComponent<RealmCache> {
 
             @Override
             public void stop(RealmCache realmCache) {
-                realmCache.applications.clear();
-                realmCache.cache.clear();
+                if (realmCache.applications != null) {
+                    realmCache.applications.clear();
+                }
+                if (realmCache.cache != null) {
+                    realmCache.cache.clear();
+                }
             }
         };
     }

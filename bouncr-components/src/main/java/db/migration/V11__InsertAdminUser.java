@@ -4,6 +4,7 @@ import net.unit8.bouncr.util.PasswordUtils;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 
 import java.sql.*;
 import java.util.Arrays;
@@ -54,7 +55,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
                         field("name"),
                         field("email"),
                         field("write_protected"))
-                .values(param(), param(), param(), param())
+                .values(param(), param(), param(), param(SQLDataType.BOOLEAN))
                 .getSQL();
 
         final String INS_PASSWD_CRED = create
@@ -65,7 +66,11 @@ public class V11__InsertAdminUser implements JdbcMigration {
                         field("salt"),
                         field("initial"),
                         field("created_at"))
-                .values(param(), param(), param(), param(), param(Date.class))
+                .values(param(SQLDataType.BIGINT),
+                        param(SQLDataType.BINARY),
+                        param(),
+                        param(SQLDataType.BOOLEAN),
+                        param(Date.class))
                 .getSQL();
 
         final String INS_GROUP = create
@@ -197,7 +202,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
 
             stmtInsApplication.setString(1, "BOUNCR");
             stmtInsApplication.setString(2, "Bouncer application");
-            stmtInsApplication.setString(3, "http://localhost:3005/bouncr/api");
+            stmtInsApplication.setString(3, "http://api:3005/bouncr/api");
             stmtInsApplication.setString(4, "/bouncr/api");
             stmtInsApplication.setString(5, "/bouncr/api");
             stmtInsApplication.setBoolean(6, true);

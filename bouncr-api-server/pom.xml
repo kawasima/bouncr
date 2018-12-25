@@ -23,34 +23,20 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>net.unit8.bouncr.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>0.10.1</version>
+                <configuration>
+                    <container>
+                        <mainClass>net.unit8.bouncr.api.Main</mainClass>
+                    </container>
+                    <from>
+                        <image>openjdk:11-slim</image>
+                    </from>
+                    <to>
+                        <image>bouncr/bouncr-api-server</image>
+                    </to>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -229,17 +215,10 @@
                     <artifactId>enkan-devel</artifactId>
                     <version>${enkan.version}</version>
                 </dependency>
-                <!--
                 <dependency>
                     <groupId>org.jsr107.ri</groupId>
                     <artifactId>cache-ri-impl</artifactId>
                     <version>1.0.0</version>
-                </dependency>
-                -->
-                <dependency>
-                    <groupId>com.hazelcast</groupId>
-                    <artifactId>hazelcast-client</artifactId>
-                    <version>3.11</version>
                 </dependency>
                 <dependency>
                     <groupId>com.h2database</groupId>
@@ -258,81 +237,28 @@
                         </exclusion>
                     </exclusions>
                 </dependency>
-
-                <dependency>
-                    <groupId>mysql</groupId>
-                    <artifactId>mysql-connector-java</artifactId>
-                    <version>5.1.44</version>
-                </dependency>
             </dependencies>
         </profile>
-
         <profile>
-            <id>integration-test</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <version>3.0.0</version>
-                        <executions>
-                            <execution>
-                                <id>add-integration-test-source</id>
-                                <phase>generate-test-sources</phase>
-                                <goals>
-                                    <goal>add-test-source</goal>
-                                </goals>
-                                <configuration>
-                                    <sources>
-                                        <source>src/integration/java</source>
-                                    </sources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <id>postgresql</id>
             <dependencies>
                 <dependency>
-                    <groupId>com.codeborne</groupId>
-                    <artifactId>selenide</artifactId>
-                    <version>4.10.01</version>
-                    <scope>test</scope>
+                    <groupId>org.postgresql</groupId>
+                    <artifactId>postgresql</artifactId>
+                    <version>42.2.5</version>
                 </dependency>
             </dependencies>
         </profile>
+
         <profile>
-            <id>yarn</id>
-            <activation>
-                <property>
-                    <name>yarn</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>build-elm</id>
-                                <phase>generate-sources</phase>
-                                <goals><goal>exec</goal></goals>
-                                <configuration>
-                                    <executable>yarn</executable>
-                                    <arguments>
-                                        <argument>run</argument>
-                                        <argument>build:elm</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <id>hazelcast</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.hazelcast</groupId>
+                    <artifactId>hazelcast-client</artifactId>
+                    <version>3.11</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 
