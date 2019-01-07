@@ -16,6 +16,7 @@ import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -36,19 +37,19 @@ public class RealmsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_REALMS") || p.hasPermission("LIST_ANY_REALMS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "POST")
+    @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("CREATE_REALM") || p.hasPermission("CREATE_ANY_REALM"))
@@ -80,7 +81,9 @@ public class RealmsResource {
         Root<Application> applicationRoot = query.from(Application.class);
         query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
 
-        Application application = em.createQuery(query).getResultStream().findAny().orElse(null);
+        Application application = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);
         }
@@ -105,8 +108,10 @@ public class RealmsResource {
         Root<Realm> realmRoot = query.from(Realm.class);
         Join<Application, Realm> applicationJoin = realmRoot.join("application");
         query.where(cb.equal(applicationJoin.get("id"), application.getId()));
+        query.orderBy(cb.asc(realmRoot.get("id")));
 
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

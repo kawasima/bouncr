@@ -1,6 +1,7 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import net.unit8.bouncr.json.IndirectListFilter;
 import org.eclipse.persistence.queries.FetchGroup;
 import org.eclipse.persistence.queries.FetchGroupTracker;
 import org.eclipse.persistence.sessions.Session;
@@ -8,15 +9,14 @@ import org.eclipse.persistence.sessions.Session;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The entity of users.
  *
  * @author kawasima
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class,
-        property  = "id",
-        scope     = Long.class)
 @Entity
 @Table(name = "users")
 public class User implements Serializable, FetchGroupTracker {
@@ -26,10 +26,8 @@ public class User implements Serializable, FetchGroupTracker {
     private Long id;
 
     private String account;
-    private String name;
-    private String email;
 
-    @JsonProperty("write_protected")
+    @JsonIgnore
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
@@ -37,11 +35,11 @@ public class User implements Serializable, FetchGroupTracker {
     @JoinTable(name = "memberships",
             joinColumns = @JoinColumn(name="user_id"),
             inverseJoinColumns = @JoinColumn(name = "group_id"))
-    @JsonInclude(value = JsonInclude.Include.NON_NULL)
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     private List<Group> groups;
 
-    @OneToMany(mappedBy = "user")
-    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
+    @OneToMany(mappedBy = "user", cascade = { CascadeType.ALL })
+    @JsonIgnore
     private List<UserProfileValue> userProfileValues;
 
     public Long getId() {
@@ -58,22 +56,6 @@ public class User implements Serializable, FetchGroupTracker {
 
     public void setAccount(String account) {
         this.account = account;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public Boolean getWriteProtected() {
@@ -100,25 +82,38 @@ public class User implements Serializable, FetchGroupTracker {
         this.userProfileValues = userProfileValues;
     }
 
+    @JsonAnyGetter
+    public Map<String, Object> getUserProfiles() {
+        return this.userProfileValues.stream()
+                .collect(Collectors.toMap(
+                        u -> u.getUserProfileField().getJsonName(),
+                        u -> u.getValue()
+                ));
+    }
+
     @Override
     public String toString() {
         return "User{" +
                 "id=" + id +
                 ", account='" + account + '\'' +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
                 ", writeProtected=" + writeProtected +
                 ", groups=" + groups +
                 '}';
     }
 
+    @Transient
+    private FetchGroup fetchGroup;
+    @Transient
+    private Session session;
+
     @Override
     public FetchGroup _persistence_getFetchGroup() {
-        return null;
+        return fetchGroup;
     }
 
     @Override
     public void _persistence_setFetchGroup(FetchGroup group) {
+        fetchGroup = group;
     }
 
     @Override
@@ -143,11 +138,11 @@ public class User implements Serializable, FetchGroupTracker {
 
     @Override
     public Session _persistence_getSession() {
-        return null;
+        return session;
     }
 
     @Override
     public void _persistence_setSession(Session session) {
-
+        this.session = session;
     }
 }

@@ -3,6 +3,7 @@ package net.unit8.bouncr.api.resource.me;
 import enkan.component.jpa.EntityManagerProvider;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
+import net.unit8.bouncr.api.resource.PasswordCredentialResource;
 import net.unit8.bouncr.api.resource.UsersResourceTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

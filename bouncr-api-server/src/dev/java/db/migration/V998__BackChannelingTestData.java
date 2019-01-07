@@ -42,6 +42,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
 
     @Override
     public void migrate(Connection connection) throws Exception {
+        /*
         DSLContext create = DSL.using(connection);
         final String INS_USER = create
                 .insertInto(table("users"))
@@ -433,5 +434,6 @@ public class V998__BackChannelingTestData implements JdbcMigration {
             stmtInsAssignment.setLong(3, bcBoard1RealmId);
             stmtInsAssignment.executeUpdate();
         }
+        */
     }
 }

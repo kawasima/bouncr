@@ -1,4 +1,4 @@
-package net.unit8.bouncr.api.resource.me;
+package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.boundary.UserActionSearchParams;
 import net.unit8.bouncr.entity.UserAction;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -20,9 +21,7 @@ import javax.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Set;
 
-import static kotowari.restful.DecisionPoint.HANDLE_OK;
-import static kotowari.restful.DecisionPoint.IS_AUTHORIZED;
-import static kotowari.restful.DecisionPoint.MALFORMED;
+import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods("GET")
 public class UserActionsResource {
@@ -32,7 +31,7 @@ public class UserActionsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean authorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
@@ -56,6 +55,8 @@ public class UserActionsResource {
         query.orderBy(cb.desc(userActionRoot.get("createdAt")));
 
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();
     }

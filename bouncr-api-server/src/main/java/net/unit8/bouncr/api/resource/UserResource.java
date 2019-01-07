@@ -12,13 +12,17 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.UserUpdateRequest;
+import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.entity.UserProfileValue;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.Collections;
@@ -37,36 +41,42 @@ public class UserResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context) {
-        Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_USERS") || p.hasPermission("LIST_ANY_USERS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("MODIFY_USER") || p.hasPermission("MODIFY_ANY_USER"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("DELETE_USER") || p.hasPermission("DELETE_ANY_USER"))
                 .isPresent();
+    }
+
+    @Decision(value = MALFORMED, method = "PUT")
+    public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
+        Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
+        Problem problem = Problem.fromViolations(violations);
+
+        UserProfileService userProfileService = new UserProfileService(em);
+        Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(updateRequest.getUserProfiles());
+        problem.getViolations().addAll(profileViolations);
+
+        return problem.getViolations().isEmpty() ? null : problem;
     }
 
     @Decision(EXISTS)
@@ -74,18 +84,23 @@ public class UserResource {
         CriteriaBuilder builder = em.getCriteriaBuilder();
         CriteriaQuery<User> query = builder.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
+        userRoot.fetch("userProfileValues", JoinType.LEFT);
         query.where(builder.equal(userRoot.get("account"), params.get("account")));
 
         List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
 
         EntityGraph<User> userGraph = em.createEntityGraph(User.class);
-        userGraph.addAttributeNodes("name", "email", "account", "writeProtected");
+        userGraph.addAttributeNodes("account", "userProfileValues");
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
-            userGraph.addSubgraph("groups").addAttributeNodes("name", "description");
+            userRoot.fetch("groups", JoinType.LEFT);
+            query.distinct(true);
+            userGraph.addAttributeNodes("groups");
+            userGraph.addSubgraph("groups")
+                    .addAttributeNodes("name", "description");
         }
-
         User user = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", userGraph)
                 .getResultStream().findAny().orElse(null);
 
@@ -97,20 +112,19 @@ public class UserResource {
 
     @Decision(HANDLE_OK)
     public User handleOk(User user, Parameters params, EntityManager em) {
-        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
-                .orElse(Collections.emptyList());
-        if (!embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
-            user.setGroups(null);
-        } else {
-            user.getGroups().stream().forEach(g -> g.setUsers(null));
-        }
         return user;
     }
 
     @Decision(PUT)
     public User update(UserUpdateRequest updateRequest, User user, EntityManager em) {
+        UserProfileService userProfileService = new UserProfileService(em);
+        List<UserProfileValue> userProfileValues = userProfileService
+                .convertToUserProfileValues(updateRequest.getUserProfiles());
         EntityTransactionManager tm = new EntityTransactionManager(em);
-        tm.required(() -> converter.copy(updateRequest, user));
+        tm.required(() -> {
+            converter.copy(updateRequest, user);
+            user.setUserProfileValues(userProfileValues);
+        });
         em.detach(user);
         return user;
     }

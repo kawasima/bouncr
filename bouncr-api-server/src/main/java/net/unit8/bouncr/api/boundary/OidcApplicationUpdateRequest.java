@@ -8,7 +8,7 @@ import javax.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
 
-public class OidcApplicationCreateRequest implements Serializable {
+public class OidcApplicationUpdateRequest implements Serializable {
     @NotBlank
     @Length(max = 100)
     @Pattern(regexp = "^\\w+$")

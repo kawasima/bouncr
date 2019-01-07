@@ -39,6 +39,10 @@ public class UserProfileField implements Serializable {
     @Column(name = "min_length")
     private Integer minLength;
 
+    @JsonProperty("needs_verification")
+    @Column(name = "needs_verification")
+    private boolean needsVerification;
+
     private Integer position;
 
     public Long getId() {
@@ -103,6 +107,14 @@ public class UserProfileField implements Serializable {
 
     public void setMinLength(Integer minLength) {
         this.minLength = minLength;
+    }
+
+    public boolean isNeedsVerification() {
+        return needsVerification;
+    }
+
+    public void setNeedsVerification(boolean needsVerification) {
+        this.needsVerification = needsVerification;
     }
 
     public Integer getPosition() {

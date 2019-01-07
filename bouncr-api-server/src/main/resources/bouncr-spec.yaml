@@ -23,6 +23,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserSession'
+  /me/password_credential:
+
 
   /users:
     parameters:
@@ -424,14 +426,12 @@ components:
           format: int64
         account:
           type: string
-        name:
-          type: string
-        email:
-          type: string
         groups:
           type: array
           items:
             $ref: '#/components/schemas/Group'
+      additionalProperties:
+        type: true
       example:
         id: 1
         account: user1
@@ -559,22 +559,11 @@ components:
       properties:
         account:
           type: string
-        name:
-          type: string
-        email:
-          type: string
+      additionalProperties: true
     UserUpdateRequest:
       type: object
       x-json-spec: UserUpdateRequest
-      properties:
-        id:
-          type: integer
-        account:
-          type: string
-        name:
-          type: string
-        email:
-          type: string
+      additionalProperties: true
     GroupCreateRequest:
       type: object
       properties:
@@ -632,6 +621,10 @@ components:
           type: string
         pass_to:
           type: string
+        virtual_path:
+          type: string
+        top_page:
+          type: string
     ApplicationUpdateRequest:
       type: object
       properties:
@@ -642,6 +635,10 @@ components:
         description:
           type: string
         pass_to:
+          type: string
+        virtual_path:
+          type: string
+        top_page:
           type: string
     RealmCreateRequest:
       type: object

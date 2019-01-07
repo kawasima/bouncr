@@ -1,19 +1,23 @@
 package net.unit8.bouncr.api.boundary;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import org.hibernate.validator.constraints.Length;
+
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UserCreateRequest implements Serializable {
     @NotBlank
+    @Length(max = 100)
+    @Pattern(regexp = "^\\w+$")
     private String account;
 
-    @NotBlank
-    private String name;
-
-    @NotBlank
-    @Email
-    private String email;
+    private Map<String, Object> userProfiles = new HashMap<>();
 
     public String getAccount() {
         return account;
@@ -23,19 +27,14 @@ public class UserCreateRequest implements Serializable {
         this.account = account;
     }
 
-    public String getName() {
-        return name;
+    @JsonAnyGetter
+    public Map<String, Object> getUserProfiles() {
+        return userProfiles;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    @JsonAnySetter
+    public void setUserProfile(String name, Object value) {
+        userProfiles.put(name, value);
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 }

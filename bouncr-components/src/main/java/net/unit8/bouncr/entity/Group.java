@@ -1,6 +1,7 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import net.unit8.bouncr.json.IndirectListFilter;
 import org.eclipse.persistence.queries.FetchGroup;
 import org.eclipse.persistence.queries.FetchGroupTracker;
 import org.eclipse.persistence.sessions.Session;
@@ -15,9 +16,6 @@ import java.util.List;
  *
  * @author kawasima
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class,
-        property  = "id",
-        scope     = Long.class)
 @Entity
 @Table(name = "groups")
 public class Group implements Serializable, FetchGroupTracker {
@@ -29,6 +27,7 @@ public class Group implements Serializable, FetchGroupTracker {
     private String name;
     private String description;
 
+    @JsonIgnore
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
@@ -36,7 +35,7 @@ public class Group implements Serializable, FetchGroupTracker {
     @JoinTable(name = "memberships",
             joinColumns = @JoinColumn(name = "group_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id"))
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     private List<User> users;
 
     public Long getId() {
@@ -89,14 +88,19 @@ public class Group implements Serializable, FetchGroupTracker {
                 '}';
     }
 
+    @Transient
+    private FetchGroup fetchGroup;
+    @Transient
+    private Session session;
+
     @Override
     public FetchGroup _persistence_getFetchGroup() {
-        return null;
+        return fetchGroup;
     }
 
     @Override
     public void _persistence_setFetchGroup(FetchGroup group) {
-
+        this.fetchGroup = group;
     }
 
     @Override
@@ -121,11 +125,11 @@ public class Group implements Serializable, FetchGroupTracker {
 
     @Override
     public Session _persistence_getSession() {
-        return null;
+        return session;
     }
 
     @Override
     public void _persistence_setSession(Session session) {
-
+        this.session = session;
     }
 }

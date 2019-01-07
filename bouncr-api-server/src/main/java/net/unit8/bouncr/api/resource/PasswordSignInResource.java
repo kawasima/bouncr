@@ -16,6 +16,7 @@ import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.util.PasswordUtils;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
 import javax.persistence.Subgraph;
@@ -67,7 +68,7 @@ public class PasswordSignInResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean authenticate(PasswordSignInRequest passwordSignInRequest,
                                 HttpRequest request,
                                 UserPermissionPrincipal principal,
@@ -77,7 +78,9 @@ public class PasswordSignInResource {
         CriteriaQuery<User> userQuery = cb.createQuery(User.class);
         Root<User> userRoot = userQuery.from(User.class);
         userQuery.where(cb.equal(userRoot.get("account"), passwordSignInRequest.getAccount()));
-        User user = em.createQuery(userQuery).getResultStream().findAny().orElse(null);
+        User user = em.createQuery(userQuery)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
 
         Problem problem = null;
         if (user != null) {
@@ -103,6 +106,7 @@ public class PasswordSignInResource {
             Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
             userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN));
             if (em.createQuery(userActionCriteria)
+                    .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                     .setMaxResults(config.getPasswordPolicy().getNumOfTrialsUntilLock())
                     .getResultStream()
                     .allMatch(action -> action.getActionType() == USER_FAILED_SIGNIN)) {
@@ -143,8 +147,6 @@ public class PasswordSignInResource {
         profileMap.put("iss", "bouncr");
         profileMap.put("uid", Long.toString(user.getId()));
         profileMap.put("sub", user.getAccount());
-        profileMap.put("email", user.getEmail());
-        profileMap.put("name", user.getName());
         profileMap.put("permissionsByRealm", getPermissionsByRealm(user, em));
 
         storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
@@ -175,6 +177,7 @@ public class PasswordSignInResource {
         permissionsGraph.addAttributeNodes("name");
 
         return em.createQuery(assignmentCriteria)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", assignmentGraph)
                 .getResultStream()
                 .collect(Collectors.groupingBy(Assignment::getRealm))

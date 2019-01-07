@@ -1,6 +1,7 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import net.unit8.bouncr.json.IndirectListFilter;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -22,7 +23,7 @@ public class Permission implements Serializable {
     private String name;
     private String description;
 
-    @JsonProperty("write_protected")
+    @JsonIgnore
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
@@ -30,8 +31,7 @@ public class Permission implements Serializable {
     @JoinTable(name = "role_permissions",
             joinColumns = @JoinColumn(name="permission_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
-    @JsonBackReference
-    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     private List<Role> roles;
 
     public Long getId() {

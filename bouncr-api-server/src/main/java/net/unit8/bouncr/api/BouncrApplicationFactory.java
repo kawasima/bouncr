@@ -18,10 +18,10 @@ import kotowari.middleware.SerDesMiddleware;
 import kotowari.restful.middleware.ResourceInvokerMiddleware;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.api.resource.*;
-import net.unit8.bouncr.api.resource.me.OtpKeyResource;
-import net.unit8.bouncr.api.resource.me.PasswordCredentialResource;
-import net.unit8.bouncr.api.resource.me.UserActionsResource;
-import net.unit8.bouncr.api.resource.me.UserSessionsResource;
+import net.unit8.bouncr.api.resource.OtpKeyResource;
+import net.unit8.bouncr.api.resource.PasswordCredentialResource;
+import net.unit8.bouncr.api.resource.UserActionsResource;
+import net.unit8.bouncr.api.resource.UserSessionsResource;
 import net.unit8.bouncr.util.DigestUtils;
 
 import java.security.KeyPair;
@@ -50,6 +50,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/user/:account").to(UserResource.class);
                 ar.all("/groups").to(GroupsResource.class);
                 ar.all("/group/:name").to(GroupResource.class);
+                ar.all("/group/:name/users").to(GroupUsersResource.class);
                 ar.all("/applications").to(ApplicationsResource.class);
                 ar.all("/application/:name").to(ApplicationResource.class);
                 ar.all("/application/:name/realms").to(RealmsResource.class);
@@ -60,11 +61,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/permissions").to(PermissionResource.class);
                 ar.all("/permission/:name").to(PermissionResource.class);
                 ar.all("/sign_in").to(PasswordSignInResource.class);
-                ar.all("/me/password_credential").to(PasswordCredentialResource.class);
-                ar.all("/me/otp_key").to(OtpKeyResource.class);
-                ar.all("/me/actions").to(UserActionsResource.class);
-                ar.all("/me/sessions").to(UserSessionsResource.class);
-                ar.all("/me/session/:userSessionId").to(UserSessionsResource.class);
+                ar.all("/password_credential").to(PasswordCredentialResource.class);
+                ar.all("/otp_key").to(OtpKeyResource.class);
+                ar.all("/actions").to(UserActionsResource.class);
+                ar.all("/sessions").to(UserSessionsResource.class);
+                ar.all("/session/:id").to(UserSessionsResource.class);
             });
 
         }).compile();

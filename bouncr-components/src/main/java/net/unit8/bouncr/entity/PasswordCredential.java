@@ -1,6 +1,7 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
@@ -17,10 +18,13 @@ public class PasswordCredential implements Serializable {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
     private byte[] password;
 
+    @JsonIgnore
     private String salt;
 
+    @JsonIgnore
     private boolean initial;
 
     @JsonProperty("create_at")

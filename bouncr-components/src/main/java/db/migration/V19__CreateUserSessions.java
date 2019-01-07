@@ -24,6 +24,7 @@ public class V19__CreateUserSessions implements JdbcMigration {
                     .column(field("created_at", SQLDataType.TIMESTAMP.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_session_id")),
+                            constraint().unique(field("token")),
                             constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
                     ).getSQL();
             stmt.execute(ddl);

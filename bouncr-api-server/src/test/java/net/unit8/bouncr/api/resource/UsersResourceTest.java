@@ -72,8 +72,6 @@ public class UsersResourceTest {
         UsersResource resource = new UsersResource();
         UserCreateRequest user = builder(new UserCreateRequest())
                 .set(UserCreateRequest::setAccount, "fuga")
-                .set(UserCreateRequest::setName, "hoge")
-                .set(UserCreateRequest::setEmail, "hoge@example.com")
                 .build();
         resource.doPost(user, em);
     }
@@ -86,16 +84,13 @@ public class UsersResourceTest {
         UsersResource resource = injector.inject(new UsersResource());
         UserCreateRequest createRequest = builder(new UserCreateRequest())
                 .set(UserCreateRequest::setAccount, "fuga")
-                .set(UserCreateRequest::setName, "hoge")
-                .set(UserCreateRequest::setEmail, "hoge@example.com")
                 .build();
         HttpRequest request = builder(new DefaultHttpRequest())
                 .set(HttpRequest::setRequestMethod, "POST")
                 .build();
-        Problem problem = resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request));
+        Problem problem = resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request), em);
         assertThat(problem).isNull();
-        createRequest.setEmail("xxx");
-        assertThat(resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request)))
+        assertThat(resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request), em))
                 .isNotNull();
 
     }

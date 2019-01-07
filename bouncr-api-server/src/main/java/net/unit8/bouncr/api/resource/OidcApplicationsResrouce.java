@@ -14,9 +14,11 @@ import net.unit8.bouncr.api.boundary.OidcApplicationSearchParams;
 import net.unit8.bouncr.entity.OidcApplication;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 
 import java.util.List;
@@ -49,19 +51,19 @@ public class OidcApplicationsResrouce {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method = "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_OIDC_APPLICATIONS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method = "POST")
+    @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("CREATE_OIDC_APPLICATION"))
@@ -72,8 +74,10 @@ public class OidcApplicationsResrouce {
     public List<OidcApplication> list(OidcApplicationSearchParams params, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OidcApplication> query = cb.createQuery(OidcApplication.class);
-        query.from(OidcApplication.class);
+        Root<OidcApplication> oidcApplicationRoot = query.from(OidcApplication.class);
+        query.orderBy(cb.asc(oidcApplicationRoot.get("id")));
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

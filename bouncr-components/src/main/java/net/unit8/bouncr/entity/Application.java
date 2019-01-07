@@ -1,9 +1,6 @@
 package net.unit8.bouncr.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import net.unit8.bouncr.json.IndirectListFilter;
 import org.eclipse.persistence.indirection.IndirectList;
 import org.eclipse.persistence.queries.FetchGroup;
@@ -41,7 +38,7 @@ public class Application implements Serializable, FetchGroupTracker {
     @Column(name = "top_page")
     private String topPage;
 
-    @JsonProperty("write_protected")
+    @JsonIgnore
     @Column(name = "write_protected")
     private Boolean writeProtected;
 

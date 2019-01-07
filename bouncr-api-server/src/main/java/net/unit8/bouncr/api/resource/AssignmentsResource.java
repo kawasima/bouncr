@@ -18,9 +18,7 @@ import javax.persistence.EntityManager;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
-import static kotowari.restful.DecisionPoint.DELETE;
-import static kotowari.restful.DecisionPoint.IS_AUTHORIZED;
-import static kotowari.restful.DecisionPoint.POST;
+import static kotowari.restful.DecisionPoint.*;
 
 /**
  * Assignments Resource.
@@ -43,7 +41,7 @@ public class AssignmentsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }

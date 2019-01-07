@@ -1,9 +1,19 @@
 package net.unit8.bouncr.api.service;
 
 import kotowari.restful.data.Problem;
+import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
+import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.component.config.PasswordPolicy;
+import net.unit8.bouncr.entity.PasswordCredential;
+import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.util.PasswordUtils;
 
 import javax.persistence.EntityManager;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Root;
+import java.util.Arrays;
 
 public class PasswordPolicyService {
     private EntityManager em;
@@ -14,13 +24,13 @@ public class PasswordPolicyService {
         this.policy = policy;
     }
 
-    public Problem.Violation validate(String password) {
+    protected Problem.Violation conformPolicy(String password) {
         if (password.length() > policy.getMaxLength()) {
             return new Problem.Violation("passwrod", "must be less than " + policy.getMaxLength() + " characters");
         }
 
         if (password.length() < policy.getMinLength()) {
-            return new Problem.Violation("passwrod", "must be greater than " + policy.getMaxLength() + " characters");
+            return new Problem.Violation("passwrod", "must be greater than " + policy.getMinLength() + " characters");
         }
 
         if (!policy.getPattern().matcher(password).matches()) {
@@ -28,5 +38,28 @@ public class PasswordPolicyService {
         }
 
         return null;
+    }
+
+    public Problem.Violation validateCreatePassword(PasswordCredentialCreateRequest createRequest) {
+        return conformPolicy(createRequest.getPassword());
+    }
+
+    public Problem.Violation validateUpdatePassword(PasswordCredentialUpdateRequest updateRequest) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
+        Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);
+        Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
+        query.where(cb.equal(userJoin.get("account"), updateRequest.getAccount()));
+        PasswordCredential passwordCredential = em.createQuery(query).getResultStream().findAny().orElse(null);
+        if (passwordCredential == null) {
+            return new Problem.Violation("old_password", "does not match current password");
+        }
+
+        byte[] currentPassword = passwordCredential.getPassword();
+        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 100);
+        if (!Arrays.equals(currentPassword, oldPassword)) {
+            return new Problem.Violation("old_password", "does not match current password");
+        }
+        return conformPolicy(updateRequest.getNewPassword());
     }
 }

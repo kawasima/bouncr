@@ -13,6 +13,7 @@ import net.unit8.bouncr.api.boundary.PermissionUpdateRequest;
 import net.unit8.bouncr.entity.Permission;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -37,26 +38,26 @@ public class PermissionResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_PERMISSIONS") || p.hasPermission("LIST_ANY_PERMISSIONS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("MODIFY_PERMISSION") || p.hasPermission("MODIFY_ANY_PERMISSION"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("DELETE_PERMISSION") || p.hasPermission("DELETE_ANY_PERMISSION"))
@@ -70,7 +71,9 @@ public class PermissionResource {
         Root<Permission> permissionRoot = query.from(Permission.class);
         query.where(cb.equal(permissionRoot.get("name"), params.get("name")));
 
-        Permission permission = em.createQuery(query).getResultStream().findAny().orElse(null);
+        Permission permission = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (permission != null) {
             context.putValue(permission);
         }

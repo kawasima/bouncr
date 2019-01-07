@@ -14,6 +14,7 @@ public class V999__TestData implements JdbcMigration {
 
     @Override
     public void migrate(Connection connection) throws Exception {
+        /*
         try(PreparedStatement stmtOidcProvider = connection.prepareStatement(INS_OIDC_PROVIDER)) {
             stmtOidcProvider.setString(1, "Google");
             stmtOidcProvider.setString(2, Env.getString("CLIENT_ID","xxxx"));
@@ -29,6 +30,6 @@ public class V999__TestData implements JdbcMigration {
             connection.rollback();
             throw ex;
         }
-
+*/
     }
 }

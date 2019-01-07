@@ -14,6 +14,7 @@ import net.unit8.bouncr.api.boundary.ApplicationUpdateRequest;
 import net.unit8.bouncr.entity.Application;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -38,26 +39,26 @@ public class ApplicationResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_APPLICATIONS") || p.hasPermission("LIST_ANY_APPLICATIONS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("MODIFY_APPLICATION") || p.hasPermission("MODIFY_ANY_APPLICATION"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("DELETE_APPLICATION") || p.hasPermission("DELETE_ANY_APPLICATION"))
@@ -71,7 +72,9 @@ public class ApplicationResource {
         Root<Application> applicationRoot = query.from(Application.class);
         query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
 
-        Application application = em.createQuery(query).getResultStream().findAny().orElse(null);
+        Application application = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);
         }

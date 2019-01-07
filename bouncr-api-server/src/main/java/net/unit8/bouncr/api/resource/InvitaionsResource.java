@@ -33,6 +33,18 @@ public class InvitaionsResource {
     @Inject
     private BeansValidator validator;
 
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("CREATE_INVITATION"))
+                .isPresent();
+    }
+
     @Decision(value = MALFORMED, method = "POST")
     public Problem vaidateCreateRequest(InvitationCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<InvitationCreateRequest>> violations = validator.validate(createRequest);
@@ -40,18 +52,6 @@ public class InvitaionsResource {
             context.putValue(createRequest);
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(IS_AUTHORIZED)
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
-    }
-
-    @Decision(value = IS_ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_INVITATION"))
-                .isPresent();
     }
 
     @Decision(POST)

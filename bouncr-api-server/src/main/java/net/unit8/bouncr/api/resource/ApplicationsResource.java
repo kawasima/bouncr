@@ -44,19 +44,19 @@ public class ApplicationsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_APPLICATIONS") || p.hasPermission("LIST_ANY_APPLICATIONS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "POST")
+    @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("CREATE_APPLICATION"))

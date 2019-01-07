@@ -3,12 +3,16 @@ package net.unit8.bouncr.api.boundary;
 import net.unit8.bouncr.api.constraints.StringEnumeration;
 import net.unit8.bouncr.entity.ResponseType;
 import net.unit8.bouncr.entity.TokenEndpointAuthMethod;
+import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import java.io.Serializable;
 
 public class OidcProviderCreateRequest implements Serializable {
     @NotBlank
+    @Length(max = 100)
+    @Pattern(regexp = "^\\w+$")
     private String name;
 
     @NotBlank

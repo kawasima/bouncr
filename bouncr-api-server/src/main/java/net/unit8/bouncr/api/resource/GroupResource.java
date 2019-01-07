@@ -28,26 +28,26 @@ public class GroupResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("MODIFY_GROUP") || p.hasPermission("MODIFY_ANY_GROUP"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("DELETE_GROUP") || p.hasPermission("DELETE_ANY_GROUP"))

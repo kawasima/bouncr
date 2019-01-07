@@ -26,7 +26,8 @@ public class V16__CreateOidcApplications implements JdbcMigration {
                     .column(field("callback_url", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("description", SQLDataType.VARCHAR(255).nullable(false)))
                     .constraints(
-                            constraint().primaryKey(field("oidc_application_id"))
+                            constraint().primaryKey(field("oidc_application_id")),
+                            constraint().unique(field("name"))
                     )
                     .getSQL();
 

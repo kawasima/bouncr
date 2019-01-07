@@ -38,6 +38,25 @@ public class GroupsResource {
     @Inject
     private BeansValidator validator;
 
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
+                .isPresent();
+    }
+
+    @Decision(value = ALLOWED, method= "POST")
+    public boolean isPutAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("CREATE_GROUP") || p.hasPermission("CREATE_ANY_GROUP"))
+                .isPresent();
+    }
+
     @Decision(value = MALFORMED, method = "GET")
     public Problem validateSearchParams(Parameters params, RestContext context) {
         GroupSearchParams groupSearchParams = converter.createFrom(params, GroupSearchParams.class);
@@ -57,25 +76,6 @@ public class GroupsResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
-    @Decision(IS_AUTHORIZED)
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
-    }
-
-    @Decision(value = IS_ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
-                .isPresent();
-    }
-
-    @Decision(value = IS_ALLOWED, method= "POST")
-    public boolean isPutAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_GROUP") || p.hasPermission("CREATE_ANY_GROUP"))
-                .isPresent();
-    }
-
     @Decision(HANDLE_OK)
     public List<Group> handleOk(GroupSearchParams params, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -86,13 +86,15 @@ public class GroupsResource {
         List<ResourceField> embedEntities = some(params.getEmbed(), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
         EntityGraph<Group> groupGraph = em.createEntityGraph(Group.class);
-        groupGraph.addAttributeNodes("name", "description", "writeProtected");
+        groupGraph.addAttributeNodes("name", "description");
 
         if (params.getQ() != null) {
             query.where(cb.like(groupRoot.get("name"), '%' + params.getQ() + '%'));
         }
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("users"))) {
             groupGraph.addAttributeNodes("users");
+            groupGraph.addSubgraph("users")
+                    .addAttributeNodes("account");
         }
         return em.createQuery(query)
                 .setHint("javax.persistence.fetchgraph", groupGraph)
@@ -104,6 +106,7 @@ public class GroupsResource {
     @Decision(POST)
     public Group doPost(GroupCreateRequest createRequest, EntityManager em) {
         Group group = converter.createFrom(createRequest, Group.class);
+        group.setWriteProtected(false);
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> em.persist(group));
         return group;

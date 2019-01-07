@@ -3,6 +3,7 @@ package net.unit8.bouncr.api.resource;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.security.bouncr.UserPermissionPrincipal;
+import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
@@ -13,9 +14,11 @@ import net.unit8.bouncr.api.boundary.PermissionSearchParams;
 import net.unit8.bouncr.entity.Permission;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Optional;
@@ -31,24 +34,28 @@ public class PermissionsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method = "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_PERMISSIONS") || p.hasPermission("LIST_ANY_PERMISSIONS"))
                 .isPresent();
     }
 
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean isPostAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("CREATE_PERMISSION") || p.hasPermission("CREATE_ANY_PERMISSION"))
+                .isPresent();
+    }
+
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePermissionCreateRequest(PermissionCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<PermissionCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(createRequest, Permission.class));
-        }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
@@ -66,11 +73,24 @@ public class PermissionsResource {
     public List<Permission> list(PermissionSearchParams params, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        query.from(Permission.class);
+        Root<Permission> permissionRoot = query.from(Permission.class);
+        query.orderBy(cb.asc(permissionRoot.get("id")));
 
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();
+    }
+
+    @Decision(POST)
+    public Permission create(PermissionCreateRequest createRequest, EntityManager em) {
+        Permission permission = converter.createFrom(createRequest, Permission.class);
+        permission.setWriteProtected(false);
+
+        EntityTransactionManager tx = new EntityTransactionManager(em);
+        tx.required(() -> em.persist(permission));
+        em.detach(permission);
+        return permission;
     }
 }

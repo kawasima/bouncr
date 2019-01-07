@@ -1,6 +1,8 @@
 package db.migration;
 
 import net.unit8.bouncr.util.PasswordUtils;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -11,9 +13,9 @@ import java.util.Arrays;
 
 import static org.jooq.impl.DSL.*;
 
-public class V11__InsertAdminUser implements JdbcMigration {
+public class V23__InsertAdminUser extends BaseJavaMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "LIST_ANY_USERS", "CREATE_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
+            "LIST_ANY_USERS", "CREATE_ANY_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
             "LOCK_ANY_USER", "UNLOCK_ANY_USER",
             "LIST_ANY_GROUPS", "CREATE_GROUP", "MODIFY_ANY_GROUP", "DELETE_ANY_GROUP",
             "CREATE_MEMBERSHIP", "DELETE_MEMBERSHIP",
@@ -46,16 +48,15 @@ public class V11__InsertAdminUser implements JdbcMigration {
     }
 
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
         DSLContext create = DSL.using(connection);
         final String INS_USER = create
                 .insertInto(table("users"))
                 .columns(
                         field("account"),
-                        field("name"),
-                        field("email"),
                         field("write_protected"))
-                .values(param(), param(), param(), param(SQLDataType.BOOLEAN))
+                .values(param(), param(SQLDataType.BOOLEAN))
                 .getSQL();
 
         final String INS_PASSWD_CRED = create
@@ -154,7 +155,28 @@ public class V11__InsertAdminUser implements JdbcMigration {
                 )
                 .values("?", "?", "?")
                 .getSQL();
-
+        final String INS_USER_PROFILE_FIELD = create
+                .insertInto(table("user_profile_fields"))
+                .columns(
+                        field("name"),
+                        field("json_name"),
+                        field("is_required"),
+                        field("is_identity"),
+                        field("regular_expression"),
+                        field("min_length"),
+                        field("max_length"),
+                        field("needs_verification"),
+                        field("position")
+                ).values("?", "?", "?", "?", "?", "?","?", "?", "?")
+                .getSQL();
+        final String INS_USER_PROFILE_VALUE = create
+                .insertInto(table("user_profile_values"))
+                .columns(
+                        field("user_profile_field_id"),
+                        field("user_id"),
+                        field("value")
+                ).values("?", "?", "?")
+                .getSQL();
         try (PreparedStatement stmtInsUser = connection.prepareStatement(INS_USER, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsPasswdCred = connection.prepareStatement(INS_PASSWD_CRED);
              PreparedStatement stmtInsPermission = connection.prepareStatement(INS_PERMISSION, Statement.RETURN_GENERATED_KEYS);
@@ -164,14 +186,50 @@ public class V11__InsertAdminUser implements JdbcMigration {
              PreparedStatement stmtInsGroup = connection.prepareStatement(INS_GROUP, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsRealm = connection.prepareStatement(INS_REALM, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsApplication = connection.prepareStatement(INS_APPLICATION, Statement.RETURN_GENERATED_KEYS);
-             PreparedStatement stmtInsAssignment = connection.prepareStatement(INS_ASSIGNMENT)
+             PreparedStatement stmtInsAssignment = connection.prepareStatement(INS_ASSIGNMENT);
+             PreparedStatement stmtInsUserProfileField = connection.prepareStatement(INS_USER_PROFILE_FIELD, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement stmtInsUserProfileValue = connection.prepareStatement(INS_USER_PROFILE_VALUE, Statement.RETURN_GENERATED_KEYS)
              ) {
+            // Email Field
+            stmtInsUserProfileField.setString(1, "Email");
+            stmtInsUserProfileField.setString(2, "email");
+            stmtInsUserProfileField.setBoolean(3, true);
+            stmtInsUserProfileField.setBoolean(4, true);
+            stmtInsUserProfileField.setString(5, "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$");
+            stmtInsUserProfileField.setNull(6, 0);
+            stmtInsUserProfileField.setInt(7, 255);
+            stmtInsUserProfileField.setBoolean(8, true);
+            stmtInsUserProfileField.setInt(9, 1);
+            stmtInsUserProfileField.executeUpdate();
+            Long emailFieldId = fetchGeneratedKey(stmtInsUserProfileField);
+
+            // Name Field
+            stmtInsUserProfileField.setString(1, "Name");
+            stmtInsUserProfileField.setString(2, "name");
+            stmtInsUserProfileField.setBoolean(3, true);
+            stmtInsUserProfileField.setBoolean(4, false);
+            stmtInsUserProfileField.setString(5, null);
+            stmtInsUserProfileField.setNull(6, 0);
+            stmtInsUserProfileField.setInt(7, 255);
+            stmtInsUserProfileField.setBoolean(8, false);
+            stmtInsUserProfileField.setInt(9, 2);
+            stmtInsUserProfileField.executeUpdate();
+            Long nameFieldId = fetchGeneratedKey(stmtInsUserProfileField);
+
             stmtInsUser.setString(1, "admin");
-            stmtInsUser.setString(2, "Admin User");
-            stmtInsUser.setString(3, "admin@example.com");
-            stmtInsUser.setBoolean(4, false);
+            stmtInsUser.setBoolean(2, true);
             stmtInsUser.executeUpdate();
             Long userId = fetchGeneratedKey(stmtInsUser);
+
+            stmtInsUserProfileValue.setLong(1, emailFieldId);
+            stmtInsUserProfileValue.setLong(2, userId);
+            stmtInsUserProfileValue.setString(3, "admin@example.com");
+            stmtInsUserProfileValue.executeUpdate();
+
+            stmtInsUserProfileValue.setLong(1, nameFieldId);
+            stmtInsUserProfileValue.setLong(2, userId);
+            stmtInsUserProfileValue.setString(3, "Admin User");
+            stmtInsUserProfileValue.executeUpdate();
 
             stmtInsPasswdCred.setLong(1, userId);
             stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
@@ -242,7 +300,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
             Arrays.asList(OTHER_PERMISSIONS).forEach(perm -> {
                 try {
                     stmtInsPermission.setString(1, perm);
-                    stmtInsPermission.setString(2, "");
+                    stmtInsPermission.setString(2, perm);
                     stmtInsPermission.setBoolean(3, true);
                     stmtInsPermission.executeUpdate();
                 } catch (SQLException e) {
@@ -256,7 +314,7 @@ public class V11__InsertAdminUser implements JdbcMigration {
             stmtInsRole.executeUpdate();
             Long myRoleId = fetchGeneratedKey(stmtInsRole);
             stmtInsPermission.setString(1, "READ_USER");
-            stmtInsPermission.setString(2, "");
+            stmtInsPermission.setString(2, "READ_USER");
             stmtInsPermission.setBoolean(3, true);
             stmtInsPermission.executeUpdate();
             Long readUserPermissionId = fetchGeneratedKey(stmtInsPermission);

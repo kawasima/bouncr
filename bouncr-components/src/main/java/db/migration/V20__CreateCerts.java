@@ -22,6 +22,7 @@ public class V20__CreateCerts implements JdbcMigration {
                     .column(field("expires", SQLDataType.DATE.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("cert_id")),
+                            constraint().unique(field("serial")),
                             constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
                     ).getSQL();
             stmt.execute(ddl);

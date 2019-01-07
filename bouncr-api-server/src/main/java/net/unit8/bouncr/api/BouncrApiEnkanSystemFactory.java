@@ -47,7 +47,6 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "validator", new BeansValidator(),
                 "converter", new JacksonBeansConverter(),
                 "jpa", builder(new EclipseLinkEntityManagerProvider())
-                        //                        .set(EclipseLinkEntityManagerProvider::setJpaProperties, jpaProperties)
                         .set(EclipseLinkEntityManagerProvider::registerClass, Application.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, Realm.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, User.class)
@@ -58,6 +57,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         .set(EclipseLinkEntityManagerProvider::registerClass, Assignment.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileField.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileValue.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileVerification.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, PasswordCredential.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserSession.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserAction.class)

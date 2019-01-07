@@ -27,7 +27,7 @@ public class Realm implements Serializable {
     @JsonBackReference("realms")
     private Application application;
 
-    @JsonProperty("write_protected")
+    @JsonIgnore
     @Column(name = "write_protected")
     private Boolean writeProtected;
 

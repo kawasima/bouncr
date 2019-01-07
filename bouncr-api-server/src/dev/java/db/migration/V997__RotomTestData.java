@@ -32,6 +32,7 @@ public class V997__RotomTestData implements JdbcMigration {
 
     @Override
     public void migrate(Connection connection) throws Exception {
+        /*
         DSLContext create = DSL.using(connection);
         final String INS_USER = create
                 .insertInto(table("users"))
@@ -325,5 +326,6 @@ public class V997__RotomTestData implements JdbcMigration {
             stmtInsAssignment.setLong(3, rotomOpenRealmId);
             stmtInsAssignment.executeUpdate();
         }
+        */
     }
 }

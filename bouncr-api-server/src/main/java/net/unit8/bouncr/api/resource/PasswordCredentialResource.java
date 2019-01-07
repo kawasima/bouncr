@@ -1,4 +1,4 @@
-package net.unit8.bouncr.api.resource.me;
+package net.unit8.bouncr.api.resource;
 
 import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
@@ -7,6 +7,8 @@ import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
+import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.api.service.PasswordPolicyService;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -24,11 +26,13 @@ import javax.validation.ConstraintViolation;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
+@AllowedMethods({"POST", "PUT", "DELETE"})
 public class PasswordCredentialResource {
     @Inject
     private BouncrConfiguration config;
@@ -36,28 +40,62 @@ public class PasswordCredentialResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(value = MALFORMED, method = {"POST", "PUT"})
-    public Problem validate(PasswordCredentialUpdateRequest request, RestContext context, EntityManager em) {
-        PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
-        Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(request);
-        Problem problem = Problem.fromViolations(violations);
-        Problem.Violation passwordPolicyViolation = passwordPolicyService.validate(request.getNewPassword());
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
 
-        return problem;
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean postAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
+        if (principal.hasPermission("CREATE_ANY_USER")) {
+            return true;
+        }
+        return principal.getName().equals(createRequest.getAccount());
+    }
+
+    @Decision(value = ALLOWED, method = "PUT")
+    public boolean putAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest createRequest) {
+        if (principal.hasPermission("MODIFY_ANY_USER")) {
+            return true;
+        }
+        return principal.getName().equals(createRequest.getAccount());
+    }
+
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem validateCreateRequest(PasswordCredentialCreateRequest createRequest, RestContext context, EntityManager em) {
+        PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
+        Set<ConstraintViolation<PasswordCredentialCreateRequest>> violations = validator.validate(createRequest);
+        Problem problem = Problem.fromViolations(violations);
+        Optional.ofNullable(passwordPolicyService.validateCreatePassword(createRequest))
+                .ifPresent(violation -> problem.getViolations().add(violation));
+
+        return problem.getViolations().isEmpty() ? null : problem;
+    }
+
+    @Decision(value = MALFORMED, method = "PUT")
+    public Problem validateUpdateRequest(PasswordCredentialUpdateRequest updateRequest, EntityManager em) {
+        PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
+        Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(updateRequest);
+        Problem problem = Problem.fromViolations(violations);
+        Optional.ofNullable(passwordPolicyService.validateUpdatePassword(updateRequest))
+                .ifPresent(violation -> problem.getViolations().add(violation));
+        return problem.getViolations().isEmpty() ? null : problem;
     }
 
     @Decision(POST)
-    public PasswordCredential create(PasswordCredentialUpdateRequest createRequest, UserPermissionPrincipal principal, EntityManager em) {
+    public PasswordCredential create(PasswordCredentialCreateRequest createRequest, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
-        query.where(cb.equal(userRoot.get("account"), principal.getName()));
+        query.where(cb.equal(userRoot.get("account"), createRequest.getAccount()));
         User user = em.createQuery(query).getResultStream().findAny().orElseThrow();
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         PasswordCredential passwordCredential = builder(new PasswordCredential())
                 .set(PasswordCredential::setUser, user)
                 .set(PasswordCredential::setSalt, salt)
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(createRequest.getNewPassword(), salt, 100))
+                .set(PasswordCredential::setInitial, true)
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(createRequest.getPassword(), salt, 100))
+                .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
                 .build();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);

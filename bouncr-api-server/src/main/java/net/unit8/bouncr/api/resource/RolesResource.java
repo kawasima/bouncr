@@ -17,6 +17,7 @@ import net.unit8.bouncr.entity.Role;
 import net.unit8.bouncr.entity.User;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -37,19 +38,19 @@ public class RolesResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_ROLES") || p.hasPermission("LIST_ANY_ROLES"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "POST")
+    @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("CREATE_ROLE"))
@@ -59,9 +60,6 @@ public class RolesResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateRoleCreateRequest(RoleCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<RoleCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(createRequest, Role.class));
-        }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
@@ -87,15 +85,19 @@ public class RolesResource {
                     .join("users");
             query.where(cb.equal(joinUsers.get("id"), principal.getId()));
         }
+        query.orderBy(cb.asc(roleRoot.get("id")));
 
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();
     }
 
     @Decision(POST)
-    public Role craete(Role role, EntityManager em) {
+    public Role craete(RoleCreateRequest createRequest, EntityManager em) {
+        Role role = converter.createFrom(createRequest, Role.class);
+        role.setWriteProtected(false);
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> em.persist(role));
         em.detach(role);

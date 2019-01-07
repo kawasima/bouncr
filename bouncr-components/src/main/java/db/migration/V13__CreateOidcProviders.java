@@ -26,8 +26,9 @@ public class V13__CreateOidcProviders implements JdbcMigration {
                     .column(field("token_endpoint", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("token_endpoint_auth_method", SQLDataType.VARCHAR(10).nullable(false)))
                     .constraints(
-                            constraint().primaryKey(field("oidc_provider_id"))
-                    ).getSQL();
+                            constraint().primaryKey(field("oidc_provider_id")),
+                            constraint().unique(field("name"))
+                            ).getSQL();
             stmt.execute(ddl);
         }
     }

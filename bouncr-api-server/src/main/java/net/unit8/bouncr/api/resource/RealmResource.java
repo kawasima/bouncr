@@ -13,6 +13,7 @@ import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -30,26 +31,26 @@ public class RealmResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(IS_AUTHORIZED)
+    @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = IS_ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("LIST_REALMS") || p.hasPermission("LIST_ANY_REALM"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method= "PUT")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("MODIFY_REALM"))
                 .isPresent();
     }
 
-    @Decision(value = IS_ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("DELETE_REALM"))
@@ -63,7 +64,9 @@ public class RealmResource {
         Root<Application> applicationRoot = query.from(Application.class);
         query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
 
-        Application application = em.createQuery(query).getResultStream().findAny().orElse(null);
+        Application application = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);
         }
@@ -79,7 +82,9 @@ public class RealmResource {
         query.where(cb.equal(realmRoot.get("name"), params.get("realmName")),
                 cb.equal(applicationJoin.get("id"), application.getId()));
 
-        Realm realm = em.createQuery(query).getResultStream().findAny().orElse(null);
+        Realm realm = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (realm != null) {
             context.putValue(realm);
         }

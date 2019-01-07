@@ -1,6 +1,7 @@
 package db.migration;
 
-import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -13,32 +14,25 @@ import static org.jooq.impl.DSL.*;
 /**
  * @author kawasima
  */
-public class V1__CreateUsers implements JdbcMigration {
+public class V1__CreateUsers extends BaseJavaMigration {
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
         try (Statement stmt = connection.createStatement()) {
             DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("users"))
                     .column(field("user_id", SQLDataType.BIGINT.identity(true)))
                     .column(field("account", SQLDataType.VARCHAR(100).nullable(false)))
-                    .column(field("name", SQLDataType.VARCHAR(100).nullable(false)))
-                    .column(field("email", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("write_protected", SQLDataType.BOOLEAN.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id")),
-                            constraint().unique(field("account")),
-                            constraint().unique(field("email"))
+                            constraint().unique(field("account"))
                     ).getSQL();
             stmt.execute(ddl);
 
             stmt.execute(
                     create.createIndex(name("idx_users_01"))
                             .on(table("users"), field("account"))
-                            .getSQL()
-            );
-            stmt.execute(
-                    create.createIndex(name("idx_users_02"))
-                            .on(table("users"), field("email"))
                             .getSQL()
             );
         }

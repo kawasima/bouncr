@@ -1,12 +1,16 @@
 package net.unit8.bouncr.api.boundary;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import java.io.Serializable;
 
 public class ApplicationUpdateRequest implements Serializable {
     @NotBlank
+    @Length(max = 100)
+    @Pattern(regexp = "^\\w+$")
     private String name;
     @NotBlank
     private String description;
