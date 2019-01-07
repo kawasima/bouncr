@@ -34,6 +34,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Proxy Client for Bouncr multiple applications.
+ *
  * @author kawasima
  */
 public class MultiAppProxyClient implements ProxyClient {
@@ -69,7 +71,7 @@ public class MultiAppProxyClient implements ProxyClient {
         if (passTo != null && passTo.endsWith("/")) {
             passTo = passTo.substring(0, passTo.length() - 1);
         }
-        return passTo + path.substring(application.getVirtualPath().length(), path.length());
+        return passTo + path.substring(application.getVirtualPath().length());
     }
 
     @Override
