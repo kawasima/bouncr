@@ -6,10 +6,12 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
+import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.entity.*;
@@ -25,6 +27,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +35,8 @@ import java.util.stream.Collectors;
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.EXPIRED;
+import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.INITIAL;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
@@ -50,15 +55,6 @@ public class PasswordSignInResource {
     @Inject
     private BeansValidator validator;
 
-    protected UserAction createUserAction(User user, HttpRequest request, String account) {
-        return builder(new UserAction())
-                .set(UserAction::setActionType, user != null ? USER_SIGNIN : USER_FAILED_SIGNIN)
-                .set(UserAction::setActor, account)
-                .set(UserAction::setActorIp, request.getRemoteAddr())
-                .set(UserAction::setCreatedAt, LocalDateTime.now())
-                .build();
-    }
-
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePasswordSignInRequest(PasswordSignInRequest passwordSignInRequest, RestContext context) {
         Set<ConstraintViolation<PasswordSignInRequest>> violations = validator.validate(passwordSignInRequest);
@@ -68,59 +64,93 @@ public class PasswordSignInResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
+    /**
+     * Authenticate the given request.
+     *
+     * <p>Authentication flow</p>
+     * <ul>
+     *     <li>
+     *         Find an user by the given account
+     *         <ul>
+     *             <li>
+     *                 Found
+     *                 <ul>
+     *                     <li>Check whether account is locked</li>
+     *                     <li>Check whether the given password matches the registered password</li>
+     *                     <li>Check whether the given code matches OTP password</li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 Not found
+     *                 <ul>
+     *                     <li>Fail to sign in</li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     *     <li>Logging the request of sign in</li>
+     * </ul>
+     *
+     * @param passwordSignInRequest A request to sign in
+     * @param request HTTP request
+     * @param principal User principal
+     * @param context REST context
+     * @param em Entity manager
+     * @return Whether request is authenticated successfully
+     */
     @Decision(AUTHORIZED)
     public boolean authenticate(PasswordSignInRequest passwordSignInRequest,
                                 HttpRequest request,
                                 UserPermissionPrincipal principal,
                                 RestContext context,
                                 final EntityManager em) {
+        SignInService signInService = new SignInService(em, config);
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<User> userQuery = cb.createQuery(User.class);
-        Root<User> userRoot = userQuery.from(User.class);
-        userQuery.where(cb.equal(userRoot.get("account"), passwordSignInRequest.getAccount()));
-        User user = em.createQuery(userQuery)
+        CriteriaQuery<User> query = cb.createQuery(User.class);
+        Root<User> userRoot = query.from(User.class);
+        query.where(cb.equal(userRoot.get("account"), passwordSignInRequest.getAccount()));
+        EntityGraph<User> userGraph = em.createEntityGraph(User.class);
+        userGraph.addAttributeNodes("account", "userProfileValues", "otpKey", "userLock");
+        userGraph.addSubgraph("otpKey").addAttributeNodes("key");
+        userGraph.addSubgraph("userLock").addAttributeNodes("lockedAt");
+        userGraph.addSubgraph("passwordCredential")
+                .addAttributeNodes("password", "salt", "initial", "createdAt");
+
+        User user = em.createQuery(query)
+                .setHint("javax.persistence.fetchgraph", userGraph)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
 
         Problem problem = null;
-        if (user != null) {
-            PasswordCredential credential = em.find(PasswordCredential.class, user.getId());
-            if (credential != null && Arrays.equals(
-                    credential.getPassword(),
-                    PasswordUtils.pbkdf2(passwordSignInRequest.getPassword(), credential.getSalt(), 100))) {
-                context.putValue(user);
-            } else {
-                // Password doesn't match
-                problem = new Problem(null, "Authentication failed", 401, null, null);
-            }
-        } else {
-            // User not found
-            problem = new Problem(null, "Authentication failed", 401, null, null);
-        }
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            em.persist(createUserAction(user, request, passwordSignInRequest.getAccount()));
-        });
-        if (user != null) {
-            CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
-            Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
-            userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN));
-            if (em.createQuery(userActionCriteria)
-                    .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                    .setMaxResults(config.getPasswordPolicy().getNumOfTrialsUntilLock())
-                    .getResultStream()
-                    .allMatch(action -> action.getActionType() == USER_FAILED_SIGNIN)) {
-                UserLock userLock = em.find(UserLock.class, user.getId());
-                if (userLock == null) {
-                    em.persist(builder(new UserLock())
-                            .set(UserLock::setUser, user)
-                            .set(UserLock::setLockedAt, LocalDateTime.now())
-                            .build());
-                }
-            }
+        if (user != null && user.getUserLock() != null) {
+            context.setMessage(new Problem(URI.create("abount:blank"), "Authentication failed", 401,
+                    "Account is locked", null));
+            return false;
         }
 
-        return problem == null;
+        // Check if the given password matches the registered password
+        if (user != null && user.getPasswordCredential() != null &&
+                Arrays.equals(
+                        user.getPasswordCredential().getPassword(),
+                        PasswordUtils.pbkdf2(
+                                passwordSignInRequest.getPassword(),
+                                user.getPasswordCredential().getSalt(),
+                                100))) {
+            context.putValue(user);
+        } else {
+            user = null;
+        }
+
+        // Check if the password must be changed
+        if (user != null) {
+            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+            if (status == EXPIRED || status == INITIAL) {
+                context.setMessage(new Problem(null, "Authentication Success but...", 401, "Password must be changed", null));
+                return false;
+            }
+        }
+        signInService.recordSignIn(user, passwordSignInRequest.getAccount(), request);
+        return user != null;
     }
 
     @Decision(POST)

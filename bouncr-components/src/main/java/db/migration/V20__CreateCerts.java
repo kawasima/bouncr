@@ -1,5 +1,7 @@
 package db.migration;
 
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -10,9 +12,10 @@ import java.sql.Statement;
 
 import static org.jooq.impl.DSL.*;
 
-public class V20__CreateCerts implements JdbcMigration {
+public class V20__CreateCerts extends BaseJavaMigration {
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
         try(Statement stmt = connection.createStatement()) {
             DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("certs"))

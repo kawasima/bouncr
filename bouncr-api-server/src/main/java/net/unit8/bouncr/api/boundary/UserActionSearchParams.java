@@ -8,8 +8,8 @@ public class UserActionSearchParams implements Serializable {
     @JsonProperty("action_type")
     private String actionType;
 
-    private Integer limit;
-    private Integer offset;
+    private Integer limit = 10;
+    private Integer offset = 0;
 
     public String getActionType() {
         return actionType;

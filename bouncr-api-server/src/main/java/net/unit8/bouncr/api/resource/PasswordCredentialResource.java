@@ -23,7 +23,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
@@ -39,27 +38,6 @@ public class PasswordCredentialResource {
 
     @Inject
     private BeansValidator validator;
-
-    @Decision(AUTHORIZED)
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
-    }
-
-    @Decision(value = ALLOWED, method = "POST")
-    public boolean postAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
-        if (principal.hasPermission("CREATE_ANY_USER")) {
-            return true;
-        }
-        return principal.getName().equals(createRequest.getAccount());
-    }
-
-    @Decision(value = ALLOWED, method = "PUT")
-    public boolean putAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest createRequest) {
-        if (principal.hasPermission("MODIFY_ANY_USER")) {
-            return true;
-        }
-        return principal.getName().equals(createRequest.getAccount());
-    }
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreateRequest(PasswordCredentialCreateRequest createRequest, RestContext context, EntityManager em) {
@@ -82,13 +60,56 @@ public class PasswordCredentialResource {
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
-    @Decision(POST)
-    public PasswordCredential create(PasswordCredentialCreateRequest createRequest, EntityManager em) {
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean postAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
+        if (principal.hasPermission("CREATE_ANY_USER")) {
+            return true;
+        }
+        return principal.getName().equals(createRequest.getAccount());
+    }
+
+    @Decision(value = ALLOWED, method = "PUT")
+    public boolean putAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest createRequest) {
+        if (principal.hasPermission("MODIFY_ANY_USER")) {
+            return true;
+        }
+        return principal.getName().equals(createRequest.getAccount());
+    }
+
+    private Optional<User> findUserByAccount(String account, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
-        query.where(cb.equal(userRoot.get("account"), createRequest.getAccount()));
-        User user = em.createQuery(query).getResultStream().findAny().orElseThrow();
+        query.where(cb.equal(userRoot.get("account"), account));
+        return em.createQuery(query).getResultStream().findAny();
+
+    }
+
+    @Decision(value=PROCESSABLE, method="POST")
+    public boolean userProcessableInPost(PasswordCredentialCreateRequest createRequest, RestContext context, EntityManager em) {
+        return findUserByAccount(createRequest.getAccount(), em)
+                .map(user -> {
+                    context.putValue(user);
+                    return user;
+                }).isPresent();
+    }
+
+    @Decision(value=PROCESSABLE, method="PUT")
+    public boolean userProcessableInPut(PasswordCredentialUpdateRequest updateRequest, RestContext context, EntityManager em) {
+        return findUserByAccount(updateRequest.getAccount(), em)
+                .map(user -> {
+                    context.putValue(user);
+                    return user;
+                }).isPresent();
+    }
+
+    @Decision(POST)
+    public PasswordCredential create(PasswordCredentialCreateRequest createRequest, User user, EntityManager em) {
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         PasswordCredential passwordCredential = builder(new PasswordCredential())
                 .set(PasswordCredential::setUser, user)

@@ -8,16 +8,22 @@ import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.apistandard.resourcefilter.ResourceField;
+import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.GroupUpdateRequest;
 import net.unit8.bouncr.entity.Group;
 
 import javax.inject.Inject;
+import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
+import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
@@ -61,7 +67,20 @@ public class GroupResource {
         Root<Group> permissionRoot = query.from(Group.class);
         query.where(cb.equal(permissionRoot.get("name"), params.get("name")));
 
-        Group group = em.createQuery(query).getResultStream().findAny().orElse(null);
+        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
+                .orElse(Collections.emptyList());
+        EntityGraph<Group> groupGraph = em.createEntityGraph(Group.class);
+        groupGraph.addAttributeNodes("name", "description");
+
+        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("users"))) {
+            groupGraph.addAttributeNodes("users");
+            groupGraph.addSubgraph("users")
+                    .addAttributeNodes("account");
+        }
+
+        Group group = em.createQuery(query)
+                .setHint("javax.persistence.fetchgraph", groupGraph)
+                .getResultStream().findAny().orElse(null);
         if (group != null) {
             context.putValue(group);
         }

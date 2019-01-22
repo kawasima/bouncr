@@ -14,8 +14,8 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.7.0-SNAPSHOT</enkan.version>
-        <kotowari-restful.version>0.1.0-SNAPSHOT</kotowari-restful.version>
+        <enkan.version>0.7.0</enkan.version>
+        <kotowari-restful.version>0.1.0</kotowari-restful.version>
     </properties>
 
     <modules>
@@ -60,23 +60,29 @@
             </dependency>
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
-                <artifactId>kotowari-jpa</artifactId>
-                <version>0.7.0-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>net.unit8.enkan</groupId>
-                <artifactId>enkan-component-eclipselink</artifactId>
-                <version>0.7.0-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>net.unit8.enkan</groupId>
-                <artifactId>enkan-component-jackson</artifactId>
+                <artifactId>enkan-component-jetty</artifactId>
                 <version>${enkan.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
+                <artifactId>kotowari-jpa</artifactId>
+                <version>${enkan.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.enkan</groupId>
+                <artifactId>enkan-component-eclipselink</artifactId>
+                <version>${enkan.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.enkan</groupId>
+                <artifactId>enkan-component-jackson</artifactId>
+                <version>0.7.1</version>
+                <!--<version>${enkan.version}</version>-->
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-component-HikariCP</artifactId>
-                <version>0.7.0-SNAPSHOT</version>
+                <version>${enkan.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
@@ -91,7 +97,7 @@
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-bouncr</artifactId>
-                <version>0.7.0-SNAPSHOT</version>
+                <version>0.7.0</version>
             </dependency>
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
@@ -182,14 +188,9 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>javax.annotation</groupId>
-                <artifactId>javax.annotation-api</artifactId>
-                <version>1.3.1</version>
-            </dependency>
-            <dependency>
                 <groupId>net.unit8.apistandard</groupId>
-                <artifactId>resource-filter</artifactId>
-                <version>0.1.0-SNAPSHOT</version>
+                <artifactId>parameter-parser</artifactId>
+                <version>0.1.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -6,9 +6,11 @@ import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserSession;
 
+import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -17,6 +19,7 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
 /**
  * A User Session Resource.
@@ -27,6 +30,9 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods("DELETE")
 public class UserSessionResource {
+    @Inject
+    private StoreProvider storeProvider;
+
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
@@ -39,7 +45,7 @@ public class UserSessionResource {
         Root<UserSession> userSessionRoot = query.from(UserSession.class);
         Join<User, UserSession> userJoin = userSessionRoot.join("user");
         query.where(cb.equal(userJoin.get("id"), principal.getId()),
-                cb.equal(userSessionRoot.get("id"), params.getLong("id")));
+                cb.equal(userSessionRoot.get("token"), params.get("token")));
 
         return em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
@@ -52,6 +58,8 @@ public class UserSessionResource {
     @Decision(DELETE)
     public Void delete(UserSession userSession, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
+        storeProvider.getStore(BOUNCR_TOKEN).delete(userSession.getToken());
+
         tx.required(() -> em.remove(userSession));
         return null;
     }

@@ -1,18 +1,14 @@
 package db.migration;
 
-import net.unit8.bouncr.util.PasswordUtils;
-import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
-import org.jooq.DSLContext;
-import org.jooq.impl.DSL;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 
-import java.sql.*;
-import java.util.Arrays;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-import static org.jooq.impl.DSL.*;
-
-public class V998__BackChannelingTestData implements JdbcMigration {
+public class V998__BackChannelingTestData extends BaseJavaMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
             "CREATE_BOARD", "READ_BOARD", "MODIFY_BOARD",
             "READ_ANY_THREAD", "WRITE_ANY_THREAD",
@@ -41,7 +37,7 @@ public class V998__BackChannelingTestData implements JdbcMigration {
     }
 
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
         /*
         DSLContext create = DSL.using(connection);
         final String INS_USER = create

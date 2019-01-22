@@ -23,7 +23,7 @@ import java.util.Set;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
-public class InvitaionsResource {
+public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
 

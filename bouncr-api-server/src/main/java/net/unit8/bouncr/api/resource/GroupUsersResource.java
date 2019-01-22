@@ -53,8 +53,8 @@ public class GroupUsersResource {
                 .isPresent();
     }
 
-    @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
+    @Decision(PROCESSABLE)
+    public boolean processable(Parameters params, RestContext context, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Group> query = cb.createQuery(Group.class);
         Root<Group> groupRoot = query.from(Group.class);

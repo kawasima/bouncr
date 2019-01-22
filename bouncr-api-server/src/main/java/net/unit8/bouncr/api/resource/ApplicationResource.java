@@ -10,19 +10,27 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.apistandard.resourcefilter.ResourceField;
+import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.ApplicationUpdateRequest;
 import net.unit8.bouncr.entity.Application;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
+import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
+import javax.persistence.Subgraph;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
@@ -72,8 +80,23 @@ public class ApplicationResource {
         Root<Application> applicationRoot = query.from(Application.class);
         query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
 
+        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
+                .orElse(Collections.emptyList());
+
+        EntityGraph<Application> applicationGraph = em.createEntityGraph(Application.class);
+        applicationGraph.addAttributeNodes("name", "description", "virtualPath", "passTo", "topPage");
+
+        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("realms"))) {
+            applicationRoot.fetch("realms", JoinType.LEFT);
+            query.distinct(true);
+            applicationGraph.addSubgraph("realms")
+                    .addAttributeNodes("name", "description", "url");
+
+        }
+
         Application application = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("javax.persistence.fetchgraph", applicationGraph)
                 .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);

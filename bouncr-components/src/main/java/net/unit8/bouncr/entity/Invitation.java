@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "invitations")
@@ -25,6 +26,14 @@ public class Invitation implements Serializable {
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @Column(name = "invited_at")
     private LocalDateTime invitedAt;
+
+    @OneToMany(mappedBy="groupInvitations", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL)
+    private List<GroupInvitation> groupInvitations;
+
+    @OneToMany(mappedBy="oidcInvitations", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL)
+    private List<OidcInvitation> oidcInvitations;
 
     public Long getId() {
         return id;
@@ -56,5 +65,21 @@ public class Invitation implements Serializable {
 
     public void setInvitedAt(LocalDateTime invitedAt) {
         this.invitedAt = invitedAt;
+    }
+
+    public List<GroupInvitation> getGroupInvitations() {
+        return groupInvitations;
+    }
+
+    public void setGroupInvitations(List<GroupInvitation> groupInvitations) {
+        this.groupInvitations = groupInvitations;
+    }
+
+    public List<OidcInvitation> getOidcInvitations() {
+        return oidcInvitations;
+    }
+
+    public void setOidcInvitations(List<OidcInvitation> oidcInvitations) {
+        this.oidcInvitations = oidcInvitations;
     }
 }

@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.boundary;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class AssignmentRequest implements Serializable {
     private IdObject group;
@@ -31,6 +32,15 @@ public class AssignmentRequest implements Serializable {
         this.realm = realm;
     }
 
+    @Override
+    public String toString() {
+        return "AssignementRequest {" +
+                "group = " + Objects.toString(group) + ", " +
+                "role = " + Objects.toString(role) + ", " +
+                "realm = " + Objects.toString(realm) +
+                "}";
+    }
+
     public static class IdObject implements Serializable {
         private Long id;
 
@@ -40,6 +50,11 @@ public class AssignmentRequest implements Serializable {
 
         public void setId(Long id) {
             this.id = id;
+        }
+
+        @Override
+        public String toString() {
+            return "{ id=" + id + " }";
         }
     }
 }

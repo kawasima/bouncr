@@ -14,6 +14,10 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+
+import static enkan.util.ThreadingUtils.some;
 
 public class PasswordPolicyService {
     private EntityManager em;
@@ -25,19 +29,19 @@ public class PasswordPolicyService {
     }
 
     protected Problem.Violation conformPolicy(String password) {
-        if (password.length() > policy.getMaxLength()) {
+        int passwordLen = some(password, p -> p.length()).orElse(0);
+        if (passwordLen > policy.getMaxLength()) {
             return new Problem.Violation("passwrod", "must be less than " + policy.getMaxLength() + " characters");
         }
 
-        if (password.length() < policy.getMinLength()) {
+        if (passwordLen < policy.getMinLength()) {
             return new Problem.Violation("passwrod", "must be greater than " + policy.getMinLength() + " characters");
         }
 
-        if (!policy.getPattern().matcher(password).matches()) {
-            return new Problem.Violation("password", "");
-        }
-
-        return null;
+        return Optional.ofNullable(policy.getPattern())
+                .filter(ptn -> !ptn.matcher(password).matches())
+                .map(ptn -> new Problem.Violation("password", ""))
+                .orElse(null);
     }
 
     public Problem.Violation validateCreatePassword(PasswordCredentialCreateRequest createRequest) {

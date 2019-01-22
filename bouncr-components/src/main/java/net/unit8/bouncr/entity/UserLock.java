@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class UserLock implements Serializable {
     @Id
     @OneToOne
+    @JoinColumn(name ="user_id")
     private User user;
 
     @JsonProperty("locked_at")

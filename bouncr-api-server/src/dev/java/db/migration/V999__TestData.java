@@ -1,19 +1,18 @@
 package db.migration;
 
-import enkan.Env;
-import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 
-public class V999__TestData implements JdbcMigration {
+public class V999__TestData extends BaseJavaMigration {
     private static final String INS_OIDC_PROVIDER =
             "INSERT INTO oidc_providers(name, api_key, api_secret, response_type, token_endpoint, authorization_endpoint, scope, token_endpoint_auth_method) "
                     + "VALUES(?,?,?,?,?,?,?,?)";
 
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
         /*
         try(PreparedStatement stmtOidcProvider = connection.prepareStatement(INS_OIDC_PROVIDER)) {
             stmtOidcProvider.setString(1, "Google");

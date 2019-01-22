@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.boundary;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.Length;
+import org.hibernate.validator.constraints.URL;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -16,16 +17,21 @@ public class ApplicationUpdateRequest implements Serializable {
     private String description;
 
     @JsonProperty("pass_to")
+    @NotBlank
+    @URL
+    @Length(max = 100)
     private String passTo;
 
     @JsonProperty("virtual_path")
+    @NotBlank
+    @Length(max = 100)
     private String virtualPath;
 
     @JsonProperty("top_page")
+    @NotBlank
+    @URL
+    @Length(max = 100)
     private String topPage;
-
-    @JsonProperty("write_protected")
-    private Boolean writeProtected;
 
     public String getName() {
         return name;
@@ -65,13 +71,5 @@ public class ApplicationUpdateRequest implements Serializable {
 
     public void setTopPage(String topPage) {
         this.topPage = topPage;
-    }
-
-    public Boolean getWriteProtected() {
-        return writeProtected;
-    }
-
-    public void setWriteProtected(Boolean writeProtected) {
-        this.writeProtected = writeProtected;
     }
 }

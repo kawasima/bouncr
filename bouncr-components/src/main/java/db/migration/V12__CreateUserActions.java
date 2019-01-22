@@ -1,7 +1,8 @@
 package db.migration;
 
 import net.unit8.bouncr.entity.ActionType;
-import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -12,9 +13,10 @@ import java.sql.Statement;
 
 import static org.jooq.impl.DSL.*;
 
-public class V12__CreateUserActions implements JdbcMigration {
+public class V12__CreateUserActions extends BaseJavaMigration {
     @Override
-    public void migrate(Connection connection) throws Exception {
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
         DSLContext create = DSL.using(connection);
         try(Statement stmt = connection.createStatement()) {
             String ddl = create.createTable(table("actions"))

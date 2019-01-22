@@ -26,7 +26,6 @@ import static kotowari.restful.DecisionPoint.*;
  * This resource has
  *
  * <ul>
- *   <li>GET: list of assignments</li>
  *   <li>POST: Create multiple assignments</li>
  *   <li>DELETE: Create multiple assignments</li>
  * </ul>

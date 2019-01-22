@@ -42,6 +42,20 @@ public class User implements Serializable, FetchGroupTracker {
     @JsonIgnore
     private List<UserProfileValue> userProfileValues;
 
+    @OneToOne(mappedBy = "user", cascade = { CascadeType.ALL }, fetch = FetchType.LAZY)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("lock")
+    private UserLock userLock;
+
+
+    @OneToOne(mappedBy = "user", cascade = { CascadeType.ALL }, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private PasswordCredential passwordCredential;
+
+    @OneToOne(mappedBy = "user", cascade = { CascadeType.ALL }, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private OtpKey otpKey;
+
     public Long getId() {
         return id;
     }
@@ -89,6 +103,30 @@ public class User implements Serializable, FetchGroupTracker {
                         u -> u.getUserProfileField().getJsonName(),
                         u -> u.getValue()
                 ));
+    }
+
+    public UserLock getUserLock() {
+        return userLock;
+    }
+
+    public void setUserLock(UserLock userLock) {
+        this.userLock = userLock;
+    }
+
+    public OtpKey getOtpKey() {
+        return otpKey;
+    }
+
+    public void setOtpKey(OtpKey otpKey) {
+        this.otpKey = otpKey;
+    }
+
+    public PasswordCredential getPasswordCredential() {
+        return passwordCredential;
+    }
+
+    public void setPasswordCredential(PasswordCredential passwordCredential) {
+        this.passwordCredential = passwordCredential;
     }
 
     @Override

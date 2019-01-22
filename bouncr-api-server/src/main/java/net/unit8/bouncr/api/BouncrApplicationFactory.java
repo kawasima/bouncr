@@ -60,12 +60,15 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/role/:name").to(RoleResource.class);
                 ar.all("/permissions").to(PermissionResource.class);
                 ar.all("/permission/:name").to(PermissionResource.class);
+                ar.all("/invitations").to(InvitationsResource.class);
+
                 ar.all("/sign_in").to(PasswordSignInResource.class);
+                ar.all("/sign_up").to(SignUpResource.class);
                 ar.all("/password_credential").to(PasswordCredentialResource.class);
                 ar.all("/otp_key").to(OtpKeyResource.class);
                 ar.all("/actions").to(UserActionsResource.class);
                 ar.all("/sessions").to(UserSessionsResource.class);
-                ar.all("/session/:id").to(UserSessionsResource.class);
+                ar.all("/session/:token").to(UserSessionResource.class);
             });
 
         }).compile();
