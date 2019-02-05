@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<h1>Confirm your email address on Bouncr</h1>
+
+<p th:inline="text">
+    Hello! We just need to verify that [[${email}]] is your email address.
+</p>
+
+<a href="http://localhost:3000/bouncr/api/user_profile_verification"
+   th:href="|${baseUrl}/user_profile_verification?code=${code}|"
+   style="min-width:196px;border-top:13px solid;border-bottom:13px solid;border-right:24px solid;border-left:24px solid;border-color:#2ea664;border-radius:4px;background-color:#2ea664;color:#ffffff;font-size:18px;line-height:18px;word-break:break-word;display:inline-block;text-align:center;font-weight:900;text-decoration:none!important">Confirm Email Address</a>
+</body>
+</html>

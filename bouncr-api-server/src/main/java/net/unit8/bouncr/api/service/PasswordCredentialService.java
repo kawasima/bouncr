@@ -32,29 +32,21 @@ public class PasswordCredentialService {
         em.persist(passwordCredential);
     }
 
-    /*
-    public ConstraintViolation<> validateBasedOnPasswordPolicy(String password) {
-        int passwordLen = some(password, p -> p.length()).orElse(0);
-        int maxLen = config.getPasswordPolicy().getMaxLength();
-        int minLen = config.getPasswordPolicy().getMinLength();
-        MessageResource messageResource = config.getMessageResource();
-        if (passwordLen > maxLen) {
-            form.getErrors().put(passwordPropertyName,
-                    messageResource.renderMessage(Locale.getDefault(), "error.passwordLength", minLen, maxLen));
+    public PasswordCredential initializePassword(User user) {
+        PasswordCredential passwordCredential = em.find(PasswordCredential.class, user);
+        if (passwordCredential != null) {
+            em.remove(passwordCredential);
         }
+        String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
+        String password = RandomUtils.generateRandomString(8, config.getSecureRandom());
 
-        if (passwordLen < minLen) {
-            form.getErrors().put(passwordPropertyName,
-                    messageResource.renderMessage(Locale.getDefault(), "error.passwordLength", minLen, maxLen));
-        }
-
-        Optional.ofNullable(config.getPasswordPolicy().getPattern()).ifPresent(p -> {
-            if (!p.matcher(password).matches()) {
-                form.getErrors().put(passwordPropertyName,
-                        messageResource.renderMessage(Locale.getDefault(), "error.mismatchPasswordPattern"));
-            }
-        });
+        passwordCredential = builder(new PasswordCredential())
+                .set(PasswordCredential::setUser, user)
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                .set(PasswordCredential::setSalt, salt)
+                .set(PasswordCredential::setInitial, true)
+                .build();
+        em.persist(passwordCredential);
+        return passwordCredential;
     }
-    */
-
 }

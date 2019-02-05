@@ -1,5 +1,6 @@
 package db.migration;
 
+import enkan.Env;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
@@ -259,8 +260,8 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             stmtInsMembership.executeUpdate();
 
             stmtInsApplication.setString(1, "BOUNCR");
-            stmtInsApplication.setString(2, "Bouncer application");
-            stmtInsApplication.setString(3, "http://api:3005/bouncr/api");
+            stmtInsApplication.setString(2, "Bouncr API");
+            stmtInsApplication.setString(3, Env.getString("API_BACKEND_URL", "http://api:3005/bouncr/api"));
             stmtInsApplication.setString(4, "/bouncr/api");
             stmtInsApplication.setString(5, "/bouncr/api");
             stmtInsApplication.setBoolean(6, true);

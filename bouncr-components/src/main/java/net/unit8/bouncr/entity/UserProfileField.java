@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
+import java.util.Optional;
 
 @Entity
 @Table(name = "user_profile_fields")
@@ -123,5 +125,15 @@ public class UserProfileField implements Serializable {
 
     public void setPosition(Integer position) {
         this.position = position;
+    }
+
+    @Override
+    public boolean equals(Object another) {
+        return Optional.ofNullable(another)
+                .filter(Objects::nonNull)
+                .filter(UserProfileField.class::isInstance)
+                .map(UserProfileField.class::cast)
+                .map(upf -> upf.getId() == id)
+                .orElse(false);
     }
 }

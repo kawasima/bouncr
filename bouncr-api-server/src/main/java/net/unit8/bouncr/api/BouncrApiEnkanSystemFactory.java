@@ -59,6 +59,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileValue.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileVerification.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, PasswordCredential.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordResetChallenge.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserSession.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserAction.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, OtpKey.class)

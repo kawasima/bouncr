@@ -27,11 +27,11 @@ public class Invitation implements Serializable {
     @Column(name = "invited_at")
     private LocalDateTime invitedAt;
 
-    @OneToMany(mappedBy="groupInvitations", fetch = FetchType.LAZY,
+    @OneToMany(mappedBy="invitation", fetch = FetchType.LAZY,
             cascade = CascadeType.ALL)
     private List<GroupInvitation> groupInvitations;
 
-    @OneToMany(mappedBy="oidcInvitations", fetch = FetchType.LAZY,
+    @OneToMany(mappedBy="invitation", fetch = FetchType.LAZY,
             cascade = CascadeType.ALL)
     private List<OidcInvitation> oidcInvitations;
 

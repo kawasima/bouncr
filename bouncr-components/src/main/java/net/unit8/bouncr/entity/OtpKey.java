@@ -1,5 +1,9 @@
 package net.unit8.bouncr.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import net.unit8.bouncr.util.Base32Utils;
+
 import javax.persistence.*;
 import java.io.Serializable;
 
@@ -9,8 +13,10 @@ public class OtpKey implements Serializable {
     @Id
     @OneToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
+    @JsonIgnore
     @Column(name = "otp_key")
     private byte[] key;
 
@@ -28,5 +34,10 @@ public class OtpKey implements Serializable {
 
     public void setKey(byte[] key) {
         this.key = key;
+    }
+
+    @JsonProperty("key")
+    public String getEncodedKey() {
+        return Base32Utils.encode(key);
     }
 }

@@ -21,7 +21,7 @@ import static kotowari.restful.DecisionPoint.AUTHORIZED;
 import static kotowari.restful.DecisionPoint.DELETE;
 import static kotowari.restful.DecisionPoint.PUT;
 
-@AllowedMethods({"GET", "PUT", "DELETE"})
+@AllowedMethods({"PUT", "DELETE"})
 public class OtpKeyResource {
     @Inject
     private BouncrConfiguration config;

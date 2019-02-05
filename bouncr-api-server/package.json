@@ -1,0 +1,19 @@
+{
+  "name": "bouncr-api-server",
+  "version": "0.2.0",
+  "description": "Bouncr API server",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "redoc-cli": "redoc-cli"
+  },
+  "keywords": [
+    "bouncr"
+  ],
+  "author": "kawasima",
+  "license": "EPL-2.0",
+  "devDependencies": {
+    "redoc": "^2.0.0-rc.2",
+    "redoc-cli": "^0.7.0"
+  }
+}

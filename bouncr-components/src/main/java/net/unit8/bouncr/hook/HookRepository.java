@@ -5,8 +5,6 @@ import net.unit8.bouncr.component.config.HookPoint;
 
 import java.util.Optional;
 
-import static enkan.util.ThreadingUtils.some;
-
 public class HookRepository {
     private Multimap<HookPoint, Hook> hooks = Multimap.empty();
 

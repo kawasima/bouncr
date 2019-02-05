@@ -10,7 +10,12 @@ servers:
 - url: http://localhost:3000/bouncr/api
 paths:
   /sign_in:
+    description: |-
+      Sign in by an account and an password.
     post:
+      tags:
+        - Sign In
+      summary: Sign in
       requestBody:
         content:
           application/json:
@@ -23,13 +28,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserSession'
-  /me/password_credential:
-
-
   /users:
+    description: |-
+      Find users and create a user.
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
     get:
+      tags:
+        - User
+        - Administration
       summary: Fetch users
       parameters:
       - in: query
@@ -50,6 +57,9 @@ paths:
     post:
       summary: Create a user
       operationId: craeteUser
+      tags:
+        - User
+        - Administration
       requestBody:
         content:
           application/json:
@@ -73,6 +83,10 @@ paths:
       example: user1
     get:
       summary: Fetch a user by a given account
+      operationId: fetchUser
+      tags:
+        - User
+        - Administration
       responses:
         200:
           description: ???
@@ -81,6 +95,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
     put:
+      summary: Update a user
+      operationId: updateUser
+      tags:
+        - User
+        - Administration
       responses:
         204:
           description: Updated a user
@@ -95,6 +114,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConstraintsProblem'
     delete:
+      summary: Delete a user
+      operationId: deleteUser
+      tags:
+        - User
+        - Administration
       responses:
         204:
           description: Delete a user
@@ -107,6 +131,10 @@ paths:
     - $ref: '#/components/parameters/BouncrCredential'
     get:
       summary: Find groups
+      operationId: listGroups
+      tags:
+        - Group
+        - Administration
       responses:
         200:
           description: ???
@@ -116,6 +144,10 @@ paths:
                 $ref: '#/components/schemas/Groups'
     post:
       summary: Create a group
+      operationId: createGroup
+      tags:
+        - Group
+        - Administration
       requestBody:
         content:
           application/json:
@@ -137,6 +169,9 @@ paths:
     get:
       summary: Find a group
       operationId: findGroup
+      tags:
+        - Group
+        - Administration
       responses:
         200:
           description: Find a group
@@ -153,6 +188,9 @@ paths:
     put:
       summary: Update a group
       operationId: updateGroup
+      tags:
+        - Group
+        - Administration
       requestBody:
         content:
           application/json:
@@ -164,6 +202,9 @@ paths:
     delete:
       summary: Delete a group
       operationId: deleteGroup
+      tags:
+        - Group
+        - Administration
       responses:
         204:
           description: Deleting a group is successful
@@ -171,7 +212,11 @@ paths:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
     get:
+      summary: Find groups
       operationId: findApplications
+      tags:
+        - Application
+        - Administration
       responses:
         200:
           content:
@@ -179,7 +224,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Applications'
     post:
+      summary: Create an application
       operationId: createApplication
+      tags:
+        - Application
+        - Administration
       requestBody:
         required: true
         content:
@@ -205,7 +254,11 @@ paths:
       schema:
         type: string
     get:
+      summary: Find an application
       operationId: findApplication
+      tags:
+        - Application
+        - Administration
       responses:
         200:
           content:
@@ -215,17 +268,26 @@ paths:
         404:
           description: Application is not found by the given name
     put:
+      summary: Update an Application
       operationId: updateApplication
+      tags:
+        - Application
+        - Administration
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ApplicationUpdateRequest'
+        required: true
       responses:
         204:
           description: Updating the application is successful
     delete:
+      summary: Delete an application
       operationId: deleteApplication
+      tags:
+        - Application
+        - Administration
       responses:
         204:
           description: Deleting the application is successful
@@ -238,7 +300,11 @@ paths:
       schema:
         type: string
     get:
+      summary: Find realms
       operationId: findRealms
+      tags:
+        - Realm
+        - Administration
       responses:
         200:
           content:
@@ -246,7 +312,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Realms'
     post:
+      summary: Create a realm
       operationId: createRealm
+      tags:
+        - Realm
+        - Administration
       requestBody:
         required: true
         content:
@@ -274,7 +344,11 @@ paths:
       schema:
         type: string
     get:
+      summary: Find an realm
       operationId: findRealm
+      tags:
+        - Realm
+        - Administration
       responses:
         200:
           content:
@@ -284,7 +358,11 @@ paths:
         404:
           description: The realm is not found by the given name
     put:
+      summary: Update a realm
       operationId: updateRealm
+      tags:
+        - Realm
+        - Administration
       requestBody:
         required: true
         content:
@@ -295,7 +373,11 @@ paths:
         204:
           description: Updating the realm is successful
     delete:
+      summary: Delete an realm
       operationId: deleteRealm
+      tags:
+        - Realm
+        - Administration
       responses:
         204:
           description: Deleting the realm is successful
@@ -303,9 +385,36 @@ paths:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
     get:
+      summary: Find roles
       operationId: findRoles
+      tags:
+        - Role
+        - Administration
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Roles'
     post:
+      summary: Create a role
       operationId: createRole
+      tags:
+        - Role
+        - Administration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+      responses:
+        201:
+          description: Role is created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
   /role/{name}:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -315,16 +424,32 @@ paths:
       schema:
         type: string
     get:
+      summary: Find a role
       operationId: findRole
+      tags:
+        - Role
+        - Administration
     put:
+      summary: Update a role
       operationId: updateRole
+      tags:
+      - Role
+      - Administration
     delete:
+      summary: Delete a role
       operationId: deleteRole
+      tags:
+      - Role
+      - Administration
   /permissions:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
     get:
+      summary: Find permissions
       operationId: findPermissions
+      tags:
+        - Permission
+        - Administration
       responses:
         200:
           content:
@@ -332,7 +457,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Permissions'
     post:
+      summary: Create a permission
       operationId: createPermission
+      tags:
+        - Permission
+        - Administration
       requestBody:
         content:
           application/json:
@@ -350,21 +479,48 @@ paths:
       schema:
         type: string
     get:
+      summary: Find a permission
       operationId: findPermission
+      tags:
+        - Permission
+        - Administration
       responses:
         200:
+          description: Fetching a permission is successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Permission'
     put:
+      summary: Update a permission
       operationId: updatePermission
+      tags:
+        - Permission
+        - Administration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionUpdateRequest'
     delete:
+      summary: Delete a permission
       operationId: deletePermission
+      tags:
+        - Permission
+        - Administration
+      responses:
+        204:
+          description: Deleteing a permission is successful
   /assignments:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
     post:
+      summary: Assignments
+      operationId: assignments
+      tags:
+        - Assignment
+        - Administration
       requestBody:
         required: true
         content:
@@ -379,6 +535,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Assignments'
     delete:
+      summary: Unassignments
+      operationId: unassignments
+      tags:
+        - Asignment
+        - Administration
       requestBody:
         required: true
         content:
@@ -388,6 +549,171 @@ paths:
       responses:
         204:
           description: Deleting assignments is successful
+  /invitations:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    post:
+      summary: Create a invitation
+      operationId: createInvitation
+      tags:
+        - Invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationCreateRequest'
+  /oidc_applications:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      summary: Find OIDC applications
+      operationId: findOidcApplications
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcApplications'
+  /sign_up:
+    description: Sign up
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpCreateRequest'
+  /user_profile_verification:
+    description: Verify an item of user profiles
+    delete:
+      parameters:
+        - name: code
+          type: string
+          in: query
+      responses:
+        204:
+          description: Verificaiton of the user profile value is successful
+  /password_credential:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    post:
+      summary: Create a password credential
+      operationId: createPasswordCredential
+      tags:
+        - Password Credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordCredentialCreateRequest'
+    put:
+      summary: Update a password credential
+      operationId: updatePasswordCredential
+      tags:
+        - Password Credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordCredentialCreateRequest'
+    delete:
+      summary: Delete a password credential
+      operationId: deletePasswordCredential
+      tags:
+        - Password Credential
+      responses:
+        204:
+          description: Deleting a password credential is successful
+  /password_credential/reset_code:
+    post:
+      summary: Create a code for reset password
+      operationId: createPassowrdResetCode
+      tags:
+        - Password Reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetChallengeRequest'
+  /password_credential/reset:
+    put:
+      summary: Reset a password
+      operationId: resetPassowrd
+      tags:
+        - Password Reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+  /otp_key:
+    description: |-
+      Find and publish a OTP (One time password) key.
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    put:
+      summary: Update a OTP key
+      operationId: updateOtpKey
+      tags:
+        - OTP Key
+      responses:
+        201:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpKey'
+    delete:
+      summary: Delete a OTP key
+      operationId: deleteOtpKey
+      tags:
+        - OTP Key
+      responses:
+        204:
+          description: Deleting a OTP key is successful
+  /actions:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      summary: Find user action histories
+      operationId: findActions
+      tags:
+        - Action History
+      responses:
+        200:
+          content:
+            application/json:
+              $ref: '#/components/schemas/UserActions'
+  /sessions:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      summary: Find user sessions
+      operationId: findUserSessions
+      tags:
+        - User Session
+      responses:
+        200:
+          description: Finging user sessions is successful
+          content:
+            application/json:
+              $ref: '#/components/schemas/UserSessions'
+  /session/{token}:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    delete:
+      summary: Delete a user session
+      description: Deleting a user session means signing out.
+      operationId: deleteUserSession
+      tags:
+        - User session
+      responses:
+        204:
+          description: Deleting a user session is successful
 components:
   schemas:
     PasswordSignInRequest:
@@ -401,17 +727,6 @@ components:
       example:
         account: user1
         password: user1
-    UserSession:
-      type: object
-      properties:
-        id:
-          type: number
-          format: int64
-        token:
-          type: string
-      example:
-        id: 1
-        token: 000000-0000-0000-000000
     Users:
       type: array
       x-json-spec: 'Users'
@@ -553,6 +868,94 @@ components:
             properties:
               id:
                 type: integer
+    UserActions:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserAction'
+    UserAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        action_type:
+          type: string
+        actor:
+          type: string
+        actor_ip:
+          type: string
+        options:
+          type: string
+        created_at:
+          type: string
+          format: 'date-time'
+    UserSessions:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserSession'
+    UserSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        token:
+          type: string
+        user_agent:
+          type: string
+        remote_address:
+          type: string
+        created_at:
+          type: string
+          format: 'date-time'
+    OidcApplications:
+      type: array
+      items:
+        $ref: '#/components/schemas/OidcApplication'
+    OidcApplication:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        home_url:
+          type: string
+        callback_url:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            schema:
+              type: string
+    OidcProviders:
+      type: array
+      items:
+        $ref: '#/components/schemas/OidcProvider'
+    OidcProvider:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        api_key:
+          type: string
+        api_secret:
+          type: string
+        scope:
+          type: string
+        response_type:
+          type: string
+        authorization_endpoint:
+          type: string
+        token_endpoint:
+          type: string
+    OtpKey:
+      type: object
+      properties:
+        key:
+          type: string
     UserCreateRequest:
       type: object
       x-json-spec: UserCreateRequest
@@ -656,6 +1059,128 @@ components:
           type: string
         description:
           type: string
+    OidcApplicationCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        home_url:
+          type: string
+        callback_url:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            schema:
+              type: string
+    OidcApplicationUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        home_url:
+          type: string
+        callback_url:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            schema:
+              type: string
+    OidcProviderCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        api_key:
+          type: string
+        api_secret:
+          type: string
+        scope:
+          type: string
+        response_type:
+          type: string
+        authorization_endpoint:
+          type: string
+        token_endpoint:
+          type: string
+    OidcProviderUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        api_key:
+          type: string
+        api_secret:
+          type: string
+        scope:
+          type: string
+        response_type:
+          type: string
+        authorization_endpoint:
+          type: string
+        token_endpoint:
+          type: string
+    InvitationCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        groups:
+          type: array
+          items:
+            schema:
+              type: object
+              properties:
+                id: integer
+    SignUpCreateRequest:
+      type: object
+      properties:
+        account:
+          type: string
+        code:
+          type: string
+      additionalProperties: true
+    PasswordCredentialCreateRequest:
+      type: object
+      properties:
+        account:
+          type: string
+        password:
+          type: string
+          format: password
+    PasswordCredentialUpdateRequest:
+      type: object
+      properties:
+        account:
+          type: string
+        old_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+    PasswordResetChallengeRequest:
+      type: object
+      properties:
+        account:
+          type: string
+          description: An account for reset a password
+    PasswordResetRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: An given code for reset a password
+        password:
+          type: string
+          format: password
+          required: false
     ConstraintsProblem:
       type: object
       properties:
@@ -686,6 +1211,7 @@ components:
   parameters:
     BouncrCredential:
       name: X-Bouncr-Credential
+      description: Bouncr credential
       in: header
       schema:
         type: string

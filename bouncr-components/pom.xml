@@ -11,14 +11,15 @@
     </parent>
 
     <artifactId>bouncr-components</artifactId>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.7.0-SNAPSHOT</enkan.version>
-        <kotowari-restful.version>0.1.0-SNAPSHOT</kotowari-restful.version>
+        <enkan.version>0.7.0</enkan.version>
+        <kotowari-restful.version>0.1.0</kotowari-restful.version>
     </properties>
 
     <repositories>
@@ -43,23 +44,15 @@
     <dependencies>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>kotowari-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-eclipselink</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-HikariCP</artifactId>
+            <artifactId>enkan-component-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-flyway</artifactId>
+            <artifactId>enkan-component-eclipselink</artifactId>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -68,15 +61,6 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-bouncr</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-ldaptive</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -91,7 +75,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
         </dependency>
-
         <dependency>
             <groupId>net.jodah</groupId>
             <artifactId>failsafe</artifactId>
@@ -105,22 +88,6 @@
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
         </dependency>
 
         <dependency>

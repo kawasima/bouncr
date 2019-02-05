@@ -22,6 +22,7 @@ import net.unit8.bouncr.api.resource.OtpKeyResource;
 import net.unit8.bouncr.api.resource.PasswordCredentialResource;
 import net.unit8.bouncr.api.resource.UserActionsResource;
 import net.unit8.bouncr.api.resource.UserSessionsResource;
+import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.util.DigestUtils;
 
 import java.security.KeyPair;
@@ -63,7 +64,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/invitations").to(InvitationsResource.class);
 
                 ar.all("/sign_in").to(PasswordSignInResource.class);
+                ar.all("/sign_in/oidc/:id").to(OidcSignInResource.class);
                 ar.all("/sign_up").to(SignUpResource.class);
+                ar.all("/user_profile_verification").to(UserProfileVerificationResource.class);
+                ar.all("/password_credential/reset_code").to(PasswordResetChallengeResource.class);
+                ar.all("/password_credential/reset").to(PasswordResetResource.class);
                 ar.all("/password_credential").to(PasswordCredentialResource.class);
                 ar.all("/otp_key").to(OtpKeyResource.class);
                 ar.all("/actions").to(UserActionsResource.class);

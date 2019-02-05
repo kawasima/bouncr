@@ -7,14 +7,13 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import static org.jooq.impl.DSL.*;
 
 public class V10__CreatePasswordCredentials extends BaseJavaMigration {
-    @Override
-    public void migrate(Context context) throws Exception {
-        Connection connection = context.getConnection();
+    private void createPasswordCredentials(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("password_credentials"))
@@ -29,7 +28,13 @@ public class V10__CreatePasswordCredentials extends BaseJavaMigration {
                     ).getSQL();
             stmt.execute(ddl);
 
-            ddl = create.createTable(table("otp_keys"))
+        }
+    }
+
+    private void createOtpKeys(Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            DSLContext create = DSL.using(connection);
+            String ddl = create.createTable(table("otp_keys"))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))//
                     .column(field("otp_key", SQLDataType.BINARY(20).nullable(false)))
                     .constraints(
@@ -38,6 +43,26 @@ public class V10__CreatePasswordCredentials extends BaseJavaMigration {
                     ).getSQL();
             stmt.execute(ddl);
         }
+    }
 
+    private void createPasswordResetChallenges(Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            DSLContext create = DSL.using(connection);
+            String ddl = create.createTable(table("password_reset_challenges"))
+                    .column(field("id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("code", SQLDataType.VARCHAR(64).nullable(false)))
+                    .column(field("expires_at", SQLDataType.TIMESTAMP.nullable(false)))
+                    .getSQL();
+            stmt.execute(ddl);
+        }
+    }
+
+    @Override
+    public void migrate(Context context) throws Exception {
+        Connection connection = context.getConnection();
+        createPasswordCredentials(connection);
+        createOtpKeys(connection);
+        createPasswordResetChallenges(connection);
     }
 }

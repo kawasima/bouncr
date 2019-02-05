@@ -5,10 +5,12 @@ import javax.persistence.*;
 @Entity
 @Table(name ="oidc_users")
 public class OidcUser {
+    @Id
     @ManyToOne
     @JoinColumn(name = "oidc_provider_id")
     private OidcProvider oidcProvider;
 
+    @Id
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

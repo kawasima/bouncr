@@ -10,6 +10,7 @@
         <version>0.2.0-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
+    <packaging>jar</packaging>
     <artifactId>bouncr-api-server</artifactId>
 
     <repositories>
@@ -38,6 +39,17 @@
                         <image>bouncr/bouncr-api-server</image>
                     </to>
                 </configuration>
+                <!--
+                <executions>
+                    <execution>
+                        <id>docker-build</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                -->
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -91,10 +103,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
             <artifactId>jackson-jaxrs-json-provider</artifactId>
         </dependency>
@@ -137,17 +145,6 @@
             <artifactId>jooq</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>net.unit8.apistandard</groupId>
             <artifactId>parameter-parser</artifactId>
