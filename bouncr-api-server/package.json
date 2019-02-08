@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "redoc-cli": "redoc-cli",
+    "redoc-cli": "redoc-cli serve src/main/resources/bouncr-spec.yaml -p 8081",
     "mock:server": "json-spec-server --port=8080 --openapi=src/main/resources/bouncr-spec.yaml --jsonspec=src/main/resources/bouncr-spec.js",
     "mock:client": "json-spec-client --baseUrl=http://localhost:3005/bouncr/api --openapi=src/main/resources/bouncr-spec.yaml"
   },
