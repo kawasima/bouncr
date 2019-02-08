@@ -24,6 +24,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.security.Security;
 import java.time.Duration;
+import java.util.Objects;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
@@ -75,7 +76,9 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "flake", new Flake(),
                 "jwt", new JsonWebToken(),
                 "realmCache", new RealmCache(),
-                "flyway", new FlywayMigration(),
+                "flyway", builder(new FlywayMigration())
+                        .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
+                        .build(),
                 "metrics", new MetricsComponent(),
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),

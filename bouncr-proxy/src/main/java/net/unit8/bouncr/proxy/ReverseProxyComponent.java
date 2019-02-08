@@ -29,6 +29,8 @@ import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.proxy.cert.ReloadableTrustManager;
 import net.unit8.bouncr.sign.JsonWebToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 
@@ -58,6 +60,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
  * @author kawasima
  */
 public class ReverseProxyComponent extends WebServerComponent<ReverseProxyComponent> {
+    private static final Logger LOG = LoggerFactory.getLogger(ReverseProxyComponent.class);
+
     private static IoCallback callback = new IoCallback() {
         @Override
         public void onComplete(HttpServerExchange exchange, Sender sender) {
@@ -152,6 +156,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                     }
                     server = builder.build();
                     server.start();
+                    LOG.info("start server {}:{}", options.getString("host"), options.getInt("port"));
                 }
 
             }

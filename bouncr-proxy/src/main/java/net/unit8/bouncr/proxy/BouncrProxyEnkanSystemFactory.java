@@ -43,7 +43,6 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                                 .build())
                         .build(),
                 "jpa", builder(new EclipseLinkEntityManagerProvider())
-                        //                        .set(EclipseLinkEntityManagerProvider::setJpaProperties, jpaProperties)
                         .set(EclipseLinkEntityManagerProvider::registerClass, Application.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, Realm.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, User.class)
@@ -54,6 +53,19 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                         .set(EclipseLinkEntityManagerProvider::registerClass, Assignment.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileField.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileValue.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileVerification.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordCredential.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordResetChallenge.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, UserSession.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, UserAction.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, OtpKey.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, UserLock.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, Invitation.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, GroupInvitation.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcInvitation.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcProvider.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcUser.class)
+                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcApplication.class)
                         .build(),
                 "jackson", new JacksonBeansConverter(),
                 "storeprovider", new StoreProvider(),
@@ -71,6 +83,7 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                         "username", Env.get("JDBC_USER"),
                         "password", Env.get("JDBC_PASSWORD"))),
                 "http", builder(new ReverseProxyComponent())
+                        .set(ReverseProxyComponent::setHost, Env.getString("HOST", "0.0.0.0"))
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
                         .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3002))
                         .set(ReverseProxyComponent::setSsl, Env.get("SSL_PORT") != null)

@@ -687,7 +687,8 @@ paths:
         200:
           content:
             application/json:
-              $ref: '#/components/schemas/UserActions'
+              schema:
+                $ref: '#/components/schemas/UserActions'
   /sessions:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -701,7 +702,8 @@ paths:
           description: Finging user sessions is successful
           content:
             application/json:
-              $ref: '#/components/schemas/UserSessions'
+              schema:
+                $ref: '#/components/schemas/UserSessions'
   /session/{token}:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -958,14 +960,12 @@ components:
           type: string
     UserCreateRequest:
       type: object
-      x-json-spec: UserCreateRequest
       properties:
         account:
           type: string
       additionalProperties: true
     UserUpdateRequest:
       type: object
-      x-json-spec: UserUpdateRequest
       additionalProperties: true
     GroupCreateRequest:
       type: object

@@ -22,6 +22,8 @@ import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -33,12 +35,16 @@ import java.nio.channels.Channel;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import static enkan.util.ThreadingUtils.some;
+
 /**
  * Proxy Client for Bouncr multiple applications.
  *
  * @author kawasima
  */
 public class MultiAppProxyClient implements ProxyClient {
+    private static final Logger LOG = LoggerFactory.getLogger(MultiAppProxyClient.class);
+
     private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {
     };
     private final AttachmentKey<ClientConnection> clientAttachmentKey = AttachmentKey.create(ClientConnection.class);
@@ -116,6 +122,7 @@ public class MultiAppProxyClient implements ProxyClient {
 
         try {
             URI uri = application.getUriToPass();
+            LOG.info("PASS: {}", uri);
             client.connect(new ConnectNotifier(callback, exchange),
                     new URI(uri.getScheme(), /*userInfo*/null, uri.getHost(), uri.getPort(),
                             /*path*/null, /*query*/null, /*fragment*/null),

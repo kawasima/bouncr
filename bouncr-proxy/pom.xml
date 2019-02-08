@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>bouncr-proxy</artifactId>
+    <packaging>jar</packaging>
 
     <build>
         <plugins>
