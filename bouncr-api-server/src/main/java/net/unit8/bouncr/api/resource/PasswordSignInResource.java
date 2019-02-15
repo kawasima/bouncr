@@ -16,6 +16,8 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.util.PasswordUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
@@ -43,6 +45,8 @@ import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
 
 @AllowedMethods("POST")
 public class PasswordSignInResource {
+    private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResource.class);
+
     @Inject
     private StoreProvider storeProvider;
 
@@ -178,7 +182,7 @@ public class PasswordSignInResource {
         profileMap.put("uid", Long.toString(user.getId()));
         profileMap.put("sub", user.getAccount());
         profileMap.put("permissionsByRealm", getPermissionsByRealm(user, em));
-
+        LOG.debug("signIn profileMap = {}", profileMap);
         storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
         context.putValue(userSession);
         return userSession;
@@ -190,7 +194,7 @@ public class PasswordSignInResource {
     }
 
 
-    protected Map<Long, Set<String>> getPermissionsByRealm(User user, EntityManager em) {
+    protected Map<String, Set<String>> getPermissionsByRealm(User user, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
         Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);
@@ -214,7 +218,7 @@ public class PasswordSignInResource {
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(
-                        e -> e.getKey().getId(),
+                        e -> e.getKey().getId().toString(),
                         e -> e.getValue().stream()
                                 .flatMap(v -> v.getRole().getPermissions().stream())
                                 .map(p -> p.getName())

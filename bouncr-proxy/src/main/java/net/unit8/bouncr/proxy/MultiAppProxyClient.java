@@ -2,9 +2,7 @@ package net.unit8.bouncr.proxy;
 
 import enkan.exception.MisconfigurationException;
 import enkan.middleware.session.KeyValueStore;
-import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.BeanBuilder;
-import enkan.util.ThreadingUtils;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
@@ -34,8 +32,6 @@ import java.net.URISyntaxException;
 import java.nio.channels.Channel;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import static enkan.util.ThreadingUtils.some;
 
 /**
  * Proxy Client for Bouncr multiple applications.
@@ -88,10 +84,11 @@ public class MultiAppProxyClient implements ProxyClient {
                 Optional<HashMap<String, Object>> userCache = authenticate(token);
 
                 userCache.ifPresent(u -> {
-                    Set<String> permissions = ((Map<Long, Set<String>>)u.remove("permissionsByRealm")).get(realm.getId());
+                    Map<String, List<String>> permissionsByRealm = (Map<String, List<String>>) u.remove("permissionsByRealm");
+                    List<String> permissions = permissionsByRealm.get(realm.getId().toString());
 
                     Map<String, Object> body = new HashMap<>(u);
-                    body.put("permissions", Optional.ofNullable(permissions).orElse(Collections.EMPTY_SET));
+                    body.put("permissions", Optional.ofNullable(permissions).orElse(Collections.emptyList()));
                     exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
                             jwt.sign(body, jwtHeader, (byte[]) null));
                 });
@@ -122,14 +119,14 @@ public class MultiAppProxyClient implements ProxyClient {
 
         try {
             URI uri = application.getUriToPass();
-            LOG.info("PASS: {}", uri);
+            LOG.debug("PASS: {}", uri);
             client.connect(new ConnectNotifier(callback, exchange),
                     new URI(uri.getScheme(), /*userInfo*/null, uri.getHost(), uri.getPort(),
                             /*path*/null, /*query*/null, /*fragment*/null),
                     exchange.getIoThread(),
                     exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
         } catch (URISyntaxException e) {
-            throw new MisconfigurationException("", application.getUriToPass(), e);
+            throw new MisconfigurationException("bouncr.proxy.WRONG_URI", application.getUriToPass(), e);
         }
     }
 

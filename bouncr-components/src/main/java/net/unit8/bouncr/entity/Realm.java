@@ -94,4 +94,18 @@ public class Realm implements Serializable {
     public void setPathPattern(Pattern pathPattern) {
         this.pathPattern = pathPattern;
     }
+
+    @Override
+    public String toString() {
+        return "Realm{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", url='" + url + '\'' +
+                ", description='" + description + '\'' +
+                ", application=" + application +
+                ", writeProtected=" + writeProtected +
+                ", assignments=" + assignments +
+                ", pathPattern=" + pathPattern +
+                '}';
+    }
 }
