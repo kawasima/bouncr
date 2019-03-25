@@ -30,7 +30,7 @@ public class V6__CreateRealms extends BaseJavaMigration {
                     .constraints(
                             constraint().primaryKey(field("realm_id")),
                             constraint().unique(field("name")),
-                            constraint().foreignKey(field("application_id")).references(table("applications"), field("application_id"))
+                            constraint().foreignKey(field("application_id")).references(table("applications"), field("application_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

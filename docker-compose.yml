@@ -17,6 +17,10 @@ services:
 
   proxy:
     image: bouncr/bouncr-proxy
+    depends_on:
+      - db
+      - kvs
+      - api
     environment:
       PORT: "3000"
       JDBC_URL: jdbc:postgresql://db:5432/bouncr
@@ -25,20 +29,19 @@ services:
       JAVA_OPTS: -Dhazelcast.member.address=kvs
     ports:
       - "3000:3000"
-    links:
-      - kvs
-      - db
 
   api:
     image: bouncr/bouncr-api-server
+    depends_on:
+      - db
+      - kvs
     environment:
       PORT: "3005"
       JDBC_URL: jdbc:postgresql://db:5432/bouncr
       JDBC_USER: bouncr
       JDBC_PASSWORD: bouncr
       JAVA_OPTS: -Dhazelcast.member.address=kvs
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
       - "3005:3005"
-    links:
-      - kvs
-      - db
+      - "5005:5005"

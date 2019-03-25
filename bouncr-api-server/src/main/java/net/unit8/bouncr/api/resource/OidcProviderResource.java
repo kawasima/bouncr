@@ -46,21 +46,21 @@ public class OidcProviderResource {
     @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_OIDC_PROVIDERS"))
+                .filter(p -> p.hasPermission("oidc_provider:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_OIDC_PROVIDER"))
+                .filter(p -> p.hasPermission("oidc_provider:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_OIDC_PROVIDER"))
+                .filter(p -> p.hasPermission("oidc_provider:delete"))
                 .isPresent();
     }
 

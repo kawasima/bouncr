@@ -13,10 +13,12 @@ import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
 import kotowari.restful.component.BeansValidator;
+import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
@@ -38,13 +40,17 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
 
     @Override
     public EnkanSystem create() {
+        BouncrConfiguration config = builder(new BouncrConfiguration())
+                .set(BouncrConfiguration::setPasswordPolicy,
+                        builder(new PasswordPolicy())
+                                .set(PasswordPolicy::setExpires, Duration.ofDays(180))
+                                .build())
+                .build();
+        config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, new GrantBouncrUserRole());
+
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),
-                "config", builder(new BouncrConfiguration())
-                        .set(BouncrConfiguration::setPasswordPolicy, builder(new PasswordPolicy())
-                                .set(PasswordPolicy::setExpires, Duration.ofDays(10))
-                                .build())
-                        .build(),
+                "config", config,
                 "validator", new BeansValidator(),
                 "converter", new JacksonBeansConverter(),
                 "jpa", builder(new EclipseLinkEntityManagerProvider())

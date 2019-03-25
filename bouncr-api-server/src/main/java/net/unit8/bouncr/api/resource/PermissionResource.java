@@ -46,21 +46,21 @@ public class PermissionResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_PERMISSIONS") || p.hasPermission("LIST_ANY_PERMISSIONS"))
+                .filter(p -> p.hasPermission("permission:read") || p.hasPermission("any_permission:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_PERMISSION") || p.hasPermission("MODIFY_ANY_PERMISSION"))
+                .filter(p -> p.hasPermission("permission:update") || p.hasPermission("any_permission:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_PERMISSION") || p.hasPermission("DELETE_ANY_PERMISSION"))
+                .filter(p -> p.hasPermission("permission:delete") || p.hasPermission("any_permission:delete"))
                 .isPresent();
     }
 

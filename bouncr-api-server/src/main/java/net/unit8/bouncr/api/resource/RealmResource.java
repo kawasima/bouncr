@@ -39,21 +39,21 @@ public class RealmResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_REALMS") || p.hasPermission("LIST_ANY_REALM"))
+                .filter(p -> p.hasPermission("realm:read") || p.hasPermission("any_realm:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "PUT")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_REALM"))
+                .filter(p -> p.hasPermission("realm:update") || p.hasPermission("any_realm:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_REALM"))
+                .filter(p -> p.hasPermission("realm:delete") || p.hasPermission("any_realm:delete"))
                 .isPresent();
     }
 

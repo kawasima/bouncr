@@ -46,14 +46,14 @@ public class GroupsResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
+                .filter(p -> p.hasPermission("group:read") || p.hasPermission("any_group:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "POST")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_GROUP") || p.hasPermission("CREATE_ANY_GROUP"))
+                .filter(p -> p.hasPermission("group:create") || p.hasPermission("any_group:create"))
                 .isPresent();
     }
 

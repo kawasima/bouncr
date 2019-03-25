@@ -55,21 +55,21 @@ public class ApplicationResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_APPLICATIONS") || p.hasPermission("LIST_ANY_APPLICATIONS"))
+                .filter(p -> p.hasPermission("application:read") || p.hasPermission("any_application:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_APPLICATION") || p.hasPermission("MODIFY_ANY_APPLICATION"))
+                .filter(p -> p.hasPermission("application:update") || p.hasPermission("any_application:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_APPLICATION") || p.hasPermission("DELETE_ANY_APPLICATION"))
+                .filter(p -> p.hasPermission("application:delete") || p.hasPermission("any_application:delete"))
                 .isPresent();
     }
 

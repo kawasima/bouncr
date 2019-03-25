@@ -17,6 +17,8 @@ import kotowari.middleware.RoutingMiddleware;
 import kotowari.middleware.SerDesMiddleware;
 import kotowari.restful.middleware.ResourceInvokerMiddleware;
 import kotowari.routing.Routes;
+import net.unit8.bouncr.api.logging.ActionLoggingMiddleware;
+import net.unit8.bouncr.api.logging.ActionRecordInjector;
 import net.unit8.bouncr.api.resource.*;
 import net.unit8.bouncr.api.resource.OtpKeyResource;
 import net.unit8.bouncr.api.resource.PasswordCredentialResource;
@@ -57,9 +59,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/application/:name/realms").to(RealmsResource.class);
                 ar.all("/application/:name/realm/:realmName").to(RealmResource.class);
                 ar.all("/assignments").to(AssignmentsResource.class);
+                ar.all("/assignment").to(AssignmentResource.class);
                 ar.all("/roles").to(RolesResource.class);
                 ar.all("/role/:name").to(RoleResource.class);
-                ar.all("/permissions").to(PermissionResource.class);
+                ar.all("/role/:name/permissions").to(RolePermissionsResource.class);
+                ar.all("/permissions").to(PermissionsResource.class);
                 ar.all("/permission/:name").to(PermissionResource.class);
                 ar.all("/invitations").to(InvitationsResource.class);
 
@@ -87,8 +91,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 new ConversationInjector(),
                 new ConversationStateInjector(),
                 new LocaleInjector(),
-                new EntityManagerInjector()
-
+                new EntityManagerInjector(),
+                new ActionRecordInjector()
         );
         // Enkan
         app.use(new DefaultCharsetMiddleware<>());
@@ -128,6 +132,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 .build());
         app.use(new RoutingMiddleware<>(routes));
         app.use(new EntityManagerMiddleware<>());
+        app.use(new ActionLoggingMiddleware<>());
         app.use(new SerDesMiddleware<>());
         app.use(builder(new ResourceInvokerMiddleware<>(injector))
                 .set(ResourceInvokerMiddleware::setParameterInjectors, parameterInjectors)

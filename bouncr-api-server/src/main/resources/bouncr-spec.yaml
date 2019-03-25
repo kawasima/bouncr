@@ -685,6 +685,7 @@ paths:
         - Action History
       responses:
         200:
+          description: Finding user action histories is successful
           content:
             application/json:
               schema:

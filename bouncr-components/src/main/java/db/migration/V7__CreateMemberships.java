@@ -25,8 +25,8 @@ public class V7__CreateMemberships extends BaseJavaMigration {
                     .column(field("group_id", SQLDataType.BIGINT.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id"), field("group_id")),
-                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")),
-                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id"))
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

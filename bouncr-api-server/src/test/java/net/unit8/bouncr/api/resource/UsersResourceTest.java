@@ -32,20 +32,15 @@ public class UsersResourceTest {
     private static final Logger LOG = LoggerFactory.getLogger(UsersResourceTest.class);
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         system = new BouncrApiEnkanSystemFactory().create();
         system.start();
         EntityManagerProvider provider = system.getComponent("jpa");
         em = provider.createEntityManager();
     }
 
-    @AfterEach
-    public void tearDown() {
-        system.stop();
-    }
-
     @Test
-    public void findDefaultUsers() throws Exception {
+    void findDefaultUsers() throws Exception {
         UsersResource resource = new UsersResource();
         UserSearchParams params = builder(new UserSearchParams())
                 .set(UserSearchParams::setGroupId, 1L)
@@ -58,7 +53,7 @@ public class UsersResourceTest {
     }
 
     @Test
-    public void findByNoSuchGroupId() {
+    void findByNoSuchGroupId() {
         UsersResource resource = new UsersResource();
         UserSearchParams params = builder(new UserSearchParams())
                 .set(UserSearchParams::setGroupId, 10L)
@@ -68,16 +63,20 @@ public class UsersResourceTest {
     }
 
     @Test
-    public void post() {
+    void post() {
         UsersResource resource = new UsersResource();
+        HttpRequest request = builder(new DefaultHttpRequest())
+                .set(HttpRequest::setRequestMethod, "POST")
+                .build();
+        RestContext context = new RestContext(new DefaultResource(), request);
         UserCreateRequest user = builder(new UserCreateRequest())
                 .set(UserCreateRequest::setAccount, "fuga")
                 .build();
-        resource.doPost(user, em);
+        resource.doPost(user, context, em);
     }
 
     @Test
-    public void validate() {
+    void validate() {
         ComponentInjector injector = new ComponentInjector(
                 Map.of("converter", system.getComponent("converter"),
                         "validator", system.getComponent("validator")));
@@ -93,5 +92,10 @@ public class UsersResourceTest {
         assertThat(resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request), em))
                 .isNotNull();
 
+    }
+
+    @AfterEach
+    void tearDown() {
+        system.stop();
     }
 }

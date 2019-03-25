@@ -17,6 +17,11 @@ public class UserLock implements Serializable {
     @JoinColumn(name ="user_id")
     private User user;
 
+    @JsonProperty("lock_level")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lock_level")
+    private LockLevel lockLevel;
+
     @JsonProperty("locked_at")
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
@@ -29,6 +34,14 @@ public class UserLock implements Serializable {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public LockLevel getLockLevel() {
+        return lockLevel;
+    }
+
+    public void setLockLevel(LockLevel lockLevel) {
+        this.lockLevel = lockLevel;
     }
 
     public LocalDateTime getLockedAt() {

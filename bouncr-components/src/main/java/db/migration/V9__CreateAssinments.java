@@ -28,9 +28,9 @@ public class V9__CreateAssinments extends BaseJavaMigration {
                     .column(field("realm_id", SQLDataType.BIGINT.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("group_id"), field("role_id"), field("realm_id")),
-                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id")),
-                            constraint().foreignKey(field("role_id")).references(table("roles"), field("role_id")),
-                            constraint().foreignKey(field("realm_id")).references(table("realms"), field("realm_id"))
+                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("role_id")).references(table("roles"), field("role_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("realm_id")).references(table("realms"), field("realm_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

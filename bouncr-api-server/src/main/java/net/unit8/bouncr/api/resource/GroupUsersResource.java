@@ -8,7 +8,7 @@ import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.GroupUsersCreateRequest;
+import net.unit8.bouncr.api.boundary.GroupUsersRequest;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
 
@@ -42,14 +42,14 @@ public class GroupUsersResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
+                .filter(p -> p.hasPermission("user:read") || p.hasPermission("any_user:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= { "POST", "DELETE" })
     public boolean isModifyAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_GROUP") || p.hasPermission("MODIFY_ANY_GROUP"))
+                .filter(p -> p.hasPermission("group:update") || p.hasPermission("any_group:update"))
                 .isPresent();
     }
 
@@ -83,11 +83,11 @@ public class GroupUsersResource {
     }
 
     @Decision(POST)
-    public GroupUsersCreateRequest create(GroupUsersCreateRequest createRequest, Group group, EntityManager em) {
+    public GroupUsersRequest create(GroupUsersRequest createRequest, Group group, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
-        query.where(userRoot.get("account").in(createRequest.getUsers()));
+        query.where(userRoot.get("account").in(createRequest));
         List<User> users = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
@@ -104,11 +104,11 @@ public class GroupUsersResource {
     }
 
     @Decision(DELETE)
-    public GroupUsersCreateRequest delete(GroupUsersCreateRequest createRequest, Group group, EntityManager em) {
+    public GroupUsersRequest delete(GroupUsersRequest createRequest, Group group, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
-        query.where(userRoot.get("account").in(createRequest.getUsers()));
+        query.where(userRoot.get("account").in(createRequest));
         List<User> users = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();

@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.boundary;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
@@ -16,6 +17,9 @@ public class SignUpCreateRequest implements Serializable {
     @Pattern(regexp = "^\\w+$")
     private String account;
     private String code;
+
+    @JsonProperty("enable_password_credential")
+    private boolean enablePasswordCredential = true;
 
     private Map<String, Object> userProfiles = new HashMap<>();
 
@@ -33,6 +37,14 @@ public class SignUpCreateRequest implements Serializable {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public boolean isEnablePasswordCredential() {
+        return enablePasswordCredential;
+    }
+
+    public void setEnablePasswordCredential(boolean enablePasswordCredential) {
+        this.enablePasswordCredential = enablePasswordCredential;
     }
 
     @JsonAnyGetter

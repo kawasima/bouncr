@@ -23,7 +23,7 @@ public class V14__CreateCertificateCredentials extends BaseJavaMigration {
                     .column(field("certificate", SQLDataType.BLOB.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id")),
-                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

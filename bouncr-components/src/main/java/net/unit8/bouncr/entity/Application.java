@@ -17,7 +17,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "applications")
-public class Application implements Serializable, FetchGroupTracker {
+public class Application extends BaseFetchGroupTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "application_id")
@@ -42,7 +42,7 @@ public class Application implements Serializable, FetchGroupTracker {
     @Column(name = "write_protected")
     private Boolean writeProtected;
 
-    @OneToMany(mappedBy = "application")
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL)
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     @JsonManagedReference("realms")
     private List<Realm> realms;
@@ -115,43 +115,4 @@ public class Application implements Serializable, FetchGroupTracker {
         this.realms = realms;
     }
 
-    @Override
-    public FetchGroup _persistence_getFetchGroup() {
-        return null;
-    }
-
-    @Override
-    public void _persistence_setFetchGroup(FetchGroup group) {
-
-    }
-
-    @Override
-    public boolean _persistence_isAttributeFetched(String attribute) {
-        return false;
-    }
-
-    @Override
-    public void _persistence_resetFetchGroup() {
-
-    }
-
-    @Override
-    public boolean _persistence_shouldRefreshFetchGroup() {
-        return false;
-    }
-
-    @Override
-    public void _persistence_setShouldRefreshFetchGroup(boolean shouldRefreshFetchGroup) {
-
-    }
-
-    @Override
-    public Session _persistence_getSession() {
-        return null;
-    }
-
-    @Override
-    public void _persistence_setSession(Session session) {
-
-    }
 }

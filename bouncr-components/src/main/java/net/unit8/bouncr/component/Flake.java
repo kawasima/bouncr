@@ -5,6 +5,7 @@ import enkan.component.SystemComponent;
 import enkan.exception.MisconfigurationException;
 
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -18,6 +19,7 @@ public class Flake extends SystemComponent {
     private byte[] macAddress;
 
     private byte[] getMacAddress() {
+        byte[] defaultAddress = new byte[6];
         try {
             return Collections.list(NetworkInterface.getNetworkInterfaces())
                     .stream()
@@ -37,7 +39,7 @@ public class Flake extends SystemComponent {
                     })
                     .filter(Objects::nonNull)
                     .findAny()
-                    .orElseThrow(() -> new MisconfigurationException(""));
+                    .orElse(defaultAddress);
         } catch (SocketException e) {
             throw new MisconfigurationException("", e);
         }

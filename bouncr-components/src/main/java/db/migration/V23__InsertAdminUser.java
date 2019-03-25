@@ -16,29 +16,28 @@ import static org.jooq.impl.DSL.*;
 
 public class V23__InsertAdminUser extends BaseJavaMigration {
     private static final String[] ADMIN_PERMISSIONS = new String[]{
-            "LIST_ANY_USERS", "CREATE_ANY_USER", "MODIFY_ANY_USER", "DELETE_ANY_USER",
-            "LOCK_ANY_USER", "UNLOCK_ANY_USER",
-            "LIST_ANY_GROUPS", "CREATE_GROUP", "MODIFY_ANY_GROUP", "DELETE_ANY_GROUP",
-            "CREATE_MEMBERSHIP", "DELETE_MEMBERSHIP",
-            "LIST_ANY_APPLICATIONS", "CREATE_APPLICATION", "MODIFY_ANY_APPLICATION", "DELETE_ANY_APPLICATION",
-            "LIST_ANY_REALMS", "CREATE_REALM", "MODIFY_ANY_REALM", "DELETE_ANY_REALM",
-            "LIST_ANY_ROLES", "CREATE_ROLE", "MODIFY_ANY_ROLE", "DELETE_ANY_ROLE",
-            "LIST_ANY_PERMISSIONS", "CREATE_PERMISSION", "MODIFY_ANY_PERMISSION", "DELETE_ANY_PERMISSION",
-            "LIST_OIDC_APPLICATIONS", "CREATE_OIDC_APPLICATION", "MODIFY_OIDC_APPLICATION", "DELETE_OIDC_APPLICATION",
-            "LIST_OIDC_PROVIDERS", "CREATE_OIDC_PROVIDER", "MODIFY_OIDC_PROVIDER", "DELETE_OIDC_PROVIDER",
-            "LIST_USER_PROFILE_FIELDS", "CREATE_USER_PROFILE_FIELD", "MODIFY_USER_PROFILE_FIELD", "DELETE_USER_PROFILE_FIELD",
-            "CREATE_INVITATION"
+            "any_user:read", "any_user:create", "any_user:update", "any_user:delete",
+            "any_user:lock", "any_user:unlock",
+            "any_group:read", "any_group:create", "any_group:update", "any_group:delete",
+            "any_application:read", "any_application:create", "any_application:update", "any_application:delete",
+            "any_realm:read", "any_realm:create", "any_realm:update", "any_realm:delete",
+            "any_role:read", "any_role:create", "any_role:update", "any_role:delete",
+            "any_permission:read", "any_permission:create", "any_permission:update", "any_permission:delete",
+            "oidc_application:read", "oidc_application:create","oidc_application:update","oidc_application:delete",
+            "oidc_provider:read","oidc_provider:create","oidc_provider:update","oidc_provider:delete",
+            "invitation:create"
     };
 
     private static final String[] OTHER_PERMISSIONS = new String[]{
-            "LIST_USERS", "MODIFY_USER", "DELETE_USER",
-            "LOCK_USER", "UNLOCK_USER",
-            "LIST_GROUPS", "MODIFY_GROUP", "DELETE_GROUP",
-            "LIST_APPLICATIONS", "MODIFY_APPLICATION", "DELETE_APPLICATION",
-            "LIST_REALMS", "MODIFY_REALM", "DELETE_REALM",
-            "LIST_ROLES", "MODIFY_ROLE", "DELETE_ROLE",
-            "LIST_PERMISSIONS", "MODIFY_PERMISSION", "DELETE_PERMISSION",
+            "user:read", "user:create", "user:update", "user:delete",
+            "user:lock", "user:unlock",
+            "group:read", "group:create", "group:update", "group:delete",
+            "application:read", "application:create", "application:update", "application:delete",
+            "realm:read", "realm:create", "realm:update", "realm:delete",
+            "role:read", "role:create", "role:update", "role:delete",
+            "permission:read", "permission:create", "permission:update", "permission:delete"
     };
+
     private Long fetchGeneratedKey(PreparedStatement stmt) throws SQLException {
         try (ResultSet rs = stmt.getGeneratedKeys()) {
             while(rs.next()) {
@@ -314,13 +313,14 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             stmtInsRole.setBoolean(3, true);
             stmtInsRole.executeUpdate();
             Long myRoleId = fetchGeneratedKey(stmtInsRole);
-            stmtInsPermission.setString(1, "READ_USER");
-            stmtInsPermission.setString(2, "READ_USER");
-            stmtInsPermission.setBoolean(3, true);
-            stmtInsPermission.executeUpdate();
-            Long readUserPermissionId = fetchGeneratedKey(stmtInsPermission);
+            Long myReadPermissionId   = createPermission("my:read", stmtInsPermission);
+            Long myUpdatePermissionId = createPermission("my:update", stmtInsPermission);
+
             stmtInsRolePermission.setLong(1, myRoleId);
-            stmtInsRolePermission.setLong(2, readUserPermissionId);
+            stmtInsRolePermission.setLong(2, myReadPermissionId);
+            stmtInsRolePermission.executeUpdate();
+            stmtInsRolePermission.setLong(1, myRoleId);
+            stmtInsRolePermission.setLong(2, myUpdatePermissionId);
             stmtInsRolePermission.executeUpdate();
 
             stmtInsAssignment.setLong(1, adminGroupId);
@@ -333,5 +333,14 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             stmtInsAssignment.setLong(3, bouncrRealmId);
             stmtInsAssignment.executeUpdate();
         }
+    }
+
+    private Long createPermission(String permission, PreparedStatement stmt) throws SQLException {
+        stmt.setString(1, permission);
+        stmt.setString(2, permission);
+        stmt.setBoolean(3, true);
+        stmt.executeUpdate();
+        return fetchGeneratedKey(stmt);
+
     }
 }

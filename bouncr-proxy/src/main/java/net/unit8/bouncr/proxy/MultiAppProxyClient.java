@@ -79,25 +79,25 @@ public class MultiAppProxyClient implements ProxyClient {
     @Override
     public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         Realm realm = realmCache.matches(exchange.getRequestPath());
-        if (realm != null) {
-            parseToken(exchange).ifPresent(token -> {
-                Optional<HashMap<String, Object>> userCache = authenticate(token);
-
-                userCache.ifPresent(u -> {
-                    Map<String, List<String>> permissionsByRealm = (Map<String, List<String>>) u.remove("permissionsByRealm");
-                    List<String> permissions = permissionsByRealm.get(realm.getId().toString());
-
-                    Map<String, Object> body = new HashMap<>(u);
-                    body.put("permissions", Optional.ofNullable(permissions).orElse(Collections.emptyList()));
-                    exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
-                            jwt.sign(body, jwtHeader, (byte[]) null));
-                });
-            });
-        } else {
+        if (realm == null) {
             exchange.setStatusCode(404);
             exchange.endExchange();
             return;
         }
+
+        parseToken(exchange).ifPresent(token -> {
+            Optional<HashMap<String, Object>> userCache = authenticate(token);
+
+            userCache.ifPresent(u -> {
+                Map<String, List<String>> permissionsByRealm = (Map<String, List<String>>) u.remove("permissionsByRealm");
+                List<String> permissions = permissionsByRealm.get(realm.getId().toString());
+
+                Map<String, Object> body = new HashMap<>(u);
+                body.put("permissions", Optional.ofNullable(permissions).orElse(Collections.emptyList()));
+                exchange.getRequestHeaders().put(HttpString.tryFromString(config.getBackendHeaderName()),
+                        jwt.sign(body, jwtHeader, (byte[]) null));
+            });
+        });
 
         Application application = realmCache.getApplication(realm);
         ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
@@ -134,7 +134,7 @@ public class MultiAppProxyClient implements ProxyClient {
         if (exchange.getRequestHeaders().contains("Authorization")) {
             String authorizationValue = exchange.getRequestHeaders().getFirst("Authorization");
             String[] tokens = authorizationValue.split("\\s+");
-            if (Objects.equals(tokens[0], "Bearer")) {
+            if (tokens[0].equalsIgnoreCase("Bearer")) {
                 return Optional.of(tokens[1]);
             } else {
                 return Optional.empty();

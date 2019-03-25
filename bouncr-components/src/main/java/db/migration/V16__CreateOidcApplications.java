@@ -41,9 +41,9 @@ public class V16__CreateOidcApplications extends BaseJavaMigration {
                     .constraints(
                             constraint().primaryKey(field("oidc_application_id"), field("permission_id")),
                             constraint().foreignKey(field("oidc_application_id"))
-                                    .references(table("oidc_applications"), field("oidc_application_id")),
+                                    .references(table("oidc_applications"), field("oidc_application_id")).onDeleteCascade(),
                             constraint().foreignKey(field("permission_id"))
-                                    .references(table("permissions"), field("permission_id"))
+                                    .references(table("permissions"), field("permission_id")).onDeleteCascade()
                     )
                     .getSQL();
             stmt.execute(ddl);

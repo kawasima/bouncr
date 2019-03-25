@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.EntityManager;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,23 +22,23 @@ public class PasswordSignInResourceTest {
     private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResourceTest.class);
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         system = new BouncrApiEnkanSystemFactory().create();
         system.start();
         EntityManagerProvider provider = system.getComponent("jpa");
         em = provider.createEntityManager();
     }
 
-    @AfterEach
-    public void tearDown() {
-        system.stop();
-    }
-
     @Test
-    public void permissionsByRealm() {
+    void permissionsByRealm() {
         PasswordSignInResource resource = new PasswordSignInResource();
         User user = em.find(User.class, 1L);
-        Map<Long, Set<String>> permissionsByRealm = resource.getPermissionsByRealm(user, em);
+        Map<String, List<String>> permissionsByRealm = resource.getPermissionsByRealm(user, em);
         System.out.println(permissionsByRealm);
+    }
+
+    @AfterEach
+    void tearDown() {
+        system.stop();
     }
 }

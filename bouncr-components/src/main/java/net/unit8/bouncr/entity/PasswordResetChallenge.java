@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Table(name = "password_reset_challenges")
 public class PasswordResetChallenge implements Serializable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonIgnore
     private Long id;
 

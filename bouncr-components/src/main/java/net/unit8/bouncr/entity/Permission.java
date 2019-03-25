@@ -14,7 +14,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "permissions")
-public class Permission implements Serializable {
+public class Permission extends BaseFetchGroupTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "permission_id")

@@ -21,6 +21,8 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -33,11 +35,6 @@ public class UserSessionsResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(AUTHORIZED)
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
-    }
-
     @Decision(MALFORMED)
     public Problem validate(Parameters params, RestContext context) {
         UserSessionSearchParams userSessionSearchParams = converter.createFrom(params, UserSessionSearchParams.class);
@@ -46,6 +43,20 @@ public class UserSessionsResource {
             context.putValue(userSessionSearchParams);
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(ALLOWED)
+    public boolean isGetAllowed(UserPermissionPrincipal principal, Parameters params) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("user:read")
+                        || p.hasPermission("any_user:read")
+                        || (p.hasPermission("my:read") && Objects.equals(p.getName(), params.get("account"))))
+                .isPresent();
     }
 
     @Decision(HANDLE_OK)

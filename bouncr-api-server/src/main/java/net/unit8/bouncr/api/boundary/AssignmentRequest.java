@@ -43,6 +43,7 @@ public class AssignmentRequest implements Serializable {
 
     public static class IdObject implements Serializable {
         private Long id;
+        private String name;
 
         public Long getId() {
             return id;
@@ -52,9 +53,20 @@ public class AssignmentRequest implements Serializable {
             this.id = id;
         }
 
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
         @Override
         public String toString() {
-            return "{ id=" + id + " }";
+            return "IdObject{" +
+                    "id=" + id +
+                    ", name='" + name + '\'' +
+                    '}';
         }
     }
 }

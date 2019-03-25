@@ -2,15 +2,14 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.component.BeansConverter;
 import enkan.data.HttpRequest;
-import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
-import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -96,16 +95,14 @@ public class PasswordSignInResource {
      * </ul>
      *
      * @param passwordSignInRequest A request to sign in
-     * @param request HTTP request
-     * @param principal User principal
+     * @param actionRecord an action record
      * @param context REST context
      * @param em Entity manager
      * @return Whether request is authenticated successfully
      */
     @Decision(AUTHORIZED)
     public boolean authenticate(PasswordSignInRequest passwordSignInRequest,
-                                HttpRequest request,
-                                UserPermissionPrincipal principal,
+                                ActionRecord actionRecord,
                                 RestContext context,
                                 final EntityManager em) {
         SignInService signInService = new SignInService(em, config);
@@ -133,28 +130,29 @@ public class PasswordSignInResource {
         }
 
         // Check if the given password matches the registered password
-        if (user != null && user.getPasswordCredential() != null &&
-                Arrays.equals(
-                        user.getPasswordCredential().getPassword(),
-                        PasswordUtils.pbkdf2(
-                                passwordSignInRequest.getPassword(),
-                                user.getPasswordCredential().getSalt(),
-                                100))) {
-            context.putValue(user);
-        } else {
-            user = null;
-        }
-
-        // Check if the password must be changed
         if (user != null) {
-            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
-            if (status == EXPIRED || status == INITIAL) {
-                context.setMessage(new Problem(null, "Authentication Success but...", 401, "Password must be changed", null));
-                return false;
+            actionRecord.setActor(user.getAccount());
+            if (user.getPasswordCredential() != null &&
+                    Arrays.equals(
+                            user.getPasswordCredential().getPassword(),
+                            PasswordUtils.pbkdf2(
+                                    passwordSignInRequest.getPassword(),
+                                    user.getPasswordCredential().getSalt(),
+                                    100))) {
+                context.putValue(user);
+                actionRecord.setActionType(USER_SIGNIN);
+                SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+                if (status == EXPIRED || status == INITIAL) {
+                    context.setMessage(new Problem(null, "Authentication Success but...", 401, "Password must be changed", null));
+                    return false;
+                }
+                return true;
+            } else {
+                actionRecord.setActionType(USER_FAILED_SIGNIN);
+                signInService.lockUser(user);
             }
         }
-        signInService.recordSignIn(user, passwordSignInRequest.getAccount(), request);
-        return user != null;
+        return false;
     }
 
     @Decision(POST)
@@ -194,7 +192,7 @@ public class PasswordSignInResource {
     }
 
 
-    protected Map<String, Set<String>> getPermissionsByRealm(User user, EntityManager em) {
+    protected Map<String, List<String>> getPermissionsByRealm(User user, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
         Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);
@@ -219,10 +217,10 @@ public class PasswordSignInResource {
                 .stream()
                 .collect(Collectors.toMap(
                         e -> e.getKey().getId().toString(),
-                        e -> e.getValue().stream()
+                        e -> new ArrayList<>(e.getValue().stream()
                                 .flatMap(v -> v.getRole().getPermissions().stream())
                                 .map(p -> p.getName())
-                                .collect(Collectors.toSet())));
+                                .collect(Collectors.toSet()))));
     }
 
 }

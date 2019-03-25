@@ -52,22 +52,19 @@ public class ApplicationsResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_APPLICATIONS") || p.hasPermission("LIST_ANY_APPLICATIONS"))
+                .filter(p -> p.hasPermission("application:read") || p.hasPermission("any_application:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_APPLICATION"))
+                .filter(p -> p.hasPermission("any_application:create"))
                 .isPresent();
     }
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateApplicationCreateRequest(ApplicationCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<ApplicationCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(createRequest, ApplicationCreateRequest.class));
-        }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
@@ -81,9 +78,20 @@ public class ApplicationsResource {
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
+    @Decision(value = CONFLICT, method = "POST")
+    public boolean isConflict(ApplicationCreateRequest createRequest, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Application> query = cb.createQuery(Application.class);
+        Root<Application> applicationRoot = query.from(Application.class);
+        query.where(cb.equal(applicationRoot.get("name"), createRequest.getName()));
+        return !em.createQuery(query)
+                .getResultList()
+                .isEmpty();
+    }
 
     @Decision(POST)
-    public Application create(Application application, EntityManager em) {
+    public Application create(ApplicationCreateRequest createRequest, EntityManager em) {
+        Application application  = converter.createFrom(createRequest, Application.class);
         application.setWriteProtected(false);
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> em.persist(application));
@@ -97,7 +105,7 @@ public class ApplicationsResource {
         CriteriaQuery<Application> query = cb.createQuery(Application.class);
         Root<Application> applicationRoot = query.from(Application.class);
 
-        if (!principal.hasPermission("LIST_ANY_APPLICATIONS")) {
+        if (!principal.hasPermission("any_application:read")) {
             Join<User, Group> userJoin = applicationRoot.join("realms")
                     .join("assignments")
                     .join("group")

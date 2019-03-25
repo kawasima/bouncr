@@ -12,7 +12,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "roles")
-public class Role implements Serializable {
+public class Role extends BaseFetchGroupTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "role_id")
@@ -31,10 +31,6 @@ public class Role implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     private List<Permission> permissions;
-
-    @OneToMany(fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<Assignment> assignments;
 
     public Long getId() {
         return id;

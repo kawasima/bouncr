@@ -59,14 +59,14 @@ public class OidcApplicationsResrouce {
     @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_OIDC_APPLICATIONS"))
+                .filter(p -> p.hasPermission("oidc_application:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_OIDC_APPLICATION"))
+                .filter(p -> p.hasPermission("oidc_application:create"))
                 .isPresent();
     }
 

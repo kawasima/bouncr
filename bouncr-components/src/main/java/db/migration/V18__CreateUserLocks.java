@@ -19,10 +19,11 @@ public class V18__CreateUserLocks extends BaseJavaMigration {
             DSLContext create = DSL.using(connection);
             String ddl = create.createTable(table("user_locks"))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("lock_level", SQLDataType.VARCHAR(10).nullable(false)))
                     .column(field("locked_at", SQLDataType.TIMESTAMP.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id")),
-                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

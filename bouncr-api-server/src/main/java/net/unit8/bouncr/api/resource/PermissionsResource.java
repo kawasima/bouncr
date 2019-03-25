@@ -42,14 +42,14 @@ public class PermissionsResource {
     @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_PERMISSIONS") || p.hasPermission("LIST_ANY_PERMISSIONS"))
+                .filter(p -> p.hasPermission("permission:read") || p.hasPermission("any_permission:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_PERMISSION") || p.hasPermission("CREATE_ANY_PERMISSION"))
+                .filter(p -> p.hasPermission("permission:create") || p.hasPermission("any_permission:create"))
                 .isPresent();
     }
 
@@ -67,6 +67,17 @@ public class PermissionsResource {
             context.putValue(converter.createFrom(permissionSearchParams, PermissionSearchParams.class));
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
+    @Decision(value = CONFLICT, method = "POST")
+    public boolean isConflict(PermissionCreateRequest createRequest, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
+        Root<Permission> permissionRoot = query.from(Permission.class);
+        query.where(cb.equal(permissionRoot.get("name"), createRequest.getName()));
+        return !em.createQuery(query)
+                .getResultList()
+                .isEmpty();
     }
 
     @Decision(HANDLE_OK)

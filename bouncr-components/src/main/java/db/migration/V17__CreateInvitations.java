@@ -35,8 +35,8 @@ public class V17__CreateInvitations extends BaseJavaMigration {
                     .column(field("group_id", SQLDataType.BIGINT.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("group_invitation_id")),
-                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")),
-                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id"))
+                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("group_id")).references(table("groups"), field("group_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
 
@@ -47,8 +47,8 @@ public class V17__CreateInvitations extends BaseJavaMigration {
                     .column(field("oidc_sub", SQLDataType.VARCHAR(255).nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("oidc_invitation_id")),
-                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")),
-                            constraint().foreignKey(field("oidc_provider_id")).references(table("oidc_providers"), field("oidc_provider_id"))
+                            constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("oidc_provider_id")).references(table("oidc_providers"), field("oidc_provider_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
 

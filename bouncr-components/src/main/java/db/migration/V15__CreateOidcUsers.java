@@ -23,8 +23,8 @@ public class V15__CreateOidcUsers extends BaseJavaMigration {
                     .column(field("oidc_sub", SQLDataType.VARCHAR(255).nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("oidc_provider_id"), field("user_id")),
-                            constraint().foreignKey(field("oidc_provider_id")).references(table("oidc_providers"), field("oidc_provider_id")),
-                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                            constraint().foreignKey(field("oidc_provider_id")).references(table("oidc_providers"), field("oidc_provider_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

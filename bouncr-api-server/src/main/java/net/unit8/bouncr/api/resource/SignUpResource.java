@@ -9,7 +9,10 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.InitialPassword;
 import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
+import net.unit8.bouncr.api.boundary.SignUpResponse;
+import net.unit8.bouncr.api.service.PasswordCredentialService;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
@@ -31,6 +34,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"POST"})
@@ -87,7 +91,7 @@ public class SignUpResource {
     }
 
     @Decision(POST)
-    public User create(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
+    public SignUpResponse create(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
         User user = converter.createFrom(createRequest, User.class);
         UserProfileService userProfileService = new UserProfileService(em);
         // Process user profiles
@@ -118,7 +122,6 @@ public class SignUpResource {
                         .map(GroupInvitation::getGroup)
                         .collect(Collectors.toList()));
                 invi.getOidcInvitations()
-                        .stream()
                         .forEach(oidcInvitation -> {
                             OidcUser oidcUser = BeanBuilder.builder(new OidcUser())
                                     .set(OidcUser::setUser, user)
@@ -137,9 +140,21 @@ public class SignUpResource {
                     .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))
                     .findAny()
                     .ifPresent(context::putValue);
+            if (createRequest.isEnablePasswordCredential()) {
+                PasswordCredentialService passwordCredentialService = new PasswordCredentialService(em, config);
+                InitialPassword initialPassword = passwordCredentialService.initializePassword(user);
+                context.putValue(initialPassword);
+            }
         });
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGNUP, context);
-        return user;
+        return builder(new SignUpResponse())
+                .set(SignUpResponse::setId, user.getId())
+                .set(SignUpResponse::setAccount, user.getAccount())
+                .set(SignUpResponse::setUserProfiles, user.getUserProfiles())
+                .set(SignUpResponse::setPassword, context.getValue(InitialPassword.class)
+                        .map(InitialPassword::getPassword)
+                        .orElse(null))
+                .build();
     }
 }

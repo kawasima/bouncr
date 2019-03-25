@@ -1,8 +1,5 @@
 package net.unit8.bouncr.component.config;
 
-import enkan.component.ComponentLifecycle;
-import enkan.component.SystemComponent;
-
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.regex.Pattern;

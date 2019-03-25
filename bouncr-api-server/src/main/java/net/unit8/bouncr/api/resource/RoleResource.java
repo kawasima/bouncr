@@ -37,21 +37,21 @@ public class RoleResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_ROLES") || p.hasPermission("LIST_ANY_ROLES"))
+                .filter(p -> p.hasPermission("role:read") || p.hasPermission("any_role:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_ANY_ROLE") || p.hasPermission("MODIFY_ROLE"))
+                .filter(p -> p.hasPermission("role:update") || p.hasPermission("any_role:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_ANY_ROLE") || p.hasPermission("DELETE_ROLE"))
+                .filter(p -> p.hasPermission("role:delete") || p.hasPermission("any_role:delete"))
                 .isPresent();
     }
 

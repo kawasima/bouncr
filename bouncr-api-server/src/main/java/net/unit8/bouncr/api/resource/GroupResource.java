@@ -42,21 +42,21 @@ public class GroupResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_GROUPS") || p.hasPermission("LIST_ANY_GROUPS"))
+                .filter(p -> p.hasPermission("group:read") || p.hasPermission("any_group:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_GROUP") || p.hasPermission("MODIFY_ANY_GROUP"))
+                .filter(p -> p.hasPermission("group:update") || p.hasPermission("any_group:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_GROUP") || p.hasPermission("DELETE_ANY_GROUP"))
+                .filter(p -> p.hasPermission("group:delete") || p.hasPermission("any_group:update"))
                 .isPresent();
     }
 

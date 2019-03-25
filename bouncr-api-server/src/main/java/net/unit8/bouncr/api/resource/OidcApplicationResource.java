@@ -46,21 +46,21 @@ public class OidcApplicationResource {
     @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_OIDC_APPLICATIONS"))
+                .filter(p -> p.hasPermission("oidc_application:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_OIDC_APPLICATION"))
+                .filter(p -> p.hasPermission("oidc_application:update"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_OIDC_APPLICATION"))
+                .filter(p -> p.hasPermission("oidc_application:delete"))
                 .isPresent();
     }
 

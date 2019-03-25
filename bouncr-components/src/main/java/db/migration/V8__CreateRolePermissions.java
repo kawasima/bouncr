@@ -25,8 +25,8 @@ public class V8__CreateRolePermissions extends BaseJavaMigration {
                     .column(field("permission_id", SQLDataType.BIGINT.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("role_id"), field("permission_id")),
-                            constraint().foreignKey(field("role_id")).references(table("roles"), field("role_id")),
-                            constraint().foreignKey(field("permission_id")).references(table("permissions"), field("permission_id"))
+                            constraint().foreignKey(field("role_id")).references(table("roles"), field("role_id")).onDeleteCascade(),
+                            constraint().foreignKey(field("permission_id")).references(table("permissions"), field("permission_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

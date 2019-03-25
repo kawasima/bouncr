@@ -76,9 +76,9 @@ public class V21__CreateUserProfiles extends BaseJavaMigration {
                     .constraints(
                             constraint().primaryKey(field("user_profile_field_id"), field("user_id")),
                             constraint().foreignKey(field("user_profile_field_id"))
-                                    .references(table("user_profile_fields"), field("user_profile_field_id")),
+                                    .references(table("user_profile_fields"), field("user_profile_field_id")).onDeleteCascade(),
                             constraint().foreignKey(field("user_id"))
-                                    .references(table("users"), field("user_id"))
+                                    .references(table("users"), field("user_id")).onDeleteCascade()
                     )
                     .getSQL();
             stmt.execute(ddl);

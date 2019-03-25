@@ -63,6 +63,23 @@ public class UserProfileService {
         }).collect(Collectors.toSet());
     }
 
+    public Set<String> unique(Map<String, Object> userProfiles, EntityManager em) {
+        List<UserProfileField> userProfileFields = findUserProfileFields();
+        return userProfileFields.stream()
+                .filter(field -> {
+                    if (!field.isIdentity()) return false;
+                    CriteriaBuilder cb = em.getCriteriaBuilder();
+                    CriteriaQuery<Long> query = cb.createQuery(Long.class);
+                    query.select(cb.count(cb.literal("1")));
+                    Root<UserProfileValue> root = query.from(UserProfileValue.class);
+                    query.where(cb.equal(root.get("value"), userProfiles.get(field.getJsonName())));
+                    Long cnt = em.createQuery(query).getSingleResult();
+                    return (cnt > 0);
+                })
+                .map(UserProfileField::getJsonName)
+                .collect(Collectors.toSet());
+    }
+
     public List<UserProfileValue> convertToUserProfileValues(Map<String, Object> userProfiles) {
         List<UserProfileField> userProfileFields = findUserProfileFields();
         return userProfiles

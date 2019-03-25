@@ -27,7 +27,7 @@ public class V19__CreateUserSessions extends BaseJavaMigration {
                     .constraints(
                             constraint().primaryKey(field("user_session_id")),
                             constraint().unique(field("token")),
-                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                            constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade()
                     ).getSQL();
             stmt.execute(ddl);
         }

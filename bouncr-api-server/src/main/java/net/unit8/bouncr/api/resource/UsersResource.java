@@ -14,6 +14,8 @@ import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.UserCreateRequest;
 import net.unit8.bouncr.api.boundary.UserSearchParams;
 import net.unit8.bouncr.api.service.UserProfileService;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileValue;
@@ -45,6 +47,9 @@ public class UsersResource {
     @Inject
     private BeansValidator validator;
 
+    @Inject
+    private BouncrConfiguration config;
+
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
@@ -53,14 +58,14 @@ public class UsersResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_USERS") || p.hasPermission("LIST_ANY_USERS"))
+                .filter(p -> p.hasPermission("user:read") || p.hasPermission("any_user:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_USER") || p.hasPermission("CREATE_ANY_USER"))
+                .filter(p -> p.hasPermission("user:create") || p.hasPermission("any_user:create"))
                 .isPresent();
     }
 
@@ -118,7 +123,7 @@ public class UsersResource {
     }
 
     @Decision(POST)
-    public User doPost(UserCreateRequest createRequest, EntityManager em) {
+    public User doPost(UserCreateRequest createRequest, RestContext context, EntityManager em) {
         User user = converter.createFrom(createRequest, User.class);
 
         UserProfileService userProfileService = new UserProfileService(em);
@@ -138,10 +143,15 @@ public class UsersResource {
                 .collect(Collectors.toList());
 
         user.setWriteProtected(false);
+        context.putValue(user);
+
+        config.getHookRepo().runHook(HookPoint.BEFORE_CREATE_USER, context);
+
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> {
             em.persist(user);
             profileVerifications.forEach(em::persist);
+            config.getHookRepo().runHook(HookPoint.AFTER_CREATE_USER, context);
         });
         return user;
     }

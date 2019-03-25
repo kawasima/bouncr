@@ -105,6 +105,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                             .setReuseXForwarded(reuseXForwarded)
                             .setNext(ResponseCodeHandler.HANDLE_404)
                             .build();
+                    HttpHandler healthCheckHandler = new HealthCheckHandler();
 
                     IdentityManager identityManager = new IdentityManager() {
                         @Override
@@ -140,6 +141,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                     Undertow.Builder builder = Undertow.builder()
                             .setHandler(addSecurity(
                                     Handlers.path()
+                                            .addPrefixPath("/_healthcheck", healthCheckHandler)
                                             .addPrefixPath("/", proxyHandler)
                                     , identityManager, options)
                             );

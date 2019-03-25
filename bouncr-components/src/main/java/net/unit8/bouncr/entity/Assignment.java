@@ -1,15 +1,10 @@
 package net.unit8.bouncr.entity;
 
-import org.eclipse.persistence.queries.FetchGroup;
-import org.eclipse.persistence.queries.FetchGroupTracker;
-import org.eclipse.persistence.sessions.Session;
-
 import javax.persistence.*;
-import java.io.Serializable;
 
 @Entity
 @Table(name = "assignments")
-public class Assignment implements Serializable, FetchGroupTracker {
+public class Assignment extends BaseFetchGroupTracker {
     @Id
     @ManyToOne
     @JoinColumn(name = "group_id")
@@ -49,43 +44,4 @@ public class Assignment implements Serializable, FetchGroupTracker {
         this.realm = realm;
     }
 
-    @Override
-    public FetchGroup _persistence_getFetchGroup() {
-        return null;
-    }
-
-    @Override
-    public void _persistence_setFetchGroup(FetchGroup group) {
-
-    }
-
-    @Override
-    public boolean _persistence_isAttributeFetched(String attribute) {
-        return false;
-    }
-
-    @Override
-    public void _persistence_resetFetchGroup() {
-
-    }
-
-    @Override
-    public boolean _persistence_shouldRefreshFetchGroup() {
-        return false;
-    }
-
-    @Override
-    public void _persistence_setShouldRefreshFetchGroup(boolean shouldRefreshFetchGroup) {
-
-    }
-
-    @Override
-    public Session _persistence_getSession() {
-        return null;
-    }
-
-    @Override
-    public void _persistence_setSession(Session session) {
-
-    }
 }

@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import net.unit8.bouncr.api.constraints.StringEnumeration;
 import net.unit8.bouncr.entity.ResponseType;
 import net.unit8.bouncr.entity.TokenEndpointAuthMethod;
@@ -15,21 +16,33 @@ public class OidcProviderCreateRequest implements Serializable {
     @Pattern(regexp = "^\\w+$")
     private String name;
 
+    @JsonProperty("api_key")
     @NotBlank
+    @Length(max = 256)
     private String apiKey;
 
+    @JsonProperty("api_secret")
     @NotBlank
+    @Length(max = 256)
     private String apiSecret;
 
     @NotBlank
+    @Length(max = 256)
     private String scope;
 
     @NotBlank
+    @JsonProperty("response_type")
     @StringEnumeration(enumClass = ResponseType.class, accessorMethod = "getName")
+    @Length(max = 16)
     private String responseType;
 
+    @JsonProperty("authorization_endpoint")
     @NotBlank
+    @Length(max = 256)
     private String authorizationEndpoint;
+
+    @JsonProperty("token_endpoint")
+    @Length(max = 256)
     private String tokenEndpoint;
 
     @NotBlank

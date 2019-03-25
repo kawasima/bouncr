@@ -10,9 +10,11 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.PermissionCreateRequest;
 import net.unit8.bouncr.api.boundary.RoleCreateRequest;
 import net.unit8.bouncr.api.boundary.RoleSearchParams;
 import net.unit8.bouncr.entity.Group;
+import net.unit8.bouncr.entity.Permission;
 import net.unit8.bouncr.entity.Role;
 import net.unit8.bouncr.entity.User;
 
@@ -46,14 +48,14 @@ public class RolesResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_ROLES") || p.hasPermission("LIST_ANY_ROLES"))
+                .filter(p -> p.hasPermission("role:read") || p.hasPermission("any_role:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_ROLE"))
+                .filter(p -> p.hasPermission("role:create") || p.hasPermission("any_role:create"))
                 .isPresent();
     }
 
@@ -71,6 +73,17 @@ public class RolesResource {
             context.putValue(converter.createFrom(applicationSearchParams, RoleSearchParams.class));
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
+    }
+
+    @Decision(value = CONFLICT, method = "POST")
+    public boolean isConflict(PermissionCreateRequest createRequest, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Role> query = cb.createQuery(Role.class);
+        Root<Role> roleRoot = query.from(Role.class);
+        query.where(cb.equal(roleRoot.get("name"), createRequest.getName()));
+        return !em.createQuery(query)
+                .getResultList()
+                .isEmpty();
     }
 
     @Decision(HANDLE_OK)

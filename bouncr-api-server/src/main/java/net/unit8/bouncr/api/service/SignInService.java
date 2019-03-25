@@ -14,6 +14,7 @@ import javax.persistence.criteria.Root;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -35,36 +36,36 @@ public class SignInService {
      * Record the event of signing in
      *
      * @param user    the user entity
-     * @param request the http request
      */
-    public void recordSignIn(User user, String account, HttpRequest request) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        final boolean isSuccess = user != null;
-        tx.required(() -> {
-            em.persist(builder(new UserAction())
-                    .set(UserAction::setActionType, isSuccess ? USER_SIGNIN : USER_FAILED_SIGNIN)
-                    .set(UserAction::setActor, account)
-                    .set(UserAction::setActorIp, request.getRemoteAddr())
-                    .set(UserAction::setCreatedAt, LocalDateTime.now())
-                    .build());
-        });
+    public void lockUser(User user) {
         if (user != null) {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
             Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
             userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN));
-            if (em.createQuery(userActionCriteria)
+
+            List<UserAction> recentActions = em.createQuery(userActionCriteria)
                     .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                     .setMaxResults(config.getPasswordPolicy().getNumOfTrialsUntilLock())
-                    .getResultStream()
-                    .allMatch(action -> action.getActionType() == USER_FAILED_SIGNIN)) {
-                if (user.getUserLock() == null) {
-                    em.persist(builder(new UserLock())
-                            .set(UserLock::setUser, user)
-                            .set(UserLock::setLockedAt, LocalDateTime.now())
-                            .build());
-                }
+                    .getResultList();
+            if (recentActions.size() == config.getPasswordPolicy().getNumOfTrialsUntilLock() &&
+                    recentActions.stream()
+                            .allMatch(action -> action.getActionType() == USER_FAILED_SIGNIN) &&
+                    user.getUserLock() == null
+            ) {
+                em.persist(builder(new UserLock())
+                        .set(UserLock::setUser, user)
+                        .set(UserLock::setLockLevel, LockLevel.LOOSE)
+                        .set(UserLock::setLockedAt, LocalDateTime.now())
+                        .build());
             }
+        }
+    }
+
+    public void unlockUser(User user) {
+        UserLock userLock = user.getUserLock();
+        if (userLock != null && userLock.getLockLevel() == LockLevel.LOOSE) {
+            em.remove(userLock);
         }
     }
 

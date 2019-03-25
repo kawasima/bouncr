@@ -13,7 +13,7 @@ import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 
 /**
- * The middleware for client authentication.
+ * The logging for client authentication.
  *
  * A HTTP header "X-Client-DN" was set by Undertow client authentication.
  *

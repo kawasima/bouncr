@@ -10,6 +10,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.PasswordPolicyService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.*;
@@ -23,6 +24,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
@@ -60,22 +62,14 @@ public class PasswordCredentialResource {
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
-    @Decision(AUTHORIZED)
+    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
     @Decision(value = ALLOWED, method = "POST")
     public boolean postAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
-        if (principal.hasPermission("CREATE_ANY_USER")) {
-            return true;
-        }
-        return principal.getName().equals(createRequest.getAccount());
-    }
-
-    @Decision(value = ALLOWED, method = "PUT")
-    public boolean putAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest createRequest) {
-        if (principal.hasPermission("MODIFY_ANY_USER")) {
+        if (principal.hasPermission("any_user:create")) {
             return true;
         }
         return principal.getName().equals(createRequest.getAccount());
@@ -105,11 +99,20 @@ public class PasswordCredentialResource {
                 .map(user -> {
                     context.putValue(user);
                     return user;
-                }).isPresent();
+                })
+                .filter(user ->
+                        Arrays.equals(user.getPasswordCredential().getPassword(),
+                                PasswordUtils.pbkdf2(updateRequest.getOldPassword(), user.getPasswordCredential().getSalt(), 100))
+                )
+                .isPresent();
     }
 
     @Decision(POST)
-    public PasswordCredential create(PasswordCredentialCreateRequest createRequest, User user, EntityManager em) {
+    public PasswordCredential create(PasswordCredentialCreateRequest createRequest,
+                                     User user,
+                                     UserPermissionPrincipal principal,
+                                     ActionRecord actionRecord,
+                                     EntityManager em) {
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         PasswordCredential passwordCredential = builder(new PasswordCredential())
                 .set(PasswordCredential::setUser, user)
@@ -121,55 +124,62 @@ public class PasswordCredentialResource {
 
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> em.persist(passwordCredential));
+
+        actionRecord.setActionType(ActionType.PASSWORD_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(user.getAccount());
+
         em.detach(passwordCredential);
         return passwordCredential;
     }
 
     @Decision(PUT)
-    public PasswordCredential update(PasswordCredentialUpdateRequest updateRequest, UserPermissionPrincipal principal, HttpRequest request,
+    public PasswordCredential update(PasswordCredentialUpdateRequest updateRequest,
+                                     User user,
+                                     UserPermissionPrincipal principal,
+                                     ActionRecord actionRecord,
                                      EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<PasswordCredential> passwordCredentialQuery = cb.createQuery(PasswordCredential.class);
-        Root<PasswordCredential> passwordCredentialRoot = passwordCredentialQuery.from(PasswordCredential.class);
-        Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
 
-        passwordCredentialQuery.where(cb.equal(userJoin.get("account"), principal.getName()));
-        PasswordCredential passwordCredential = em.createQuery(passwordCredentialQuery)
-                .getResultStream()
-                .findAny()
-                .orElseThrow();
+        PasswordCredential passwordCredential = user.getPasswordCredential();
+        String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
 
-        Arrays.equals(passwordCredential.getPassword(),
-                PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 100));
-        passwordCredential.setCreatedAt(LocalDateTime.now());
-
-        UserAction userAction = builder(new UserAction())
-                .set(UserAction::setActionType, ActionType.CHANGE_PASSWORD)
-                .set(UserAction::setActor, principal.getName())
-                .set(UserAction::setActorIp, request.getRemoteAddr())
-                .set(UserAction::setCreatedAt, LocalDateTime.now())
-                .build();
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> {
+            passwordCredential.setSalt(salt);
+            passwordCredential.setPassword(PasswordUtils.pbkdf2(updateRequest.getNewPassword(), salt, 100));
+            passwordCredential.setInitial(false);
+            passwordCredential.setCreatedAt(LocalDateTime.now());
             em.merge(passwordCredential);
-            em.persist(userAction);
         });
         em.detach(passwordCredential);
+
+        actionRecord.setActionType(ActionType.PASSWORD_CHANGED);
+        actionRecord.setActor(Optional.ofNullable(principal)
+                .map(Principal::getName)
+                .orElse(user.getAccount()));
+        actionRecord.setDescription(user.getAccount());
+
         return passwordCredential;
     }
 
     @Decision(DELETE)
-    public Void delete(UserPermissionPrincipal principal, EntityManager em) {
+    public Void delete(UserPermissionPrincipal principal,
+                       ActionRecord actionRecord,
+                       EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OtpKey> query = cb.createQuery(OtpKey.class);
-        Root<OtpKey> otpKeyRoot = query.from(OtpKey.class);
-        Join<User, OtpKey> userRoot = otpKeyRoot.join("user");
+        CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
+        Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);
+        Join<User, PasswordCredential> userRoot = passwordCredentialRoot.join("user");
         query.where(cb.equal(userRoot.get("name"), principal.getName()));
         EntityTransactionManager tx = new EntityTransactionManager(em);
         em.createQuery(query)
                 .getResultStream()
                 .findAny()
-                .ifPresent(otpKey -> tx.required(() -> em.remove(otpKey)));
+                .ifPresent(passwordCredential -> tx.required(() -> em.remove(passwordCredential)));
+
+        actionRecord.setActionType(ActionType.PASSWORD_DELETED);
+        actionRecord.setActor(principal.getName());
+
         return null;
     }
 

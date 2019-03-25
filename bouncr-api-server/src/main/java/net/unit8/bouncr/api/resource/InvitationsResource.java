@@ -41,7 +41,7 @@ public class InvitationsResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_INVITATION"))
+                .filter(p -> p.hasPermission("invitation:create"))
                 .isPresent();
     }
 

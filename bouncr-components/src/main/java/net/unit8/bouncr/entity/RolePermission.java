@@ -5,7 +5,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "role_permissions")
-public class RolePermission implements Serializable {
+public class RolePermission extends BaseFetchGroupTracker {
     @Id
     @OneToOne
     @JoinColumn(name = "role_id")

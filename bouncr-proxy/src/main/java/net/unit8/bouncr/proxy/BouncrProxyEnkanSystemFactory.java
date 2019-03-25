@@ -86,6 +86,8 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                         .set(ReverseProxyComponent::setHost, Env.getString("HOST", "0.0.0.0"))
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))
                         .set(ReverseProxyComponent::setSslPort, Env.getInt("SSL_PORT", 3002))
+                        .set(ReverseProxyComponent::setIoThreads, Env.getInt("IO_THREADS", 4))
+                        .set(ReverseProxyComponent::setMaxRequestTime, Env.getInt("MAX_REQUEST_TIME", 30000))
                         .set(ReverseProxyComponent::setSsl, Env.get("SSL_PORT") != null)
                         .set(ReverseProxyComponent::setKeystorePath, Env.getString("KEYSTORE_PATH", ""))
                         .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))

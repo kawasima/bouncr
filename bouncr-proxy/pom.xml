@@ -18,13 +18,13 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>0.10.1</version>
+                <version>1.0.2</version>
                 <configuration>
                     <container>
                         <mainClass>net.unit8.bouncr.proxy.Main</mainClass>
                     </container>
                     <from>
-                        <image>openjdk:11-slim</image>
+                        <image>gcr.io/distroless/java:11</image>
                     </from>
                     <to>
                         <image>bouncr/bouncr-proxy</image>
@@ -84,6 +84,11 @@
             <artifactId>jackson-jaxrs-json-provider</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-repl-pseudo</artifactId>
         </dependency>
@@ -118,9 +123,22 @@
         </dependency>
 
         <dependency>
+            <groupId>org.eclipse.microprofile.health</groupId>
+            <artifactId>microprofile-health-api</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>net.unit8.bouncr</groupId>
             <artifactId>bouncr-components</artifactId>
             <version>0.2.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>2.24.5</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -214,6 +232,26 @@
                     <groupId>com.hazelcast</groupId>
                     <artifactId>hazelcast-client</artifactId>
                     <version>3.11</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>log4j2</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                    <version>2.11.1</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-core</artifactId>
+                    <version>2.11.1</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                    <version>2.11.1</version>
                 </dependency>
             </dependencies>
         </profile>

@@ -15,20 +15,15 @@ import net.unit8.bouncr.api.boundary.UserUpdateRequest;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileValue;
+import net.unit8.bouncr.entity.UserProfileVerification;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.JoinType;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
@@ -41,32 +36,6 @@ public class UserResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(AUTHORIZED)
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
-    }
-
-    @Decision(value = ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_USERS") || p.hasPermission("LIST_ANY_USERS"))
-                .isPresent();
-    }
-
-    @Decision(value = ALLOWED, method= "PUT")
-    public boolean isPutAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("MODIFY_USER") || p.hasPermission("MODIFY_ANY_USER"))
-                .isPresent();
-    }
-
-    @Decision(value = ALLOWED, method= "DELETE")
-    public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("DELETE_USER") || p.hasPermission("DELETE_ANY_USER"))
-                .isPresent();
-    }
-
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
         Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
@@ -78,6 +47,39 @@ public class UserResource {
 
         return problem.getViolations().isEmpty() ? null : problem;
     }
+
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal, Parameters params) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("user:read")
+                        || p.hasPermission("any_user:read")
+                        || (p.hasPermission("my:read") && Objects.equals(p.getName(), params.get("account"))))
+                .isPresent();
+    }
+
+    @Decision(value = ALLOWED, method= "PUT")
+    public boolean isPutAllowed(UserPermissionPrincipal principal, Parameters params) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("user:update")
+                        || p.hasPermission("any_user:update")
+                        || (p.hasPermission("my:update") && Objects.equals(p.getName(), params.get("account"))))
+                .isPresent();
+    }
+
+    @Decision(value = ALLOWED, method= "DELETE")
+    public boolean isDeleteAllowed(UserPermissionPrincipal principal, Parameters params) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("user:delete")
+                        || p.hasPermission("any_user:delete")
+                        || (p.hasPermission("my:delete") && Objects.equals(p.getName(), params.get("account"))))
+                .isPresent();
+    }
+
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, EntityManager em) {
@@ -132,7 +134,18 @@ public class UserResource {
     @Decision(DELETE)
     public Void delete(User user, EntityManager em) {
         EntityTransactionManager tm = new EntityTransactionManager(em);
-        tm.required(() -> em.remove(user));
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<UserProfileVerification> query = cb.createQuery(UserProfileVerification.class);
+        Root<UserProfileVerification> userProfileVerificationRoot = query.from(UserProfileVerification.class);
+        Join<UserProfileVerification, User> userJoin = userProfileVerificationRoot.join("user");
+        query.where(cb.equal(userJoin.get("id"), user.getId()));
+
+        tm.required(() -> {
+            em.createQuery(query)
+                    .getResultStream()
+                    .forEach(verification -> em.remove(verification));
+            em.remove(user);
+        });
         em.detach(user);
         return null;
     }

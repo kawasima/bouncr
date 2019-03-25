@@ -11,7 +11,7 @@ import static enkan.component.ComponentRelationship.component;
 public class StoreProviderTest {
     private EnkanSystem system;
     @BeforeEach
-    public void setup() {
+    void setup() {
         system = EnkanSystem.of(
                 "storeProvider", new StoreProvider(),
                 "config", new BouncrConfiguration()
@@ -22,14 +22,14 @@ public class StoreProviderTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         if (system != null) {
             system.stop();
         }
     }
 
     @Test
-    public void test() {
+    void test() {
         StoreProvider provider = system.getComponent("storeProvider", StoreProvider.class);
         KeyValueStore store = provider.getStore(StoreProvider.StoreType.BOUNCR_TOKEN);
         store.write("A", "B");

@@ -45,14 +45,14 @@ public class RealmsResource {
     @Decision(value = ALLOWED, method= "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_REALMS") || p.hasPermission("LIST_ANY_REALMS"))
+                .filter(p -> p.hasPermission("realm:read") || p.hasPermission("any_realm:read"))
                 .isPresent();
     }
 
     @Decision(value = ALLOWED, method= "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_REALM") || p.hasPermission("CREATE_ANY_REALM"))
+                .filter(p -> p.hasPermission("realm:create") || p.hasPermission("any_realm:create"))
                 .isPresent();
     }
     @Decision(value = MALFORMED, method = "POST")

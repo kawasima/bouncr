@@ -36,7 +36,7 @@ public class V20__CreateCerts extends BaseJavaMigration {
                     .column(field("device_token", SQLDataType.VARCHAR(36)))
                     .constraints(
                             constraint().primaryKey(field("cert_device_id")),
-                            constraint().foreignKey(field("cert_id")).references(table("certs"), field("cert_id"))
+                            constraint().foreignKey(field("cert_id")).references(table("certs"), field("cert_id")).onDeleteCascade()
                     )
                     .getSQL();
             stmt.execute(ddl);

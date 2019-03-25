@@ -60,13 +60,13 @@ public class OidcProvidersResource {
     @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("LIST_OIDC_PROVIDERS"))
+                .filter(p -> p.hasPermission("oidc_provider:read"))
                 .isPresent();
     }
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("CREATE_OIDC_PROVIDER"))
+                .filter(p -> p.hasPermission("oidc_provider:create"))
                 .isPresent();
     }
 
