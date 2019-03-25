@@ -55,7 +55,7 @@ public class OidcSignInResource {
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         if (oidcProvider.getResponseType() == ID_TOKEN && oidcProvider.getResponseType() == TOKEN) {
-
+            // TODO
         }
         return null;
     }

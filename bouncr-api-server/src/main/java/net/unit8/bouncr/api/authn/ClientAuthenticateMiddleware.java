@@ -29,7 +29,7 @@ public class ClientAuthenticateMiddleware<NRES> extends AbstractWebMiddleware<Ht
     public HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
         request = MixinUtils.mixin(request, PrincipalAvailable.class);
         String clientDN = request.getHeaders().get("X-Client-DN");
-        if (!isAuthenticated((PrincipalAvailable) request) && clientDN != null) {
+        if (!isAuthenticated(request) && clientDN != null) {
             RDN cn = new X500Name(clientDN).getRDNs(BCStyle.CN)[0];
             String account = IETFUtils.valueToString(cn.getFirst().getValue());
 

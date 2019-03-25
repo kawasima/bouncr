@@ -35,9 +35,9 @@ public class AssignmentRequest implements Serializable {
     @Override
     public String toString() {
         return "AssignementRequest {" +
-                "group = " + Objects.toString(group) + ", " +
-                "role = " + Objects.toString(role) + ", " +
-                "realm = " + Objects.toString(realm) +
+                "group = " + group + ", " +
+                "role = " + role + ", " +
+                "realm = " + realm +
                 "}";
     }
 

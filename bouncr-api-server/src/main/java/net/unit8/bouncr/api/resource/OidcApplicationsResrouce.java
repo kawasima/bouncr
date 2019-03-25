@@ -3,6 +3,7 @@ package net.unit8.bouncr.api.resource;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.security.bouncr.UserPermissionPrincipal;
+import enkan.util.BeanBuilder;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
@@ -12,6 +13,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.OidcApplicationCreateRequest;
 import net.unit8.bouncr.api.boundary.OidcApplicationSearchParams;
 import net.unit8.bouncr.entity.OidcApplication;
+import net.unit8.bouncr.entity.Permission;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
@@ -70,6 +73,18 @@ public class OidcApplicationsResrouce {
                 .isPresent();
     }
 
+    @Decision(CONFLICT)
+    public boolean conflict(OidcApplicationCreateRequest createRequest, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        query.select(cb.count(cb.literal("1")));
+        Root<OidcApplication> root = query.from(OidcApplication.class);
+        query.where(cb.equal(root.get("name"), createRequest.getName()));
+
+        Long cnt = em.createQuery(query).getSingleResult();
+        return cnt > 0;
+    }
+
     @Decision(HANDLE_OK)
     public List<OidcApplication> list(OidcApplicationSearchParams params, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -87,6 +102,13 @@ public class OidcApplicationsResrouce {
     public OidcApplication create(OidcApplicationCreateRequest createRequest, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
         OidcApplication oidcApplication = converter.createFrom(createRequest, OidcApplication.class);
+        if (createRequest.getPermissions() != null) {
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
+            Root<Permission> root = query.from(Permission.class);
+            query.where(cb.in(root.get("name").in(createRequest.getPermissions())));
+            oidcApplication.setPermissions(em.createQuery(query).getResultList());
+        }
         tx.required(() -> em.persist(oidcApplication));
 
         return oidcApplication;

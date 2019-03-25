@@ -1,9 +1,12 @@
 package net.unit8.bouncr.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import net.unit8.bouncr.json.IndirectListFilter;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Table(name = "oidc_applications")
@@ -39,6 +42,13 @@ public class OidcApplication implements Serializable {
     @Column(name = "callback_url")
     private String callbackUrl;
     private String description;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "oidc_application_scopes",
+            joinColumns = @JoinColumn(name="oidc_application_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
+    private List<Permission> permissions;
 
     public Long getId() {
         return id;
@@ -110,5 +120,13 @@ public class OidcApplication implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<Permission> getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(List<Permission> permissions) {
+        this.permissions = permissions;
     }
 }

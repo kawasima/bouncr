@@ -106,7 +106,7 @@ public class Certificate {
                 component("certificate").using("flake", "config")
         );
         system.start();
-        CertificateProvider certificateProvider = (CertificateProvider) system.getComponent("certificate");
+        CertificateProvider certificateProvider = system.getComponent("certificate");
         X500PrivateCredential clientCredential = certificateProvider.generateClientCertificate(
                 "CN=admin");
         KeyStore trustStore = KeyStore.getInstance("JKS");

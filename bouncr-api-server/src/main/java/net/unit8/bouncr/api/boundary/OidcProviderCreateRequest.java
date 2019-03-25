@@ -47,6 +47,7 @@ public class OidcProviderCreateRequest implements Serializable {
 
     @NotBlank
     @StringEnumeration(enumClass = TokenEndpointAuthMethod.class, accessorMethod = "getValue")
+    @JsonProperty("token_endpoint_auth_method")
     private String tokenEndpointAuthMethod;
 
     public String getName() {

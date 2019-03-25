@@ -1,7 +1,5 @@
 package net.unit8.bouncr.api.service;
 
-import enkan.data.HttpRequest;
-import enkan.util.jpa.EntityTransactionManager;
 import net.unit8.bouncr.api.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.*;

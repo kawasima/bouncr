@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api;
 
 import enkan.Application;
+import enkan.Env;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
 import enkan.endpoint.ResourceEndpoint;
@@ -76,7 +77,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/password_credential").to(PasswordCredentialResource.class);
                 ar.all("/otp_key").to(OtpKeyResource.class);
                 ar.all("/actions").to(UserActionsResource.class);
-                ar.all("/sessions").to(UserSessionsResource.class);
+                // Sessions can't be listed by a user now.
+                //ar.all("/sessions").to(UserSessionsResource.class);
                 ar.all("/session/:token").to(UserSessionResource.class);
             });
 
@@ -134,9 +136,12 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new EntityManagerMiddleware<>());
         app.use(new ActionLoggingMiddleware<>());
         app.use(new SerDesMiddleware<>());
+
+        boolean outputErrorReason = Objects.equals(Env.getString("enkan.env", "development"), "development");
         app.use(builder(new ResourceInvokerMiddleware<>(injector))
                 .set(ResourceInvokerMiddleware::setParameterInjectors, parameterInjectors)
                 .set(ResourceInvokerMiddleware::setDefaultResource, new BouncrBaseResource())
+                .set(ResourceInvokerMiddleware::setOutputErrorReason, outputErrorReason)
                 .build());
 
         return app;

@@ -18,6 +18,11 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
@@ -40,6 +45,18 @@ public class UserSessionResource {
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, UserPermissionPrincipal principal, RestContext context, EntityManager em) {
+        String token = params.get("token");
+        if (token == null) {
+            return false;
+        }
+
+        Map<String, Object> profiles = (Map<String, Object>)storeProvider.getStore(BOUNCR_TOKEN).read(token);
+        if (profiles == null) {
+            return false;
+        }
+
+        return Objects.equals(profiles.get("sub"), principal.getName());
+        /*
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<UserSession> query = cb.createQuery(UserSession.class);
         Root<UserSession> userSessionRoot = query.from(UserSession.class);
@@ -53,14 +70,17 @@ public class UserSessionResource {
                 .findAny()
                 .map(s -> { context.putValue(s); return s; })
                 .isPresent();
+                */
     }
 
     @Decision(DELETE)
-    public Void delete(UserSession userSession, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        storeProvider.getStore(BOUNCR_TOKEN).delete(userSession.getToken());
+    public Void delete(Parameters params, EntityManager em) {
+        storeProvider.getStore(BOUNCR_TOKEN).delete(params.get("token"));
 
+        /*
+        EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> em.remove(userSession));
+        */
         return null;
     }
 }

@@ -112,6 +112,18 @@ public class UserResource {
         return user != null;
     }
 
+    @Decision(value = CONFLICT, method = "PUT")
+    public boolean conflict(UserUpdateRequest updateRequest,
+                            RestContext context,
+                            EntityManager em) {
+        UserProfileService userProfileService = new UserProfileService(em);
+        Set<String> violations = userProfileService.unique(updateRequest.getUserProfiles());
+        if (!violations.isEmpty()) {
+            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+        }
+        return !violations.isEmpty();
+    }
+
     @Decision(HANDLE_OK)
     public User handleOk(User user, Parameters params, EntityManager em) {
         return user;

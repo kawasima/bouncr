@@ -169,10 +169,12 @@ public class PasswordSignInResource {
                 .set(UserSession::setCreatedAt, LocalDateTime.now())
                 .build();
 
+        /*
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> {
             em.persist(userSession);
         });
+        */
         HashMap<String, Object> profileMap = new HashMap<>(user.getUserProfileValues()
                 .stream()
                 .collect(Collectors.toMap(v -> v.getUserProfileField().getJsonName(), UserProfileValue::getValue)));

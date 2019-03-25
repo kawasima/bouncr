@@ -76,6 +76,18 @@ public class SignUpResource {
                 null);
     }
 
+    @Decision(CONFLICT)
+    public boolean conflict(SignUpCreateRequest createRequest,
+                            RestContext context,
+                            EntityManager em) {
+        UserProfileService userProfileService = new UserProfileService(em);
+        Set<String> violations = userProfileService.unique(createRequest.getUserProfiles());
+        if (!violations.isEmpty()) {
+            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+        }
+        return !violations.isEmpty();
+    }
+
     public Invitation findInvitation(String code, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Invitation> query = cb.createQuery(Invitation.class);

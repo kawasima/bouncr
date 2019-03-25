@@ -63,7 +63,7 @@ public class UserProfileService {
         }).collect(Collectors.toSet());
     }
 
-    public Set<String> unique(Map<String, Object> userProfiles, EntityManager em) {
+    public Set<String> unique(Map<String, Object> userProfiles) {
         List<UserProfileField> userProfileFields = findUserProfileFields();
         return userProfileFields.stream()
                 .filter(field -> {

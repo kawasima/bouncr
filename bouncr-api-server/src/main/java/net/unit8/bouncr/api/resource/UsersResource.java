@@ -11,6 +11,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
+import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
 import net.unit8.bouncr.api.boundary.UserCreateRequest;
 import net.unit8.bouncr.api.boundary.UserSearchParams;
 import net.unit8.bouncr.api.service.UserProfileService;
@@ -90,6 +91,18 @@ public class UsersResource {
         }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
 
+    }
+
+    @Decision(value = CONFLICT, method = "POST")
+    public boolean conflict(UserCreateRequest createRequest,
+                            RestContext context,
+                            EntityManager em) {
+        UserProfileService userProfileService = new UserProfileService(em);
+        Set<String> violations = userProfileService.unique(createRequest.getUserProfiles());
+        if (!violations.isEmpty()) {
+            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+        }
+        return !violations.isEmpty();
     }
 
     @Decision(HANDLE_OK)
