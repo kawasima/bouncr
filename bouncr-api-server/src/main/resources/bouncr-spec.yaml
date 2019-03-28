@@ -396,6 +396,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Finding roles is successful
           content:
             application/json:
               schema:
@@ -433,18 +434,36 @@ paths:
       tags:
         - Role
         - Administration
+      responses:
+        200:
+          description: Finding a role is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
     put:
       summary: Update a role
       operationId: updateRole
       tags:
       - Role
       - Administration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdateRequest'
+      responses:
+        204:
+          description: Updating a role is successful
     delete:
       summary: Delete a role
       operationId: deleteRole
       tags:
       - Role
       - Administration
+      responses:
+        204:
+          description: Deleting a role is successful
   /permissions:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -456,6 +475,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Finding permissions is successful
           content:
             application/json:
               schema:
@@ -507,6 +527,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PermissionUpdateRequest'
+      responses:
+        204:
+          description: Updating a permission is successful
     delete:
       summary: Delete a permission
       operationId: deletePermission
@@ -567,6 +590,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InvitationCreateRequest'
+      responses:
+        201:
+          description: Creating a invitation is successful
   /oidc_applications:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -575,6 +601,7 @@ paths:
       operationId: findOidcApplications
       responses:
         200:
+          description: Finding OIDC application is successful
           content:
             application/json:
               schema:
@@ -588,20 +615,28 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SignUpCreateRequest'
+      responses:
+        201:
+          description: Signing up is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignUpResponse'
   /user_profile_verification:
     description: Verify an item of user profiles
     delete:
       parameters:
         - name: code
-          type: string
           in: query
+          schema:
+            type: string
       responses:
         204:
           description: Verificaiton of the user profile value is successful
   /password_credential:
-    parameters:
-    - $ref: '#/components/parameters/BouncrCredential'
     post:
+      parameters:
+        - $ref: '#/components/parameters/BouncrCredential'
       summary: Create a password credential
       operationId: createPasswordCredential
       tags:
@@ -612,8 +647,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordCredentialCreateRequest'
+      responses:
+        201:
+          description: Creating a password credential is successful.
     put:
-      summary: Update a password credential
+      summary: Update a password
       operationId: updatePasswordCredential
       tags:
         - Password Credential
@@ -623,6 +661,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordCredentialCreateRequest'
+      responses:
+        204:
+          description: Updating a password is successful
     delete:
       summary: Delete a password credential
       operationId: deletePasswordCredential
@@ -643,6 +684,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordResetChallengeRequest'
+      responses:
+        201:
+          description: Creating a code for reset password is successful
+
   /password_credential/reset:
     put:
       summary: Reset a password
@@ -655,6 +700,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        204:
+          description: Reset a password is successful
   /otp_key:
     description: |-
       Find and publish a OTP (One time password) key.
@@ -667,6 +715,7 @@ paths:
         - OTP Key
       responses:
         201:
+          description: Updating a OTP key is successful
           content:
             application/json:
               schema:
@@ -752,8 +801,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Group'
-      additionalProperties:
-        type: true
+      additionalProperties: true
       example:
         id: 1
         account: user1
@@ -933,8 +981,7 @@ components:
         permissions:
           type: array
           items:
-            schema:
-              type: string
+            type: string
     OidcProviders:
       type: array
       items:
@@ -1078,8 +1125,7 @@ components:
         permissions:
           type: array
           items:
-            schema:
-              type: string
+            type: string
     OidcApplicationUpdateRequest:
       type: object
       properties:
@@ -1094,8 +1140,7 @@ components:
         permissions:
           type: array
           items:
-            schema:
-              type: string
+            type: string
     OidcProviderCreateRequest:
       type: object
       properties:
@@ -1139,10 +1184,10 @@ components:
         groups:
           type: array
           items:
-            schema:
-              type: object
-              properties:
-                id: integer
+            type: object
+            properties:
+              id:
+                type: integer
     SignUpCreateRequest:
       type: object
       properties:
@@ -1150,6 +1195,17 @@ components:
           type: string
         code:
           type: string
+      additionalProperties: true
+    SignUpResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        account:
+          type: string
+        password:
+          type: string
+          format: password
       additionalProperties: true
     PasswordCredentialCreateRequest:
       type: object

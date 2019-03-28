@@ -13,6 +13,7 @@ import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserSession;
 import net.unit8.bouncr.util.PasswordUtils;
@@ -100,6 +101,7 @@ public class PasswordSignInResource {
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 final EntityManager em) {
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
         SignInService signInService = new SignInService(em, storeProvider, config);
         UserLockService userLockService = new UserLockService(em, config);
 
@@ -158,6 +160,7 @@ public class PasswordSignInResource {
         String token = signInService.createToken();
         UserSession userSession = signInService.createUserSession(request, user, token);
         context.putValue(userSession);
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
         return userSession;
     }
 
