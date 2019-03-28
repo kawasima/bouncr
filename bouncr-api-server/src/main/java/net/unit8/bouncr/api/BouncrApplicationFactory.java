@@ -21,11 +21,6 @@ import kotowari.routing.Routes;
 import net.unit8.bouncr.api.logging.ActionLoggingMiddleware;
 import net.unit8.bouncr.api.logging.ActionRecordInjector;
 import net.unit8.bouncr.api.resource.*;
-import net.unit8.bouncr.api.resource.OtpKeyResource;
-import net.unit8.bouncr.api.resource.PasswordCredentialResource;
-import net.unit8.bouncr.api.resource.UserActionsResource;
-import net.unit8.bouncr.api.resource.UserSessionsResource;
-import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.util.DigestUtils;
 
 import java.security.KeyPair;
@@ -66,6 +61,11 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/role/:name/permissions").to(RolePermissionsResource.class);
                 ar.all("/permissions").to(PermissionsResource.class);
                 ar.all("/permission/:name").to(PermissionResource.class);
+                ar.all("/oidc_providers").to(OidcProvidersResource.class);
+                ar.all("/oidc_provider/:name").to(OidcProviderResource.class);
+                ar.all("/oidc_applications").to(OidcApplicationsResrouce.class);
+                ar.all("/oidc_application/:name").to(OidcApplicationResource.class);
+
                 ar.all("/invitations").to(InvitationsResource.class);
 
                 ar.all("/sign_in").to(PasswordSignInResource.class);

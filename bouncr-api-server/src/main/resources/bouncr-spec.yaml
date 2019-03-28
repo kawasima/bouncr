@@ -219,6 +219,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Finding groups is successful
           content:
             application/json:
               schema:
@@ -261,6 +262,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Finding an appllication is successful
           content:
             application/json:
               schema:
@@ -307,6 +309,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Find realms is successful
           content:
             application/json:
               schema:
@@ -351,6 +354,7 @@ paths:
         - Administration
       responses:
         200:
+          description: Find an realm is successful
           content:
             application/json:
               schema:

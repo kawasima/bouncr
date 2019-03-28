@@ -16,7 +16,11 @@ public class HealthCheckHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.startBlocking();
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(this);
+            return;
+        }
+
         HealthCheckResponse response = HealthCheckResponse.builder()
                 .name("bouncr-proxy")
                 .up()

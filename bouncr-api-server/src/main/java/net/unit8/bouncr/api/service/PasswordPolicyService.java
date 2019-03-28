@@ -40,7 +40,7 @@ public class PasswordPolicyService {
 
         return Optional.ofNullable(policy.getPattern())
                 .filter(ptn -> !ptn.matcher(password).matches())
-                .map(ptn -> new Problem.Violation("password", ""))
+                .map(ptn -> new Problem.Violation("password", "doesn't match pattern"))
                 .orElse(null);
     }
 
@@ -49,6 +49,10 @@ public class PasswordPolicyService {
     }
 
     public Problem.Violation validateUpdatePassword(PasswordCredentialUpdateRequest updateRequest) {
+        if (updateRequest.getNewPassword() == updateRequest.getOldPassword()) {
+            return new Problem.Violation("new_password", "is the same as the old password");
+        }
+
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
         Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);

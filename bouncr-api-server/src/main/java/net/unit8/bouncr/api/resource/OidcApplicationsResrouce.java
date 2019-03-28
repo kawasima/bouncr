@@ -12,8 +12,11 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.OidcApplicationCreateRequest;
 import net.unit8.bouncr.api.boundary.OidcApplicationSearchParams;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.OidcApplication;
 import net.unit8.bouncr.entity.Permission;
+import net.unit8.bouncr.util.KeyUtils;
+import net.unit8.bouncr.util.RandomUtils;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
@@ -23,6 +26,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 
+import java.security.KeyPair;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -37,6 +41,9 @@ public class OidcApplicationsResrouce {
 
     @Inject
     private BeansValidator validator;
+
+    @Inject
+    private BouncrConfiguration config;
 
     @Decision(value = MALFORMED, method = "GET")
     public Problem validateSearchParams(Parameters params, RestContext context) {
@@ -102,6 +109,13 @@ public class OidcApplicationsResrouce {
     public OidcApplication create(OidcApplicationCreateRequest createRequest, EntityManager em) {
         EntityTransactionManager tx = new EntityTransactionManager(em);
         OidcApplication oidcApplication = converter.createFrom(createRequest, OidcApplication.class);
+        oidcApplication.setClientId(RandomUtils.generateRandomString(16, config.getSecureRandom()));
+        oidcApplication.setClientSecret(RandomUtils.generateRandomString(32, config.getSecureRandom()));
+
+        KeyPair keyPair = KeyUtils.generate(2048, config.getSecureRandom());
+        oidcApplication.setPublicKey(keyPair.getPublic().getEncoded());
+        oidcApplication.setPrivateKey(keyPair.getPrivate().getEncoded());
+
         if (createRequest.getPermissions() != null) {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<Permission> query = cb.createQuery(Permission.class);

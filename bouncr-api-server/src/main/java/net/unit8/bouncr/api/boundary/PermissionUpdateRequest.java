@@ -9,7 +9,7 @@ import java.io.Serializable;
 public class PermissionUpdateRequest implements Serializable {
     @NotBlank
     @Length(max = 100)
-    @Pattern(regexp = "^\\w+$")
+    @Pattern(regexp = "^[\\w:]+$")
     private String name;
     @NotBlank
     private String description;

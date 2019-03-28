@@ -10,18 +10,19 @@ import java.io.Serializable;
 public class OidcProvider implements Serializable {
     @Id
     @Column(name = "oidc_provider_id")
+    @JsonProperty("id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
 
-    @JsonProperty("api_key")
-    @Column(name = "api_key")
-    private String apiKey;
+    @JsonProperty("client_id")
+    @Column(name = "client_id")
+    private String clientId;
 
-    @JsonProperty("api_secret")
-    @Column(name = "api_secret")
-    private String apiSecret;
+    @JsonProperty("client_secret")
+    @Column(name = "client_secret")
+    private String clientSecret;
     private String scope;
 
     @JsonProperty("response_type")
@@ -56,20 +57,20 @@ public class OidcProvider implements Serializable {
         this.name = name;
     }
 
-    public String getApiKey() {
-        return apiKey;
+    public String getClientId() {
+        return clientId;
     }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
-    public String getApiSecret() {
-        return apiSecret;
+    public String getClientSecret() {
+        return clientSecret;
     }
 
-    public void setApiSecret(String apiSecret) {
-        this.apiSecret = apiSecret;
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
     }
 
     public String getScope() {

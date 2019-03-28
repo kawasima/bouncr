@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.URL;
 
@@ -16,16 +17,18 @@ public class OidcApplicationUpdateRequest implements Serializable {
 
     @NotBlank
     @URL
+    @JsonProperty("home_url")
     private String homeUrl;
 
     @NotBlank
     @URL
+    @JsonProperty("callback_url")
     private String callbackUrl;
 
     @NotBlank
     private String description;
 
-    private List<Long> permissionId;
+    private List<String> permissions;
 
     public String getName() {
         return name;
@@ -59,11 +62,11 @@ public class OidcApplicationUpdateRequest implements Serializable {
         this.description = description;
     }
 
-    public List<Long> getPermissionId() {
-        return permissionId;
+    public List<String> getPermissions() {
+        return permissions;
     }
 
-    public void setPermissionId(List<Long> permissionId) {
-        this.permissionId = permissionId;
+    public void setPermissions(List<String> permissions) {
+        this.permissions = permissions;
     }
 }

@@ -81,7 +81,8 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),
                         "username", Env.get("JDBC_USER"),
-                        "password", Env.get("JDBC_PASSWORD"))),
+                        "password", Env.get("JDBC_PASSWORD"),
+                        "schema", Env.getString("JDBC_SCHEMA", null))),
                 "http", builder(new ReverseProxyComponent())
                         .set(ReverseProxyComponent::setHost, Env.getString("HOST", "0.0.0.0"))
                         .set(ReverseProxyComponent::setPort, Env.getInt("PORT", 3000))

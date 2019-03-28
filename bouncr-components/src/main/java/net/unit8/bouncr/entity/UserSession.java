@@ -16,6 +16,7 @@ public class UserSession implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_session_id")
+    @JsonIgnore
     private Long id;
 
     @JsonIgnore

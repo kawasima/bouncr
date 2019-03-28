@@ -106,6 +106,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                             .setNext(ResponseCodeHandler.HANDLE_404)
                             .build();
                     HttpHandler healthCheckHandler = new HealthCheckHandler();
+                    HttpHandler cacheRefreshHandler = new CacheRefreshHandler(realmCache);
 
                     IdentityManager identityManager = new IdentityManager() {
                         @Override
@@ -142,6 +143,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                             .setHandler(addSecurity(
                                     Handlers.path()
                                             .addPrefixPath("/_healthcheck", healthCheckHandler)
+                                            .addPrefixPath("/_refresh", cacheRefreshHandler)
                                             .addPrefixPath("/", proxyHandler)
                                     , identityManager, options)
                             );

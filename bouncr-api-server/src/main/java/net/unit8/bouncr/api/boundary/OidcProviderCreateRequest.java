@@ -16,15 +16,15 @@ public class OidcProviderCreateRequest implements Serializable {
     @Pattern(regexp = "^\\w+$")
     private String name;
 
-    @JsonProperty("api_key")
+    @JsonProperty("client_id")
     @NotBlank
     @Length(max = 256)
-    private String apiKey;
+    private String clientId;
 
-    @JsonProperty("api_secret")
+    @JsonProperty("client_secret")
     @NotBlank
     @Length(max = 256)
-    private String apiSecret;
+    private String clientSecret;
 
     @NotBlank
     @Length(max = 256)
@@ -58,20 +58,20 @@ public class OidcProviderCreateRequest implements Serializable {
         this.name = name;
     }
 
-    public String getApiKey() {
-        return apiKey;
+    public String getClientId() {
+        return clientId;
     }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
-    public String getApiSecret() {
-        return apiSecret;
+    public String getClientSecret() {
+        return clientSecret;
     }
 
-    public void setApiSecret(String apiSecret) {
-        this.apiSecret = apiSecret;
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
     }
 
     public String getScope() {

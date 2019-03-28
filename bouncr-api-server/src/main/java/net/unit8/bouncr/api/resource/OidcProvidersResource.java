@@ -74,8 +74,8 @@ public class OidcProvidersResource {
     public List<OidcProvider> list(OidcProviderSearchParams params, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OidcProvider> query = cb.createQuery(OidcProvider.class);
-        Root<OidcProvider> oidcApplicationRoot = query.from(OidcProvider.class);
-        query.orderBy(cb.asc(oidcApplicationRoot.get("id")));
+        Root<OidcProvider> oidcProviderRoot = query.from(OidcProvider.class);
+        query.orderBy(cb.asc(oidcProviderRoot.get("id")));
         return em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())

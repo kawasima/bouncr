@@ -60,6 +60,10 @@ public class User extends BaseFetchGroupTracker {
     @JsonIgnore
     private OtpKey otpKey;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<OidcUser> oidcUsers;
+
     public Long getId() {
         return id;
     }
@@ -131,6 +135,14 @@ public class User extends BaseFetchGroupTracker {
 
     public void setPasswordCredential(PasswordCredential passwordCredential) {
         this.passwordCredential = passwordCredential;
+    }
+
+    public List<OidcUser> getOidcUsers() {
+        return oidcUsers;
+    }
+
+    public void setOidcUsers(List<OidcUser> oidcUsers) {
+        this.oidcUsers = oidcUsers;
     }
 
     @Override

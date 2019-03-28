@@ -2,7 +2,6 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.component.BeansConverter;
 import enkan.data.HttpRequest;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
@@ -11,9 +10,11 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
+import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.entity.UserSession;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,23 +23,17 @@ import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
-import javax.persistence.Subgraph;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
-import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.EXPIRED;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.INITIAL;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.entity.ActionType.USER_FAILED_SIGNIN;
 import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
 
@@ -105,7 +100,9 @@ public class PasswordSignInResource {
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 final EntityManager em) {
-        SignInService signInService = new SignInService(em, config);
+        SignInService signInService = new SignInService(em, storeProvider, config);
+        UserLockService userLockService = new UserLockService(em, config);
+
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
@@ -149,7 +146,7 @@ public class PasswordSignInResource {
                 return true;
             } else {
                 actionRecord.setActionType(USER_FAILED_SIGNIN);
-                signInService.lockUser(user);
+                userLockService.lockUser(user);
             }
         }
         return false;
@@ -157,33 +154,9 @@ public class PasswordSignInResource {
 
     @Decision(POST)
     public UserSession doPost(User user, HttpRequest request, RestContext context, EntityManager em) {
-        String token = UUID.randomUUID().toString();
-
-        String userAgent = some(request.getHeaders().get("User-Agent"),
-                ua -> ua.substring(0, Math.min(ua.length(), 255))).orElse("");
-        final UserSession userSession = builder(new UserSession())
-                .set(UserSession::setToken, token)
-                .set(UserSession::setUser, user)
-                .set(UserSession::setRemoteAddress, request.getRemoteAddr())
-                .set(UserSession::setUserAgent, userAgent)
-                .set(UserSession::setCreatedAt, LocalDateTime.now())
-                .build();
-
-        /*
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            em.persist(userSession);
-        });
-        */
-        HashMap<String, Object> profileMap = new HashMap<>(user.getUserProfileValues()
-                .stream()
-                .collect(Collectors.toMap(v -> v.getUserProfileField().getJsonName(), UserProfileValue::getValue)));
-        profileMap.put("iss", "bouncr");
-        profileMap.put("uid", Long.toString(user.getId()));
-        profileMap.put("sub", user.getAccount());
-        profileMap.put("permissionsByRealm", getPermissionsByRealm(user, em));
-        LOG.debug("signIn profileMap = {}", profileMap);
-        storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
+        SignInService signInService = new SignInService(em, storeProvider, config);
+        String token = signInService.createToken();
+        UserSession userSession = signInService.createUserSession(request, user, token);
         context.putValue(userSession);
         return userSession;
     }
@@ -193,36 +166,5 @@ public class PasswordSignInResource {
         return userSession;
     }
 
-
-    protected Map<String, List<String>> getPermissionsByRealm(User user, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
-        Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);
-        Join<Group, Assignment> groupJoin = assignmentRoot.join("group");
-        Join<User, Group> userJoin = groupJoin.join("users");
-        assignmentRoot.fetch("role").fetch("permissions");
-        assignmentCriteria.where(cb.equal(userJoin.get("id"), user.getId()));
-
-        EntityGraph<Assignment> assignmentGraph = em.createEntityGraph(Assignment.class);
-        assignmentGraph.addAttributeNodes("realm", "role");
-        Subgraph<Role> roleGraph = assignmentGraph.addSubgraph("role");
-        roleGraph.addAttributeNodes("permissions");
-        Subgraph<Permission> permissionsGraph = roleGraph.addSubgraph("permissions");
-        permissionsGraph.addAttributeNodes("name");
-
-        return em.createQuery(assignmentCriteria)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", assignmentGraph)
-                .getResultStream()
-                .collect(Collectors.groupingBy(Assignment::getRealm))
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        e -> e.getKey().getId().toString(),
-                        e -> new ArrayList<>(e.getValue().stream()
-                                .flatMap(v -> v.getRole().getPermissions().stream())
-                                .map(p -> p.getName())
-                                .collect(Collectors.toSet()))));
-    }
 
 }

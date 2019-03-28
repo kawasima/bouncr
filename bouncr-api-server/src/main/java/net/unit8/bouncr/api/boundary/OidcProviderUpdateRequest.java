@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import net.unit8.bouncr.api.constraints.StringEnumeration;
 import net.unit8.bouncr.entity.ResponseType;
 import net.unit8.bouncr.entity.TokenEndpointAuthMethod;
@@ -15,25 +16,38 @@ public class OidcProviderUpdateRequest implements Serializable {
     @Pattern(regexp = "^\\w+$")
     private String name;
 
+    @JsonProperty("client_id")
     @NotBlank
-    private String apiKey;
+    @Length(max = 256)
+    private String clientId;
+
+    @JsonProperty("client_secret")
+    @NotBlank
+    @Length(max = 256)
+    private String clientSecret;
 
     @NotBlank
-    private String apiSecret;
-
-    @NotBlank
+    @Length(max = 256)
     private String scope;
 
     @NotBlank
+    @JsonProperty("response_type")
     @StringEnumeration(enumClass = ResponseType.class, accessorMethod = "getName")
+    @Length(max = 16)
     private String responseType;
 
+    @JsonProperty("authorization_endpoint")
     @NotBlank
+    @Length(max = 256)
     private String authorizationEndpoint;
+
+    @JsonProperty("token_endpoint")
+    @Length(max = 256)
     private String tokenEndpoint;
 
     @NotBlank
     @StringEnumeration(enumClass = TokenEndpointAuthMethod.class, accessorMethod = "getValue")
+    @JsonProperty("token_endpoint_auth_method")
     private String tokenEndpointAuthMethod;
 
     public String getName() {
@@ -44,20 +58,20 @@ public class OidcProviderUpdateRequest implements Serializable {
         this.name = name;
     }
 
-    public String getApiKey() {
-        return apiKey;
+    public String getClientId() {
+        return clientId;
     }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
-    public String getApiSecret() {
-        return apiSecret;
+    public String getClientSecret() {
+        return clientSecret;
     }
 
-    public void setApiSecret(String apiSecret) {
-        this.apiSecret = apiSecret;
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
     }
 
     public String getScope() {

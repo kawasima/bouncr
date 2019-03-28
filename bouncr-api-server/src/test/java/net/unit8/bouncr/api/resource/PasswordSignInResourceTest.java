@@ -1,20 +1,14 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.component.jpa.EntityManagerProvider;
-import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
-import net.unit8.bouncr.entity.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.EntityManager;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class PasswordSignInResourceTest {
     private EntityManager em;
@@ -27,14 +21,6 @@ public class PasswordSignInResourceTest {
         system.start();
         EntityManagerProvider provider = system.getComponent("jpa");
         em = provider.createEntityManager();
-    }
-
-    @Test
-    void permissionsByRealm() {
-        PasswordSignInResource resource = new PasswordSignInResource();
-        User user = em.find(User.class, 1L);
-        Map<String, List<String>> permissionsByRealm = resource.getPermissionsByRealm(user, em);
-        System.out.println(permissionsByRealm);
     }
 
     @AfterEach

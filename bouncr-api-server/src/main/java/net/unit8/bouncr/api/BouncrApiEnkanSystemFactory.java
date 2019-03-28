@@ -89,7 +89,8 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),
                         "username", Env.get("JDBC_USER"),
-                        "password", Env.get("JDBC_PASSWORD"))),
+                        "password", Env.get("JDBC_PASSWORD"),
+                        "schema", Env.getString("JDBC_SCHEMA", null))),
                 "app", new ApplicationComponent("net.unit8.bouncr.api.BouncrApplicationFactory"),
                 "http", builder(new JettyComponent())
                         .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
