@@ -47,7 +47,6 @@ public class User extends BaseFetchGroupTracker {
     @JsonProperty("lock")
     private UserLock userLock;
 
-
     @OneToOne(mappedBy = "user", cascade = { CascadeType.ALL },
             orphanRemoval = true,
             fetch = FetchType.LAZY)
@@ -63,6 +62,10 @@ public class User extends BaseFetchGroupTracker {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<OidcUser> oidcUsers;
+
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<String> permissions;
 
     public Long getId() {
         return id;
@@ -143,6 +146,14 @@ public class User extends BaseFetchGroupTracker {
 
     public void setOidcUsers(List<OidcUser> oidcUsers) {
         this.oidcUsers = oidcUsers;
+    }
+
+    public List<String> getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(List<String> permissions) {
+        this.permissions = permissions;
     }
 
     @Override

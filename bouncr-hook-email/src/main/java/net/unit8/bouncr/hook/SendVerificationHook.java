@@ -17,7 +17,7 @@ public class SendVerificationHook extends AbstractSendMailHook {
         Map<String, Object> variables = new HashMap<>();
 
         context.getValue(User.class).ifPresent(user -> {
-            variables.put("baseUrl", Env.getString("API_FRONTEND_URL", "http://localhost:3000/bouncr/api"));
+            variables.put("baseUrl", Env.getString("EMAIL_BASE_URL", "http://localhost:3000/bouncr/api"));
             variables.put("user", user);
             variables.put("email", user.getUserProfileValues().stream()
                     .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))

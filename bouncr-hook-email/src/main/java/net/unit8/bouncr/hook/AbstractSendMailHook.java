@@ -12,10 +12,13 @@ import net.unit8.bouncr.entity.UserProfileVerification;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import java.io.UnsupportedEncodingException;
+import javax.mail.internet.MimeUtility;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class AbstractSendMailHook implements Hook<RestContext> {
@@ -36,7 +39,11 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
                 ctx.entrySet().stream()
                         .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
                         .toArray());
-        return response.getBodyAsString();
+        try(BufferedReader reader = new BufferedReader(new InputStreamReader(response.getBodyAsStream(), StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Override
@@ -65,10 +72,11 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
                 Session session = Session.getDefaultInstance(props);
                 MimeMessage msg = new MimeMessage(session);
                 try {
-                    msg.setFrom(new InternetAddress(fromAddress, fromName));
+                    msg.setFrom(new InternetAddress(fromAddress, MimeUtility.encodeText(fromName, "UTF-8", "B")));
                     msg.setRecipient(Message.RecipientType.TO, new InternetAddress(email, email));
-                    msg.setSubject(subject);
-                    msg.setContent(mergeTemplate(context), contentType);
+                    msg.setSubject(MimeUtility.encodeText(subject, "UTF-8", "B"));
+                    msg.setText(
+                            mergeTemplate(context), "UTF-8", contentType);
                 } catch (UnsupportedEncodingException e) {
                     throw new MisconfigurationException("", e);
                 } catch (MessagingException e) {

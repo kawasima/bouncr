@@ -110,6 +110,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 .set(CorsMiddleware::setHeaders, new HashSet<>(Arrays.asList(
                         "Origin", "Accept", "X-Requested-With", "Content-Type",
                         "Access-Control-Request-Method", "Access-Control-Request-Headers",
+                        "Authorization",
                         "X-Bouncr-Token")))
                 .build());
 

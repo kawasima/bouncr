@@ -102,6 +102,9 @@ public class PasswordSignInResource {
                                 RestContext context,
                                 final EntityManager em) {
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
+        if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
+            return false;
+        }
         SignInService signInService = new SignInService(em, storeProvider, config);
         UserLockService userLockService = new UserLockService(em, config);
 
@@ -121,7 +124,6 @@ public class PasswordSignInResource {
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
 
-        Problem problem = null;
         if (user != null && user.getUserLock() != null) {
             context.setMessage(new Problem(URI.create("abount:blank"), "Authentication failed", 401,
                     "Account is locked", null));

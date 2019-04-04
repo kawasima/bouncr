@@ -88,14 +88,14 @@ public class SignInService {
         profileMap.put("iss", "bouncr");
         profileMap.put("uid", Long.toString(user.getId()));
         profileMap.put("sub", user.getAccount());
-        profileMap.put("permissionsByRealm", getPermissionsByRealm(user, em));
+        profileMap.put("permissionsByRealm", getPermissionsByRealm(user));
         LOG.debug("signIn profileMap = {}", profileMap);
         storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
 
         return userSession;
     }
 
-    protected Map<String, List<String>> getPermissionsByRealm(User user, EntityManager em) {
+    public Map<String, List<String>> getPermissionsByRealm(User user) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
         Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);

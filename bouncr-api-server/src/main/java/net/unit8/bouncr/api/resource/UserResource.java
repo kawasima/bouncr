@@ -12,7 +12,10 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.UserUpdateRequest;
+import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserProfileService;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileValue;
 import net.unit8.bouncr.entity.UserProfileVerification;
@@ -24,6 +27,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
@@ -35,6 +39,12 @@ public class UserResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Inject
+    private BouncrConfiguration config;
+
+    @Inject
+    private StoreProvider storeProvider;
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
@@ -101,6 +111,7 @@ public class UserResource {
             userGraph.addSubgraph("groups")
                     .addAttributeNodes("name", "description");
         }
+
         User user = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", userGraph)
@@ -126,6 +137,18 @@ public class UserResource {
 
     @Decision(HANDLE_OK)
     public User handleOk(User user, Parameters params, EntityManager em) {
+        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
+                .orElse(Collections.emptyList());
+
+        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("permissions"))) {
+            SignInService signInService = new SignInService(em, storeProvider, config);
+            Set<String> permissions = signInService.getPermissionsByRealm(user).values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toSet());
+            user.setPermissions(new ArrayList<>(permissions));
+        }
+
         return user;
     }
 
