@@ -17,6 +17,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,6 +33,8 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
 
     protected abstract Map<String, Object> createContext(RestContext message);
 
+    protected abstract Optional<UserProfileValue> findEmailField(RestContext context);
+
     private String mergeTemplate(RestContext context) {
         Map<String, Object> ctx = createContext(context);
 
@@ -39,7 +42,7 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
                 ctx.entrySet().stream()
                         .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
                         .toArray());
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(response.getBodyAsStream(), StandardCharsets.UTF_8))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getBodyAsStream(), StandardCharsets.UTF_8))) {
             return reader.lines().collect(Collectors.joining(System.lineSeparator()));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -56,46 +59,34 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
         props.put("mail.smtp.connectiontimeout", mailServerConfig.getConnectionTimeout());
         props.put("mail.smtp.timeout", mailServerConfig.getTimeout());
 
-        context.getValue(UserProfileVerification.class).ifPresent(verification -> {
-            String name = verification.getUserProfileField().getJsonName();
-            if (Objects.equals(name, "email")) {
-                UserProfileField emailField = verification.getUserProfileField();
-                String email = context.getValue(User.class)
-                        .map(User::getUserProfileValues)
-                        .map(values -> values.stream()
-                                .filter(v -> v.getUserProfileField().equals(emailField))
-                                .findAny()
-                                .orElse(null))
-                        .map(UserProfileValue::getValue)
-                        .orElseThrow(() -> new MisconfigurationException(""));
+        findEmailField(context).ifPresent(value -> {
+            String email = value.getValue();
 
-                Session session = Session.getDefaultInstance(props);
-                MimeMessage msg = new MimeMessage(session);
-                try {
-                    msg.setFrom(new InternetAddress(fromAddress, MimeUtility.encodeText(fromName, "UTF-8", "B")));
-                    msg.setRecipient(Message.RecipientType.TO, new InternetAddress(email, email));
-                    msg.setSubject(MimeUtility.encodeText(subject, "UTF-8", "B"));
-                    msg.setText(
-                            mergeTemplate(context), "UTF-8", contentType);
-                } catch (UnsupportedEncodingException e) {
-                    throw new MisconfigurationException("", e);
-                } catch (MessagingException e) {
-                    throw new HookRuntimeException(e);
-                }
+            Session session = Session.getDefaultInstance(props);
+            MimeMessage msg = new MimeMessage(session);
+            try {
+                msg.setFrom(new InternetAddress(fromAddress, MimeUtility.encodeText(fromName, "UTF-8", "B")));
+                msg.setRecipient(Message.RecipientType.TO, new InternetAddress(email, email));
+                msg.setSubject(MimeUtility.encodeText(subject, "UTF-8", "B"));
+                msg.setText(
+                        mergeTemplate(context), "UTF-8", contentType);
+            } catch (UnsupportedEncodingException e) {
+                throw new MisconfigurationException("", e);
+            } catch (MessagingException e) {
+                throw new HookRuntimeException(e);
+            }
 
-                try (Transport transport = session.getTransport()) {
-                    transport.connect(mailServerConfig.getSmtpHost(),
-                            mailServerConfig.getSmtpUsername(),
-                            mailServerConfig.getSmtpPassword());
-                    transport.sendMessage(msg, msg.getAllRecipients());
-                } catch (NoSuchProviderException e) {
-                    throw new MisconfigurationException("", e);
-                } catch (MessagingException e) {
-                    throw new HookRuntimeException(e);
-                }
+            try (Transport transport = session.getTransport()) {
+                transport.connect(mailServerConfig.getSmtpHost(),
+                        mailServerConfig.getSmtpUsername(),
+                        mailServerConfig.getSmtpPassword());
+                transport.sendMessage(msg, msg.getAllRecipients());
+            } catch (NoSuchProviderException e) {
+                throw new MisconfigurationException("", e);
+            } catch (MessagingException e) {
+                throw new HookRuntimeException(e);
             }
         });
-
     }
 
     public void setMailServerConfig(MailServerConfig mailServerConfig) {

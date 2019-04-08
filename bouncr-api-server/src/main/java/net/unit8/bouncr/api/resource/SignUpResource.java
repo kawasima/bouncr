@@ -9,7 +9,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.InitialPassword;
+import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
@@ -122,7 +122,9 @@ public class SignUpResource {
                 .collect(Collectors.toList());
 
         user.setWriteProtected(false);
+        context.putValue(user);
 
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_UP, context);
 
         Optional<Invitation> invitation = Optional.ofNullable(createRequest.getCode())
                 .map(code -> findInvitation(code, em));
@@ -159,7 +161,7 @@ public class SignUpResource {
             }
         });
 
-        config.getHookRepo().runHook(HookPoint.AFTER_SIGNUP, context);
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
         return builder(new SignUpResponse())
                 .set(SignUpResponse::setId, user.getId())
                 .set(SignUpResponse::setAccount, user.getAccount())

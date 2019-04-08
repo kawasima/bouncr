@@ -46,7 +46,9 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))
                                 .build())
                 .build();
-        config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, new GrantBouncrUserRole());
+        GrantBouncrUserRole grantBouncrUserRole = new GrantBouncrUserRole();
+        config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
+        config.getHookRepo().register(HookPoint.BEFORE_SIGN_UP, grantBouncrUserRole);
 
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),

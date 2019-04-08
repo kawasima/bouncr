@@ -1,11 +1,18 @@
 package net.unit8.bouncr.api.boundary;
 
-import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 
-public class InitialPassword implements Serializable {
-    @NotBlank
+public class PasswordResetResponse implements Serializable {
+    private String account;
     private String password;
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
 
     public String getPassword() {
         return password;

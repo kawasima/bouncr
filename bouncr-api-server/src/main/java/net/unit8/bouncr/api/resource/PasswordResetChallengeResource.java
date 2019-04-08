@@ -44,8 +44,12 @@ public class PasswordResetChallengeResource {
     private BeansValidator validator;
 
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validate(PasswordResetChallengeCreateRequest createRequest) {
+    public Problem validate(PasswordResetChallengeCreateRequest createRequest, RestContext context) {
         Set<ConstraintViolation<PasswordResetChallengeCreateRequest>> violations = validator.validate(createRequest);
+        if (violations.isEmpty()) {
+            context.putValue(createRequest);
+            config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
+        }
         return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
@@ -67,11 +71,7 @@ public class PasswordResetChallengeResource {
 
     @Decision(HANDLE_UNPROCESSABLE_ENTITY)
     public Problem unprocessable() {
-        return new Problem(URI.create("about:blank"),
-                "Account not found",
-                422,
-                null,
-                null);
+        return Problem.valueOf(422, "Account not found");
     }
 
     /**

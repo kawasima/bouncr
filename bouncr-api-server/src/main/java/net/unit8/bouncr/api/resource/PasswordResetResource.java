@@ -7,7 +7,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.InitialPassword;
+import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.api.boundary.PasswordResetRequest;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
 import net.unit8.bouncr.api.service.UserLockService;
@@ -60,10 +60,10 @@ public class PasswordResetResource {
     }
 
     @Decision(PUT)
-    public Void reset(PasswordResetChallenge resetChallenge,
-                      User user,
-                      RestContext context,
-                      EntityManager em) {
+    public InitialPassword reset(PasswordResetChallenge resetChallenge,
+                                       User user,
+                                       RestContext context,
+                                       EntityManager em) {
         PasswordCredentialService passwordCredentialService = new PasswordCredentialService(em, config);
         UserLockService userLockService = new UserLockService(em, config);
 
@@ -74,8 +74,9 @@ public class PasswordResetResource {
             InitialPassword initialPassword = passwordCredentialService.initializePassword(user);
             context.putValue(initialPassword);
         });
+
         config.getHookRepo().runHook(HookPoint.AFTER_PASSWORD_RESET, context);
 
-        return null;
+        return context.getValue(InitialPassword.class).orElse(null);
     }
 }

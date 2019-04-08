@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.service;
 
-import net.unit8.bouncr.api.boundary.InitialPassword;
+import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.PasswordCredential;
 import net.unit8.bouncr.entity.User;
