@@ -33,6 +33,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
@@ -72,6 +73,8 @@ public class OidcSignInResource {
     @Inject
     private JsonWebToken jsonWebToken;
 
+    private ObjectMapper jsonMapper = new ObjectMapper();
+
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -91,9 +94,13 @@ public class OidcSignInResource {
 
     @Decision(PROCESSABLE)
     public boolean processable(Parameters params, OidcSession oidcSession) {
+        // The verification of state should be executed at frontend?
+        /*
         if (!Objects.equals(oidcSession.getState(), params.get("state"))) {
             return false;
         }
+        return true;
+        */
         return true;
     }
 
@@ -102,13 +109,13 @@ public class OidcSignInResource {
                                 Parameters params,
                                 OidcProvider oidcProvider,
                                 EntityManager em) {
-        if (oidcProvider.getResponseType() == ID_TOKEN && oidcProvider.getResponseType() == TOKEN) {
+        if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
             String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
             OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
             // TODO
         }
         OidcProviderDto oidcProviderDto = converter.createFrom(oidcProvider, OidcProviderDto.class);
-        oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
+        oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api");
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             Response response =  OKHTTP.newCall(new Request.Builder()
@@ -121,12 +128,18 @@ public class OidcSignInResource {
                     .build())
                     .execute();
             if (response.code() == 503) throw new FalteringEnvironmentException();
+
             try(InputStream in  = response.body().byteStream()) {
-                ObjectMapper jsonMapper = new ObjectMapper();
                 return jsonMapper.readValue(in, GENERAL_JSON_REF);
             }
         });
         String encodedIdToken = (String) res.get("id_token");
+        if (encodedIdToken == null) {
+            return builder(new ApiResponse())
+                    .set(ApiResponse::setStatus, 401)
+                    .set(ApiResponse::setBody, Problem.valueOf(401, "Can't authenticate by OpenID Connect"))
+                    .build();
+        }
         return connectOpenIdToBouncrUser(encodedIdToken, oidcProvider, request, em);
     }
 
@@ -157,6 +170,7 @@ public class OidcSignInResource {
             } else {
                 Invitation invitation = builder(new Invitation())
                         .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
+                        .set(Invitation::setInvitedAt, LocalDateTime.now())
                         .build();
                 OidcInvitation oidcInvitation = builder(new OidcInvitation())
                         .set(OidcInvitation::setInvitation, invitation)
@@ -201,7 +215,7 @@ public class OidcSignInResource {
 
         public String getRedirectUri() {
             return redirectUriBase
-                    + "/sign_in/oidc/" + id;
+                    + "/sign_in/oidc/" + name;
         }
 
         public String getAuthorizationUrl() {

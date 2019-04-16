@@ -7,6 +7,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
@@ -32,6 +33,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.EXPIRED;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.INITIAL;
@@ -144,7 +146,16 @@ public class PasswordSignInResource {
                 actionRecord.setActionType(USER_SIGNIN);
                 SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
                 if (status == EXPIRED || status == INITIAL) {
-                    context.setMessage(new Problem(null, "Authentication Success but...", 401, "Password must be changed", null));
+                    context.setMessage(builder(Problem.valueOf(401,"Password must be changed"))
+                            .set(Problem::setType, BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri())
+                            .build());
+                    return false;
+                }
+
+                if (!signInService.validateOtpKey(user.getOtpKey(), passwordSignInRequest.getOneTimePassword())) {
+                    context.setMessage(builder(Problem.valueOf(401, "One time password is needed"))
+                            .set(Problem::setType, BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri())
+                            .build());
                     return false;
                 }
                 return true;

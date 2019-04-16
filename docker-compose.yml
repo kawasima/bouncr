@@ -40,7 +40,7 @@ services:
       JDBC_URL: jdbc:postgresql://db:5432/bouncr
       JDBC_USER: bouncr
       JDBC_PASSWORD: bouncr
-      JAVA_OPTS: -Dhazelcast.member.address=kvs
+      JAVA_OPTS: -Dhazelcast.member.address=kvs -Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
       - "3005:3005"

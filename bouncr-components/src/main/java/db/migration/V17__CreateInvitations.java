@@ -44,7 +44,7 @@ public class V17__CreateInvitations extends BaseJavaMigration {
                     .column(field("oidc_invitation_id", SQLDataType.BIGINT.identity(true)))
                     .column(field("invitation_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("oidc_provider_id", SQLDataType.BIGINT.nullable(false)))
-                    .column(field("oidc_sub", SQLDataType.VARCHAR(255).nullable(false)))
+                    .column(field("oidc_sub", SQLDataType.VARCHAR(2048).nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("oidc_invitation_id")),
                             constraint().foreignKey(field("invitation_id")).references(table("invitations"), field("invitation_id")).onDeleteCascade(),

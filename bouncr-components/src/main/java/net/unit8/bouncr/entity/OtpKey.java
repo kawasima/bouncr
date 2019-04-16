@@ -38,6 +38,6 @@ public class OtpKey implements Serializable {
 
     @JsonProperty("key")
     public String getEncodedKey() {
-        return Base32Utils.encode(key);
+        return key != null ? Base32Utils.encode(key) : null;
     }
 }

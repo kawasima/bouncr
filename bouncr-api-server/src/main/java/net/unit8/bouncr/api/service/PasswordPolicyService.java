@@ -8,6 +8,7 @@ import net.unit8.bouncr.entity.PasswordCredential;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -49,7 +50,7 @@ public class PasswordPolicyService {
     }
 
     public Problem.Violation validateUpdatePassword(PasswordCredentialUpdateRequest updateRequest) {
-        if (updateRequest.getNewPassword() == updateRequest.getOldPassword()) {
+        if (Objects.equals(updateRequest.getNewPassword(), updateRequest.getOldPassword())) {
             return new Problem.Violation("new_password", "is the same as the old password");
         }
 
@@ -58,7 +59,9 @@ public class PasswordPolicyService {
         Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);
         Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
         query.where(cb.equal(userJoin.get("account"), updateRequest.getAccount()));
-        PasswordCredential passwordCredential = em.createQuery(query).getResultStream().findAny().orElse(null);
+        PasswordCredential passwordCredential = em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .getResultStream().findAny().orElse(null);
         if (passwordCredential == null) {
             return new Problem.Violation("old_password", "does not match current password");
         }

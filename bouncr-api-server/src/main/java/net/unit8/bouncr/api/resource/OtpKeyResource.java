@@ -17,11 +17,9 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
 import static enkan.util.BeanBuilder.builder;
-import static kotowari.restful.DecisionPoint.AUTHORIZED;
-import static kotowari.restful.DecisionPoint.DELETE;
-import static kotowari.restful.DecisionPoint.PUT;
+import static kotowari.restful.DecisionPoint.*;
 
-@AllowedMethods({"PUT", "DELETE"})
+@AllowedMethods({"GET", "PUT", "DELETE"})
 public class OtpKeyResource {
     @Inject
     private BouncrConfiguration config;
@@ -29,6 +27,17 @@ public class OtpKeyResource {
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
+    }
+
+    @Decision(HANDLE_OK)
+    public OtpKey find(UserPermissionPrincipal principal, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<OtpKey> query = cb.createQuery(OtpKey.class);
+        Root<OtpKey> root = query.from(OtpKey.class);
+        Join<OtpKey, User> userRoot = root.join("user");
+        query.where(cb.equal(userRoot.get("account"), principal.getName()));
+        return em.createQuery(query).getResultStream().findAny()
+                .orElse(new OtpKey());
     }
 
     @Decision(PUT)

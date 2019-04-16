@@ -36,22 +36,27 @@ public class PasswordCredentialService {
     }
 
     public InitialPassword initializePassword(User user) {
-        PasswordCredential passwordCredential = user.getPasswordCredential();
-        if (passwordCredential != null) {
-            em.remove(passwordCredential);
-            em.flush();
-        }
         String password = RandomUtils.generateRandomString(8, config.getSecureRandom());
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        passwordCredential = builder(new PasswordCredential())
-                .set(PasswordCredential::setUser, user)
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
-                .set(PasswordCredential::setSalt, salt)
-                .set(PasswordCredential::setInitial, true)
-                .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
-                .build();
-        em.persist(passwordCredential);
-        user.setPasswordCredential(passwordCredential);
+
+        if (user.getPasswordCredential() == null) {
+            PasswordCredential passwordCredential = builder(new PasswordCredential())
+                    .set(PasswordCredential::setUser, user)
+                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                    .set(PasswordCredential::setSalt, salt)
+                    .set(PasswordCredential::setInitial, true)
+                    .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
+                    .build();
+            user.setPasswordCredential(passwordCredential);
+            em.persist(passwordCredential);
+        } else {
+            builder(user.getPasswordCredential())
+                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                    .set(PasswordCredential::setSalt, salt)
+                    .set(PasswordCredential::setInitial, true)
+                    .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
+                    .build();
+        }
         return builder(new InitialPassword())
                 .set(InitialPassword::setPassword, password)
                 .build();

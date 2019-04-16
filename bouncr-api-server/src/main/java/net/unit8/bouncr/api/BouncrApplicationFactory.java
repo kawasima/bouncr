@@ -44,6 +44,10 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         // Routing
         Routes routes = Routes.define(r -> {
+            r.scope("/bouncr", br -> {
+                br.all("/problem/:problem").to(ProblemResource.class);
+            });
+
             r.scope("/bouncr/api", ar -> {
                 ar.all("/users").to(UsersResource.class);
                 ar.all("/user/:account").to(UserResource.class);
@@ -69,7 +73,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/invitations").to(InvitationsResource.class);
 
                 ar.all("/sign_in").to(PasswordSignInResource.class);
-                ar.all("/sign_in/oidc/:id").to(OidcSignInResource.class);
+                ar.all("/sign_in/oidc/:name").to(OidcSignInResource.class);
                 ar.all("/sign_up").to(SignUpResource.class);
                 ar.all("/user_profile_verification").to(UserProfileVerificationResource.class);
                 ar.all("/password_credential/reset_code").to(PasswordResetChallengeResource.class);
