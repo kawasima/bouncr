@@ -5,14 +5,14 @@ const sb = require('@json-spec/spec-basic');
 
 const PasswordSignInRequest = s.object({
   required: {
-    account: sp.name({ size: 20}),
+    account: sp.name({ size: 100}),
     password: sp.name({ size: 20})
   }
 });
 
 const UserCreateRequest = s.object({
   required: {
-      account: sp.account({ size: 20}),
+      account: sp.account({ size: 100}),
       email: sp.email,
       name: sp.name({ size: 20})
   }

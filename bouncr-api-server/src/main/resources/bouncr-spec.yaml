@@ -660,10 +660,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordCredentialCreateRequest'
+              $ref: '#/components/schemas/PasswordCredentialUpdateRequest'
       responses:
-        204:
+        201:
           description: Updating a password is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialPassword'
     delete:
       summary: Delete a password credential
       operationId: deletePasswordCredential
@@ -1242,6 +1246,14 @@ components:
           type: string
           format: password
           required: false
+    InitialPassword:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          format: password
     ConstraintsProblem:
       type: object
       properties:

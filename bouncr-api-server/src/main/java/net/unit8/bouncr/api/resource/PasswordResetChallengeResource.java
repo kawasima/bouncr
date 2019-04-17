@@ -80,9 +80,10 @@ public class PasswordResetChallengeResource {
      * User can only know the code by email or SMS.
      * So this endpoint returns Void.
      *
-     * @param createRequest
-     * @param context
-     * @param em
+     * @param createRequest a creation request for the password reset challenge
+     * @param user an user entity
+     * @param context an REST context
+     * @param em an entity manager
      * @return null
      */
     @Decision(POST)

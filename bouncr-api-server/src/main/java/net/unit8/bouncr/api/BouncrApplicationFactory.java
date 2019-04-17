@@ -9,6 +9,7 @@ import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
 import enkan.middleware.jpa.EntityManagerMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
+import enkan.predicate.EnvPredicate;
 import enkan.security.bouncr.BouncrBackend;
 import enkan.system.inject.ComponentInjector;
 import is.tagomor.woothee.Classifier;

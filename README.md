@@ -11,13 +11,11 @@ Bouncer has following features:
         - Password
         - LDAP
         - OpenID Connect
-        - Client certificate
-    - Two factor authentication (using by Google authenticator)
+    - Two factor authentication (using by Google authenticator etc)
 - Authorization (based on Group - Role - Permission)
 - Sign in
 - Sign out
 - Audit
-    - Show active sessions
     - Show security activities
 - IdP
     - OpenID Connect provider
@@ -30,37 +28,6 @@ Bouncer has following features:
 
 ![bouncr architecture](https://i.imgur.com/BXWLGPG.png)
 
-## Build
-
-To build for production,
-
-```
-mvn -P \!dev package
-```
-
-## Developing
-
-To begin developing, start with a REPL.
-
-```sh
-mvn compile exec:java
-```
-
-Run `start` to prep and initiate the system.
-
-```
-enkan> /start
-```
-
-By default this creates a web server at <http://localhost:3000>.
-
-
-When you make changes to your source files, use `reset` to reload any
-modified files and reset the server.
-
-```
-enkan> /reset
-```
 
 ## Docker
 
@@ -80,6 +47,6 @@ You can build the docker image of the api server and the proxy server using by j
 
 ## License
 
-Copyright © 2017-2018 kawasima
+Copyright © 2017-2019 kawasima
 
 Distributed under the Eclipse Public License, the same as Clojure.

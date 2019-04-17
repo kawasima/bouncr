@@ -31,7 +31,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
  *
  * Deleting an user session means sign out.
  *
- * @Author kawasima
+ * @author kawasima
  */
 @AllowedMethods("DELETE")
 public class UserSessionResource {

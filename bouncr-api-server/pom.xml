@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
+        <version>0.2.0</version>
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -39,17 +39,6 @@
                         <image>bouncr/bouncr-api-server</image>
                     </to>
                 </configuration>
-                <!--
-                <executions>
-                    <execution>
-                        <id>docker-build</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                -->
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -87,7 +76,6 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-flyway</artifactId>
-            <version>0.7.1</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -148,12 +136,11 @@
         <dependency>
             <groupId>net.unit8.apistandard</groupId>
             <artifactId>parameter-parser</artifactId>
-            <version>0.1.0</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.bouncr</groupId>
             <artifactId>bouncr-components</artifactId>
-            <version>0.2.0-SNAPSHOT</version>
+            <version>0.2.0</version>
         </dependency>
     </dependencies>
 
@@ -206,7 +193,6 @@
                 <dependency>
                     <groupId>net.unit8.enkan</groupId>
                     <artifactId>enkan-devel</artifactId>
-                    <version>${enkan.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>org.jsr107.ri</groupId>
@@ -216,7 +202,7 @@
                 <dependency>
                     <groupId>com.h2database</groupId>
                     <artifactId>h2</artifactId>
-                    <version>1.4.197</version>
+                    <version>1.4.199</version>
                 </dependency>
 
                 <dependency>
@@ -281,7 +267,6 @@
                 <dependency>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-simple</artifactId>
-                    <version>1.7.25</version>
                 </dependency>
             </dependencies>
         </profile>
