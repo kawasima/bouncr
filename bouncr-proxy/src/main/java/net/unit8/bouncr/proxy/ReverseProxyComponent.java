@@ -82,6 +82,8 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
 
     private boolean reuseXForwarded = true;
 
+    private boolean connectionCache = false;
+
     private Undertow server;
 
     @Override
@@ -98,6 +100,7 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                     OptionMap options = buildOptionMap();
 
                     MultiAppProxyClient proxyClient = new MultiAppProxyClient(config, storeProvider.getStore(BOUNCR_TOKEN), realmCache, jwt);
+                    proxyClient.setConnectionCache(connectionCache);
                     ProxyHandler proxyHandler = ProxyHandler.builder()
                             .setProxyClient(proxyClient)
                             .setMaxRequestTime(maxRequestTime)
@@ -263,5 +266,9 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
             handler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, handler);
         }
         return handler;
+    }
+
+    public void setConnectionCache(boolean connectionCache) {
+        this.connectionCache = connectionCache;
     }
 }

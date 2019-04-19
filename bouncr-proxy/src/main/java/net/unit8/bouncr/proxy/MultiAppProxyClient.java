@@ -50,6 +50,7 @@ public class MultiAppProxyClient implements ProxyClient {
     private final BouncrConfiguration config;
     private final JsonWebToken jwt;
     private final JwtHeader jwtHeader;
+    private boolean connectionCache = false;
 
     public MultiAppProxyClient(BouncrConfiguration config, KeyValueStore store, RealmCache realmCache, JsonWebToken jwt) {
         client = UndertowClient.getInstance();
@@ -60,6 +61,10 @@ public class MultiAppProxyClient implements ProxyClient {
         this.jwtHeader = BeanBuilder.builder(new JwtHeader())
                 .set(JwtHeader::setAlg, "none")
                 .build();
+    }
+
+    public void setConnectionCache(boolean enabled) {
+        this.connectionCache = enabled;
     }
 
     @Override
@@ -100,20 +105,22 @@ public class MultiAppProxyClient implements ProxyClient {
         });
 
         Application application = realmCache.getApplication(realm);
-        ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
-        if (existing != null) {
-            if (existing.isOpen()) {
-                //this connection already has a client, re-use it
-                String path = exchange.getRequestURI();
-                if (path.startsWith(application.getVirtualPath())) {
-                    String passTo = calculatePathTo(path, application);
-                    exchange.setRequestPath(passTo);
-                    exchange.setRequestURI(passTo);
+        if (connectionCache) {
+            ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
+            if (existing != null) {
+                if (existing.isOpen()) {
+                    //this connection already has a client, re-use it
+                    String path = exchange.getRequestURI();
+                    if (path.startsWith(application.getVirtualPath())) {
+                        String passTo = calculatePathTo(path, application);
+                        exchange.setRequestPath(passTo);
+                        exchange.setRequestURI(passTo);
+                    }
+                    callback.completed(exchange, new ProxyConnection(existing, "/"));
+                    return;
+                } else {
+                    exchange.getConnection().removeAttachment(clientAttachmentKey);
                 }
-                callback.completed(exchange, new ProxyConnection(existing, "/"));
-                return;
-            } else {
-                exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
 
@@ -164,7 +171,9 @@ public class MultiAppProxyClient implements ProxyClient {
         public void completed(final ClientConnection connection) {
             final ServerConnection serverConnection = exchange.getConnection();
             //we attach to the connection so it can be re-used
-            serverConnection.putAttachment(clientAttachmentKey, connection);
+            if (connectionCache) {
+                serverConnection.putAttachment(clientAttachmentKey, connection);
+            }
             serverConnection.addCloseListener(serverConnection1 -> IoUtils.safeClose(connection));
             connection.getCloseSetter().set((ChannelListener<Channel>) channel -> serverConnection.removeAttachment(clientAttachmentKey));
 

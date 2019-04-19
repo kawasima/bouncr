@@ -3,7 +3,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.0</version>
+        <version>0.2.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>bouncr-hook-email</artifactId>
@@ -14,7 +14,6 @@
         <dependency>
             <groupId>net.unit8.bouncr</groupId>
             <artifactId>bouncr-components</artifactId>
-            <version>0.2.0</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>

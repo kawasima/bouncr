@@ -22,6 +22,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.security.Security;
 import java.time.Duration;
+import java.util.Objects;
 
 import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
@@ -92,6 +93,7 @@ public class BouncrProxyEnkanSystemFactory implements EnkanSystemFactory {
                         .set(ReverseProxyComponent::setSsl, Env.get("SSL_PORT") != null)
                         .set(ReverseProxyComponent::setKeystorePath, Env.getString("KEYSTORE_PATH", ""))
                         .set(ReverseProxyComponent::setKeystorePassword, Env.getString("KEYSTORE_PASSWORD", ""))
+                        .set(ReverseProxyComponent::setConnectionCache, Objects.equals(Env.getString("ENABLE_CONNECTION_CACHE", "false"), "true"))
                         .build()
         ).relationships(
                 component("http").using("storeprovider", "realmCache", "trustManager", "config", "jwt"),
