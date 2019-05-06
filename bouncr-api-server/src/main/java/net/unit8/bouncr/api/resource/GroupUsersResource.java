@@ -6,8 +6,10 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.GroupUsersRequest;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
@@ -19,11 +21,10 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import javax.validation.ConstraintViolation;
+import java.util.*;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST", "DELETE"})
@@ -33,6 +34,16 @@ public class GroupUsersResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Decision(value = MALFORMED, method = {"POST", "DELETE"})
+    public Problem vaidateCreateRequest(GroupUsersRequest createRequest, RestContext context) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        return null;
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {

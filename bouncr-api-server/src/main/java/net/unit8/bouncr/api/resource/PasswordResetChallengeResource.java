@@ -7,6 +7,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PasswordResetChallengeCreateRequest;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
@@ -25,6 +26,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 /**
@@ -45,12 +47,19 @@ public class PasswordResetChallengeResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(PasswordResetChallengeCreateRequest createRequest, RestContext context) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<PasswordResetChallengeCreateRequest>> violations = validator.validate(createRequest);
         if (violations.isEmpty()) {
             context.putValue(createRequest);
             config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
         }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
     }
 
     @Decision(PROCESSABLE)
@@ -71,7 +80,9 @@ public class PasswordResetChallengeResource {
 
     @Decision(HANDLE_UNPROCESSABLE_ENTITY)
     public Problem unprocessable() {
-        return Problem.valueOf(422, "Account not found");
+        return builder(Problem.valueOf(422, "Account not found"))
+                .set(Problem::setType, BouncrProblem.UNPROCESSABLE.problemUri())
+                .build();
     }
 
     /**

@@ -2,13 +2,18 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
+import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.boundary.RoleCreateRequest;
 import net.unit8.bouncr.api.boundary.RoleUpdateRequest;
+import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Role;
 
 import javax.inject.Inject;
@@ -17,8 +22,13 @@ import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import javax.validation.ConstraintViolation;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
@@ -28,6 +38,19 @@ public class RoleResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Decision(value = MALFORMED, method = "PUT")
+    public Problem validateUpdateRequest(RoleUpdateRequest updateRequest, RestContext context) {
+        if (updateRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        Set<ConstraintViolation<RoleUpdateRequest>> violations = validator.validate(updateRequest);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
@@ -53,6 +76,18 @@ public class RoleResource {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:delete") || p.hasPermission("any_role:delete"))
                 .isPresent();
+    }
+
+    @Decision(value = CONFLICT, method = "PUT")
+    public boolean isConflict(RoleUpdateRequest updateRequest, Parameters params, EntityManager em) {
+        if (Objects.equals(updateRequest.getName(), params.get("name"))) {
+            return false;
+        }
+        UniquenessCheckService<Role> uniquenessCheckService = new UniquenessCheckService<>(em);
+        return !uniquenessCheckService.isUnique(Role.class, "nameLower",
+                Optional.ofNullable(updateRequest.getName())
+                        .map(n -> n.toLowerCase(Locale.US))
+                        .orElseThrow(UnreachableException::new));
     }
 
     @Decision(EXISTS)

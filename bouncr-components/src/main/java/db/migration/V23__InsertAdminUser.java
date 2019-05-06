@@ -4,7 +4,6 @@ import enkan.Env;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
-import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -23,6 +22,7 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             "any_realm:read", "any_realm:create", "any_realm:update", "any_realm:delete",
             "any_role:read", "any_role:create", "any_role:update", "any_role:delete",
             "any_permission:read", "any_permission:create", "any_permission:update", "any_permission:delete",
+            "assignments:read", "assignments:create", "assignments:delete",
             "oidc_application:read", "oidc_application:create","oidc_application:update","oidc_application:delete",
             "oidc_provider:read","oidc_provider:create","oidc_provider:update","oidc_provider:delete",
             "invitation:create"
@@ -284,7 +284,7 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             Arrays.asList(ADMIN_PERMISSIONS).forEach(perm -> {
                 try {
                     stmtInsPermission.setString(1, perm);
-                    stmtInsPermission.setString(2, "");
+                    stmtInsPermission.setString(2, perm);
                     stmtInsPermission.setBoolean(3, true);
                     stmtInsPermission.executeUpdate();
                     Long permissionId = fetchGeneratedKey(stmtInsPermission);
@@ -315,12 +315,18 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             Long myRoleId = fetchGeneratedKey(stmtInsRole);
             Long myReadPermissionId   = createPermission("my:read", stmtInsPermission);
             Long myUpdatePermissionId = createPermission("my:update", stmtInsPermission);
+            Long myDeletePermissionId = createPermission("my:delete", stmtInsPermission);
 
             stmtInsRolePermission.setLong(1, myRoleId);
             stmtInsRolePermission.setLong(2, myReadPermissionId);
             stmtInsRolePermission.executeUpdate();
+
             stmtInsRolePermission.setLong(1, myRoleId);
             stmtInsRolePermission.setLong(2, myUpdatePermissionId);
+            stmtInsRolePermission.executeUpdate();
+
+            stmtInsRolePermission.setLong(1, myRoleId);
+            stmtInsRolePermission.setLong(2, myDeletePermissionId);
             stmtInsRolePermission.executeUpdate();
 
             stmtInsAssignment.setLong(1, adminGroupId);

@@ -2,13 +2,17 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
-import enkan.data.HttpRequest;
+import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
+import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.DecisionPoint;
 import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.boundary.RealmUpdateRequest;
+import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 
@@ -19,8 +23,13 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
+import javax.validation.ConstraintViolation;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
@@ -31,6 +40,21 @@ public class RealmResource {
     @Inject
     private BeansValidator validator;
 
+    @Decision(value = MALFORMED, method = "PUT")
+    public Problem vaidateUpdateRequest(RealmUpdateRequest updateRequest, RestContext context) {
+        if (updateRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        Set<ConstraintViolation<RealmUpdateRequest>> violations = validator.validate(updateRequest);
+        if (violations.isEmpty()) {
+            context.putValue(updateRequest);
+        }
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+    }
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
@@ -73,6 +97,18 @@ public class RealmResource {
         return application != null;
     }
 
+    @Decision(value = CONFLICT, method = "PUT")
+    public boolean isConflict(RealmUpdateRequest updateRequest, Parameters params, EntityManager em) {
+        if (Objects.equals(updateRequest.getName(), params.get("name"))) {
+            return false;
+        }
+        UniquenessCheckService<Realm> uniquenessCheckService = new UniquenessCheckService<>(em);
+        return !uniquenessCheckService.isUnique(Realm.class, "nameLower",
+                Optional.ofNullable(updateRequest.getName())
+                        .map(n -> n.toLowerCase(Locale.US))
+                        .orElseThrow(UnreachableException::new));
+    }
+
     @Decision(EXISTS)
     public boolean exists(Parameters params, Application application, RestContext context, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -96,4 +132,20 @@ public class RealmResource {
         em.detach(realm);
         return realm;
     }
+
+    @Decision(PUT)
+    public Realm update(RealmUpdateRequest updateRequest, Realm realm, EntityManager em) {
+        EntityTransactionManager tx = new EntityTransactionManager(em);
+        tx.required(() -> converter.copy(updateRequest, realm));
+        em.detach(realm);
+        return realm;
+    }
+
+    @Decision(DELETE)
+    public Void delete(Realm realm, EntityManager em) {
+        EntityTransactionManager tx = new EntityTransactionManager(em);
+        tx.required(() -> em.remove(realm));
+        return null;
+    }
+
 }

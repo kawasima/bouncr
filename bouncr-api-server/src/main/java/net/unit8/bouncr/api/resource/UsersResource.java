@@ -11,7 +11,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
-import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserCreateRequest;
 import net.unit8.bouncr.api.boundary.UserSearchParams;
 import net.unit8.bouncr.api.service.UserProfileService;
@@ -26,17 +26,12 @@ import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
@@ -50,6 +45,43 @@ public class UsersResource {
 
     @Inject
     private BouncrConfiguration config;
+
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem validateUserCreateRequest(UserCreateRequest createRequest, RestContext context, EntityManager em) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        Set<ConstraintViolation<UserCreateRequest>> violations = validator.validate(createRequest);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+
+        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, createRequest.getUserProfiles());
+        UserProfileService userProfileService = new UserProfileService(em);
+        Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
+        problem.getViolations().addAll(profileViolations);
+
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(createRequest);
+        }
+
+        return problem.getViolations().isEmpty() ? null : problem;
+    }
+
+    @Decision(value = MALFORMED, method = "GET")
+    public Problem validateUserSearchParams(Parameters params, RestContext context) {
+        UserSearchParams userSearchParam = converter.createFrom(params, UserSearchParams.class);
+        Set<ConstraintViolation<UserSearchParams>> violations = validator.validate(userSearchParam);
+        if (violations.isEmpty()) {
+            context.putValue(userSearchParam);
+        }
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
@@ -70,37 +102,20 @@ public class UsersResource {
                 .isPresent();
     }
 
-    @Decision(value = MALFORMED, method = "POST")
-    public Problem validateUserCreateRequest(UserCreateRequest createRequest, RestContext context, EntityManager em) {
-        Set<ConstraintViolation<UserCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = Problem.fromViolations(violations);
-
-        UserProfileService userProfileService = new UserProfileService(em);
-        Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
-        problem.getViolations().addAll(profileViolations);
-
-        return problem.getViolations().isEmpty() ? null : problem;
-    }
-
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validateUserSearchParams(Parameters params, RestContext context) {
-        UserSearchParams userSearchParam = converter.createFrom(params, UserSearchParams.class);
-        Set<ConstraintViolation<UserSearchParams>> violations = validator.validate(userSearchParam);
-        if (violations.isEmpty()) {
-            context.putValue(userSearchParam);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-
-    }
-
     @Decision(value = CONFLICT, method = "POST")
     public boolean conflict(UserCreateRequest createRequest,
                             RestContext context,
                             EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
-        Set<String> violations = userProfileService.unique(createRequest.getUserProfiles());
+        Set<Problem.Violation> violations = userProfileService.validateAccountUniqueness(createRequest.getAccount());
+        violations.addAll(userProfileService.validateProfileUniqueness(createRequest.getUserProfiles()));
+
         if (!violations.isEmpty()) {
-            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+            Problem problem = builder(Problem.valueOf(409))
+                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
+                    .build();
+            problem.getViolations().addAll(violations);
+            context.setMessage(problem);
         }
         return !violations.isEmpty();
     }
@@ -118,10 +133,22 @@ public class UsersResource {
                 .orElse(Collections.emptyList());
         EntityGraph<User> userGraph = em.createEntityGraph(User.class);
         userGraph.addAttributeNodes("account", "userProfileValues");
+
+        List<Predicate> predicates = new ArrayList<>();
         if (params.getGroupId() != null) {
             Join<Group, User> groups = userRoot.join("groups");
-            query.where(cb.equal(groups.get("id"), params.getGroupId()));
+            predicates.add(cb.equal(groups.get("id"), params.getGroupId()));
         }
+        Optional.ofNullable(params.getQ())
+                .ifPresent(q -> {
+                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
+                    predicates.add(cb.like(userRoot.get("name"), likeExpr, '_'));
+                });
+
+        if (!predicates.isEmpty()) {
+            query.where(predicates.toArray(Predicate[]::new));
+        }
+
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
             userGraph.addAttributeNodes("groups");
             userGraph.addSubgraph("groups").addAttributeNodes("name");

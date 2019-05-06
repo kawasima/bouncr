@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.RestContext;
@@ -18,8 +19,9 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
-import static kotowari.restful.DecisionPoint.EXISTS;
-import static kotowari.restful.DecisionPoint.HANDLE_OK;
+import java.util.Optional;
+
+import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET"})
 public class AssignmentResource {
@@ -28,6 +30,18 @@ public class AssignmentResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = ALLOWED, method= "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("assignments:read"))
+                .isPresent();
+    }
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, EntityManager em) {

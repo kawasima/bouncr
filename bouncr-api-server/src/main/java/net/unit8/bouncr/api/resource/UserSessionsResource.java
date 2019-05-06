@@ -8,6 +8,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserSessionSearchParams;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserSession;
@@ -25,6 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET"})
@@ -42,7 +44,9 @@ public class UserSessionsResource {
         if (violations.isEmpty()) {
             context.putValue(userSessionSearchParams);
         }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
     }
 
     @Decision(AUTHORIZED)

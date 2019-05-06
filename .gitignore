@@ -43,3 +43,4 @@ yarn.lock
 *.mv.db
 
 /examples
+pom.xml.versionsBackup

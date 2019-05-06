@@ -6,6 +6,8 @@ import net.unit8.bouncr.json.IndirectListFilter;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * @author kawasima
@@ -19,6 +21,9 @@ public class Role extends BaseFetchGroupTracker {
     private Long id;
 
     private String name;
+    @JsonIgnore
+    @Column(name = "name_lower")
+    private String nameLower;
     private String description;
 
     @JsonIgnore
@@ -31,6 +36,10 @@ public class Role extends BaseFetchGroupTracker {
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IndirectListFilter.class)
     private List<Permission> permissions;
+
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "role")
+    private List<Assignment> assignments;
 
     public Long getId() {
         return id;
@@ -46,6 +55,17 @@ public class Role extends BaseFetchGroupTracker {
 
     public void setName(String name) {
         this.name = name;
+        this.nameLower = Optional.ofNullable(name)
+                .map(n -> n.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getNameLower() {
+        return nameLower;
+    }
+
+    public void setNameLower(String nameLower) {
+        this.nameLower = nameLower;
     }
 
     public String getDescription() {
@@ -71,4 +91,5 @@ public class Role extends BaseFetchGroupTracker {
     public void setPermissions(List<Permission> permissions) {
         this.permissions = permissions;
     }
+
 }

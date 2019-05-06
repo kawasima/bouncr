@@ -6,7 +6,7 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr-parent</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.2.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>bouncr-parent</name>
@@ -51,7 +51,7 @@
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <enkan.version>0.8.0</enkan.version>
-        <kotowari-restful.version>0.2.0</kotowari-restful.version>
+        <kotowari-restful.version>0.2.1</kotowari-restful.version>
     </properties>
 
     <modules>

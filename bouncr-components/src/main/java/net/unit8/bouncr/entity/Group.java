@@ -10,6 +10,8 @@ import javax.persistence.*;
 import javax.persistence.criteria.Fetch;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * The entity of groups.
@@ -25,6 +27,9 @@ public class Group extends BaseFetchGroupTracker {
     private Long id;
 
     private String name;
+    @JsonIgnore
+    @Column(name = "name_lower")
+    private String nameLower;
     private String description;
 
     @JsonIgnore
@@ -52,6 +57,17 @@ public class Group extends BaseFetchGroupTracker {
 
     public void setName(String name) {
         this.name = name;
+        this.nameLower = Optional.ofNullable(name)
+                .map(n -> n.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getNameLower() {
+        return nameLower;
+    }
+
+    public void setNameLower(String nameLower) {
+        this.nameLower = nameLower;
     }
 
     public String getDescription() {

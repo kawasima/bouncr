@@ -9,6 +9,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
@@ -47,18 +48,30 @@ public class SignUpResource {
 
     @Inject
     private JsonWebToken jsonWebToken;
+
     @Inject
     private BouncrConfiguration config;
 
     @Decision(MALFORMED)
-    public Problem validate(SignUpCreateRequest createRequest, EntityManager em) {
+    public Problem validate(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<SignUpCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = Problem.fromViolations(violations);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
 
+        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, createRequest.getUserProfiles());
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
         problem.getViolations().addAll(profileViolations);
 
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(createRequest);
+        }
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
@@ -69,11 +82,7 @@ public class SignUpResource {
 
     @Decision(HANDLE_FORBIDDEN)
     public Problem forbidden() {
-        return new Problem(URI.create("about:blank"),
-                "Signing up is NOT allowed",
-                403,
-                "Signing up is NOT allowed",
-                null);
+        return Problem.valueOf(403, "Signing up is NOT allowed");
     }
 
     @Decision(CONFLICT)
@@ -81,9 +90,16 @@ public class SignUpResource {
                             RestContext context,
                             EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
-        Set<String> violations = userProfileService.unique(createRequest.getUserProfiles());
+
+        Set<Problem.Violation> violations = userProfileService.validateAccountUniqueness(createRequest.getAccount());
+        violations.addAll(userProfileService.validateProfileUniqueness(createRequest.getUserProfiles()));
+
         if (!violations.isEmpty()) {
-            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+            Problem problem = builder(Problem.valueOf(409))
+                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
+                    .build();
+            problem.getViolations().addAll(violations);
+            context.setMessage(problem);
         }
         return !violations.isEmpty();
     }

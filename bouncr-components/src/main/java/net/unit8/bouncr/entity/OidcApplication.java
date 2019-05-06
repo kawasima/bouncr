@@ -1,5 +1,6 @@
 package net.unit8.bouncr.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.unit8.bouncr.json.IndirectListFilter;
@@ -7,6 +8,8 @@ import net.unit8.bouncr.json.IndirectListFilter;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 @Entity
 @Table(name = "oidc_applications")
@@ -18,6 +21,9 @@ public class OidcApplication implements Serializable {
     private Long id;
 
     private String name;
+    @JsonIgnore
+    @Column(name = "name_lower")
+    private String nameLower;
 
     @JsonProperty("client_id")
     @Column(name = "client_id")
@@ -65,6 +71,17 @@ public class OidcApplication implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+        this.nameLower = Optional.ofNullable(name)
+                .map(n -> n.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getNameLower() {
+        return nameLower;
+    }
+
+    public void setNameLower(String nameLower) {
+        this.nameLower = nameLower;
     }
 
     public String getClientId() {

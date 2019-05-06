@@ -58,11 +58,18 @@ public class PasswordSignInResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePasswordSignInRequest(PasswordSignInRequest passwordSignInRequest, RestContext context) {
+        if (passwordSignInRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<PasswordSignInRequest>> violations = validator.validate(passwordSignInRequest);
         if (violations.isEmpty()) {
             context.putValue(passwordSignInRequest);
         }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
     }
 
     /**

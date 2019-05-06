@@ -8,6 +8,8 @@ public class UserActionSearchParams implements Serializable {
     @JsonProperty("action_type")
     private String actionType;
 
+    private String actor;
+
     private Integer limit = 10;
     private Integer offset = 0;
 
@@ -17,6 +19,14 @@ public class UserActionSearchParams implements Serializable {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public void setActor(String actor) {
+        this.actor = actor;
     }
 
     public Integer getLimit() {

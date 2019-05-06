@@ -9,9 +9,9 @@ import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
 import enkan.middleware.jpa.EntityManagerMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
-import enkan.predicate.EnvPredicate;
 import enkan.security.bouncr.BouncrBackend;
 import enkan.system.inject.ComponentInjector;
+import enkan.util.Predicates;
 import is.tagomor.woothee.Classifier;
 import kotowari.inject.ParameterInjector;
 import kotowari.inject.parameter.*;
@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.function.Function;
 
 import static enkan.util.BeanBuilder.builder;
-import static enkan.util.Predicates.NONE;
+import static enkan.util.Predicates.*;
 
 /**
  * The factory for Bouncr application.
@@ -105,7 +105,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         app.use(new DefaultCharsetMiddleware<>());
         app.use(new MetricsMiddleware<>());
         app.use(NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
-        app.use(new TraceMiddleware<>());
+        app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware<>());
         app.use(new ParamsMiddleware<>());
         app.use(new MultipartParamsMiddleware<>());
@@ -120,7 +120,6 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 .build());
 
         try {
-
             BouncrBackend bouncrBackend = builder(new BouncrBackend())
                     .set(BouncrBackend::setKey, "abcdefghijklmnopqrstuvwxyzabcdef")
                     .build();

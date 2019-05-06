@@ -8,6 +8,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
@@ -43,9 +44,16 @@ public class PasswordCredentialResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreateRequest(PasswordCredentialCreateRequest createRequest, RestContext context, EntityManager em) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
         Set<ConstraintViolation<PasswordCredentialCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = Problem.fromViolations(violations);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
         Optional.ofNullable(passwordPolicyService.validateCreatePassword(createRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
 
@@ -54,9 +62,16 @@ public class PasswordCredentialResource {
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(PasswordCredentialUpdateRequest updateRequest, EntityManager em) {
+        if (updateRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
         Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(updateRequest);
-        Problem problem = Problem.fromViolations(violations);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
         Optional.ofNullable(passwordPolicyService.validateUpdatePassword(updateRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
         return problem.getViolations().isEmpty() ? null : problem;
@@ -68,8 +83,16 @@ public class PasswordCredentialResource {
     }
 
     @Decision(value = ALLOWED, method = "POST")
-    public boolean postAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
-        if (principal.hasPermission("any_user:create")) {
+    public boolean isPostAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
+        if (principal.hasPermission("any_user:create") || principal.hasPermission("user:create")) {
+            return true;
+        }
+        return principal.getName().equals(createRequest.getAccount());
+    }
+
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean isDeleteAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
+        if (principal.hasPermission("any_user:create") || principal.hasPermission("user:create")) {
             return true;
         }
         return principal.getName().equals(createRequest.getAccount());

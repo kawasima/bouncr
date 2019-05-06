@@ -11,6 +11,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.AssignmentRequest;
 import net.unit8.bouncr.api.boundary.AssignmentsRequest;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.entity.Assignment;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.Realm;
@@ -159,6 +160,11 @@ public class AssignmentsResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateForPost(AssignmentsRequest assignmentsRequest, RestContext context, EntityManager em) {
+        if (assignmentsRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         return validateInner((group, role, realm) -> builder(new Assignment())
                 .set(Assignment::setGroup, group)
                 .set(Assignment::setRole,  role)
@@ -169,6 +175,11 @@ public class AssignmentsResource {
 
     @Decision(value = MALFORMED, method = "DELETE")
     public Problem validateForDelete(AssignmentsRequest assignmentsRequest, RestContext context, EntityManager em) {
+        if (assignmentsRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         return validateInner((group, role, realm) -> findAssignment(group, role, realm, em),
                 assignmentsRequest, context, em);
     }
@@ -178,6 +189,15 @@ public class AssignmentsResource {
         return principal != null;
     }
 
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean allowedPost(UserPermissionPrincipal principal) {
+        return principal.hasPermission("assignments:create");
+    }
+
+    @Decision(value = ALLOWED, method = "DELETE")
+    public boolean allowedDelete(UserPermissionPrincipal principal) {
+        return principal.hasPermission("assignments:delete");
+    }
 
     public static class Assignments extends ArrayList<Assignment>{}
 

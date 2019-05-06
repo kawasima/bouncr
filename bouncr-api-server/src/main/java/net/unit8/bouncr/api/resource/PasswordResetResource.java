@@ -7,12 +7,13 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.data.InitialPassword;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PasswordResetRequest;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
 import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
+import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.entity.User;
 
@@ -24,6 +25,7 @@ import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"PUT"})
@@ -38,8 +40,15 @@ public class PasswordResetResource {
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validate(PasswordResetRequest createRequest) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<PasswordResetRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
     }
 
     @Decision(PROCESSABLE)

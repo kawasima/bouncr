@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.*;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -19,6 +21,9 @@ public class Realm extends BaseFetchGroupTracker {
     private Long id;
 
     private String name;
+    @JsonIgnore
+    @Column(name = "name_lower")
+    private String nameLower;
     private String url;
     private String description;
 
@@ -53,6 +58,17 @@ public class Realm extends BaseFetchGroupTracker {
 
     public void setName(String name) {
         this.name = name;
+        this.nameLower = Optional.ofNullable(name)
+                .map(n -> n.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getNameLower() {
+        return nameLower;
+    }
+
+    public void setNameLower(String nameLower) {
+        this.nameLower = nameLower;
     }
 
     public String getUrl() {

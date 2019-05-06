@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.service;
 
 import kotowari.restful.data.Problem;
+import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileField;
 import net.unit8.bouncr.entity.UserProfileValue;
 import net.unit8.bouncr.entity.UserProfileVerification;
@@ -63,7 +64,7 @@ public class UserProfileService {
         }).collect(Collectors.toSet());
     }
 
-    public Set<String> unique(Map<String, Object> userProfiles) {
+    public Set<Problem.Violation> validateProfileUniqueness(Map<String, Object> userProfiles) {
         List<UserProfileField> userProfileFields = findUserProfileFields();
         return userProfileFields.stream()
                 .filter(field -> {
@@ -76,8 +77,21 @@ public class UserProfileService {
                     Long cnt = em.createQuery(query).getSingleResult();
                     return (cnt > 0);
                 })
-                .map(UserProfileField::getJsonName)
+                .map(f -> new Problem.Violation(f.getJsonName(), "conflicts"))
                 .collect(Collectors.toSet());
+    }
+
+    public Set<Problem.Violation> validateAccountUniqueness(String account) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        query.select(cb.count(cb.literal("1")));
+        Root<User> root = query.from(User.class);
+        query.where(cb.equal(root.get("accountLower"), account.toLowerCase(Locale.US)));
+        Long cnt = em.createQuery(query).getSingleResult();
+        if (cnt > 0) {
+            return new HashSet<>(Arrays.asList(new Problem.Violation<>("account", "conflicts")));
+        }
+        return Collections.emptySet();
     }
 
     public List<UserProfileValue> convertToUserProfileValues(Map<String, Object> userProfiles) {
@@ -90,11 +104,13 @@ public class UserProfileService {
                             .filter(f -> f.getJsonName().equals(e.getKey()))
                             .findAny()
                             .orElse(null);
+                    if (field == null) return null;
                     return builder(new UserProfileValue())
                             .set(UserProfileValue::setUserProfileField, field)
                             .set(UserProfileValue::setValue, Objects.toString(e.getValue(), null))
                             .build();
                 })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

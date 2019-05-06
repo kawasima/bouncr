@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
+import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
@@ -9,21 +10,21 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PermissionCreateRequest;
 import net.unit8.bouncr.api.boundary.PermissionSearchParams;
+import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Permission;
+import net.unit8.bouncr.entity.User;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
@@ -33,6 +34,31 @@ public class PermissionsResource {
 
     @Inject
     private BeansValidator validator;
+
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem validatePermissionCreateRequest(PermissionCreateRequest createRequest, RestContext context) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        Set<ConstraintViolation<PermissionCreateRequest>> violations = validator.validate(createRequest);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+    }
+
+    @Decision(value = MALFORMED, method = "GET")
+    public Problem validatePermissionSearchParams(Parameters params, RestContext context) {
+        PermissionSearchParams permissionSearchParams = converter.createFrom(params, PermissionSearchParams.class);
+        Set<ConstraintViolation<PermissionSearchParams>> violations = validator.validate(permissionSearchParams);
+        if (violations.isEmpty()) {
+            context.putValue(converter.createFrom(permissionSearchParams, PermissionSearchParams.class));
+        }
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
@@ -53,38 +79,42 @@ public class PermissionsResource {
                 .isPresent();
     }
 
-    @Decision(value = MALFORMED, method = "POST")
-    public Problem validatePermissionCreateRequest(PermissionCreateRequest createRequest, RestContext context) {
-        Set<ConstraintViolation<PermissionCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validatePermissionSearchParams(Parameters params, RestContext context) {
-        PermissionSearchParams permissionSearchParams = converter.createFrom(params, PermissionSearchParams.class);
-        Set<ConstraintViolation<PermissionSearchParams>> violations = validator.validate(permissionSearchParams);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(permissionSearchParams, PermissionSearchParams.class));
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
     @Decision(value = CONFLICT, method = "POST")
     public boolean isConflict(PermissionCreateRequest createRequest, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        Root<Permission> permissionRoot = query.from(Permission.class);
-        query.where(cb.equal(permissionRoot.get("name"), createRequest.getName()));
-        return !em.createQuery(query)
-                .getResultList()
-                .isEmpty();
+        UniquenessCheckService<Permission> uniquenessCheckService = new UniquenessCheckService<>(em);
+        return !uniquenessCheckService.isUnique(Permission.class, "nameLower",
+                Optional.ofNullable(createRequest.getName())
+                        .map(n -> n.toLowerCase(Locale.US))
+                        .orElseThrow(UnreachableException::new));
     }
 
     @Decision(HANDLE_OK)
-    public List<Permission> list(PermissionSearchParams params, EntityManager em) {
+    public List<Permission> list(PermissionSearchParams params,
+                                 UserPermissionPrincipal principal,
+                                 EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
         Root<Permission> permissionRoot = query.from(Permission.class);
+        query.distinct(true);
+
+        List<Predicate> predicates = new ArrayList<>();
+        Optional.ofNullable(params.getQ())
+                .ifPresent(q -> {
+                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
+                    predicates.add(cb.like(permissionRoot.get("name"), likeExpr, '_'));
+                });
+        if (!principal.hasPermission("any_permission:read")) {
+            Join<Permission, User> userRoot = permissionRoot.join("roles")
+                    .join("assignments")
+                    .join("group")
+                    .join("users");
+            predicates.add(cb.equal(userRoot.get("id"), principal.getId()));
+        }
+
+        if (!predicates.isEmpty()) {
+            query.where(predicates.toArray(Predicate[]::new));
+        }
+
         query.orderBy(cb.asc(permissionRoot.get("id")));
 
         return em.createQuery(query)

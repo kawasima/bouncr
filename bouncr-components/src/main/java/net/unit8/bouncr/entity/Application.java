@@ -11,6 +11,8 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * @author kawasima
@@ -24,6 +26,9 @@ public class Application extends BaseFetchGroupTracker {
     private Long id;
 
     private String name;
+    @JsonIgnore
+    @Column(name = "name_lower")
+    private String nameLower;
     private String description;
 
     @JsonProperty("pass_to")
@@ -65,6 +70,17 @@ public class Application extends BaseFetchGroupTracker {
 
     public void setName(String name) {
         this.name = name;
+        this.nameLower = Optional.ofNullable(name)
+                .map(n -> n.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getNameLower() {
+        return nameLower;
+    }
+
+    public void setNameLower(String nameLower) {
+        this.nameLower = nameLower;
     }
 
     public String getDescription() {

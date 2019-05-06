@@ -9,7 +9,9 @@ import org.eclipse.persistence.sessions.Session;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -26,6 +28,10 @@ public class User extends BaseFetchGroupTracker {
     private Long id;
 
     private String account;
+
+    @JsonIgnore
+    @Column(name = "account_lower")
+    private String accountLower;
 
     @JsonIgnore
     @Column(name = "write_protected")
@@ -81,6 +87,17 @@ public class User extends BaseFetchGroupTracker {
 
     public void setAccount(String account) {
         this.account = account;
+        this.accountLower = Optional.ofNullable(account)
+                .map(acc -> acc.toLowerCase(Locale.US))
+                .orElse(null);
+    }
+
+    public String getAccountLower() {
+        return accountLower;
+    }
+
+    public void setAccountLower(String accountLower) {
+        this.accountLower = accountLower;
     }
 
     public Boolean getWriteProtected() {

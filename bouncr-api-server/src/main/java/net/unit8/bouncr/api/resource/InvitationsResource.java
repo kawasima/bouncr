@@ -8,6 +8,7 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.InvitationCreateRequest;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.Invitation;
@@ -20,6 +21,7 @@ import javax.validation.ConstraintViolation;
 import java.util.Optional;
 import java.util.Set;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
@@ -47,11 +49,18 @@ public class InvitationsResource {
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem vaidateCreateRequest(InvitationCreateRequest createRequest, RestContext context) {
+        if (createRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<InvitationCreateRequest>> violations = validator.validate(createRequest);
         if (violations.isEmpty()) {
             context.putValue(createRequest);
         }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
     }
 
     @Decision(POST)

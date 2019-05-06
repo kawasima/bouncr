@@ -11,11 +11,13 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserUpdateRequest;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileValue;
 import net.unit8.bouncr.entity.UserProfileVerification;
@@ -29,6 +31,7 @@ import javax.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
@@ -48,13 +51,24 @@ public class UserResource {
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
+        if (updateRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
         Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
-        Problem problem = Problem.fromViolations(violations);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
 
+        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, updateRequest.getUserProfiles());
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(updateRequest.getUserProfiles());
         problem.getViolations().addAll(profileViolations);
 
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(updateRequest);
+        }
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
@@ -128,9 +142,13 @@ public class UserResource {
                             RestContext context,
                             EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
-        Set<String> violations = userProfileService.unique(updateRequest.getUserProfiles());
+        Set<Problem.Violation> violations = userProfileService.validateProfileUniqueness(updateRequest.getUserProfiles());
         if (!violations.isEmpty()) {
-            context.setMessage(Problem.valueOf(409, violations + " is conflicted"));
+            Problem problem = builder(Problem.valueOf(409))
+                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
+                    .build();
+            problem.getViolations().addAll(violations);
+            context.setMessage(problem);
         }
         return !violations.isEmpty();
     }
@@ -155,12 +173,27 @@ public class UserResource {
     @Decision(PUT)
     public User update(UserUpdateRequest updateRequest, User user, EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
-        List<UserProfileValue> userProfileValues = userProfileService
-                .convertToUserProfileValues(updateRequest.getUserProfiles());
+        List<UserProfileValue> newValues = new ArrayList<>(userProfileService
+                .convertToUserProfileValues(updateRequest.getUserProfiles()));
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> {
             converter.copy(updateRequest, user);
-            user.setUserProfileValues(userProfileValues);
+            List<UserProfileValue> removeValues = new ArrayList<>();
+            user.getUserProfileValues().forEach(v -> {
+                Optional<UserProfileValue> maybeNewValue = newValues.stream()
+                        .filter(newValue -> newValue.getUserProfileField().getId().equals(v.getUserProfileField().getId()))
+                        .findAny();
+
+                maybeNewValue.ifPresentOrElse(
+                        newValue -> {
+                            v.setValue(newValue.getValue());
+                            newValues.remove(newValue);
+                        },
+                        () -> removeValues.add(v)
+                );
+            });
+            newValues.forEach(v -> v.setUser(user));
+            user.getUserProfileValues().addAll(newValues);
         });
         em.detach(user);
         return user;
@@ -178,7 +211,7 @@ public class UserResource {
         tm.required(() -> {
             em.createQuery(query)
                     .getResultStream()
-                    .forEach(verification -> em.remove(verification));
+                    .forEach(em::remove);
             em.remove(user);
         });
         em.detach(user);
