@@ -142,7 +142,7 @@ public class UsersResource {
         Optional.ofNullable(params.getQ())
                 .ifPresent(q -> {
                     String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
-                    predicates.add(cb.like(userRoot.get("name"), likeExpr, '_'));
+                    predicates.add(cb.like(userRoot.get("account"), likeExpr, '_'));
                 });
 
         if (!predicates.isEmpty()) {

@@ -91,7 +91,7 @@ public class UserProfileService {
         if (cnt > 0) {
             return new HashSet<>(Arrays.asList(new Problem.Violation<>("account", "conflicts")));
         }
-        return Collections.emptySet();
+        return new HashSet<>();
     }
 
     public List<UserProfileValue> convertToUserProfileValues(Map<String, Object> userProfiles) {

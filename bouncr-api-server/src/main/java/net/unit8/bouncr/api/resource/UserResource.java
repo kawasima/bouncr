@@ -171,7 +171,10 @@ public class UserResource {
     }
 
     @Decision(PUT)
-    public User update(UserUpdateRequest updateRequest, User user, EntityManager em) {
+    public User update(UserUpdateRequest updateRequest,
+                       User user,
+                       RestContext context,
+                       EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
         List<UserProfileValue> newValues = new ArrayList<>(userProfileService
                 .convertToUserProfileValues(updateRequest.getUserProfiles()));
@@ -194,13 +197,15 @@ public class UserResource {
             });
             newValues.forEach(v -> v.setUser(user));
             user.getUserProfileValues().addAll(newValues);
+            config.getHookRepo().runHook(HookPoint.AFTER_UPDATE_USER, context);
         });
+
         em.detach(user);
         return user;
     }
 
     @Decision(DELETE)
-    public Void delete(User user, EntityManager em) {
+    public Void delete(User user, RestContext context, EntityManager em) {
         EntityTransactionManager tm = new EntityTransactionManager(em);
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<UserProfileVerification> query = cb.createQuery(UserProfileVerification.class);
@@ -213,6 +218,7 @@ public class UserResource {
                     .getResultStream()
                     .forEach(em::remove);
             em.remove(user);
+            config.getHookRepo().runHook(HookPoint.AFTER_DELETE_USER, context);
         });
         em.detach(user);
         return null;

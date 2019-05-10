@@ -1,6 +1,5 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
@@ -14,7 +13,9 @@ import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.PasswordPolicyService;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.entity.ActionType;
+import net.unit8.bouncr.entity.PasswordCredential;
+import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 
@@ -33,6 +34,7 @@ import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.component.config.HookPoint.*;
 
 @AllowedMethods({"POST", "PUT", "DELETE"})
 public class PasswordCredentialResource {
@@ -135,18 +137,22 @@ public class PasswordCredentialResource {
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
+                                     RestContext context,
                                      EntityManager em) {
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         PasswordCredential passwordCredential = builder(new PasswordCredential())
                 .set(PasswordCredential::setUser, user)
                 .set(PasswordCredential::setSalt, salt)
-                .set(PasswordCredential::setInitial, true)
+                .set(PasswordCredential::setInitial, createRequest.isInitial())
                 .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(createRequest.getPassword(), salt, 100))
                 .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
                 .build();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.persist(passwordCredential));
+        tx.required(() -> {
+            em.persist(passwordCredential);
+            config.getHookRepo().runHook(AFTER_CREATE_PASSWORD_CREDENTIAL, context);
+        });
 
         actionRecord.setActionType(ActionType.PASSWORD_CREATED);
         actionRecord.setActor(principal.getName());
@@ -161,6 +167,7 @@ public class PasswordCredentialResource {
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
+                                     RestContext context,
                                      EntityManager em) {
 
         PasswordCredential passwordCredential = user.getPasswordCredential();
@@ -173,6 +180,7 @@ public class PasswordCredentialResource {
             passwordCredential.setInitial(false);
             passwordCredential.setCreatedAt(LocalDateTime.now());
             em.merge(passwordCredential);
+            config.getHookRepo().runHook(AFTER_UPDATE_PASSWORD_CREDENTIAL, context);
         });
         em.detach(passwordCredential);
 
@@ -188,6 +196,7 @@ public class PasswordCredentialResource {
     @Decision(DELETE)
     public Void delete(UserPermissionPrincipal principal,
                        ActionRecord actionRecord,
+                       RestContext context,
                        EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
@@ -198,7 +207,10 @@ public class PasswordCredentialResource {
         em.createQuery(query)
                 .getResultStream()
                 .findAny()
-                .ifPresent(passwordCredential -> tx.required(() -> em.remove(passwordCredential)));
+                .ifPresent(passwordCredential -> tx.required(() -> {
+                    em.remove(passwordCredential);
+                    config.getHookRepo().runHook(AFTER_DELETE_PASSWORD_CREDENTIAL, context);
+                }));
 
         actionRecord.setActionType(ActionType.PASSWORD_DELETED);
         actionRecord.setActor(principal.getName());
