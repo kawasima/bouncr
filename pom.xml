@@ -6,7 +6,7 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr-parent</artifactId>
-    <version>0.2.2-SNAPSHOT</version>
+    <version>0.2.2</version>
     <packaging>pom</packaging>
 
     <name>bouncr-parent</name>
