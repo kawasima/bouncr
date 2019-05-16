@@ -35,7 +35,7 @@ import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
-public class OidcApplicationsResrouce {
+public class OidcApplicationsResoruce {
     @Inject
     private BeansConverter converter;
 

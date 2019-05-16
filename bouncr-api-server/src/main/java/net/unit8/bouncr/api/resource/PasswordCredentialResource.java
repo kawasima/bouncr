@@ -59,11 +59,14 @@ public class PasswordCredentialResource {
         Optional.ofNullable(passwordPolicyService.validateCreatePassword(createRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
 
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(createRequest);
+        }
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(PasswordCredentialUpdateRequest updateRequest, EntityManager em) {
+    public Problem validateUpdateRequest(PasswordCredentialUpdateRequest updateRequest, RestContext context, EntityManager em) {
         if (updateRequest == null) {
             return builder(Problem.valueOf(400, "request is empty"))
                     .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
@@ -76,6 +79,10 @@ public class PasswordCredentialResource {
                 .build();
         Optional.ofNullable(passwordPolicyService.validateUpdatePassword(updateRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
+
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(updateRequest);
+        }
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
@@ -151,6 +158,7 @@ public class PasswordCredentialResource {
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> {
             em.persist(passwordCredential);
+            context.putValue(passwordCredential);
             config.getHookRepo().runHook(AFTER_CREATE_PASSWORD_CREDENTIAL, context);
         });
 
@@ -180,6 +188,7 @@ public class PasswordCredentialResource {
             passwordCredential.setInitial(false);
             passwordCredential.setCreatedAt(LocalDateTime.now());
             em.merge(passwordCredential);
+            context.putValue(passwordCredential);
             config.getHookRepo().runHook(AFTER_UPDATE_PASSWORD_CREDENTIAL, context);
         });
         em.detach(passwordCredential);

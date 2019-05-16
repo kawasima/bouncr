@@ -11,7 +11,6 @@ import enkan.middleware.jpa.EntityManagerMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
 import enkan.security.bouncr.BouncrBackend;
 import enkan.system.inject.ComponentInjector;
-import enkan.util.Predicates;
 import is.tagomor.woothee.Classifier;
 import kotowari.inject.ParameterInjector;
 import kotowari.inject.parameter.*;
@@ -68,7 +67,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/permission/:name").to(PermissionResource.class);
                 ar.all("/oidc_providers").to(OidcProvidersResource.class);
                 ar.all("/oidc_provider/:name").to(OidcProviderResource.class);
-                ar.all("/oidc_applications").to(OidcApplicationsResrouce.class);
+                ar.all("/oidc_applications").to(OidcApplicationsResoruce.class);
                 ar.all("/oidc_application/:name").to(OidcApplicationResource.class);
 
                 ar.all("/invitations").to(InvitationsResource.class);

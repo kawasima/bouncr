@@ -178,6 +178,8 @@ public class UserResource {
         UserProfileService userProfileService = new UserProfileService(em);
         List<UserProfileValue> newValues = new ArrayList<>(userProfileService
                 .convertToUserProfileValues(updateRequest.getUserProfiles()));
+        config.getHookRepo().runHook(HookPoint.BEFORE_UPDATE_USER, context);
+
         EntityTransactionManager tm = new EntityTransactionManager(em);
         tm.required(() -> {
             converter.copy(updateRequest, user);
@@ -213,6 +215,7 @@ public class UserResource {
         Join<UserProfileVerification, User> userJoin = userProfileVerificationRoot.join("user");
         query.where(cb.equal(userJoin.get("id"), user.getId()));
 
+        config.getHookRepo().runHook(HookPoint.BEFORE_DELETE_USER, context);
         tm.required(() -> {
             em.createQuery(query)
                     .getResultStream()

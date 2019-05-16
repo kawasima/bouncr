@@ -9,12 +9,14 @@ import java.io.Serializable;
 public class PasswordCredentialCreateRequest implements Serializable {
     @NotBlank
     @Length(max = 100)
+    @JsonProperty(value = "account", required = true)
     private String account;
 
     @NotBlank
-    @JsonProperty("password")
+    @JsonProperty(value = "password", required = true)
     private String password;
 
+    @JsonProperty("initial")
     private boolean initial = true;
 
     public String getAccount() {

@@ -175,9 +175,9 @@ public class SignUpResource {
                 InitialPassword initialPassword = passwordCredentialService.initializePassword(user);
                 context.putValue(initialPassword);
             }
+            config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
         });
 
-        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
         return builder(new SignUpResponse())
                 .set(SignUpResponse::setId, user.getId())
                 .set(SignUpResponse::setAccount, user.getAccount())

@@ -32,7 +32,11 @@ paths:
     description: |-
       Find users and create a user.
     parameters:
-    - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/Query'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Embed'
     get:
       tags:
         - User
@@ -89,7 +93,7 @@ paths:
         - Administration
       responses:
         200:
-          description: ???
+          description: Fetch a user
           content:
             application/json:
               schema:
@@ -128,7 +132,11 @@ paths:
                 $ref: '#/components/schemas/User'
   /groups:
     parameters:
-    - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/Query'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Embed'
     get:
       summary: Find groups
       operationId: listGroups
@@ -210,7 +218,11 @@ paths:
           description: Deleting a group is successful
   /applications:
     parameters:
-    - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/BouncrCredential'
+      - $ref: '#/components/parameters/Query'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Embed'
     get:
       summary: Find groups
       operationId: findApplications
@@ -296,6 +308,10 @@ paths:
   /application/{name}/realms:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
+    - $ref: '#/components/parameters/Query'
+    - $ref: '#/components/parameters/Limit'
+    - $ref: '#/components/parameters/Offset'
+    - $ref: '#/components/parameters/Embed'
     - name: name
       required: true
       in: path
@@ -388,6 +404,10 @@ paths:
   /roles:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
+    - $ref: '#/components/parameters/Query'
+    - $ref: '#/components/parameters/Limit'
+    - $ref: '#/components/parameters/Offset'
+    - $ref: '#/components/parameters/Embed'
     get:
       summary: Find roles
       operationId: findRoles
@@ -467,6 +487,10 @@ paths:
   /permissions:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
+    - $ref: '#/components/parameters/Query'
+    - $ref: '#/components/parameters/Limit'
+    - $ref: '#/components/parameters/Offset'
+    - $ref: '#/components/parameters/Embed'
     get:
       summary: Find permissions
       operationId: findPermissions
@@ -576,6 +600,37 @@ paths:
       responses:
         204:
           description: Deleting assignments is successful
+  /assignment:
+    parameters:
+      - $ref: '#/components/parameters/BouncrCredential'
+    get:
+      summary: Fetch an assignment
+      operationId: fetchAssignment
+      tags:
+        - Assignment
+      parameters:
+        - name: group
+          description: The name of the group
+          in: query
+          schema:
+            type: string
+        - name: realm
+          description: The name of the realm
+          in: query
+          schema:
+            type: string
+        - name: role
+          description: The name of the role
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Fetch an assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
   /invitations:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -1212,6 +1267,9 @@ components:
           format: password
       additionalProperties: true
     PasswordCredentialCreateRequest:
+      required:
+        - account
+        - password
       type: object
       properties:
         account:
@@ -1219,6 +1277,8 @@ components:
         password:
           type: string
           format: password
+        initial:
+          type: boolean
     PasswordCredentialUpdateRequest:
       type: object
       properties:
@@ -1282,6 +1342,32 @@ components:
         instance:
           type: string
   parameters:
+    Query:
+      name: q
+      description: Keywords for searching
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      description: The limit to restrict the number of entries on a page
+      in: query
+      schema:
+        type: integer
+        format: int64
+    Offset:
+      name: offset
+      description: The numeric offset of the first element on a page
+      in: query
+      schema:
+        type: integer
+        format: int64
+    Embed:
+      name: embed
+      description: To expand or embedded sub-entities
+      in: query
+      schema:
+        type: string
     BouncrCredential:
       name: X-Bouncr-Credential
       description: Bouncr credential
