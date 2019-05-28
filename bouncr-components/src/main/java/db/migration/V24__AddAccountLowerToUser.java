@@ -65,7 +65,7 @@ public class V24__AddAccountLowerToUser extends BaseJavaMigration {
 
     private void addAccountLower(DSLContext create, Statement stmt) throws SQLException {
         String ddl = create.alterTable(table("users"))
-                .addColumn("account_lower", SQLDataType.VARCHAR(100))
+                .addColumn(field("account_lower", SQLDataType.VARCHAR(100)))
                 .getSQL();
         stmt.execute(ddl);
     }
@@ -89,7 +89,7 @@ public class V24__AddAccountLowerToUser extends BaseJavaMigration {
 
     private void notNullAccountLower(DSLContext create, Statement stmt) throws SQLException {
         String sql = create.alterTable(table("users"))
-                .alterColumn("account_lower")
+                .alterColumn(field("account_lower"))
                 .setNotNull()
                 .getSQL();
         stmt.execute(sql);
@@ -97,7 +97,7 @@ public class V24__AddAccountLowerToUser extends BaseJavaMigration {
 
     private void addNameLower(DSLContext create, Statement stmt, String tableName) throws SQLException {
         String ddl = create.alterTable(table(tableName))
-                .addColumn("name_lower", SQLDataType.VARCHAR(100))
+                .addColumn(field("name_lower", SQLDataType.VARCHAR(100)))
                 .getSQL();
         stmt.execute(ddl);
     }
@@ -121,7 +121,7 @@ public class V24__AddAccountLowerToUser extends BaseJavaMigration {
 
     private void notNullNameLower(DSLContext create, Statement stmt, String tableName) throws SQLException {
         String sql = create.alterTable(table(tableName))
-                .alterColumn("name_lower")
+                .alterColumn(field("name_lower"))
                 .setNotNull()
                 .getSQL();
         stmt.execute(sql);

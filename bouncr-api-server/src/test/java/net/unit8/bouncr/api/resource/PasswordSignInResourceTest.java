@@ -2,7 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.component.jpa.EntityManagerProvider;
 import enkan.system.EnkanSystem;
-import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
+import net.unit8.bouncr.BouncrTestSystemFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -17,7 +17,7 @@ public class PasswordSignInResourceTest {
 
     @BeforeEach
     void setup() {
-        system = new BouncrApiEnkanSystemFactory().create();
+        system = new BouncrTestSystemFactory().create();
         system.start();
         EntityManagerProvider provider = system.getComponent("jpa");
         em = provider.createEntityManager();

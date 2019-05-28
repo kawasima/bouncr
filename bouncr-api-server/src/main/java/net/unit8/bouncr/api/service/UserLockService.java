@@ -38,6 +38,7 @@ public class UserLockService {
             CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
             Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
             userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN));
+            userActionCriteria.orderBy(cb.desc(userActionRoot.get("createdAt")));
 
             List<UserAction> recentActions = em.createQuery(userActionCriteria)
                     .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)

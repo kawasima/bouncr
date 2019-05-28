@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.3</version>
+        <version>0.2.4-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -27,10 +27,11 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.0.2</version>
+                <version>1.2.0</version>
                 <configuration>
                     <container>
                         <mainClass>net.unit8.bouncr.api.Main</mainClass>
+                        <workingDirectory>/app</workingDirectory>
                     </container>
                     <from>
                         <image>gcr.io/distroless/java:11</image>
@@ -55,6 +56,11 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-system</artifactId>
+            <version>0.8.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
             <artifactId>kotowari-restful</artifactId>
         </dependency>
         <dependency>
@@ -64,6 +70,7 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-eclipselink</artifactId>
+            <version>0.8.1</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -94,11 +101,6 @@
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
             <artifactId>jackson-jaxrs-json-provider</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-repl-pseudo</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
@@ -141,15 +143,31 @@
             <groupId>net.unit8.bouncr</groupId>
             <artifactId>bouncr-components</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jsr107.ri</groupId>
+            <artifactId>cache-ri-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 
     <profiles>
         <profile>
             <id>dev</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <build>
                 <resources>
                     <resource>
@@ -194,6 +212,16 @@
                     <artifactId>enkan-devel</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-repl-pseudo</artifactId>
+                </dependency>
+
+                <dependency>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-repl-jshell</artifactId>
+                </dependency>
+
+                <dependency>
                     <groupId>org.jsr107.ri</groupId>
                     <artifactId>cache-ri-impl</artifactId>
                     <version>1.0.0</version>
@@ -214,6 +242,11 @@
                             <artifactId>*</artifactId>
                         </exclusion>
                     </exclusions>
+                </dependency>
+
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
                 </dependency>
             </dependencies>
         </profile>

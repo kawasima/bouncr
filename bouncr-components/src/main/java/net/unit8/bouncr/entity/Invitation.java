@@ -12,7 +12,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "invitations")
-public class Invitation extends BaseFetchGroupTracker {
+public class Invitation implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "invitation_id")

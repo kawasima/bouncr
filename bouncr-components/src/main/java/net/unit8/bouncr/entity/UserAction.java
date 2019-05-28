@@ -17,6 +17,7 @@ public class UserAction implements Serializable {
     @Column(name = "user_action_id")
     private Long id;
 
+    @JsonProperty("action_type")
     @Column(name = "action_id")
     private ActionType actionType;
     private String actor;

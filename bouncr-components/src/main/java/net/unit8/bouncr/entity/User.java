@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "users")
-public class User extends BaseFetchGroupTracker {
+public class User implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")

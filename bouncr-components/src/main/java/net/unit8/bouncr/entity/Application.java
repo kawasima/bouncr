@@ -19,7 +19,7 @@ import java.util.Optional;
  */
 @Entity
 @Table(name = "applications")
-public class Application extends BaseFetchGroupTracker {
+public class Application implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "application_id")

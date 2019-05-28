@@ -1,10 +1,11 @@
 package net.unit8.bouncr.entity;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "assignments")
-public class Assignment extends BaseFetchGroupTracker {
+public class Assignment implements Serializable {
     @Id
     @ManyToOne
     @JoinColumn(name = "group_id")

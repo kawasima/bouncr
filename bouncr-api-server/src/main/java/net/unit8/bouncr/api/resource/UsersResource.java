@@ -26,6 +26,7 @@ import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
+import javax.persistence.Subgraph;
 import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
 import java.util.*;
@@ -121,7 +122,7 @@ public class UsersResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<User> handleOk(UserSearchParams params, EntityManager em) {
+    public List<User> handleOk(UserSearchParams params, UserPermissionPrincipal principal, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         query.distinct(true);
@@ -133,12 +134,25 @@ public class UsersResource {
                 .orElse(Collections.emptyList());
         EntityGraph<User> userGraph = em.createEntityGraph(User.class);
         userGraph.addAttributeNodes("account", "userProfileValues");
+        Subgraph<UserProfileValue> userProfileValuesGraph = userGraph.addSubgraph("userProfileValues");
+        userProfileValuesGraph.addAttributeNodes("value", "userProfileField");
+        userProfileValuesGraph.addSubgraph("userProfileField").addAttributeNodes("id", "name", "jsonName");
 
         List<Predicate> predicates = new ArrayList<>();
         if (params.getGroupId() != null) {
-            Join<Group, User> groups = userRoot.join("groups");
+            Join<User, Group> groups = userRoot.join("groups");
             predicates.add(cb.equal(groups.get("id"), params.getGroupId()));
         }
+
+        if (!principal.hasPermission("any_user:read")) {
+            Join<User, ?> groups = userRoot.getJoins().stream().filter(j -> j.getModel().getBindableJavaType() == Group.class)
+                    .findAny()
+                    .orElseGet(() -> userRoot.join("groups"));
+            Join users = groups.join("users");
+            predicates.add(cb.notEqual(groups.get("name"), "BOUNCR_USER"));
+            predicates.add(cb.equal(users.get("id"), principal.getId()));
+        }
+
         Optional.ofNullable(params.getQ())
                 .ifPresent(q -> {
                     String likeExpr = "%" + q.replaceAll("%", "_%") + "%";

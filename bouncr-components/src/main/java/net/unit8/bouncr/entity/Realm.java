@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  */
 @Entity
 @Table(name = "realms")
-public class Realm extends BaseFetchGroupTracker {
+public class Realm implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "realm_id")

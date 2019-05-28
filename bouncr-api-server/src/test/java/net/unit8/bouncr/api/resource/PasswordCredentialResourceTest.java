@@ -8,6 +8,7 @@ import enkan.system.inject.ComponentInjector;
 import kotowari.restful.data.DefaultResource;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
+import net.unit8.bouncr.BouncrTestSystemFactory;
 import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
 import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
 import net.unit8.bouncr.api.resource.PasswordCredentialResource;
@@ -32,7 +33,7 @@ public class PasswordCredentialResourceTest {
 
     @BeforeEach
     void setup() {
-        system = new BouncrApiEnkanSystemFactory().create();
+        system = new BouncrTestSystemFactory().create();
         system.start();
         EntityManagerProvider provider = system.getComponent("jpa");
         em = provider.createEntityManager();

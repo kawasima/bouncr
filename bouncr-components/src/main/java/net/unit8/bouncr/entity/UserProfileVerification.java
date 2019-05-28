@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_profile_verifications")
-public class UserProfileVerification extends BaseFetchGroupTracker {
+public class UserProfileVerification implements Serializable {
     @Id
     @ManyToOne
     @JoinColumn(name = "user_profile_field_id")

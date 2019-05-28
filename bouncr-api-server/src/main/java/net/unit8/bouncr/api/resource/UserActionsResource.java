@@ -69,9 +69,13 @@ public class UserActionsResource {
         Root<UserAction> userActionRoot = query.from(UserAction.class);
         List<Predicate> predicates = new ArrayList<>();
         Optional<String> maybeActor = Optional.ofNullable(params.getActor());
+        System.out.println(principal.hasPermission("any_user:read"));
         if (principal.hasPermission("any_user:read")
                 && maybeActor.isPresent()) {
-            predicates.add(cb.equal(userActionRoot.get("actor"), maybeActor.orElseThrow(UnreachableException::new)));
+            String likeExpr = maybeActor.orElseThrow(UnreachableException::new)
+                    .replaceAll("%", "_%")
+                    .replaceAll("\\*+", "%");
+            predicates.add(cb.like(userActionRoot.get("actor"), likeExpr, '_'));
         } else {
             predicates.add(cb.equal(userActionRoot.get("actor"), principal.getName()));
         }
