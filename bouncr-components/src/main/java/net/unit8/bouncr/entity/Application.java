@@ -12,6 +12,7 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -131,4 +132,34 @@ public class Application implements Serializable {
         this.realms = realms;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+
+        return Optional.ofNullable(obj)
+                .filter(o -> getClass().isInstance(o))
+                .map(o -> getClass().cast(o))
+                .filter(o -> getId() != null && getId().equals(o.getId()))
+                .isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
+    }
+
+    @Override
+    public String toString() {
+        return "Application{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", nameLower='" + nameLower + '\'' +
+                ", description='" + description + '\'' +
+                ", passTo='" + passTo + '\'' +
+                ", virtualPath='" + virtualPath + '\'' +
+                ", topPage='" + topPage + '\'' +
+                ", writeProtected=" + writeProtected +
+                '}';
+    }
 }

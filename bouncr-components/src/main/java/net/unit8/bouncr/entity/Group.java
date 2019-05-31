@@ -11,6 +11,7 @@ import javax.persistence.criteria.Fetch;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -92,6 +93,23 @@ public class Group implements Serializable {
 
     public void setUsers(List<User> users) {
         this.users = users;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+
+        return Optional.ofNullable(obj)
+                .filter(o -> getClass().isInstance(o))
+                .map(o -> getClass().cast(o))
+                .filter(o -> getId() != null && getId().equals(o.getId()))
+                .isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
     }
 
     @Override

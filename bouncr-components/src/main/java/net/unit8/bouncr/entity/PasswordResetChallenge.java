@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.Optional;
 
 @Entity
 @Table(name = "password_reset_challenges")
@@ -55,5 +57,22 @@ public class PasswordResetChallenge implements Serializable {
 
     public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+
+        return Optional.ofNullable(obj)
+                .filter(o -> getClass().isInstance(o))
+                .map(o -> getClass().cast(o))
+                .filter(o -> getId() != null && getId().equals(o.getId()))
+                .isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
     }
 }

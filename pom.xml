@@ -6,7 +6,7 @@
 
     <groupId>net.unit8.bouncr</groupId>
     <artifactId>bouncr-parent</artifactId>
-    <version>0.2.4-SNAPSHOT</version>
+    <version>0.2.5-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>bouncr-parent</name>
@@ -77,6 +77,14 @@
                     <version>3.1.0</version>
                     <configuration>
                         <source>8</source>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>1.20</version>
+                    <configuration>
+                        <excludedScopes>provided,test</excludedScopes>
                     </configuration>
                 </plugin>
             </plugins>

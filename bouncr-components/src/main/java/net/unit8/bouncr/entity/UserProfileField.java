@@ -128,12 +128,35 @@ public class UserProfileField implements Serializable {
     }
 
     @Override
-    public boolean equals(Object another) {
-        return Optional.ofNullable(another)
-                .filter(Objects::nonNull)
-                .filter(UserProfileField.class::isInstance)
-                .map(UserProfileField.class::cast)
-                .map(upf -> upf.getId() == id)
-                .orElse(false);
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+
+        return Optional.ofNullable(obj)
+                .filter(o -> getClass().isInstance(o))
+                .map(o -> getClass().cast(o))
+                .filter(o -> getId() != null && getId().equals(o.getId()))
+                .isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
+    }
+
+    @Override
+    public String toString() {
+        return "UserProfileField{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", jsonName='" + jsonName + '\'' +
+                ", isRequired=" + isRequired +
+                ", isIdentity=" + isIdentity +
+                ", regularExpression='" + regularExpression + '\'' +
+                ", maxLength=" + maxLength +
+                ", minLength=" + minLength +
+                ", needsVerification=" + needsVerification +
+                ", position=" + position +
+                '}';
     }
 }

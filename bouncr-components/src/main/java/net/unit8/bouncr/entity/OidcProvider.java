@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 @Entity
@@ -128,5 +129,22 @@ public class OidcProvider implements Serializable {
 
     public void setTokenEndpointAuthMethod(TokenEndpointAuthMethod tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+
+        return Optional.ofNullable(obj)
+                .filter(o -> getClass().isInstance(o))
+                .map(o -> getClass().cast(o))
+                .filter(o -> getId() != null && getId().equals(o.getId()))
+                .isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
     }
 }

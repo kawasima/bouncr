@@ -10,7 +10,7 @@ public class HookRepository {
 
     public void register(HookPoint point, Hook hook) {
         synchronized (hooks) {
-            hooks.put(point, hook);
+            hooks.add(point, hook);
         }
     }
 
