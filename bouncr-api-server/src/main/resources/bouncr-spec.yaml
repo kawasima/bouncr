@@ -216,6 +216,65 @@ paths:
       responses:
         204:
           description: Deleting a group is successful
+
+  /group/{name}/users:
+    parameters:
+      - $ref: '#/components/parameters/BouncrCredential'
+      - name: name
+        in: path
+        description: The name of the group
+        required: true
+        schema:
+          type: string
+        example: group1
+    get:
+      summary: Find users who belong to the given group
+      operationId: findUsersInGroup
+      tags:
+        - Group
+        - Administration
+      responses:
+        200:
+          description: Users who belong to the given group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+        404:
+          description: The name of the group is not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      summary: Add users to the given group
+      operationId: addUsersToGroup
+      tags:
+        - Group
+        - Administration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupUsersRequest'
+      responses:
+        204:
+          description: Adding users is successful
+    delete:
+      summary: Remove users from the given group
+      operationId: removeUsersToGroup
+      tags:
+        - Group
+        - Administration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupUsersRequest'
+      responses:
+        204:
+          description: Removing users is successful
+
   /applications:
     parameters:
       - $ref: '#/components/parameters/BouncrCredential'
@@ -1094,6 +1153,10 @@ components:
           type: string
         description:
           type: string
+    GroupUsersRequest:
+      type: array
+      items:
+        type: string
     RoleCreateRequest:
       type: object
       properties:

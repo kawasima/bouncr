@@ -188,13 +188,16 @@ public class UsersResource {
                 .map(v -> { v.setUser(user); return v; })
                 .collect(Collectors.toList()));
         // Process user profile verifications
-        List<UserProfileVerification> profileVerifications = userProfileService
-                .createProfileVerification(userProfileValues).stream()
-                .map(v -> {
-                    v.setUser(user);
-                    return v;
-                })
-                .collect(Collectors.toList());
+        List<UserProfileVerification> profileVerifications = Collections.emptyList();
+        if (config.getVerificationPolicy().isVerificationEnabledAtCreateUser()) {
+            userProfileService
+                    .createProfileVerification(userProfileValues).stream()
+                    .map(v -> {
+                        v.setUser(user);
+                        return v;
+                    })
+                    .collect(Collectors.toList());
+        }
 
         user.setWriteProtected(false);
         context.putValue(user);

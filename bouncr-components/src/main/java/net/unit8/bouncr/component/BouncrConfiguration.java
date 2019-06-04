@@ -8,6 +8,7 @@ import net.jodah.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.CertConfiguration;
 import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
+import net.unit8.bouncr.component.config.VerificationPolicy;
 import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.CommunicationException;
@@ -31,6 +32,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private String tokenName = "BOUNCR_TOKEN";
     private String backendHeaderName = "X-Bouncr-Credential";
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
+    private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
     private KvsSettings keyValueStoreSettings = new KvsSettings();
     private SecureRandom secureRandom;
@@ -147,6 +149,14 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setPasswordPolicy(PasswordPolicy passwordPolicy) {
         this.passwordPolicy = passwordPolicy;
+    }
+
+    public VerificationPolicy getVerificationPolicy() {
+        return verificationPolicy;
+    }
+
+    public void setVerificationPolicy(VerificationPolicy verificationPolicy) {
+        this.verificationPolicy = verificationPolicy;
     }
 
     public RetryPolicy getHttpClientRetryPolicy() {
