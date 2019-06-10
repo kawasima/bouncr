@@ -29,7 +29,6 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -134,8 +133,9 @@ public class PasswordSignInResource {
                 .getResultStream().findAny().orElse(null);
 
         if (user != null && user.getUserLock() != null) {
-            context.setMessage(new Problem(URI.create("abount:blank"), "Authentication failed", 401,
-                    "Account is locked", null));
+            context.setMessage(builder(Problem.valueOf(401,"Account is locked"))
+                    .set(Problem::setType, BouncrProblem.ACCOUNT_IS_LOCKED.problemUri())
+                    .build());
             return false;
         }
 

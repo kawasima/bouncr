@@ -12,25 +12,26 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.boundary.UserCreateRequest;
 import net.unit8.bouncr.api.boundary.UserSearchParams;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.*;
-import javax.persistence.criteria.*;
-import java.util.Arrays;
-import java.util.List;
+import javax.persistence.EntityGraph;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.util.Map;
 import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -103,7 +104,9 @@ public class UsersResourceTest {
                 .set(UserCreateRequest::setAccount, "fuga")
                 .build();
         EntityManager em = MockFactory.createEntityManagerMock();
-        resource.doPost(user, context, em);
+        ActionRecord actionRecord = new ActionRecord();
+        UserPermissionPrincipal principal = new UserPermissionPrincipal(1L, "admin", Map.of(), Set.of());
+        resource.doPost(user, actionRecord, principal, context, em);
     }
 
     @Test

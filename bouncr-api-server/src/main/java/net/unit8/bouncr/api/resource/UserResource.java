@@ -13,11 +13,13 @@ import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserUpdateRequest;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
+import net.unit8.bouncr.entity.ActionType;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileValue;
 import net.unit8.bouncr.entity.UserProfileVerification;
@@ -173,6 +175,8 @@ public class UserResource {
     @Decision(PUT)
     public User update(UserUpdateRequest updateRequest,
                        User user,
+                       ActionRecord actionRecord,
+                       UserPermissionPrincipal principal,
                        RestContext context,
                        EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
@@ -201,13 +205,20 @@ public class UserResource {
             user.getUserProfileValues().addAll(newValues);
             config.getHookRepo().runHook(HookPoint.AFTER_UPDATE_USER, context);
         });
+        actionRecord.setActionType(ActionType.USER_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(user.getAccount());
 
         em.detach(user);
         return user;
     }
 
     @Decision(DELETE)
-    public Void delete(User user, RestContext context, EntityManager em) {
+    public Void delete(User user,
+                       ActionRecord actionRecord,
+                       UserPermissionPrincipal principal,
+                       RestContext context,
+                       EntityManager em) {
         EntityTransactionManager tm = new EntityTransactionManager(em);
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<UserProfileVerification> query = cb.createQuery(UserProfileVerification.class);
@@ -223,6 +234,10 @@ public class UserResource {
             em.remove(user);
             config.getHookRepo().runHook(HookPoint.AFTER_DELETE_USER, context);
         });
+        actionRecord.setActionType(ActionType.USER_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(user.getAccount());
+
         em.detach(user);
         return null;
     }

@@ -7,7 +7,8 @@ public enum BouncrProblem {
     CONFLICT,
     UNPROCESSABLE,
     PASSWORD_MUST_BE_CHANGED,
-    ONE_TIME_PASSWORD_IS_NEEDED;
+    ONE_TIME_PASSWORD_IS_NEEDED,
+    ACCOUNT_IS_LOCKED;
 
     public URI problemUri() {
         return URI.create("/bouncr/problem/" + this.name());

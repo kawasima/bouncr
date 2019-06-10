@@ -132,6 +132,7 @@ public class PasswordCredentialResource {
                     context.putValue(user);
                     return user;
                 })
+                .filter(user -> user.getPasswordCredential() != null)
                 .filter(user ->
                         Arrays.equals(user.getPasswordCredential().getPassword(),
                                 PasswordUtils.pbkdf2(updateRequest.getOldPassword(), user.getPasswordCredential().getSalt(), 100))

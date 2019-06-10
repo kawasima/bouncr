@@ -76,7 +76,7 @@ public class RolePermissionsResource {
         CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
         Root<Permission> userRoot = query.from(Permission.class);
         Join<Role, User> rolesJoin = userRoot.join("roles");
-        query.where(cb.equal(rolesJoin.get("id"), role));
+        query.where(cb.equal(rolesJoin.get("id"), role.getId()));
         query.orderBy(cb.asc(userRoot.get("id")));
         return em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)

@@ -15,8 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static enkan.util.BeanBuilder.builder;
-import static net.unit8.bouncr.entity.ActionType.USER_FAILED_SIGNIN;
-import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
+import static net.unit8.bouncr.entity.ActionType.*;
 
 public class UserLockService {
     private final BouncrConfiguration config;
@@ -37,7 +36,7 @@ public class UserLockService {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
             Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
-            userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN));
+            userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN, PASSWORD_CHANGED));
             userActionCriteria.orderBy(cb.desc(userActionRoot.get("createdAt")));
 
             List<UserAction> recentActions = em.createQuery(userActionCriteria)

@@ -21,8 +21,10 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -86,7 +88,7 @@ public class GroupUsersResource {
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
         Join<Group, User> groupsJoin = userRoot.join("groups");
-        query.where(cb.equal(groupsJoin.get("id"), group));
+        query.where(cb.equal(groupsJoin.get("id"), group.getId()));
         query.orderBy(cb.asc(userRoot.get("id")));
         return em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)

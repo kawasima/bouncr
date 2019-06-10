@@ -201,6 +201,13 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <configuration>
+                            <executable>java</executable>
+                            <longClasspath>true</longClasspath>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>backendexample.ReplMain</argument>
+                            </arguments>
                             <mainClass>backendexample.ReplMain</mainClass>
                         </configuration>
                     </plugin>

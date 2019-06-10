@@ -14,13 +14,11 @@ import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserCreateRequest;
 import net.unit8.bouncr.api.boundary.UserSearchParams;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserProfileValue;
-import net.unit8.bouncr.entity.UserProfileVerification;
+import net.unit8.bouncr.entity.*;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
@@ -177,7 +175,11 @@ public class UsersResource {
     }
 
     @Decision(POST)
-    public User doPost(UserCreateRequest createRequest, RestContext context, EntityManager em) {
+    public User doPost(UserCreateRequest createRequest,
+                       ActionRecord actionRecord,
+                       UserPermissionPrincipal principal,
+                       RestContext context,
+                       EntityManager em) {
         User user = converter.createFrom(createRequest, User.class);
 
         UserProfileService userProfileService = new UserProfileService(em);
@@ -210,6 +212,9 @@ public class UsersResource {
             profileVerifications.forEach(em::persist);
             config.getHookRepo().runHook(HookPoint.AFTER_CREATE_USER, context);
         });
+        actionRecord.setActionType(ActionType.USER_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(user.getAccount());
         return user;
     }
 }
