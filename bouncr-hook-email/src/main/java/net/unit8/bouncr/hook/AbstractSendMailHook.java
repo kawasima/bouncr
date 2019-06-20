@@ -4,10 +4,7 @@ import enkan.data.HttpResponse;
 import enkan.exception.MisconfigurationException;
 import kotowari.component.TemplateEngine;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserProfileField;
 import net.unit8.bouncr.entity.UserProfileValue;
-import net.unit8.bouncr.entity.UserProfileVerification;
 
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
@@ -16,7 +13,6 @@ import javax.mail.internet.MimeUtility;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;

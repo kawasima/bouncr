@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.5-SNAPSHOT</version>
+        <version>0.2.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>bouncr-components</artifactId>
@@ -113,6 +113,18 @@
         <dependency>
             <groupId>org.jsr107.ri</groupId>
             <artifactId>cache-ri-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>6.0.16.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
+            <version>3.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
