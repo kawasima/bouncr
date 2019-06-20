@@ -1,0 +1,23 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>net.unit8.bouncr</groupId>
+        <artifactId>bouncr-parent</artifactId>
+        <version>0.2.5-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bouncr-hook-license</artifactId>
+    <packaging>jar</packaging>
+    <name>bouncr-hook-licnese</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.unit8.bouncr</groupId>
+            <artifactId>bouncr-components</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>kotowari-restful</artifactId>
+        </dependency>
+    </dependencies>
+</project>
