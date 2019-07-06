@@ -174,6 +174,12 @@ public class PasswordSignInResource {
         return false;
     }
 
+    @Decision(ALLOWED)
+    public boolean allowed(RestContext context) {
+        config.getHookRepo().runHook(HookPoint.ALLOWED_SIGN_IN, context);
+        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
+    }
+
     @Decision(POST)
     public UserSession doPost(User user, HttpRequest request, RestContext context, EntityManager em) {
         SignInService signInService = new SignInService(em, storeProvider, config);

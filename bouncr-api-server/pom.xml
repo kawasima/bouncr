@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.5-SNAPSHOT</version>
+        <version>0.2.7-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -27,7 +27,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.2.0</version>
+                <version>1.3.0</version>
                 <configuration>
                     <container>
                         <mainClass>net.unit8.bouncr.api.Main</mainClass>
@@ -56,11 +56,6 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-system</artifactId>
-            <version>0.8.0</version>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
             <artifactId>kotowari-restful</artifactId>
         </dependency>
         <dependency>
@@ -70,7 +65,6 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-eclipselink</artifactId>
-            <version>0.8.1</version>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -91,6 +85,12 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-bouncr</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>

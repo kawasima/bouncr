@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.5-SNAPSHOT</version>
+        <version>0.2.7-SNAPSHOT</version>
     </parent>
 
     <artifactId>bouncr-components</artifactId>
@@ -18,7 +18,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <eclipselink.version>2.7.3</eclipselink.version>
+        <eclipselink.version>2.7.4</eclipselink.version>
     </properties>
 
     <repositories>
@@ -64,6 +64,10 @@
     <dependencies>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jackson</artifactId>
         </dependency>
         <dependency>
@@ -81,6 +85,12 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-bouncr</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -113,6 +123,18 @@
         <dependency>
             <groupId>org.jsr107.ri</groupId>
             <artifactId>cache-ri-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>6.0.17.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
+            <version>3.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

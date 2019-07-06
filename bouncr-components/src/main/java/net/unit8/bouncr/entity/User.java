@@ -2,9 +2,6 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import net.unit8.bouncr.json.IndirectListFilter;
-import org.eclipse.persistence.queries.FetchGroup;
-import org.eclipse.persistence.queries.FetchGroupTracker;
-import org.eclipse.persistence.sessions.Session;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -123,10 +120,11 @@ public class User implements Serializable {
 
     @JsonAnyGetter
     public Map<String, Object> getUserProfiles() {
-        return this.userProfileValues.stream()
+        return Optional.ofNullable(this.userProfileValues).orElse(Collections.emptyList())
+                .stream()
                 .collect(Collectors.toMap(
                         u -> u.getUserProfileField().getJsonName(),
-                        u -> u.getValue()
+                        UserProfileValue::getValue
                 ));
     }
 

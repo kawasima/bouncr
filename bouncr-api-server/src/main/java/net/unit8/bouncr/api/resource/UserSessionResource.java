@@ -2,24 +2,16 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserSession;
+import net.unit8.bouncr.component.config.HookPoint;
 
 import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
-
-import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -37,6 +29,9 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 public class UserSessionResource {
     @Inject
     private StoreProvider storeProvider;
+
+    @Inject
+    private BouncrConfiguration config;
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
@@ -74,8 +69,13 @@ public class UserSessionResource {
     }
 
     @Decision(DELETE)
-    public Void delete(Parameters params, EntityManager em) {
+    public Void delete(Parameters params, RestContext context, EntityManager em) {
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_OUT, context);
+        if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
+            return null;
+        }
         storeProvider.getStore(BOUNCR_TOKEN).delete(params.get("token"));
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
 
         /*
         EntityTransactionManager tx = new EntityTransactionManager(em);

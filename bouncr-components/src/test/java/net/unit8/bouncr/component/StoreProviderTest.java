@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static enkan.component.ComponentRelationship.component;
 
-public class StoreProviderTest {
+class StoreProviderTest {
     private EnkanSystem system;
     @BeforeEach
     void setup() {

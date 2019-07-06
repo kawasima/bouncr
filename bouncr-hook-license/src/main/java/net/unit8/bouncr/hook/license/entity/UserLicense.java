@@ -9,14 +9,16 @@ import java.io.Serializable;
 @Table(name = "user_licenses")
 public class UserLicense implements Serializable {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "user_licence_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_license_id")
     private Long id;
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Column(name = "license_key")
-    private String licenseKey;
+    private byte[] licenseKey;
 
     public Long getId() {
         return id;
@@ -34,11 +36,11 @@ public class UserLicense implements Serializable {
         this.user = user;
     }
 
-    public String getLicenseKey() {
+    public byte[] getLicenseKey() {
         return licenseKey;
     }
 
-    public void setLicenseKey(String licenseKey) {
+    public void setLicenseKey(byte[] licenseKey) {
         this.licenseKey = licenseKey;
     }
 }

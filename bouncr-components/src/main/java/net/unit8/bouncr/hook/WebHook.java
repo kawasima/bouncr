@@ -6,10 +6,10 @@ import net.jodah.failsafe.RetryPolicy;
 import okhttp3.*;
 
 import java.net.SocketTimeoutException;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public class WebHook<T> implements Hook<T> {
@@ -18,17 +18,17 @@ public class WebHook<T> implements Hook<T> {
     private static final MediaType JSON = MediaType.parse("application/json");
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
 
-    private RetryPolicy idempotent = new RetryPolicy()
-            .withBackoff(3, 10, TimeUnit.SECONDS)
-            .retryOn(SocketTimeoutException.class)
-            .retryIf(res -> Stream.of(res)
+    private RetryPolicy idempotent = new RetryPolicy<>()
+            .withBackoff(3, 10, ChronoUnit.SECONDS)
+            .handle(SocketTimeoutException.class)
+            .handleIf(res -> Stream.of(res)
                     .map(Response.class::cast)
                     .map(Response::code)
                     .anyMatch(code -> code >= 500));
 
-    private RetryPolicy notIdempotent = new RetryPolicy()
-            .withBackoff(3, 10, TimeUnit.SECONDS)
-            .retryIf(res -> Stream.of(res)
+    private RetryPolicy notIdempotent = new RetryPolicy<>()
+            .withBackoff(3, 10, ChronoUnit.SECONDS)
+            .handleIf(res -> Stream.of(res)
                     .map(Response.class::cast)
                     .map(Response::code)
                     .anyMatch(code -> code >= 500));

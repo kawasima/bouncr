@@ -4,7 +4,6 @@ import enkan.Env;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserProfileField;
 import net.unit8.bouncr.entity.UserProfileValue;
 
 import java.util.HashMap;

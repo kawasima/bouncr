@@ -9,6 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
+import net.unit8.bouncr.api.boundary.PasswordCredentialDeleteRequest;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.PasswordPolicyService;
@@ -86,25 +87,46 @@ public class PasswordCredentialResource {
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
-    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
-        return principal != null;
+    @Decision(value = MALFORMED, method = "DELETE")
+    public Problem validateDeleteRequest(PasswordCredentialUpdateRequest deleteRequest, RestContext context, EntityManager em) {
+        if (deleteRequest == null) {
+            return builder(Problem.valueOf(400, "request is empty"))
+                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                    .build();
+        }
+        Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(deleteRequest);
+        Problem problem = builder(Problem.fromViolations(violations))
+                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
+                .build();
+
+        if (problem.getViolations().isEmpty()) {
+            context.putValue(deleteRequest);
+        }
+        return problem.getViolations().isEmpty() ? null : problem;
     }
 
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
-        if (principal.hasPermission("any_user:create") || principal.hasPermission("user:create")) {
+        if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
             return true;
         }
         return principal.getName().equals(createRequest.getAccount());
     }
 
-    @Decision(value = ALLOWED, method = "POST")
-    public boolean isDeleteAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
-        if (principal.hasPermission("any_user:create") || principal.hasPermission("user:create")) {
+    @Decision(value = ALLOWED, method = "PUT")
+    public boolean isPutAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest updateRequest) {
+        if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
             return true;
         }
-        return principal.getName().equals(createRequest.getAccount());
+        return principal.getName().equals(updateRequest.getAccount());
+    }
+
+    @Decision(value = ALLOWED, method = "DELETE")
+    public boolean isDeleteAllowed(UserPermissionPrincipal principal, PasswordCredentialDeleteRequest deleteRequest) {
+        if (principal.hasPermission("any_user:delete") || principal.hasPermission("user:delete")) {
+            return true;
+        }
+        return principal.getName().equals(deleteRequest.getAccount());
     }
 
     private Optional<User> findUserByAccount(String account, EntityManager em) {

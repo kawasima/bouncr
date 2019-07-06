@@ -17,10 +17,12 @@ import java.net.SocketTimeoutException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private Clock clock = Clock.systemDefaultZone();
@@ -40,17 +42,18 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
             Locale.ENGLISH,
             Locale.JAPANESE))
     );
-    private RetryPolicy httpClientRetryPolicy = new RetryPolicy()
-            .retryOn(SocketTimeoutException.class)
-            .withBackoff(3, 10, TimeUnit.SECONDS);
-    private CircuitBreaker ldapClientCircuitBreaker = new CircuitBreaker()
+
+    private RetryPolicy httpClientRetryPolicy = new RetryPolicy<>()
+            .handle(SocketTimeoutException.class)
+            .withBackoff(3, 10, ChronoUnit.SECONDS);
+    private CircuitBreaker ldapClientCircuitBreaker = new CircuitBreaker<>()
             .withFailureThreshold(5)
             .withSuccessThreshold(3)
-            .withTimeout(5, TimeUnit.SECONDS)
-            .failOn(NamingException.class);
-    private RetryPolicy ldapRetryPolicy = new RetryPolicy()
-            .retryOn(CommunicationException.class)
-            .withBackoff(3, 10, TimeUnit.SECONDS);
+            .withTimeout(Duration.ofSeconds(5))
+            .handle(NamingException.class);
+    private RetryPolicy ldapRetryPolicy = new RetryPolicy<>()
+            .handle(CommunicationException.class)
+            .withBackoff(3, 10, ChronoUnit.SECONDS);
 
     private HookRepository hookRepo = new HookRepository();
 
@@ -159,7 +162,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
         this.verificationPolicy = verificationPolicy;
     }
 
-    public RetryPolicy getHttpClientRetryPolicy() {
+    public RetryPolicy<Map<String, Object>> getHttpClientRetryPolicy() {
         return httpClientRetryPolicy;
     }
 

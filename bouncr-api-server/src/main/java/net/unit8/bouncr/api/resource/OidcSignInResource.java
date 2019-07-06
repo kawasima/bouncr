@@ -118,13 +118,16 @@ public class OidcSignInResource {
         oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api");
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
+            FormBody body = new FormBody.Builder()
+                    .add("grant_type", "authorization")
+                    .add("code", params.get("code"))
+                    .add("redirect_uri", oidcProviderDto.getRedirectUri())
+                    .build();
             Response response =  OKHTTP.newCall(new Request.Builder()
                     .url(oidcProvider.getTokenEndpoint())
                     .header("Authorization", "Basic " +
                             Base64.getUrlEncoder().encodeToString((oidcProvider.getClientId() + ":" + oidcProvider.getClientSecret()).getBytes()))
-                    .post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded"),
-                            "grant_type=authorization_code&code=" + params.get("code") +
-                                    "&redirect_uri=" + oidcProviderDto.getRedirectUri()))
+                    .post(body)
                     .build())
                     .execute();
             if (response.code() == 503) throw new FalteringEnvironmentException();
