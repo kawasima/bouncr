@@ -44,6 +44,7 @@ public class LicenseUpdateHook implements Hook<RestContext> {
                                 .atTime(0, 0), zone)
                                 .toInstant());
                 cookie.setExpires(expires);
+                cookie.setPath("/");
                 context.setHeaders(Headers.of("Set-Cookie", cookie.toHttpString()));
 
                 return userLic;

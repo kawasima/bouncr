@@ -8,7 +8,7 @@
 
     <artifactId>bouncr-hook-license</artifactId>
     <packaging>jar</packaging>
-    <name>bouncr-hook-licnese</name>
+    <name>bouncr-hook-license</name>
 
     <dependencies>
         <dependency>

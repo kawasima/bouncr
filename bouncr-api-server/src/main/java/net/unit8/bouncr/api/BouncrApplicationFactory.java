@@ -28,6 +28,8 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.Predicates.*;
@@ -114,8 +116,9 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 .set(CorsMiddleware::setHeaders, new HashSet<>(Arrays.asList(
                         "Origin", "Accept", "X-Requested-With", "Content-Type",
                         "Access-Control-Request-Method", "Access-Control-Request-Headers",
-                        "Authorization",
+                        "Authorization", "Set-Cookie", "Cookie",
                         "X-Bouncr-Token")))
+                .set(CorsMiddleware::setOrigins, corsOrigins())
                 .build());
 
         try {
@@ -178,5 +181,12 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Set<String> corsOrigins() {
+        final String corsOrigins = Env.getString("cors.origins", "*");
+        return Stream.of(corsOrigins.split(","))
+                .map(String::strip)
+                .collect(Collectors.toSet());
     }
 }
