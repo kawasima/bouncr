@@ -42,4 +42,9 @@ public class SendPasswordResetHook extends AbstractSendMailHook {
                 .findAny()
                 .orElse(null));
     }
+
+    @Override
+    public String getMetaKey() {
+        return "PasswordReset";
+    }
 }

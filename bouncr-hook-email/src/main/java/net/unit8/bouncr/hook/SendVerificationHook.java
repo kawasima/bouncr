@@ -53,4 +53,9 @@ public class SendVerificationHook extends AbstractSendMailHook {
             return null;
         });
     }
+
+    @Override
+    public String getMetaKey() {
+        return "Verification";
+    }
 }

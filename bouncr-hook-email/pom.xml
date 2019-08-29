@@ -3,7 +3,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.7</version>
+        <version>0.2.8-SNAPSHOT</version>
     </parent>
 
     <artifactId>bouncr-hook-email</artifactId>
@@ -29,6 +29,10 @@
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-thymeleaf</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.apistandard</groupId>
+            <artifactId>parameter-parser</artifactId>
         </dependency>
 
     </dependencies>

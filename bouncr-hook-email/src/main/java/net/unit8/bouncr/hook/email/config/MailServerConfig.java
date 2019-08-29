@@ -1,4 +1,4 @@
-package net.unit8.bouncr.hook;
+package net.unit8.bouncr.hook.email.config;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;

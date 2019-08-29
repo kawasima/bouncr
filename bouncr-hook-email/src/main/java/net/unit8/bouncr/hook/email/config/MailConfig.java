@@ -1,18 +1,20 @@
-package net.unit8.bouncr.hook.email.component;
+package net.unit8.bouncr.hook.email.config;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import kotowari.component.TemplateEngine;
-import net.unit8.bouncr.hook.MailServerConfig;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MailConfig extends SystemComponent<MailConfig> {
     private MailServerConfig mailServerConfig;
-    private String templateName;
-    private String fromAddress = "nobody";
-    private String fromName = "nobody";
-    private String subject;
-    private String contentType = "text/html";
+    private Map<String, MailMetaConfig> mailMetaConfigMap;
     private TemplateEngine templateEngine;
+
+    public MailConfig() {
+        mailMetaConfigMap = new HashMap<>();
+    }
 
     public MailServerConfig getMailServerConfig() {
         return mailServerConfig;
@@ -35,5 +37,21 @@ public class MailConfig extends SystemComponent<MailConfig> {
 
             }
         };
+    }
+
+    public void setTemplateEngine(TemplateEngine templateEngine) {
+        this.templateEngine = templateEngine;
+    }
+
+    public void putMailMetaConfig(String key, MailMetaConfig mailMetaConfig) {
+        mailMetaConfigMap.put(key, mailMetaConfig);
+    }
+
+    public MailMetaConfig getMailMetaConfig(String key) {
+        return mailMetaConfigMap.get(key);
+    }
+
+    public TemplateEngine getTemplateEngine() {
+        return templateEngine;
     }
 }

@@ -33,6 +33,11 @@ public class SendPasswordResetChallengeHook extends AbstractSendMailHook {
     }
 
     @Override
+    protected String getMetaKey() {
+        return "PasswordResetChallenge";
+    }
+
+    @Override
     protected Optional<UserProfileValue> findEmailField(RestContext context) {
         return context.getValue(User.class).map(user -> user.getUserProfileValues()
                 .stream()

@@ -187,17 +187,14 @@ public class UsersResource {
         List<UserProfileValue> userProfileValues = userProfileService
                 .convertToUserProfileValues(createRequest.getUserProfiles());
         user.setUserProfileValues(userProfileValues.stream()
-                .map(v -> { v.setUser(user); return v; })
+                .peek(v -> v.setUser(user))
                 .collect(Collectors.toList()));
         // Process user profile verifications
         List<UserProfileVerification> profileVerifications = Collections.emptyList();
         if (config.getVerificationPolicy().isVerificationEnabledAtCreateUser()) {
             userProfileService
                     .createProfileVerification(userProfileValues).stream()
-                    .map(v -> {
-                        v.setUser(user);
-                        return v;
-                    })
+                    .peek(v -> v.setUser(user))
                     .collect(Collectors.toList());
         }
 
