@@ -28,7 +28,7 @@ import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
 
-@AllowedMethods({"GET", "POST"})
+@AllowedMethods({"PUT"})
 public class VerificationEmailResource {
     @Inject
     private BeansConverter converter;
@@ -42,6 +42,15 @@ public class VerificationEmailResource {
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
+    }
+
+    @Decision(ALLOWED)
+    public boolean isAllowed(UserPermissionPrincipal principal, Parameters params) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("user:read")
+                        || p.hasPermission("any_user:read")
+                        || (p.hasPermission("my:read") && Objects.equals(p.getName(), params.get("account"))))
+                .isPresent();
     }
 
     private Optional<UserProfileVerification> findMailVerification(EntityManager em, String account) {
@@ -58,8 +67,8 @@ public class VerificationEmailResource {
                 .findAny();
     }
 
-    @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
+    @Decision(PROCESSABLE)
+    public boolean processable(Parameters params, EntityManager em, RestContext context) {
         CriteriaBuilder builder = em.getCriteriaBuilder();
         CriteriaQuery<User> query = builder.createQuery(User.class);
         Root<User> userRoot = query.from(User.class);
@@ -76,12 +85,11 @@ public class VerificationEmailResource {
 
         if (user != null) {
             context.putValue(user);
+        } else {
+            context.setMessage(Problem.valueOf(422, "User not found"));
+            return false;
         }
-        return user != null;
-    }
 
-    @Decision(PROCESSABLE)
-    public Problem processable(User user, EntityManager em, RestContext context) {
         UserProfileValue emailValue = findMailVerification(em, user.getAccount()).map(verification -> {
             context.putValue(verification);
             return verification;
@@ -92,7 +100,10 @@ public class VerificationEmailResource {
                 .filter(v -> Objects.nonNull(v.getValue()))
         ).orElse(null);
 
-        return emailValue != null ? null : Problem.valueOf(422);
+        if (emailValue != null) {
+            context.putValue(emailValue);
+        }
+        return emailValue != null;
     }
 
     @Decision(PUT)

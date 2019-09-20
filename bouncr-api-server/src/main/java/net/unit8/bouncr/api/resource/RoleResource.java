@@ -11,7 +11,6 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.RoleCreateRequest;
 import net.unit8.bouncr.api.boundary.RoleUpdateRequest;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Role;

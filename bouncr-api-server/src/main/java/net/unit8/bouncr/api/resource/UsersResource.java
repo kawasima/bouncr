@@ -165,13 +165,12 @@ public class UsersResource {
             userGraph.addAttributeNodes("groups");
             userGraph.addSubgraph("groups").addAttributeNodes("name");
         }
-        List<User> resultList = em.createQuery(query)
+        return em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", userGraph)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();
-        return resultList;
     }
 
     @Decision(POST)
@@ -190,13 +189,13 @@ public class UsersResource {
                 .peek(v -> v.setUser(user))
                 .collect(Collectors.toList()));
         // Process user profile verifications
-        List<UserProfileVerification> profileVerifications = Collections.emptyList();
-        if (config.getVerificationPolicy().isVerificationEnabledAtCreateUser()) {
-            userProfileService
-                    .createProfileVerification(userProfileValues).stream()
-                    .peek(v -> v.setUser(user))
-                    .collect(Collectors.toList());
-        }
+        List<UserProfileVerification> profileVerifications = config.getVerificationPolicy().isVerificationEnabledAtCreateUser() ?
+                userProfileService
+                        .createProfileVerification(userProfileValues).stream()
+                        .peek(v -> v.setUser(user))
+                        .collect(Collectors.toList())
+                :
+                Collections.emptyList();
 
         user.setWriteProtected(false);
         context.putValue(user);

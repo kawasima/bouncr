@@ -10,13 +10,14 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.data.InitialPassword;
 import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
 import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
+import net.unit8.bouncr.data.InitialPassword;
+import net.unit8.bouncr.domain.VerificationTargetSet;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
@@ -28,9 +29,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
-import java.net.URI;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -166,10 +165,7 @@ public class SignUpResource {
             em.persist(user);
             context.putValue(user);
             profileVerifications.forEach(em::persist);
-            profileVerifications.stream()
-                    .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))
-                    .findAny()
-                    .ifPresent(context::putValue);
+            context.putValue(new VerificationTargetSet(profileVerifications));
             if (createRequest.isEnablePasswordCredential()) {
                 PasswordCredentialService passwordCredentialService = new PasswordCredentialService(em, config);
                 InitialPassword initialPassword = passwordCredentialService.initializePassword(user);

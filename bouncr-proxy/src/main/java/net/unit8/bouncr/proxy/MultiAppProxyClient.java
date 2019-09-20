@@ -140,9 +140,10 @@ public class MultiAppProxyClient implements ProxyClient {
     private Optional<String> parseToken(HttpServerExchange exchange) {
         if (exchange.getRequestHeaders().contains("Authorization")) {
             String authorizationValue = exchange.getRequestHeaders().getFirst("Authorization");
-            String[] tokens = authorizationValue.split("\\s+");
-            if (tokens[0].equalsIgnoreCase("Bearer")) {
-                return Optional.of(tokens[1]);
+            String[] tokens = authorizationValue.split("\\s+", 2);
+            if (tokens[0].equalsIgnoreCase("Bearer") && tokens.length == 2) {
+                return Optional.of(tokens[1])
+                        .map(String::strip);
             } else {
                 return Optional.empty();
             }

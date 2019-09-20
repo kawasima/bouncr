@@ -15,7 +15,6 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.RoleCreateRequest;
 import net.unit8.bouncr.api.boundary.RoleSearchParams;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.Role;
 import net.unit8.bouncr.entity.User;
 

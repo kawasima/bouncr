@@ -105,6 +105,11 @@ public class PasswordCredentialResource {
         return problem.getViolations().isEmpty() ? null : problem;
     }
 
+    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal, PasswordCredentialCreateRequest createRequest) {
         if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
@@ -115,9 +120,7 @@ public class PasswordCredentialResource {
 
     @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdateRequest updateRequest) {
-        if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
-            return true;
-        }
+        if (principal == null) return true;
         return principal.getName().equals(updateRequest.getAccount());
     }
 

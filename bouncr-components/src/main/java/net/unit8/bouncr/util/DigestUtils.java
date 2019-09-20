@@ -4,7 +4,6 @@ import enkan.exception.UnreachableException;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Locale;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Entity
 @Table(name = "user_profile_verifications")
@@ -58,4 +59,12 @@ public class UserProfileVerification implements Serializable {
         this.code = code;
     }
 
+    @Override
+    public boolean equals(Object other) {
+        return Optional.ofNullable(other)
+                .filter(UserProfileVerification.class::isInstance)
+                .map(UserProfileVerification.class::cast)
+                .filter(v -> v.getUserProfileField().equals(userProfileField) && v.getUser().equals(user))
+                .isPresent();
+    }
 }

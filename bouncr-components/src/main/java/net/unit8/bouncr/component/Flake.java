@@ -5,7 +5,6 @@ import enkan.component.SystemComponent;
 import enkan.exception.MisconfigurationException;
 
 import java.math.BigInteger;
-import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;

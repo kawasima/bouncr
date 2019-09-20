@@ -7,7 +7,7 @@ public class HazelCastMain {
     }
     public static void main(String[] args) {
         final EnkanSystem system = new BouncrProxyEnkanSystemFactory().create();
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> system.stop()));
+        Runtime.getRuntime().addShutdownHook(new Thread(system::stop));
         system.start();
     }
 }

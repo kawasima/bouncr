@@ -8,9 +8,7 @@ import net.unit8.bouncr.entity.UserProfileVerification;
 import net.unit8.bouncr.util.RandomUtils;
 
 import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -31,6 +29,18 @@ public class UserProfileService {
         CriteriaQuery<UserProfileField> query = cb.createQuery(UserProfileField.class);
         Root<UserProfileField> userProfileFieldRoot = query.from(UserProfileField.class);
         return em.createQuery(query).getResultList();
+    }
+
+    public List<UserProfileVerification> findUserProfileVerifications(String account) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<UserProfileVerification> query = cb.createQuery(UserProfileVerification.class);
+        Root<UserProfileVerification> root = query.from(UserProfileVerification.class);
+        Join<UserProfileVerification, User> userRoot = root.join("user");
+        Join<UserProfileField, User> userProfileFieldRoot = root.join("userProfileField");
+        query.where(cb.equal(userRoot.get("account"), account));
+
+        return em.createQuery(query)
+                .getResultList();
     }
 
     public Set<Problem.Violation> validateUserProfile(Map<String, Object> userProfiles) {
@@ -63,8 +73,11 @@ public class UserProfileService {
             return fieldViolations.stream();
         }).collect(Collectors.toSet());
     }
-
     public Set<Problem.Violation> validateProfileUniqueness(Map<String, Object> userProfiles) {
+        return validateProfileUniqueness(userProfiles, null);
+    }
+
+    public Set<Problem.Violation> validateProfileUniqueness(Map<String, Object> userProfiles, User user) {
         List<UserProfileField> userProfileFields = findUserProfileFields();
         return userProfileFields.stream()
                 .filter(field -> {
@@ -73,7 +86,12 @@ public class UserProfileService {
                     CriteriaQuery<Long> query = cb.createQuery(Long.class);
                     query.select(cb.count(cb.literal("1")));
                     Root<UserProfileValue> root = query.from(UserProfileValue.class);
-                    query.where(cb.equal(root.get("value"), userProfiles.get(field.getJsonName())));
+                    List<Predicate> predicates = new ArrayList<>();
+                    predicates.add(cb.equal(root.get("value"), userProfiles.get(field.getJsonName())));
+                    if (user != null) {
+                        predicates.add(cb.notEqual(root.get("user"), user));
+                    }
+                    query.where(predicates.toArray(Predicate[]::new));
                     Long cnt = em.createQuery(query).getSingleResult();
                     return (cnt > 0);
                 })
@@ -89,7 +107,7 @@ public class UserProfileService {
         query.where(cb.equal(root.get("accountLower"), account.toLowerCase(Locale.US)));
         Long cnt = em.createQuery(query).getSingleResult();
         if (cnt > 0) {
-            return new HashSet<>(Arrays.asList(new Problem.Violation<>("account", "conflicts")));
+            return new HashSet<>(Collections.singletonList(new Problem.Violation<>("account", "conflicts")));
         }
         return new HashSet<>();
     }
@@ -114,14 +132,17 @@ public class UserProfileService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserProfileVerification> createProfileVerification(List<UserProfileValue> userProfileValues) {
-        return userProfileValues.stream()
-                .filter(value -> value.getUserProfileField().isNeedsVerification())
+    public List<UserProfileVerification> createProfileVerification(Stream<UserProfileValue> userProfileValueStream) {
+        return userProfileValueStream.filter(value -> value.getUserProfileField().isNeedsVerification())
                 .map(value -> builder(new UserProfileVerification())
                         .set(UserProfileVerification::setUserProfileField, value.getUserProfileField())
                         .set(UserProfileVerification::setCode, RandomUtils.generateRandomString(6))
                         .set(UserProfileVerification::setExpiresAt, LocalDateTime.now().plusDays(1))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public List<UserProfileVerification> createProfileVerification(List<UserProfileValue> userProfileValues) {
+        return createProfileVerification(userProfileValues.stream());
     }
 }

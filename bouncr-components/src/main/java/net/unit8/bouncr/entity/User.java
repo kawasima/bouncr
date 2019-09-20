@@ -67,6 +67,11 @@ public class User implements Serializable {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<String> permissions;
 
+    @JsonProperty("unverified_profiles")
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> unverifiedProfiles;
+
     public Long getId() {
         return id;
     }
@@ -166,6 +171,14 @@ public class User implements Serializable {
 
     public void setPermissions(List<String> permissions) {
         this.permissions = permissions;
+    }
+
+    public List<String> getUnverifiedProfiles() {
+        return unverifiedProfiles;
+    }
+
+    public void setUnverifiedProfiles(List<String> unverifiedProfiles) {
+        this.unverifiedProfiles = unverifiedProfiles;
     }
 
     @Override

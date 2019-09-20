@@ -2,7 +2,6 @@ package net.unit8.bouncr.api.resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import enkan.collection.Headers;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.data.Cookie;
@@ -24,7 +23,10 @@ import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
-import okhttp3.*;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -36,6 +38,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -53,7 +56,7 @@ import static net.unit8.bouncr.entity.ResponseType.TOKEN;
  */
 @AllowedMethods({"GET"})
 public class OidcSignInResource {
-    private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<HashMap<String, Object>>() {
+    private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<>() {
     };
 
     private static final OkHttpClient OKHTTP = new OkHttpClient().newBuilder()
@@ -119,7 +122,7 @@ public class OidcSignInResource {
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             FormBody body = new FormBody.Builder()
-                    .add("grant_type", "authorization")
+                    .add("grant_type", "authorization_code")
                     .add("code", params.get("code"))
                     .add("redirect_uri", oidcProviderDto.getRedirectUri())
                     .build();
@@ -157,7 +160,8 @@ public class OidcSignInResource {
     }
     private ApiResponse connectOpenIdToBouncrUser(String idToken, OidcProvider oidcProvider, HttpRequest request, EntityManager em) {
         String[] tokens = idToken.split("\\.", 3);
-        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<JwtClaim>() {});
+        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
+        });
         // TODO Verify Nonce
 
         SignInService signInService = new SignInService(em, storeProvider, config);
@@ -190,10 +194,11 @@ public class OidcSignInResource {
                     return null; // Implicit
                 } else {
                     return builder(new ApiResponse())
-                            .set(ApiResponse::setHeaders, Headers.of(
-                                    "Location", "/bouncr/api/sign_up?code=" + invitation.getCode()
+                            .set(ApiResponse::setStatus, 202)
+                            .set(ApiResponse::setBody, Map.of(
+                                    "code", invitation.getCode(),
+                                    "message", ""
                             ))
-                            .set(ApiResponse::setStatus, 307)
                             .build();
                 }
             }

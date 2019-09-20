@@ -50,9 +50,7 @@ public class ActionLoggingMiddleware<NRES> extends AbstractWebMiddleware<HttpReq
                 .set(UserAction::setOptions,actionRecord.getDescription())
                     .set(UserAction::setCreatedAt, LocalDateTime.now())
                 .build();
-        tx.required(() -> {
-            em.persist(userAction);
-        });
+        tx.required(() -> em.persist(userAction));
 
     }
 }

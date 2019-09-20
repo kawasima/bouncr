@@ -19,10 +19,8 @@ import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.entity.ActionType;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserProfileValue;
-import net.unit8.bouncr.entity.UserProfileVerification;
+import net.unit8.bouncr.domain.VerificationTargetSet;
+import net.unit8.bouncr.entity.*;
 
 import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
@@ -32,6 +30,7 @@ import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
@@ -127,13 +126,19 @@ public class UserResource {
             userGraph.addSubgraph("groups")
                     .addAttributeNodes("name", "description");
         }
-
         User user = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", userGraph)
                 .getResultStream().findAny().orElse(null);
 
         if (user != null) {
+            final UserProfileService userProfileService = new UserProfileService(em);
+            final List<UserProfileVerification> userProfileVerifications = userProfileService.findUserProfileVerifications(user.getAccount());
+            user.setUnverifiedProfiles(userProfileVerifications.stream()
+                    .map(UserProfileVerification::getUserProfileField)
+                    .filter(Objects::nonNull)
+                    .map(UserProfileField::getJsonName)
+                    .collect(Collectors.toList()));
             context.putValue(user);
         }
         return user != null;
@@ -141,10 +146,11 @@ public class UserResource {
 
     @Decision(value = CONFLICT, method = "PUT")
     public boolean conflict(UserUpdateRequest updateRequest,
+                            User user,
                             RestContext context,
                             EntityManager em) {
         UserProfileService userProfileService = new UserProfileService(em);
-        Set<Problem.Violation> violations = userProfileService.validateProfileUniqueness(updateRequest.getUserProfiles());
+        Set<Problem.Violation> violations = userProfileService.validateProfileUniqueness(updateRequest.getUserProfiles(), user);
         if (!violations.isEmpty()) {
             Problem problem = builder(Problem.valueOf(409))
                     .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
@@ -188,6 +194,7 @@ public class UserResource {
         tm.required(() -> {
             converter.copy(updateRequest, user);
             List<UserProfileValue> removeValues = new ArrayList<>();
+            List<UserProfileValue> updatedValues = new ArrayList<>();
             user.getUserProfileValues().forEach(v -> {
                 Optional<UserProfileValue> maybeNewValue = newValues.stream()
                         .filter(newValue -> newValue.getUserProfileField().getId().equals(v.getUserProfileField().getId()))
@@ -195,7 +202,10 @@ public class UserResource {
 
                 maybeNewValue.ifPresentOrElse(
                         newValue -> {
-                            v.setValue(newValue.getValue());
+                            if (!Objects.equals(v.getValue(), newValue.getValue())) {
+                                v.setValue(newValue.getValue());
+                                updatedValues.add(v);
+                            }
                             newValues.remove(newValue);
                         },
                         () -> removeValues.add(v)
@@ -203,6 +213,27 @@ public class UserResource {
             });
             newValues.forEach(v -> v.setUser(user));
             user.getUserProfileValues().addAll(newValues);
+
+            // Verifications for updated profiles
+            final Set<UserProfileVerification> currentVerifications = new HashSet<>(userProfileService
+                    .findUserProfileVerifications(user.getAccount()));
+            VerificationTargetSet verifications = new VerificationTargetSet(userProfileService
+                    .createProfileVerification(Stream.concat(newValues.stream(), updatedValues.stream()))
+                    .stream()
+                    .map(newVerification -> currentVerifications.stream()
+                                        .filter(v -> v.getUserProfileField().equals(newVerification.getUserProfileField()))
+                                        .findAny()
+                                        .orElseGet(() -> {
+                                            newVerification.setUser(user);
+                                            em.persist(newVerification);
+                                            return newVerification;
+                                        }))
+                    .collect(Collectors.toSet()));
+
+            if (!verifications.isEmpty()) {
+                context.putValue(verifications);
+            }
+
             config.getHookRepo().runHook(HookPoint.AFTER_UPDATE_USER, context);
         });
         actionRecord.setActionType(ActionType.USER_MODIFIED);

@@ -30,7 +30,7 @@ public class PasswordPolicyService {
     }
 
     protected Problem.Violation conformPolicy(String password) {
-        int passwordLen = some(password, p -> p.length()).orElse(0);
+        int passwordLen = some(password, String::length).orElse(0);
         if (passwordLen > policy.getMaxLength()) {
             return new Problem.Violation("passwrod", "must be less than " + policy.getMaxLength() + " characters");
         }

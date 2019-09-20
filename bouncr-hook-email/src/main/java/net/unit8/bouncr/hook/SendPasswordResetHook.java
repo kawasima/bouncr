@@ -26,7 +26,7 @@ public class SendPasswordResetHook extends AbstractSendMailHook {
             variables.put("password", password);
             variables.put("email", user.getUserProfileValues().stream()
                     .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))
-                    .map(v -> v.getValue())
+                    .map(UserProfileValue::getValue)
                     .findAny()
                     .orElse("Unknown"));
         });

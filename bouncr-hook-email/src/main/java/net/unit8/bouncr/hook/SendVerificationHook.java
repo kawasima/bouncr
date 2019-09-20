@@ -2,10 +2,10 @@ package net.unit8.bouncr.hook;
 
 import enkan.Env;
 import kotowari.restful.data.RestContext;
+import net.unit8.bouncr.domain.VerificationTargetSet;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserProfileField;
 import net.unit8.bouncr.entity.UserProfileValue;
-import net.unit8.bouncr.entity.UserProfileVerification;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,34 +24,35 @@ public class SendVerificationHook extends AbstractSendMailHook {
             variables.put("user", user);
             variables.put("email", user.getUserProfileValues().stream()
                     .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))
-                    .map(v -> v.getValue())
+                    .map(UserProfileValue::getValue)
                     .findAny()
                     .orElse("Unknown"));
         });
 
-        context.getValue(UserProfileVerification.class).ifPresent(verification-> {
-            variables.put("code", verification.getCode());
+        context.getValue(VerificationTargetSet.class).ifPresent(verifications -> {
+            verifications.stream()
+                    .filter(verification -> verification.getUserProfileField().getJsonName().equals("email"))
+                    .findAny()
+                    .ifPresent(verification -> variables.put("code", verification.getCode()));
         });
         return variables;
     }
 
     @Override
     protected Optional<UserProfileValue> findEmailField(RestContext context) {
-        return context.getValue(UserProfileVerification.class).map(verification -> {
-            String name = verification.getUserProfileField().getJsonName();
-            if (Objects.equals(name, "email")) {
-                UserProfileField emailField = verification.getUserProfileField();
-                return context.getValue(User.class)
-                        .map(User::getUserProfileValues)
-                        .map(values -> values.stream()
-                                .filter(v -> v.getUserProfileField().equals(emailField))
-                                .findAny()
-                                .orElse(null))
-                        .orElse(null);
-
-            }
-            return null;
-        });
+        return context.getValue(VerificationTargetSet.class).flatMap(verificationTargetSet -> verificationTargetSet.stream()
+                .filter(v -> v.getUserProfileField().getJsonName().equals("email"))
+                .map(v -> {
+                    UserProfileField emailField = v.getUserProfileField();
+                    return context.getValue(User.class)
+                            .map(User::getUserProfileValues)
+                            .map(values -> values.stream()
+                                    .filter(value -> value.getUserProfileField().equals(emailField))
+                                    .findAny()
+                                    .orElse(null))
+                            .orElse(null);
+                })
+                .findAny());
     }
 
     @Override

@@ -21,7 +21,7 @@ import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 
-public class UsersResourceWithDbTest {
+class UsersResourceWithDbTest {
     private EnkanSystem system;
 
     @BeforeEach

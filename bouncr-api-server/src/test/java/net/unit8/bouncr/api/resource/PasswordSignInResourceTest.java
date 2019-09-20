@@ -1,14 +1,12 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.component.jackson.JacksonBeansConverter;
-import enkan.component.jpa.EntityManagerProvider;
 import enkan.data.DefaultHttpRequest;
 import enkan.system.EnkanSystem;
 import enkan.system.inject.ComponentInjector;
 import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.DefaultResource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.BouncrTestSystemFactory;
 import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -23,7 +21,6 @@ import javax.persistence.EntityManager;
 import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
-import static org.mockito.MockitoAnnotations.initMocks;
 
 public class PasswordSignInResourceTest {
     private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResourceTest.class);

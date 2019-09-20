@@ -26,8 +26,6 @@ import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
-import static net.unit8.bouncr.entity.ActionType.USER_FAILED_SIGNIN;
-import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
 
 public class SignInService {
     private final BouncrConfiguration config;

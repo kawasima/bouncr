@@ -6,7 +6,7 @@ import net.unit8.bouncr.component.config.HookPoint;
 import java.util.Optional;
 
 public class HookRepository {
-    private Multimap<HookPoint, Hook> hooks = Multimap.empty();
+    private final Multimap<HookPoint, Hook> hooks = Multimap.empty();
 
     public void register(HookPoint point, Hook hook) {
         synchronized (hooks) {

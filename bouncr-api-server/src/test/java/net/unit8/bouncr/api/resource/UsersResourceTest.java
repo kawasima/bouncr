@@ -31,11 +31,10 @@ import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-public class UsersResourceTest {
+class UsersResourceTest {
     private static final Logger LOG = LoggerFactory.getLogger(UsersResourceTest.class);
 
     private EnkanSystem system;

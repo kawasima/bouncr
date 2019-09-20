@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
+import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
@@ -75,12 +76,11 @@ public class UserSessionResource {
             return null;
         }
         storeProvider.getStore(BOUNCR_TOKEN).delete(params.get("token"));
-        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
 
-        /*
         EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(userSession));
-        */
+        tx.required(() -> {
+            config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
+        });
         return null;
     }
 }

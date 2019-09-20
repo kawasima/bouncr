@@ -1,0 +1,65 @@
+openapi: 3.0.0
+info:
+  version: 0.2.8
+  title: The Specification of the e-mail extension for Bouncr
+  description: |
+    Bouncr is a reverse proxy with authenticate and authorization.
+  license:
+    name: EPL 2.0
+servers:
+- url: http://localhost:3000/bouncr/api
+paths:
+  /verification/{account}/email:
+    parameters:
+    - $ref: '#/components/parameters/BouncrCredential'
+    - name: account
+      in: path
+      required: true
+      schema:
+        type: string
+      example: user1
+    put:
+      summary: Send a verification via e-mail
+      operationId: sendEmailVerification
+      tags:
+        - Verification
+      responses:
+        204:
+          description: Sent a verification mail
+components:
+  parameters:
+    Query:
+      name: q
+      description: Keywords for searching
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      description: The limit to restrict the number of entries on a page
+      in: query
+      schema:
+        type: integer
+        format: int64
+    Offset:
+      name: offset
+      description: The numeric offset of the first element on a page
+      in: query
+      schema:
+        type: integer
+        format: int64
+    Embed:
+      name: embed
+      description: To expand or embedded sub-entities
+      in: query
+      schema:
+        type: string
+    BouncrCredential:
+      name: X-Bouncr-Credential
+      description: Bouncr credential
+      in: header
+      schema:
+        type: string
+        x-json-spec: BouncrCredential
+
+

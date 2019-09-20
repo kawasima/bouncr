@@ -40,11 +40,11 @@ public class V1__CreateUserLicense extends BaseJavaMigration {
         String ddl = create.createTable(table("license_last_activities"))
                 .column(field("license_last_activity_id", SQLDataType.BIGINT.identity(true)))
                 .column(field("user_license_id", SQLDataType.BIGINT.nullable(false)))
+                .column(field("user_agent", SQLDataType.VARCHAR(255)))
                 .column(field("last_used_at", SQLDataType.TIMESTAMP.nullable(false)))
                 .constraints(
                         constraint().primaryKey(field("license_last_activity_id")),
-                        constraint().unique(field("user_license_id")),
-                        constraint().foreignKey(field("user_license_id")).references(table("user_licenses"), field("user_license_id"))
+                        constraint().unique(field("user_license_id"))
                 ).getSQL();
         stmt.execute(ddl);
     }

@@ -1,7 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
 import java.io.Serializable;
-import java.util.Objects;
 
 public class AssignmentRequest implements Serializable {
     private IdObject group;

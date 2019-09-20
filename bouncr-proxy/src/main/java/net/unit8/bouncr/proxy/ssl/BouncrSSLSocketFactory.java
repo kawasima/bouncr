@@ -15,7 +15,7 @@ import java.security.KeyStore;
 import java.security.SecureRandom;
 
 public class BouncrSSLSocketFactory extends SSLSocketFactory {
-    private static ThreadLocal<KeyStoreInfo> keyStoreInfo = ThreadLocal.withInitial(() -> new KeyStoreInfo());
+    private static ThreadLocal<KeyStoreInfo> keyStoreInfo = ThreadLocal.withInitial(KeyStoreInfo::new);
     private SSLSocketFactory delegate;
 
     public BouncrSSLSocketFactory() {

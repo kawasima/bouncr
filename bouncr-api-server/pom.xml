@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.8-SNAPSHOT</version>
+        <version>0.2.8</version>
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -27,7 +27,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.3.0</version>
+                <version>1.5.1</version>
                 <configuration>
                     <container>
                         <mainClass>net.unit8.bouncr.api.Main</mainClass>

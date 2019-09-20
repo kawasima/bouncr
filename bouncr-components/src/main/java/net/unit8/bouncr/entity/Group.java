@@ -2,12 +2,8 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import net.unit8.bouncr.json.IndirectListFilter;
-import org.eclipse.persistence.queries.FetchGroup;
-import org.eclipse.persistence.queries.FetchGroupTracker;
-import org.eclipse.persistence.sessions.Session;
 
 import javax.persistence.*;
-import javax.persistence.criteria.Fetch;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;

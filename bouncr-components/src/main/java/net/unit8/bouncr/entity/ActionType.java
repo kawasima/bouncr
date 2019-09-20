@@ -33,6 +33,6 @@ public enum ActionType {
         return Stream.of(ActionType.values())
                 .filter(type -> Objects.equals(type.getId(), id))
                 .findAny()
-                .orElseGet(null);
+                .orElseThrow();
     }
 }

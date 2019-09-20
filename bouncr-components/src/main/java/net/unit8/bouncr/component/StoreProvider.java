@@ -2,15 +2,8 @@ package net.unit8.bouncr.component;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
-import enkan.middleware.session.JCacheStore;
 import enkan.middleware.session.KeyValueStore;
 import net.unit8.bouncr.component.config.KvsSettings;
-
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.AccessedExpiryPolicy;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author kawasima

@@ -4,7 +4,6 @@ import enkan.exception.UnreachableException;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Random;
 
 public class RandomUtils {
     /**

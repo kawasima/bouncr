@@ -16,8 +16,11 @@ public class LicenseLastActivity implements Serializable {
     @JoinColumn(name = "user_license_id")
     private UserLicense userLicense;
 
-    @Column(name = "last_updated_at")
-    private LocalDateTime lastUpdatedAt;
+    @Column(name = "user_agent")
+    private String userAgent;
+
+    @Column(name = "last_used_at")
+    private LocalDateTime lastUsedAt;
 
     public Long getId() {
         return id;
@@ -35,11 +38,19 @@ public class LicenseLastActivity implements Serializable {
         this.userLicense = userLicense;
     }
 
-    public LocalDateTime getLastUpdatedAt() {
-        return lastUpdatedAt;
+    public String getUserAgent() {
+        return userAgent;
     }
 
-    public void setLastUpdatedAt(LocalDateTime lastUpdatedAt) {
-        this.lastUpdatedAt = lastUpdatedAt;
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
+    public LocalDateTime getLastUsedAt() {
+        return lastUsedAt;
+    }
+
+    public void setLastUsedAt(LocalDateTime lastUsedAt) {
+        this.lastUsedAt = lastUsedAt;
     }
 }

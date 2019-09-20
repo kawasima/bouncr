@@ -10,7 +10,7 @@ import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.server.core.partition.impl.avl.AvlPartition;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 public class LdapStandaloneServer {
     private static final String LDIF_FILENAME_JBOSS_ORG = "jboss-org.ldif";
@@ -51,7 +51,7 @@ public class LdapStandaloneServer {
         TcpTransport tcp = new TcpTransport("0.0.0.0", 10389);
         TcpTransport ldapsTcp = new TcpTransport("0.0.0.0", 10636);
         ldapsTcp.setEnableSSL(true);
-        ldapsTcp.setEnabledProtocols(Arrays.asList("TLSv1.2"));
+        ldapsTcp.setEnabledProtocols(Collections.singletonList("TLSv1.2"));
         ldapServer.setKeystoreFile("src/dev/resources/bouncr.jks");
         ldapServer.setCertificatePassword("password");
         ldapServer.setTransports(tcp, ldapsTcp);

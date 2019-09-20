@@ -1,7 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.component.jackson.JacksonBeansConverter;
-import enkan.component.jpa.EntityManagerProvider;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
 import enkan.system.EnkanSystem;
@@ -10,12 +9,9 @@ import kotowari.restful.component.BeansValidator;
 import kotowari.restful.data.DefaultResource;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.BouncrTestSystemFactory;
-import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
 import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
 import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
 import net.unit8.bouncr.api.resource.PasswordCredentialResource;
-import net.unit8.bouncr.api.resource.UsersResourceTest;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.PasswordCredential;
 import net.unit8.bouncr.entity.User;
