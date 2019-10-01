@@ -23,12 +23,14 @@ import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 
 import javax.inject.Inject;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -103,7 +105,7 @@ public class SignUpResource {
         return !violations.isEmpty();
     }
 
-    public Invitation findInvitation(String code, EntityManager em) {
+    private Invitation findInvitation(String code, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Invitation> query = cb.createQuery(Invitation.class);
         Root<Invitation> invitationRoot = query.from(Invitation.class);
@@ -112,6 +114,7 @@ public class SignUpResource {
         query.where(cb.equal(invitationRoot.get("code"), code));
 
         return em.createQuery(query)
+                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream()
                 .findAny()
                 .orElse(null);
@@ -146,10 +149,14 @@ public class SignUpResource {
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> {
             invitation.ifPresent(invi -> {
-                user.setGroups(invi.getGroupInvitations()
+                List<Group> groups = Optional.ofNullable(user.getGroups())
+                        .filter(gs -> !gs.isEmpty())
+                        .orElseGet(ArrayList::new);
+                groups.addAll(invi.getGroupInvitations()
                         .stream()
                         .map(GroupInvitation::getGroup)
                         .collect(Collectors.toList()));
+                user.setGroups(groups);
                 invi.getOidcInvitations()
                         .forEach(oidcInvitation -> {
                             OidcUser oidcUser = BeanBuilder.builder(new OidcUser())

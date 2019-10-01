@@ -161,6 +161,9 @@ public class ReverseProxyComponent extends WebServerComponent<ReverseProxyCompon
                     if (options.get("truststore") != null) {
                         builder.setSocketOption(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUESTED);
                     }
+                    if (options.get("ioThreads") != null) {
+                        builder.setIoThreads(options.getInt("ioThreads"));
+                    }
                     server = builder.build();
                     server.start();
                     LOG.info("start server {}:{}", options.getString("host"), options.getInt("port"));

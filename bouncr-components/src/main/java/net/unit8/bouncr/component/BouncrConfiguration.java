@@ -5,10 +5,7 @@ import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.RetryPolicy;
-import net.unit8.bouncr.component.config.CertConfiguration;
-import net.unit8.bouncr.component.config.KvsSettings;
-import net.unit8.bouncr.component.config.PasswordPolicy;
-import net.unit8.bouncr.component.config.VerificationPolicy;
+import net.unit8.bouncr.component.config.*;
 import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.CommunicationException;
@@ -42,6 +39,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
             Locale.ENGLISH,
             Locale.JAPANESE))
     );
+    private OidcConfiguration oidcConfiguration = new OidcConfiguration();
 
     private RetryPolicy httpClientRetryPolicy = new RetryPolicy<>()
             .handle(SocketTimeoutException.class)
@@ -58,8 +56,8 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private HookRepository hookRepo = new HookRepository();
 
     @Override
-    protected ComponentLifecycle lifecycle() {
-        return new ComponentLifecycle<BouncrConfiguration>() {
+    protected ComponentLifecycle<BouncrConfiguration> lifecycle() {
+        return new ComponentLifecycle<>() {
             @Override
             public void start(BouncrConfiguration component) {
                 component.certConfiguration = new CertConfiguration();
@@ -228,5 +226,13 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public HookRepository getHookRepo() {
         return hookRepo;
+    }
+
+    public OidcConfiguration getOidcConfiguration() {
+        return oidcConfiguration;
+    }
+
+    public void setOidcConfiguration(OidcConfiguration oidcConfiguration) {
+        this.oidcConfiguration = oidcConfiguration;
     }
 }

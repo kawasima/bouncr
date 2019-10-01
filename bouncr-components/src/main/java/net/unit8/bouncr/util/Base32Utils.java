@@ -14,8 +14,8 @@ public class Base32Utils {
         int shift = 3;
         StringBuilder sb = new StringBuilder();
 
-        for (int i = 0; i < input.length; i++) {
-            b = input[i];
+        for (byte value : input) {
+            b = value;
             symbol = carry | (b >> shift);
             sb.append(BASE32_CHARS[symbol & 0x1f]);
 

@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import enkan.collection.Headers;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
 import enkan.data.Cookie;
@@ -23,6 +24,7 @@ import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.util.UriInterpolator;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -36,10 +38,7 @@ import javax.persistence.criteria.Root;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static enkan.util.BeanBuilder.builder;
@@ -164,16 +163,26 @@ public class OidcSignInResource {
         });
         // TODO Verify Nonce
 
+        UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
         SignInService signInService = new SignInService(em, storeProvider, config);
         if (claim.getSub() != null) {
             OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
             if (oidcUser != null) {
                 String token = signInService.createToken();
                 UserSession userSession = signInService.createUserSession(request, oidcUser.getUser(), token);
-                return builder(new ApiResponse())
-                        .set(ApiResponse::setStatus, 200)
-                        .set(ApiResponse::setBody, userSession)
-                        .build();
+                return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
+                        .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.getToken()))
+                        .map(uri -> uriInterpolator.interpolate(uri, "account", oidcUser.getUser().getAccount()))
+                        .map(uri -> builder(new ApiResponse())
+                                .set(ApiResponse::setStatus, 302)
+                                .set(ApiResponse::setHeaders, Headers.of(
+                                        "Location", uri.toString()
+                                ))
+                                .build())
+                        .orElse(builder(new ApiResponse())
+                                .set(ApiResponse::setStatus, 200)
+                                .set(ApiResponse::setBody, userSession)
+                                .build());
             } else {
                 Invitation invitation = builder(new Invitation())
                         .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
@@ -193,20 +202,36 @@ public class OidcSignInResource {
                 if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
                     return null; // Implicit
                 } else {
-                    return builder(new ApiResponse())
-                            .set(ApiResponse::setStatus, 202)
-                            .set(ApiResponse::setBody, Map.of(
-                                    "code", invitation.getCode(),
-                                    "message", ""
-                            ))
-                            .build();
+                    return Optional.ofNullable(config.getOidcConfiguration().getSignUpRedirectUrl())
+                            .map(uri -> builder(new ApiResponse())
+                                    .set(ApiResponse::setStatus, 302)
+                                    .set(ApiResponse::setHeaders, Headers.of(
+                                            "Location", uriInterpolator.interpolate(uri, "code", invitation.getCode()).toString()
+                                    ))
+                                    .build())
+                            .orElse(
+                                    builder(new ApiResponse())
+                                            .set(ApiResponse::setStatus, 202)
+                                            .set(ApiResponse::setBody, Map.of(
+                                                    "code", invitation.getCode(),
+                                                    "message", ""
+                                            ))
+                                    .build()
+                            );
                 }
             }
         }
-        return builder(new ApiResponse())
-                .set(ApiResponse::setStatus, 401)
-                .set(ApiResponse::setBody, Problem.valueOf(401))
-                .build();
+        return Optional.ofNullable(config.getOidcConfiguration().getUnauthenticateRedirectUrl())
+                .map(uri -> builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 302)
+                        .set(ApiResponse::setHeaders, Headers.of(
+                                "Location", uri.toString()
+                        ))
+                        .build())
+                .orElse(builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 401)
+                        .set(ApiResponse::setBody, Problem.valueOf(401))
+                        .build());
     }
 
     public static class OidcProviderDto implements Serializable {
