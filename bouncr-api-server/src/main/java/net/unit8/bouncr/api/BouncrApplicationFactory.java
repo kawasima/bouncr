@@ -75,6 +75,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/invitations").to(InvitationsResource.class);
 
                 ar.all("/sign_in").to(PasswordSignInResource.class);
+                ar.all("/pre_sign_in").to(PreSignInResource.class);
                 ar.all("/sign_in/oidc/:name").to(OidcSignInResource.class);
                 ar.all("/sign_up").to(SignUpResource.class);
                 ar.all("/user_profile_verification").to(UserProfileVerificationResource.class);

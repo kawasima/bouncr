@@ -28,6 +28,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserSession'
+  /pre_sign_in:
+    description: |-
+      Creates parameters of nonce and state for OpenID Connect
+    post:
+      tags:
+        - Sign In
+      summary: Creates nonce and state
+      responses:
+        201:
+          description: Create a session of OpenID Conenct successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcSession'
   /users:
     description: |-
       Find users and create a user.
@@ -898,6 +912,9 @@ components:
           type: string
         password:
           type: string
+      required:
+        - account
+        - password
       example:
         account: user1
         password: user1
@@ -919,6 +936,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Group'
+      required:
+        - id
+        - account
       additionalProperties: true
       example:
         id: 1
@@ -946,6 +966,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     Roles:
       type: array
       items:
@@ -960,6 +984,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     Permissions:
       type: array
       items:
@@ -974,6 +1002,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     Applications:
       type: array
       items:
@@ -992,6 +1024,12 @@ components:
           type: string
         virtual_path:
           type: string
+      required:
+        - id
+        - name
+        - description
+        - pass_to
+        - virtual_path
     Realms:
       type: array
       items:
@@ -1008,6 +1046,11 @@ components:
           type: string
         url:
           type: string
+      required:
+        - id
+        - name
+        - description
+        - url
     Assignments:
       type: array
       items:
@@ -1021,6 +1064,10 @@ components:
           $ref: '#/components/schemas/Role'
         realm:
           $ref: '#/components/schemas/Realm'
+      required:
+        - group
+        - role
+        - realm
     AssignmentsRequest:
       type: array
       items:
@@ -1041,6 +1088,10 @@ components:
             properties:
               id:
                 type: integer
+        required:
+          - group
+          - role
+          - realm
     UserActions:
       type: array
       items:
@@ -1061,6 +1112,13 @@ components:
         created_at:
           type: string
           format: 'date-time'
+      required:
+        - id
+        - action_type
+        - actor
+        - actor_ip
+        - options
+        - created_at
     UserSessions:
       type: array
       items:
@@ -1079,6 +1137,22 @@ components:
         created_at:
           type: string
           format: 'date-time'
+      required:
+        - id
+        - token
+        - user_agent
+        - remote_address
+        - created_at
+    OidcSession:
+      type: object
+      properties:
+        state:
+          type: string
+        nonce:
+          type: string
+      required:
+        - state
+        - nonce
     OidcApplications:
       type: array
       items:
@@ -1100,6 +1174,13 @@ components:
           type: array
           items:
             type: string
+      required:
+        - id
+        - name
+        - home_url
+        - callback_url
+        - description
+        - permissions
     OidcProviders:
       type: array
       items:
@@ -1123,17 +1204,30 @@ components:
           type: string
         token_endpoint:
           type: string
+      required:
+        - id
+        - name
+        - api_key
+        - api_secret
+        - scope
+        - response_type
+        - authorization_endpoint
+        - token_endpoint
     OtpKey:
       type: object
       properties:
         key:
           type: string
+      required:
+        - key
     UserCreateRequest:
       type: object
       properties:
         account:
           type: string
       additionalProperties: true
+      required:
+        - account
     UserUpdateRequest:
       type: object
       additionalProperties: true
@@ -1144,6 +1238,9 @@ components:
           type: string
         description:
           type: string
+      required:
+        - name
+        - description
     GroupUpdateRequest:
       type: object
       properties:
@@ -1153,6 +1250,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     GroupUsersRequest:
       type: array
       items:
@@ -1164,6 +1265,9 @@ components:
           type: string
         description:
           type: string
+      required:
+        - name
+        - description
     RoleUpdateRequest:
       type: object
       properties:
@@ -1173,6 +1277,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     PermissionCreateRequest:
       type: object
       properties:
@@ -1180,6 +1288,9 @@ components:
           type: string
         description:
           type: string
+      required:
+        - name
+        - description
     PermissionUpdateRequest:
       type: object
       properties:
@@ -1189,6 +1300,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     ApplicationCreateRequest:
       type: object
       properties:
@@ -1202,6 +1317,12 @@ components:
           type: string
         top_page:
           type: string
+      required:
+        - name
+        - description
+        - pass_to
+        - virtual_path
+        - top_page
     ApplicationUpdateRequest:
       type: object
       properties:
@@ -1217,6 +1338,13 @@ components:
           type: string
         top_page:
           type: string
+      required:
+        - id
+        - name
+        - description
+        - pass_to
+        - virtual_path
+        - top_page
     RealmCreateRequest:
       type: object
       properties:
@@ -1224,6 +1352,9 @@ components:
           type: string
         description:
           type: string
+      required:
+        - name
+        - description
     RealmUpdateRequest:
       type: object
       properties:
@@ -1233,6 +1364,10 @@ components:
           type: string
         description:
           type: string
+      required:
+        - id
+        - name
+        - description
     OidcApplicationCreateRequest:
       type: object
       properties:
@@ -1248,6 +1383,12 @@ components:
           type: array
           items:
             type: string
+      required:
+        - name
+        - home_url
+        - callback_url
+        - description
+        - permissions
     OidcApplicationUpdateRequest:
       type: object
       properties:
@@ -1263,6 +1404,13 @@ components:
           type: array
           items:
             type: string
+      required:
+        - id
+        - name
+        - home_url
+        - callback_url
+        - description
+        - permissions
     OidcProviderCreateRequest:
       type: object
       properties:
@@ -1280,6 +1428,14 @@ components:
           type: string
         token_endpoint:
           type: string
+      required:
+        - name
+        - api_key
+        - api_secret
+        - scope
+        - response_type
+        - authorization_endpoint
+        - token_endpoint
     OidcProviderUpdateRequest:
       type: object
       properties:
@@ -1297,6 +1453,14 @@ components:
           type: string
         token_endpoint:
           type: string
+      required:
+        - name
+        - api_key
+        - api_secret
+        - scope
+        - response_type
+        - authorization_endpoint
+        - token_endpoint
     InvitationCreateRequest:
       type: object
       properties:
@@ -1310,6 +1474,8 @@ components:
             properties:
               id:
                 type: integer
+      required:
+        - email
     SignUpCreateRequest:
       type: object
       properties:
@@ -1318,6 +1484,8 @@ components:
         code:
           type: string
       additionalProperties: true
+      required:
+        - account
     SignUpResponse:
       type: object
       properties:
@@ -1329,10 +1497,11 @@ components:
           type: string
           format: password
       additionalProperties: true
-    PasswordCredentialCreateRequest:
       required:
+        - id
         - account
         - password
+    PasswordCredentialCreateRequest:
       type: object
       properties:
         account:
@@ -1342,6 +1511,9 @@ components:
           format: password
         initial:
           type: boolean
+      required:
+        - account
+        - password
     PasswordCredentialUpdateRequest:
       type: object
       properties:
@@ -1353,12 +1525,18 @@ components:
         new_password:
           type: string
           format: password
+      required:
+        - account
+        - old_password
+        - new_password
     PasswordResetChallengeRequest:
       type: object
       properties:
         account:
           type: string
           description: An account for reset a password
+      required:
+        - account
     PasswordResetRequest:
       type: object
       properties:
@@ -1369,14 +1547,17 @@ components:
           type: string
           format: password
           required: false
+      required:
+        - code
+        - password
     InitialPassword:
       type: object
-      required:
-        - password
       properties:
         password:
           type: string
           format: password
+      required:
+        - password
     ConstraintsProblem:
       type: object
       properties:
@@ -1391,6 +1572,9 @@ components:
           type: string
         value:
           type: string
+      required:
+        - name
+        - value
     Problem:
       type: object
       properties:
@@ -1404,6 +1588,9 @@ components:
           type: string
         instance:
           type: string
+      required:
+        - type
+        - status
   parameters:
     Query:
       name: q

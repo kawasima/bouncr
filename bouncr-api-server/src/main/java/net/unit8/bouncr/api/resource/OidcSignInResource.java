@@ -114,7 +114,13 @@ public class OidcSignInResource {
         if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
             String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
             OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
-            // TODO
+            // Verify State
+            if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.getState())) {
+                return builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 401)
+                        .set(ApiResponse::setBody, Problem.valueOf(401, "State doesn't match"))
+                        .build();
+            }
         }
         OidcProviderDto oidcProviderDto = converter.createFrom(oidcProvider, OidcProviderDto.class);
         oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api");
@@ -161,7 +167,16 @@ public class OidcSignInResource {
         String[] tokens = idToken.split("\\.", 3);
         JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
         });
-        // TODO Verify Nonce
+
+        // Verify Nonce
+        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
+        OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
+        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.getNonce())) {
+            return builder(new ApiResponse())
+                    .set(ApiResponse::setStatus, 401)
+                    .set(ApiResponse::setBody, Problem.valueOf(401, "Nonce doesn't match"))
+                    .build();
+        }
 
         UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
         SignInService signInService = new SignInService(em, storeProvider, config);
