@@ -2,7 +2,7 @@ package backendexample;
 
 import enkan.system.command.MetricsCommandRegister;
 import enkan.system.command.SqlCommand;
-import enkan.system.repl.JShellRepl;
+import enkan.system.repl.PseudoRepl;
 import enkan.system.repl.ReplBoot;
 import kotowari.system.KotowariCommandRegister;
 
@@ -15,8 +15,8 @@ public class ReplMain {
     }
 
     public static void main(String[] args) throws Exception {
-        JShellRepl repl = new JShellRepl("net.unit8.bouncr.api.BouncrApiEnkanSystemFactory");
-        //PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.api.BouncrApiEnkanSystemFactory");
+        //JShellRepl repl = new JShellRepl("net.unit8.bouncr.api.BouncrApiEnkanSystemFactory");
+        PseudoRepl repl = new PseudoRepl("net.unit8.bouncr.api.BouncrApiEnkanSystemFactory");
         ReplBoot.start(repl,
                 new KotowariCommandRegister(),
                 //new DevelCommandRegister(),

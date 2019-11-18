@@ -102,6 +102,8 @@ paths:
     get:
       summary: Fetch a user by a given account
       operationId: fetchUser
+      parameters:
+        - $ref: '#/components/parameters/Embed'
       tags:
         - User
         - Administration
@@ -721,6 +723,42 @@ paths:
       responses:
         201:
           description: Creating a invitation is successful
+  /invitation/{code}:
+    parameters:
+      - $ref: '#/components/parameters/BouncrCredential'
+      - name: code
+        required: true
+        in: path
+        schema:
+          type: string
+    get:
+      summary: Create a invitation
+      operationId: createInvitation
+      tags:
+        - Invitation
+      responses:
+        200:
+          description: Fetch the content of the invitation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oidc_invitations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        oidoc_provider:
+                          type: string
+                        claim:
+                          type: object
+                          additionalProperties: true
+                  group_invitations:
+                    type: array
+                    items:
+                      type: string
+                      description: The group's name
   /oidc_applications:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'

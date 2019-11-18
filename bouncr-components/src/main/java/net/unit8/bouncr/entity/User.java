@@ -165,6 +165,16 @@ public class User implements Serializable {
         this.oidcUsers = oidcUsers;
     }
 
+    @JsonProperty("oidc_providers")
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getOidcProviders() {
+        return Optional.ofNullable(oidcUsers).orElse(Collections.emptyList())
+                .stream()
+                .map(oidcUser -> oidcUser.getOidcProvider().getName())
+                .collect(Collectors.toList());
+    }
+
     public List<String> getPermissions() {
         return permissions;
     }

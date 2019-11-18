@@ -202,12 +202,6 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <configuration>
                             <executable>java</executable>
-                            <longClasspath>true</longClasspath>
-                            <arguments>
-                                <argument>-classpath</argument>
-                                <classpath/>
-                                <argument>backendexample.ReplMain</argument>
-                            </arguments>
                             <mainClass>backendexample.ReplMain</mainClass>
                         </configuration>
                     </plugin>
@@ -232,11 +226,13 @@
                     <groupId>org.jsr107.ri</groupId>
                     <artifactId>cache-ri-impl</artifactId>
                     <version>1.0.0</version>
+                    <scope>runtime</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.h2database</groupId>
                     <artifactId>h2</artifactId>
                     <version>1.4.199</version>
+                    <scope>runtime</scope>
                 </dependency>
 
                 <dependency>

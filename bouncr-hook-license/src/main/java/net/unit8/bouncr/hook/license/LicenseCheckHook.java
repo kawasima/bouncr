@@ -60,7 +60,9 @@ public class LicenseCheckHook implements Hook<RestContext> {
                     .orElse(null);
             if (userLicense == null
                     && licenses.size() >= config.getNumOfDevicesPerUser()) {
-                Problem problem = Problem.valueOf(403, EXCEED_LICENSING_DEVICES);
+                Problem problem = builder(Problem.valueOf(403))
+                        .set(Problem::setType, EXCEED_LICENSING_DEVICES)
+                        .build();
                 context.setMessage(problem);
             } else {
                 if (userLicense != null) {

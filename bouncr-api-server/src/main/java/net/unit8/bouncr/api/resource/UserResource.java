@@ -26,6 +26,7 @@ import javax.inject.Inject;
 import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
+import javax.persistence.Subgraph;
 import javax.persistence.criteria.*;
 import javax.validation.ConstraintViolation;
 import java.util.*;
@@ -126,6 +127,16 @@ public class UserResource {
             userGraph.addSubgraph("groups")
                     .addAttributeNodes("name", "description");
         }
+
+        // OIDC provider
+        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("oidc_providers"))) {
+            userRoot.fetch("oidcUsers", JoinType.LEFT);
+            userGraph.addAttributeNodes("oidcUsers");
+            Subgraph<Object> oidcUsersGraph = userGraph.addSubgraph("oidcUsers");
+            oidcUsersGraph.addSubgraph("oidcProvider")
+                    .addAttributeNodes("name");
+        }
+
         User user = em.createQuery(query)
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setHint("javax.persistence.fetchgraph", userGraph)

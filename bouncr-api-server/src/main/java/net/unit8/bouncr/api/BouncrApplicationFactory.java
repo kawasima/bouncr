@@ -72,6 +72,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/oidc_applications").to(OidcApplicationsResoruce.class);
                 ar.all("/oidc_application/:name").to(OidcApplicationResource.class);
 
+                ar.all("/invitation/:code").to(InvitationResource.class);
                 ar.all("/invitations").to(InvitationsResource.class);
 
                 ar.all("/sign_in").to(PasswordSignInResource.class);
