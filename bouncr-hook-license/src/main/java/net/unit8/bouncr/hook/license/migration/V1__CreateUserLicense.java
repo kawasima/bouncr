@@ -30,7 +30,8 @@ public class V1__CreateUserLicense extends BaseJavaMigration {
                 .column(field("license_key", SQLDataType.VARBINARY(16).nullable(false)))
                 .constraints(
                         constraint().primaryKey(field("user_license_id")),
-                        constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")),
+                        constraint().foreignKey(field("user_id")).references(table("users"), field("user_id"))
+                                .onDeleteCascade(),
                         constraint().unique(field("license_key"))
                 ).getSQL();
         stmt.execute(ddl);
