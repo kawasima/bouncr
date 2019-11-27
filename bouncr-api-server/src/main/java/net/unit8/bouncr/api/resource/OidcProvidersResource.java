@@ -25,6 +25,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -108,7 +109,14 @@ public class OidcProvidersResource {
                 .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
-                .getResultList();
+                .getResultList()
+                .stream()
+                .map(oidcProvider -> {
+                    // Excludes client secret
+                    oidcProvider.setClientSecret(null);
+                    return oidcProvider;
+                })
+                .collect(Collectors.toList());
     }
 
     @Decision(POST)

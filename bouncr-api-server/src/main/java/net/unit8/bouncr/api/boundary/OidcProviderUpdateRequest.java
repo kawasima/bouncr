@@ -50,6 +50,11 @@ public class OidcProviderUpdateRequest implements Serializable {
     @JsonProperty("token_endpoint_auth_method")
     private String tokenEndpointAuthMethod;
 
+    @NotBlank
+    @Length(max = 255)
+    @JsonProperty("redirect_uri")
+    private String redirectUri;
+
     public String getName() {
         return name;
     }
@@ -112,5 +117,13 @@ public class OidcProviderUpdateRequest implements Serializable {
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getRedirectUri() {
+        return redirectUri;
+    }
+
+    public void setRedirectUri(String redirectUri) {
+        this.redirectUri = redirectUri;
     }
 }

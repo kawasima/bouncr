@@ -18,16 +18,16 @@ public class OidcProviderCreateRequest implements Serializable {
 
     @JsonProperty("client_id")
     @NotBlank
-    @Length(max = 256)
+    @Length(max = 255)
     private String clientId;
 
     @JsonProperty("client_secret")
     @NotBlank
-    @Length(max = 256)
+    @Length(max = 255)
     private String clientSecret;
 
     @NotBlank
-    @Length(max = 256)
+    @Length(max = 255)
     private String scope;
 
     @NotBlank
@@ -38,17 +38,22 @@ public class OidcProviderCreateRequest implements Serializable {
 
     @JsonProperty("authorization_endpoint")
     @NotBlank
-    @Length(max = 256)
+    @Length(max = 255)
     private String authorizationEndpoint;
 
     @JsonProperty("token_endpoint")
-    @Length(max = 256)
+    @Length(max = 255)
     private String tokenEndpoint;
 
     @NotBlank
     @StringEnumeration(enumClass = TokenEndpointAuthMethod.class, accessorMethod = "getValue")
     @JsonProperty("token_endpoint_auth_method")
     private String tokenEndpointAuthMethod;
+
+    @NotBlank
+    @Length(max = 255)
+    @JsonProperty("redirect_uri")
+    private String redirectUri;
 
     public String getName() {
         return name;
@@ -112,5 +117,13 @@ public class OidcProviderCreateRequest implements Serializable {
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getRedirectUri() {
+        return redirectUri;
+    }
+
+    public void setRedirectUri(String redirectUri) {
+        this.redirectUri = redirectUri;
     }
 }

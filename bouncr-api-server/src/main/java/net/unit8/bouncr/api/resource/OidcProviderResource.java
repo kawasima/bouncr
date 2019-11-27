@@ -23,6 +23,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.validation.ConstraintViolation;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -77,7 +78,11 @@ public class OidcProviderResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(OidcProviderUpdateRequest updateRequest, EntityManager em) {
+    public boolean isConflict(Parameters params, OidcProviderUpdateRequest updateRequest, EntityManager em) {
+        if (Objects.equals(params.get("name"), updateRequest.getName())) {
+            return false;
+        }
+
         UniquenessCheckService<OidcProvider> uniquenessCheckService = new UniquenessCheckService<>(em);
         return !uniquenessCheckService.isUnique(OidcProvider.class, "nameLower",
                 Optional.ofNullable(updateRequest.getName())
@@ -102,6 +107,8 @@ public class OidcProviderResource {
 
     @Decision(HANDLE_OK)
     public OidcProvider find(OidcProvider oidcProvider) {
+        // Excludes a client secret
+        oidcProvider.setClientSecret(null);
         return oidcProvider;
     }
 

@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import enkan.collection.Headers;
@@ -148,7 +149,7 @@ public class OidcSignInResource {
         if (encodedIdToken == null) {
             return builder(new ApiResponse())
                     .set(ApiResponse::setStatus, 401)
-                    .set(ApiResponse::setBody, Problem.valueOf(401, "Can't authenticate by OpenID Connect"))
+                    .set(ApiResponse::setBody, Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
                     .build();
         }
         return connectOpenIdToBouncrUser(encodedIdToken, oidcProvider, request, em);
@@ -252,18 +253,28 @@ public class OidcSignInResource {
     public static class OidcProviderDto implements Serializable {
         private Long id;
         private String name;
+        @JsonProperty("client_id")
         private String clientId;
         private String scope;
         private String state = RandomUtils.generateRandomString(8);
+        @JsonProperty("response_type")
         private String responseType;
+        @JsonProperty("token_endpoint")
         private String tokenEndpoint;
+        @JsonProperty("authorization_endpoint")
         private String authorizationEndpoint;
         private String nonce = RandomUtils.generateRandomString(32);
+        @JsonProperty("redirect_uri")
+        private String redirectUri;
         private String redirectUriBase;
 
+        public void setRedirectUri(String redirectUri) {
+            this.redirectUri = redirectUri;
+        }
+
         public String getRedirectUri() {
-            return redirectUriBase
-                    + "/sign_in/oidc/" + name;
+            return Optional.ofNullable(redirectUri)
+                    .orElse(redirectUriBase + "/sign_in/oidc/" + name);
         }
 
         public String getAuthorizationUrl() {

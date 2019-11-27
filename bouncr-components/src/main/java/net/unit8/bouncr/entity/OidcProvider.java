@@ -1,6 +1,7 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.*;
@@ -28,6 +29,7 @@ public class OidcProvider implements Serializable {
     private String clientId;
 
     @JsonProperty("client_secret")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @Column(name = "client_secret")
     private String clientSecret;
     private String scope;
@@ -47,6 +49,10 @@ public class OidcProvider implements Serializable {
     @JsonProperty("token_endpoint_auth_method")
     @Column(name = "token_endpoint_auth_method")
     private TokenEndpointAuthMethod tokenEndpointAuthMethod;
+
+    @JsonProperty("redirect_uri")
+    @Column(name = "redirect_uri")
+    private String redirectUri;
 
     public Long getId() {
         return id;
@@ -129,6 +135,14 @@ public class OidcProvider implements Serializable {
 
     public void setTokenEndpointAuthMethod(TokenEndpointAuthMethod tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getRedirectUri() {
+        return redirectUri;
+    }
+
+    public void setRedirectUri(String redirectUri) {
+        this.redirectUri = redirectUri;
     }
 
     @Override
