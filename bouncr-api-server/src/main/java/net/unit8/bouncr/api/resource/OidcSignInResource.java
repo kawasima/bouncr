@@ -17,9 +17,11 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.jodah.failsafe.Failsafe;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.OidcSession;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
@@ -46,6 +48,7 @@ import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
+import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
 import static net.unit8.bouncr.entity.ResponseType.ID_TOKEN;
 import static net.unit8.bouncr.entity.ResponseType.TOKEN;
 
@@ -77,6 +80,12 @@ public class OidcSignInResource {
     private JsonWebToken jsonWebToken;
 
     private ObjectMapper jsonMapper = new ObjectMapper();
+
+    @Decision(ALLOWED)
+    public boolean allowed(RestContext context) {
+        config.getHookRepo().runHook(HookPoint.ALLOWED_SIGN_IN, context);
+        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
+    }
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, EntityManager em) {
@@ -111,6 +120,8 @@ public class OidcSignInResource {
     public ApiResponse callback(HttpRequest request,
                                 Parameters params,
                                 OidcProvider oidcProvider,
+                                ActionRecord actionRecord,
+                                RestContext context,
                                 EntityManager em) {
         if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
             String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
@@ -152,7 +163,7 @@ public class OidcSignInResource {
                     .set(ApiResponse::setBody, Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
                     .build();
         }
-        return connectOpenIdToBouncrUser(encodedIdToken, oidcProvider, request, em);
+        return connectOpenIdToBouncrUser(encodedIdToken, oidcProvider, request, actionRecord, context, em);
     }
 
     private OidcUser findOidcUser(OidcProvider oidcProvider, String sub, EntityManager em) {
@@ -164,7 +175,12 @@ public class OidcSignInResource {
                 cb.equal(root.get("oidcProvider"), oidcProvider));
         return em.createQuery(query).getResultStream().findAny().orElse(null);
     }
-    private ApiResponse connectOpenIdToBouncrUser(String idToken, OidcProvider oidcProvider, HttpRequest request, EntityManager em) {
+    private ApiResponse connectOpenIdToBouncrUser(String idToken,
+                                                  OidcProvider oidcProvider,
+                                                  HttpRequest request,
+                                                  ActionRecord actionRecord,
+                                                  RestContext context,
+                                                  EntityManager em) {
         String[] tokens = idToken.split("\\.", 3);
         JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
         });
@@ -184,8 +200,21 @@ public class OidcSignInResource {
         if (claim.getSub() != null) {
             OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
             if (oidcUser != null) {
+                if (oidcUser.getUser().getUserLock() != null) {
+                    return builder(new ApiResponse())
+                            .set(ApiResponse::setStatus, 401)
+                            .set(ApiResponse::setBody, Problem.valueOf(401, "Account is locked"))
+                            .build();
+                }
+                context.putValue(oidcUser.getUser());
+                // Sign In
+                actionRecord.setActor(oidcUser.getUser().getAccount());
+                actionRecord.setActionType(USER_SIGNIN);
                 String token = signInService.createToken();
                 UserSession userSession = signInService.createUserSession(request, oidcUser.getUser(), token);
+                context.putValue(userSession);
+                config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
+
                 return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
                         .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.getToken()))
                         .map(uri -> uriInterpolator.interpolate(uri, "account", oidcUser.getUser().getAccount()))
