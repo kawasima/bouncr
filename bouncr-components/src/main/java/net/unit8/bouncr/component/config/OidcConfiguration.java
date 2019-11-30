@@ -11,6 +11,7 @@ public class OidcConfiguration implements Serializable {
     private URI signUpRedirectUrl;
     private URI signInRedirectUrl;
     private URI unauthenticateRedirectUrl;
+    private URI unauthorizeRedirectUrl;
 
     public URI getSignUpRedirectUrl() {
         return signUpRedirectUrl;
@@ -34,6 +35,14 @@ public class OidcConfiguration implements Serializable {
 
     public void setUnauthenticateRedirectUrl(URI unauthenticateRedirectUrl) {
         this.unauthenticateRedirectUrl = unauthenticateRedirectUrl;
+    }
+
+    public URI getUnauthorizeRedirectUrl() {
+        return unauthorizeRedirectUrl;
+    }
+
+    public void setUnauthorizeRedirectUrl(URI unauthorizeRedirectUrl) {
+        this.unauthorizeRedirectUrl = unauthorizeRedirectUrl;
     }
 
     public UriInterpolator getUriInterpolator() {

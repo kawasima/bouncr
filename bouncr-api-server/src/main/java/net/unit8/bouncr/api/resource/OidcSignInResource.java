@@ -17,6 +17,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.jodah.failsafe.Failsafe;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -40,6 +41,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -81,57 +83,25 @@ public class OidcSignInResource {
 
     private ObjectMapper jsonMapper = new ObjectMapper();
 
-    @Decision(ALLOWED)
-    public boolean allowed(RestContext context) {
-        config.getHookRepo().runHook(HookPoint.ALLOWED_SIGN_IN, context);
-        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
-    }
-
-    @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OidcProvider> query = cb.createQuery(OidcProvider.class);
-        Root<OidcProvider> root = query.from(OidcProvider.class);
-        query.where(cb.equal(root.get("name"), params.get("name")));
-
-        OidcProvider oidcProvider = em.createQuery(query)
-                .getResultStream()
-                .findAny()
-                .orElse(null);
-        if (oidcProvider != null) {
-            context.putValue(oidcProvider);
-        }
-        return oidcProvider != null;
-    }
-
-    @Decision(PROCESSABLE)
-    public boolean processable(Parameters params, OidcSession oidcSession) {
-        // The verification of state should be executed at frontend?
-        /*
-        if (!Objects.equals(oidcSession.getState(), params.get("state"))) {
+    @Decision(AUTHORIZED)
+    public boolean authenticate(HttpRequest request,
+                              Parameters params,
+                              RestContext context,
+                              EntityManager em) {
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
+        if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return false;
         }
-        return true;
-        */
-        return true;
-    }
-
-    @Decision(HANDLE_OK)
-    public ApiResponse callback(HttpRequest request,
-                                Parameters params,
-                                OidcProvider oidcProvider,
-                                ActionRecord actionRecord,
-                                RestContext context,
-                                EntityManager em) {
+        OidcProvider oidcProvider = findOidcProvider(params, context, em);
         if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
             String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
             OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
             // Verify State
             if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.getState())) {
-                return builder(new ApiResponse())
-                        .set(ApiResponse::setStatus, 401)
-                        .set(ApiResponse::setBody, Problem.valueOf(401, "State doesn't match"))
-                        .build();
+                context.setMessage(builder(Problem.valueOf(401, "State doesn't match"))
+                        .set(Problem::setType, BouncrProblem.MISMATCH_STATE.problemUri())
+                        .build());
+                return false;
             }
         }
         OidcProviderDto oidcProviderDto = converter.createFrom(oidcProvider, OidcProviderDto.class);
@@ -158,13 +128,158 @@ public class OidcSignInResource {
         });
         String encodedIdToken = (String) res.get("id_token");
         if (encodedIdToken == null) {
-            return builder(new ApiResponse())
-                    .set(ApiResponse::setStatus, 401)
-                    .set(ApiResponse::setBody, Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
-                    .build();
+            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
+                    .set(Problem::setType, BouncrProblem.OPENID_PROVIDER_RETURNS_ERROR.problemUri())
+                    .build());
+            return false;
         }
-        return connectOpenIdToBouncrUser(encodedIdToken, oidcProvider, request, actionRecord, context, em);
+        String[] tokens = encodedIdToken.split("\\.", 3);
+        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
+        });
+
+        // Verify Nonce
+        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
+        OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
+        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.getNonce())) {
+            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
+                    .set(Problem::setType, BouncrProblem.MISMATCH_NONCE.problemUri())
+                    .build());
+        }
+
+        if (claim.getSub() == null) {
+            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
+                    .set(Problem::setType, BouncrProblem.MISSING_SUBJECT.problemUri())
+                    .build());
+        }
+        OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
+        if (oidcUser == null) {
+            createInvitation(tokens[1], oidcProvider, request, context, em);
+            return false;
+        }
+
+        if (oidcUser.getUser().getUserLock() != null) {
+            context.setMessage(builder(Problem.valueOf(401, "Account is locked"))
+                    .set(Problem::setType, BouncrProblem.ACCOUNT_IS_LOCKED.problemUri())
+                    .build());
+        }
+        context.putValue(oidcUser.getUser());
+        return true;
     }
+
+    private void createInvitation(String payload,
+                                         OidcProvider oidcProvider,
+                                         HttpRequest request,
+                                         RestContext context,
+                                         EntityManager em) {
+        Invitation invitation = builder(new Invitation())
+                .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
+                .set(Invitation::setInvitedAt, LocalDateTime.now())
+                .build();
+        OidcInvitation oidcInvitation = builder(new OidcInvitation())
+                .set(OidcInvitation::setInvitation, invitation)
+                .set(OidcInvitation::setOidcProvider, oidcProvider)
+                .set(OidcInvitation::setOidcPayload, payload)
+                .build();
+        EntityTransactionManager tx = new EntityTransactionManager(em);
+        tx.required(() -> {
+            em.persist(invitation);
+            em.persist(oidcInvitation);
+        });
+        context.putValue(invitation);
+    }
+
+    private ApiResponse handleInvitation(Invitation invitation) {
+        UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
+        return Optional.ofNullable(config.getOidcConfiguration().getSignUpRedirectUrl())
+                .map(uri -> builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 302)
+                        .set(ApiResponse::setHeaders, Headers.of(
+                                "Location", uriInterpolator.interpolate(uri, "code", invitation.getCode()).toString()
+                        ))
+                        .build())
+                .orElse(
+                        builder(new ApiResponse())
+                                .set(ApiResponse::setStatus, 202)
+                                .set(ApiResponse::setBody, Map.of(
+                                        "code", invitation.getCode(),
+                                        "message", ""
+                                ))
+                                .build()
+                );
+    }
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized(Invitation invitation, RestContext context) {
+        if (invitation != null) {
+            return handleInvitation(invitation);
+        }
+
+        UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
+        URI problemType = context.getMessage()
+                .filter(Problem.class::isInstance)
+                .map(Problem.class::cast)
+                .map(Problem::getType)
+                .orElse(null);
+        return Optional.ofNullable(config.getOidcConfiguration().getUnauthenticateRedirectUrl())
+                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType.toString()))
+                .map(uri -> builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 302)
+                        .set(ApiResponse::setHeaders, Headers.of(
+                                "Location", uri.toString()
+                        ))
+                        .build())
+                .orElse(builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 401)
+                        .set(ApiResponse::setBody, context.getMessage()
+                                .orElse(Problem.valueOf(401)))
+                        .build());
+    }
+
+    @Decision(ALLOWED)
+    public boolean allowed(RestContext context) {
+        config.getHookRepo().runHook(HookPoint.ALLOWED_SIGN_IN, context);
+        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
+    }
+
+    @Decision(HANDLE_FORBIDDEN)
+    public ApiResponse handleForbidden(RestContext context) {
+        UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
+        URI problemType = context.getMessage()
+                .filter(Problem.class::isInstance)
+                .map(Problem.class::cast)
+                .map(Problem::getType)
+                .orElse(null);
+        return Optional.ofNullable(config.getOidcConfiguration().getUnauthorizeRedirectUrl())
+                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType.toString()))
+                .map(uri -> builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 302)
+                        .set(ApiResponse::setHeaders, Headers.of(
+                                "Location", uri.toString()
+                        ))
+                        .build())
+                .orElse(builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 403)
+                        .set(ApiResponse::setBody, context.getMessage()
+                                .orElse(Problem.valueOf(403)))
+                        .build());
+    }
+
+
+    private OidcProvider findOidcProvider(Parameters params, RestContext context, EntityManager em) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<OidcProvider> query = cb.createQuery(OidcProvider.class);
+        Root<OidcProvider> root = query.from(OidcProvider.class);
+        query.where(cb.equal(root.get("name"), params.get("name")));
+
+        OidcProvider oidcProvider = em.createQuery(query)
+                .getResultStream()
+                .findAny()
+                .orElse(null);
+        if (oidcProvider != null) {
+            context.putValue(oidcProvider);
+        }
+        return oidcProvider;
+    }
+
 
     private OidcUser findOidcUser(OidcProvider oidcProvider, String sub, EntityManager em) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -175,98 +290,26 @@ public class OidcSignInResource {
                 cb.equal(root.get("oidcProvider"), oidcProvider));
         return em.createQuery(query).getResultStream().findAny().orElse(null);
     }
-    private ApiResponse connectOpenIdToBouncrUser(String idToken,
-                                                  OidcProvider oidcProvider,
-                                                  HttpRequest request,
-                                                  ActionRecord actionRecord,
-                                                  RestContext context,
-                                                  EntityManager em) {
-        String[] tokens = idToken.split("\\.", 3);
-        JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
-        });
 
-        // Verify Nonce
-        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
-        OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
-        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.getNonce())) {
-            return builder(new ApiResponse())
-                    .set(ApiResponse::setStatus, 401)
-                    .set(ApiResponse::setBody, Problem.valueOf(401, "Nonce doesn't match"))
-                    .build();
-        }
+    @Decision(HANDLE_OK)
+    public ApiResponse signIn(User user,
+                              HttpRequest request,
+                              ActionRecord actionRecord,
+                              RestContext context,
+                              EntityManager em) {
+        actionRecord.setActor(user.getAccount());
+        actionRecord.setActionType(USER_SIGNIN);
+
+        SignInService signInService = new SignInService(em, storeProvider, config);
+        String token = signInService.createToken();
+        UserSession userSession = signInService.createUserSession(request, user, token);
+        context.putValue(userSession);
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
 
         UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
-        SignInService signInService = new SignInService(em, storeProvider, config);
-        if (claim.getSub() != null) {
-            OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
-            if (oidcUser != null) {
-                if (oidcUser.getUser().getUserLock() != null) {
-                    return builder(new ApiResponse())
-                            .set(ApiResponse::setStatus, 401)
-                            .set(ApiResponse::setBody, Problem.valueOf(401, "Account is locked"))
-                            .build();
-                }
-                context.putValue(oidcUser.getUser());
-                // Sign In
-                actionRecord.setActor(oidcUser.getUser().getAccount());
-                actionRecord.setActionType(USER_SIGNIN);
-                String token = signInService.createToken();
-                UserSession userSession = signInService.createUserSession(request, oidcUser.getUser(), token);
-                context.putValue(userSession);
-                config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
-
-                return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
-                        .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.getToken()))
-                        .map(uri -> uriInterpolator.interpolate(uri, "account", oidcUser.getUser().getAccount()))
-                        .map(uri -> builder(new ApiResponse())
-                                .set(ApiResponse::setStatus, 302)
-                                .set(ApiResponse::setHeaders, Headers.of(
-                                        "Location", uri.toString()
-                                ))
-                                .build())
-                        .orElse(builder(new ApiResponse())
-                                .set(ApiResponse::setStatus, 200)
-                                .set(ApiResponse::setBody, userSession)
-                                .build());
-            } else {
-                Invitation invitation = builder(new Invitation())
-                        .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
-                        .set(Invitation::setInvitedAt, LocalDateTime.now())
-                        .build();
-                OidcInvitation oidcInvitation = builder(new OidcInvitation())
-                        .set(OidcInvitation::setInvitation, invitation)
-                        .set(OidcInvitation::setOidcProvider, oidcProvider)
-                        .set(OidcInvitation::setOidcPayload, tokens[1])
-                        .build();
-                EntityTransactionManager tx = new EntityTransactionManager(em);
-                tx.required(() -> {
-                    em.persist(invitation);
-                    em.persist(oidcInvitation);
-                });
-
-                if (Objects.equals(request.getHeaders().get("X-Requested-With"), "XMLHttpRequest")) {
-                    return null; // Implicit
-                } else {
-                    return Optional.ofNullable(config.getOidcConfiguration().getSignUpRedirectUrl())
-                            .map(uri -> builder(new ApiResponse())
-                                    .set(ApiResponse::setStatus, 302)
-                                    .set(ApiResponse::setHeaders, Headers.of(
-                                            "Location", uriInterpolator.interpolate(uri, "code", invitation.getCode()).toString()
-                                    ))
-                                    .build())
-                            .orElse(
-                                    builder(new ApiResponse())
-                                            .set(ApiResponse::setStatus, 202)
-                                            .set(ApiResponse::setBody, Map.of(
-                                                    "code", invitation.getCode(),
-                                                    "message", ""
-                                            ))
-                                    .build()
-                            );
-                }
-            }
-        }
-        return Optional.ofNullable(config.getOidcConfiguration().getUnauthenticateRedirectUrl())
+        return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
+                .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.getToken()))
+                .map(uri -> uriInterpolator.interpolate(uri, "account", user.getAccount()))
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
@@ -274,8 +317,8 @@ public class OidcSignInResource {
                         ))
                         .build())
                 .orElse(builder(new ApiResponse())
-                        .set(ApiResponse::setStatus, 401)
-                        .set(ApiResponse::setBody, Problem.valueOf(401))
+                        .set(ApiResponse::setStatus, 200)
+                        .set(ApiResponse::setBody, userSession)
                         .build());
     }
 
