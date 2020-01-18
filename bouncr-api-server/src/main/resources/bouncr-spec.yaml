@@ -559,6 +559,55 @@ paths:
       responses:
         204:
           description: Deleting a role is successful
+  /role/{name}/permissions:
+    parameters:
+      - $ref: '#/components/parameters/BouncrCredential'
+      - name: name
+        required: true
+        in: path
+        schema:
+          type: string
+    get:
+      summary: Find role's permissions
+      operationId: findRolePermissions
+      tags:
+        - RolePermissions
+        - Administration
+      responses:
+        200:
+          description: Finding role's permissions is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permissions'
+    post:
+      summary: Create role's permissions
+      operationId: createRolePermissions
+      tags:
+        - RolePermissions
+        - Administration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolePermissionsRequest'
+      responses:
+        201:
+          description: Creating role's permissions is successful
+    delete:
+      summary: Delete role's permissions
+      operationId: deleteRolePermissions
+      tags:
+        - RolePermissions
+        - Administration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolePermissionsRequest'
+      responses:
+        204:
+          description: Deleting role's permissions is successful
   /permissions:
     parameters:
     - $ref: '#/components/parameters/BouncrCredential'
@@ -1319,6 +1368,10 @@ components:
         - id
         - name
         - description
+    RolePermissionsRequest:
+      type: array
+      items:
+        type: string
     PermissionCreateRequest:
       type: object
       properties:
