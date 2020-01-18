@@ -50,7 +50,7 @@ public class Certificate {
         X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(issuerName, serial, NOT_BEFORE, NOT_AFTER, subjectName, kp.getPublic());
         DERSequence subjectAlternativeNames = new DERSequence(new ASN1Encodable[] {
                 new GeneralName(GeneralName.dNSName, "localhost"),
-                new GeneralName(GeneralName.dNSName, "127.0.0.1")
+                new GeneralName(GeneralName.iPAddress, "127.0.0.1")
         });
         builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNames);
         X509Certificate cert = signCertificate(builder, caKeyPair.getPrivate());
