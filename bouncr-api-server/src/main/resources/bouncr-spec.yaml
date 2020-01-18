@@ -1441,10 +1441,13 @@ components:
       properties:
         name:
           type: string
+        url:
+          type: string
         description:
           type: string
       required:
         - name
+        - url
         - description
     RealmUpdateRequest:
       type: object
