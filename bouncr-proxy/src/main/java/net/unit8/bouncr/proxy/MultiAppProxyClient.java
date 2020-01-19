@@ -90,6 +90,8 @@ public class MultiAppProxyClient implements ProxyClient {
             return;
         }
 
+        exchange.getRequestHeaders().remove(config.getBackendHeaderName());
+
         parseToken(exchange).ifPresent(token -> {
             Optional<HashMap<String, Object>> userCache = authenticate(token);
 
