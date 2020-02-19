@@ -1,7 +1,7 @@
 version: '3'
 services:
   kvs:
-    image: hazelcast/hazelcast
+    image: hazelcast/hazelcast:3.12.6
     environment:
       JAVA_OPTS: -Dhazelcast.local.publicAddress=0.0.0.0:5701
     ports:
