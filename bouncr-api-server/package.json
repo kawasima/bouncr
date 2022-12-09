@@ -15,7 +15,7 @@
   "author": "kawasima",
   "license": "EPL-2.0",
   "devDependencies": {
-    "@json-spec/openapi": "0.1.5",
+    "@json-spec/openapi": "0.1.12",
     "redoc": "^2.0.0-rc.2",
     "redoc-cli": "^0.7.0"
   }
