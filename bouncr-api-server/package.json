@@ -17,6 +17,6 @@
   "devDependencies": {
     "@json-spec/openapi": "0.1.5",
     "redoc": "^2.0.0-rc.2",
-    "redoc-cli": "^0.7.0"
+    "redoc-cli": "^0.13.21"
   }
 }
