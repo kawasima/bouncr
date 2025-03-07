@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 class HookRepositoryTest {
     @Test
     void multipleHooksAtOnePoint() {
-        final Hook hook1 = mock(Hook.class);
-        final Hook hook2 = mock(Hook.class);
+        final Hook<String> hook1 = mock(Hook.class);
+        final Hook<String> hook2 = mock(Hook.class);
         final HookRepository repo = new HookRepository();
         repo.register(HookPoint.AFTER_SIGN_IN, hook1);
         repo.register(HookPoint.AFTER_SIGN_IN, hook2);

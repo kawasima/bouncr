@@ -3,9 +3,6 @@ package net.unit8.bouncr.proxy.health;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 
-import static org.eclipse.microprofile.health.HealthCheckResponse.State.DOWN;
-import static org.eclipse.microprofile.health.HealthCheckResponse.State.UP;
-
 public class HealthCheckResponseBuilderImpl extends HealthCheckResponseBuilder {
     private HealthCheckResponseImpl response;
     public HealthCheckResponseBuilderImpl() {
@@ -38,19 +35,19 @@ public class HealthCheckResponseBuilderImpl extends HealthCheckResponseBuilder {
 
     @Override
     public HealthCheckResponseBuilder up() {
-        response.setState(UP);
+        response.setUp(true);
         return this;
     }
 
     @Override
     public HealthCheckResponseBuilder down() {
-        response.setState(DOWN);
+        response.setUp(false);
         return this;
     }
 
     @Override
-    public HealthCheckResponseBuilder state(boolean up) {
-        response.setState(up ? UP : DOWN);
+    public HealthCheckResponseBuilder status(boolean up) {
+        response.setUp(up);
         return this;
     }
 

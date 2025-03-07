@@ -2,15 +2,16 @@ package net.unit8.bouncr.proxy.health;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.HealthCheckResponse.Status;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-class HealthCheckResponseImpl extends HealthCheckResponse {
+public class HealthCheckResponseImpl extends HealthCheckResponse {
     private String name;
     private Map<String, Object> data;
-    private State state;
+    private boolean up;
 
     @Override
     public String getName() {
@@ -22,12 +23,12 @@ class HealthCheckResponseImpl extends HealthCheckResponse {
     }
 
     @Override
-    public State getState() {
-        return state;
+    public Status getStatus() {
+        return up ? Status.UP : Status.DOWN;
     }
 
-    public void setState(State state) {
-        this.state = state;
+    public void setUp(boolean up) {
+        this.up = up;
     }
 
     @Override

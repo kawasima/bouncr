@@ -156,8 +156,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         return app;
     }
 
-    private Map<String, Function<List, Object>> userFunctions() {
-        Map<String, Function<List, Object>> functions = new HashMap<>();
+    private Map<String, Function<List<Object>, Object>> userFunctions() {
+        Map<String, Function<List<Object>, Object>> functions = new HashMap<>();
         functions.put("md5hex", arguments -> {
             if (arguments.size() == 1) {
                 String text = Objects.toString(arguments.get(0));

@@ -47,7 +47,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private CircuitBreaker ldapClientCircuitBreaker = new CircuitBreaker<>()
             .withFailureThreshold(5)
             .withSuccessThreshold(3)
-            .withTimeout(Duration.ofSeconds(5))
+            .withDelay(Duration.ofSeconds(5))
             .handle(NamingException.class);
     private RetryPolicy ldapRetryPolicy = new RetryPolicy<>()
             .handle(CommunicationException.class)

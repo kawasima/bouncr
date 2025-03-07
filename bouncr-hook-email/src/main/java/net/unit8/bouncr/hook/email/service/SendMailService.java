@@ -7,10 +7,10 @@ import net.unit8.bouncr.hook.email.config.MailConfig;
 import net.unit8.bouncr.hook.email.config.MailMetaConfig;
 import net.unit8.bouncr.hook.email.config.MailServerConfig;
 
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeUtility;
+import jakarta.mail.*;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeUtility;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;

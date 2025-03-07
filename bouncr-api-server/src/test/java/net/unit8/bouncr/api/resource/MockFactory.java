@@ -14,26 +14,26 @@ public class MockFactory {
         EntityManager em = mock(EntityManager.class);
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
 
-        CriteriaQuery query = mockList.stream()
+        CriteriaQuery<Object> query = mockList.stream()
                 .filter(CriteriaQuery.class::isInstance)
                 .map(CriteriaQuery.class::cast)
                 .findAny()
                 .orElse(mock(CriteriaQuery.class));
-        Root<?> root = mockList.stream()
+        Root<Object> root = mockList.stream()
                 .filter(Root.class::isInstance)
                 .map(Root.class::cast)
                 .findAny()
                 .orElse(mock(Root.class));
-        Path path = mock(Path.class);
-        Join join = mock(Join.class);
-        EntityGraph graph = mockList.stream()
+        Path<Object> path = mock(Path.class);
+        Join<Object, Object> join = mock(Join.class);
+        EntityGraph<Object> graph = mockList.stream()
                 .filter(EntityGraph.class::isInstance)
                 .map(EntityGraph.class::cast)
                 .findAny()
                 .orElse(mock(EntityGraph.class));
-        Subgraph subgraph = mock(Subgraph.class);
+        Subgraph<Object> subgraph = mock(Subgraph.class);
 
-        TypedQuery typedQuery = mockList.stream()
+        TypedQuery<Object> typedQuery = mockList.stream()
                 .filter(TypedQuery.class::isInstance)
                 .map(TypedQuery.class::cast)
                 .findAny()
