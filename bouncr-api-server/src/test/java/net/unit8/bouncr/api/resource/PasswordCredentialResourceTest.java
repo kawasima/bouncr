@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.component.SystemComponent;
 import enkan.component.jackson.JacksonBeansConverter;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
@@ -22,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -61,7 +62,7 @@ public class PasswordCredentialResourceTest {
         PasswordCredentialCreateRequest createRequest = new PasswordCredentialCreateRequest();
 
         ComponentInjector injector = new ComponentInjector(
-                Map.of("config",   system.getComponent("config"),
+                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
                         "validator", system.getComponent("validator")));
 
         injector.inject(resource);
@@ -84,7 +85,7 @@ public class PasswordCredentialResourceTest {
         createRequest.setPassword("pass1234");
 
         ComponentInjector injector = new ComponentInjector(
-                Map.of("config",   system.getComponent("config"),
+                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
                         "validator", system.getComponent("validator")));
 
         injector.inject(resource);
@@ -112,7 +113,7 @@ public class PasswordCredentialResourceTest {
         createRequest.setPassword("pass1234");
 
         ComponentInjector injector = new ComponentInjector(
-                Map.of("config",   system.getComponent("config"),
+                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
                         "validator", system.getComponent("validator")));
 
         injector.inject(resource);
@@ -124,7 +125,7 @@ public class PasswordCredentialResourceTest {
     void userProcessableInPut_Successful() {
         TypedQuery query = mock(TypedQuery.class);
         PasswordCredential credential = builder(new PasswordCredential())
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2("pass1234", "saltsalt", 100))
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2("pass1234", "saltsalt", 600_000))
                 .set(PasswordCredential::setSalt, "saltsalt")
                 .build();
         User user = builder(new User())
@@ -147,7 +148,7 @@ public class PasswordCredentialResourceTest {
                 .build();
 
         ComponentInjector injector = new ComponentInjector(
-                Map.of("config",   system.getComponent("config"),
+                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
                         "validator", system.getComponent("validator")));
 
         injector.inject(resource);

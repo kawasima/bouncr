@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.9</version>
+        <version>0.3.0-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -45,6 +45,9 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
+                <configuration>
+                    <mainClass>net.unit8.bouncr.api.Main</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -84,6 +87,11 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jedis</artifactId>
+            <version>0.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-bouncr</artifactId>
             <exclusions>
                 <exclusion>
@@ -98,8 +106,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.jaxrs</groupId>
-            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+            <artifactId>jackson-jakarta-rs-json-provider</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -118,11 +126,11 @@
 
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
+            <artifactId>bcprov-jdk18on</artifactId>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk15on</artifactId>
+            <artifactId>bcpkix-jdk18on</artifactId>
         </dependency>
 
         <dependency>
@@ -203,6 +211,14 @@
                         <configuration>
                             <executable>java</executable>
                             <mainClass>backendexample.ReplMain</mainClass>
+                            <environmentVariables>
+                                <JDBC_URL>jdbc:postgresql://localhost:5432/bouncr</JDBC_URL>
+                                <JDBC_USER>bouncr</JDBC_USER>
+                                <JDBC_PASSWORD>bouncr</JDBC_PASSWORD>
+                                <REDIS_URL>redis://localhost:6379</REDIS_URL>
+                                <JWT_SECRET>abcdefghijklmnopqrstuvwxyzabcdef</JWT_SECRET>
+                                <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                            </environmentVariables>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -223,15 +239,16 @@
                 </dependency>
 
                 <dependency>
-                    <groupId>org.jsr107.ri</groupId>
-                    <artifactId>cache-ri-impl</artifactId>
-                    <version>1.0.0</version>
+                    <groupId>org.postgresql</groupId>
+                    <artifactId>postgresql</artifactId>
+                    <version>42.7.5</version>
                     <scope>runtime</scope>
                 </dependency>
+
                 <dependency>
-                    <groupId>com.h2database</groupId>
-                    <artifactId>h2</artifactId>
-                    <version>1.4.199</version>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-database-postgresql</artifactId>
+                    <version>11.20.3</version>
                     <scope>runtime</scope>
                 </dependency>
 
@@ -250,16 +267,6 @@
                 <dependency>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-simple</artifactId>
-                </dependency>
-            </dependencies>
-        </profile>
-        <profile>
-            <id>postgresql</id>
-            <dependencies>
-                <dependency>
-                    <groupId>org.postgresql</groupId>
-                    <artifactId>postgresql</artifactId>
-                    <version>42.2.5</version>
                 </dependency>
             </dependencies>
         </profile>

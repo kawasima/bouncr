@@ -2,7 +2,7 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;

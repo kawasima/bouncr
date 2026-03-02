@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
-import javax.validation.constraints.Email;
+import jakarta.validation.constraints.Email;
 import java.io.Serializable;
 import java.util.List;
 

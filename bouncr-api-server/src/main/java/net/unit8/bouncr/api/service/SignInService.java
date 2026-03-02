@@ -8,14 +8,14 @@ import net.unit8.bouncr.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.Subgraph;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Subgraph;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -110,8 +110,8 @@ public class SignInService {
         permissionsGraph.addAttributeNodes("name");
 
         return em.createQuery(assignmentCriteria)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", assignmentGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", assignmentGraph)
                 .getResultStream()
                 .collect(Collectors.groupingBy(Assignment::getRealm))
                 .entrySet()

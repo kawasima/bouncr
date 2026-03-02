@@ -15,13 +15,13 @@ import net.unit8.bouncr.api.boundary.RoleUpdateRequest;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Role;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -41,14 +41,10 @@ public class RoleResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(RoleUpdateRequest updateRequest, RestContext context) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<RoleUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -97,7 +93,7 @@ public class RoleResource {
         query.where(cb.equal(roleRoot.get("name"), params.get("name")));
 
         Role role = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (role != null) {
             context.putValue(role);

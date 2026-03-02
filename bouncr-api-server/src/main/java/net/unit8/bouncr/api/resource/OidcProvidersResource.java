@@ -16,14 +16,14 @@ import net.unit8.bouncr.api.boundary.OidcProviderSearchParams;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.OidcProvider;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,22 +45,16 @@ public class OidcProvidersResource {
         if (violations.isEmpty()) {
             context.putValue(searchParams);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreateRequest(OidcProviderCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<OidcProviderCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -106,7 +100,7 @@ public class OidcProvidersResource {
 
         query.orderBy(cb.asc(oidcProviderRoot.get("id")));
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList()

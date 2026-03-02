@@ -18,15 +18,15 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Application;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.JoinType;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -44,15 +44,11 @@ public class ApplicationResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(ApplicationUpdateRequest updateRequest, RestContext context) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
 
         Set<ConstraintViolation<ApplicationUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -115,8 +111,8 @@ public class ApplicationResource {
         }
 
         Application application = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", applicationGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", applicationGraph)
                 .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);

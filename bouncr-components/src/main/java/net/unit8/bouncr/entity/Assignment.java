@@ -1,9 +1,10 @@
 package net.unit8.bouncr.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity
+@IdClass(AssignmentId.class)
 @Table(name = "assignments")
 public class Assignment implements Serializable {
     @Id

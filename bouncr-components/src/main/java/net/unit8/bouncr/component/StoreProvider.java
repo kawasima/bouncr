@@ -15,7 +15,7 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
     private KeyValueStore oidcSessionStore;
 
     @Override
-    protected ComponentLifecycle lifecycle() {
+    protected ComponentLifecycle<StoreProvider> lifecycle() {
         return new ComponentLifecycle<StoreProvider>() {
             @Override
             public void start(StoreProvider provider) {

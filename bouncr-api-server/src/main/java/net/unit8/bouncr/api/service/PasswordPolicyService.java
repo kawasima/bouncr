@@ -8,12 +8,12 @@ import net.unit8.bouncr.entity.PasswordCredential;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -60,14 +60,14 @@ public class PasswordPolicyService {
         Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
         query.where(cb.equal(userJoin.get("account"), updateRequest.getAccount()));
         PasswordCredential passwordCredential = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (passwordCredential == null) {
             return new Problem.Violation("old_password", "does not match current password");
         }
 
         byte[] currentPassword = passwordCredential.getPassword();
-        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 100);
+        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 600_000);
         if (!Arrays.equals(currentPassword, oldPassword)) {
             return new Problem.Violation("old_password", "does not match current password");
         }

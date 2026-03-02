@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.unit8.bouncr</groupId>
         <artifactId>bouncr-parent</artifactId>
-        <version>0.2.9</version>
+        <version>0.3.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>bouncr-components</artifactId>
@@ -18,7 +18,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <eclipselink.version>2.7.4</eclipselink.version>
+        <eclipselink.version>4.0.8</eclipselink.version>
     </properties>
 
     <repositories>
@@ -35,7 +35,7 @@
             <plugin>
                 <groupId>net.unit8.maven.plugins</groupId>
                 <artifactId>staticweave-nopu-maven-plugin</artifactId>
-                <version>0.1.0</version>
+                <version>0.2.0</version>
                 <executions>
                     <execution>
                         <phase>process-classes</phase>
@@ -93,8 +93,8 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.jaxrs</groupId>
-            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+            <artifactId>jackson-jakarta-rs-json-provider</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -121,20 +121,24 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jsr107.ri</groupId>
-            <artifactId>cache-ri-impl</artifactId>
-            <scope>test</scope>
+            <groupId>am.ik.yavi</groupId>
+            <artifactId>yavi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <version>6.0.17.Final</version>
+            <version>8.0.1.Final</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.el</artifactId>
-            <version>3.0.0</version>
+            <groupId>org.glassfish.expressly</groupId>
+            <artifactId>expressly</artifactId>
+            <version>5.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

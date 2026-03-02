@@ -6,8 +6,8 @@ import net.unit8.bouncr.entity.Role;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import java.util.Arrays;
 import java.util.List;
 

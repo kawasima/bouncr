@@ -5,6 +5,7 @@ import net.unit8.bouncr.util.PasswordUtils;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
@@ -50,7 +51,7 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         Connection connection = context.getConnection();
-        DSLContext create = DSL.using(connection);
+        DSLContext create = DSL.using(connection, SQLDialect.H2);
         final String INS_USER = create
                 .insertInto(table("users"))
                 .columns(
@@ -169,14 +170,8 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
                         field("position")
                 ).values("?", "?", "?", "?", "?", "?","?", "?", "?")
                 .getSQL();
-        final String INS_USER_PROFILE_VALUE = create
-                .insertInto(table("user_profile_values"))
-                .columns(
-                        field("user_profile_field_id"),
-                        field("user_id"),
-                        field("value")
-                ).values("?", "?", "?")
-                .getSQL();
+        final String INS_USER_PROFILE_VALUE =
+                "insert into user_profile_values (user_profile_field_id, user_id, \"value\") values (?, ?, ?)";
         try (PreparedStatement stmtInsUser = connection.prepareStatement(INS_USER, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtInsPasswdCred = connection.prepareStatement(INS_PASSWD_CRED);
              PreparedStatement stmtInsPermission = connection.prepareStatement(INS_PERMISSION, Statement.RETURN_GENERATED_KEYS);
@@ -232,7 +227,7 @@ public class V23__InsertAdminUser extends BaseJavaMigration {
             stmtInsUserProfileValue.executeUpdate();
 
             stmtInsPasswdCred.setLong(1, userId);
-            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 100));
+            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 600_000));
             stmtInsPasswdCred.setString(3, "0123456789012345");
             stmtInsPasswdCred.setBoolean(4, false);
             stmtInsPasswdCred.setDate(5, new Date(System.currentTimeMillis()));

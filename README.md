@@ -1,20 +1,18 @@
 # Bouncr
 
-Bouncr is an reverse proxy with authentication and authorization for backend applications.
+Bouncr is a reverse proxy with authentication and authorization for backend applications.
 
 ![bouncer](http://2.bp.blogspot.com/-kVVeXhsM8yU/VIhOpmLlnDI/AAAAAAAApfY/O5N9L72Byo4/s450/job_sp.png)
 
-Bouncer has following features:
+Bouncr has the following features:
 
 - Authenticate
     - Various types of credentials
         - Password
-        - LDAP
         - OpenID Connect
-    - Two factor authentication (using by Google authenticator etc)
+    - Two factor authentication (using Google Authenticator etc.)
 - Authorization (based on Group - Role - Permission)
-- Sign in
-- Sign out
+- Sign in / Sign out
 - Audit
     - Show security activities
 - IdP
@@ -26,27 +24,68 @@ Bouncer has following features:
     - Manage roles
     - Manage OpenID Connect applications
 
-![bouncr architecture](https://i.imgur.com/BXWLGPG.png)
+## Modules
 
+| Module | Language | Description |
+|--------|----------|-------------|
+| `bouncr-proxy` | Go | Envoy ext_proc sidecar for authentication, authorization, and dynamic routing |
+| `bouncr-api-server` | Java | REST API server (enkan/kotowari-restful) |
+| `bouncr-components` | Java | Shared entities, migrations, and components |
+| `bouncr-ui` | TypeScript | React SPA (Vite) |
+| `envoy/` | YAML | Envoy proxy configuration |
 
-## Docker
+## Quick Start
 
-You can build the docker image of the api server and the proxy server using by jib.
+### Docker Compose
 
+```bash
+docker compose up
 ```
-% cd bouncr-api-server
-% mvn -P\!dev,postgresql,hazelcast compile jib:dockerBuild
+
+This starts Redis, PostgreSQL, bouncr-proxy (ext_proc), and Envoy. The proxy listens on port 3000.
+
+### Local Development
+
+```bash
+# 1. Start dependencies
+docker compose up redis db
+
+# 2. Start the API server
+cd bouncr-api-server
+mvn compile exec:java -Pdev,slf4j-simple
+
+# 3. Start the proxy
+cd bouncr-proxy
+export DB_DSN="postgres://bouncr:bouncr@localhost:5432/bouncr?sslmode=disable"
+export JWT_SECRET="your-secret-key"
+go run ./cmd/bouncr-proxy/
+
+# 4. Start Envoy
+envoy -c envoy/envoy.yaml
+
+# 5. Start the UI
+cd bouncr-ui
+npm run dev
 ```
 
-```
-% cd bouncr-proxy
-% mvn -P\!dev,postgresql,hazelcast compile jib:dockerBuild
-```
+## Build
 
-`docker-compose.yml` can run the api server and the proxy server with Hazelcast and Postgresql database.
+```bash
+# API server (Java)
+cd bouncr-api-server
+mvn package
+
+# Proxy (Go)
+cd bouncr-proxy
+go build -o bouncr-proxy ./cmd/bouncr-proxy/
+
+# UI
+cd bouncr-ui
+npm run build
+```
 
 ## License
 
-Copyright © 2017-2019 kawasima
+Copyright © 2017-2025 kawasima
 
 Distributed under the Eclipse Public License, the same as Clojure.

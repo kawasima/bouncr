@@ -19,12 +19,13 @@ import net.unit8.bouncr.entity.ActionType;
 import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
@@ -43,14 +44,10 @@ public class PasswordResetResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validate(PasswordResetRequest createRequest) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<PasswordResetRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(PROCESSABLE)
@@ -60,7 +57,12 @@ public class PasswordResetResource {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<PasswordResetChallenge> query = cb.createQuery(PasswordResetChallenge.class);
         Root<PasswordResetChallenge> userRoot = query.from(PasswordResetChallenge.class);
-        query.where(cb.equal(userRoot.get("code"), resetRequest.getCode()));
+        query.where(
+                cb.and(
+                        cb.equal(userRoot.get("code"), resetRequest.getCode()),
+                        cb.greaterThan(userRoot.get("expiresAt"), LocalDateTime.now())
+                )
+        );
         PasswordResetChallenge resetChallenge = em.createQuery(query).getResultStream().findAny().orElse(null);
 
         if (resetChallenge != null) {

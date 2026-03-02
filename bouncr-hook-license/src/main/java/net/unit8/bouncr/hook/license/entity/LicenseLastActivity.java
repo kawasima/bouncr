@@ -1,6 +1,6 @@
 package net.unit8.bouncr.hook.license.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 

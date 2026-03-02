@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 1px);
+    --radius-md: var(--radius);
+    --radius-lg: calc(var(--radius) + 2px);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 6px);
+    --radius-3xl: calc(var(--radius) + 8px);
+    --radius-4xl: calc(var(--radius) + 10px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-gold: var(--gold);
+    --color-gold-muted: var(--gold-muted);
+    --font-serif-display: 'Cormorant Garamond', 'Georgia', serif;
+    --font-serif-body: 'EB Garamond', 'Georgia', serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+:root {
+    --radius: 0.125rem;
+    --gold: oklch(0.75 0.1 80);
+    --gold-muted: oklch(0.75 0.1 80 / 40%);
+
+    /* Mansion poem dark palette */
+    --background: oklch(0.14 0.005 90);
+    --foreground: oklch(0.92 0.01 80);
+    --card: oklch(0.18 0.005 90);
+    --card-foreground: oklch(0.92 0.01 80);
+    --popover: oklch(0.18 0.005 90);
+    --popover-foreground: oklch(0.92 0.01 80);
+    --primary: oklch(0.75 0.1 80);
+    --primary-foreground: oklch(0.14 0.005 90);
+    --secondary: oklch(0.22 0.005 90);
+    --secondary-foreground: oklch(0.92 0.01 80);
+    --muted: oklch(0.22 0.005 90);
+    --muted-foreground: oklch(0.60 0.02 80);
+    --accent: oklch(0.22 0.005 90);
+    --accent-foreground: oklch(0.92 0.01 80);
+    --destructive: oklch(0.60 0.15 20);
+    --border: oklch(0.75 0.1 80 / 20%);
+    --input: oklch(0.75 0.1 80 / 25%);
+    --ring: oklch(0.75 0.1 80 / 50%);
+    --chart-1: oklch(0.75 0.1 80);
+    --chart-2: oklch(0.65 0.08 60);
+    --chart-3: oklch(0.55 0.06 40);
+    --chart-4: oklch(0.70 0.09 90);
+    --chart-5: oklch(0.60 0.07 70);
+    --sidebar: oklch(0.16 0.005 90);
+    --sidebar-foreground: oklch(0.92 0.01 80);
+    --sidebar-primary: oklch(0.75 0.1 80);
+    --sidebar-primary-foreground: oklch(0.14 0.005 90);
+    --sidebar-accent: oklch(0.22 0.005 90);
+    --sidebar-accent-foreground: oklch(0.92 0.01 80);
+    --sidebar-border: oklch(0.75 0.1 80 / 20%);
+    --sidebar-ring: oklch(0.75 0.1 80 / 50%);
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'EB Garamond', 'Georgia', serif;
+        font-size: 17px;
+        line-height: 1.6;
+        background-image: radial-gradient(ellipse at 50% 0%, oklch(0.20 0.01 80 / 30%) 0%, transparent 70%);
+        background-attachment: fixed;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Cormorant Garamond', 'Georgia', serif;
+    }
+    code, pre, .font-mono, input[type="password"] {
+        font-family: 'JetBrains Mono', monospace;
+    }
+}
+
+/* Mansion poem utility classes */
+.mansion-heading {
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: oklch(0.75 0.1 80);
+    font-weight: 600;
+}
+
+.mansion-subtitle {
+    font-family: 'EB Garamond', 'Georgia', serif;
+    font-style: italic;
+    color: oklch(0.60 0.02 80);
+    letter-spacing: 0.05em;
+}
+
+.mansion-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(0.75 0.1 80 / 40%), transparent);
+    border: none;
+}
+
+.mansion-ornament {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: oklch(0.75 0.1 80 / 60%);
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+}
+.mansion-ornament::before,
+.mansion-ornament::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(0.75 0.1 80 / 30%));
+}
+.mansion-ornament::after {
+    background: linear-gradient(90deg, oklch(0.75 0.1 80 / 30%), transparent);
+}
+
+.mansion-card {
+    border: 1px solid oklch(0.75 0.1 80 / 20%);
+    background: oklch(0.18 0.005 90);
+}
+
+.mansion-input {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid oklch(0.75 0.1 80 / 30%) !important;
+    border-radius: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    font-family: 'EB Garamond', 'Georgia', serif;
+    font-size: 17px;
+    transition: border-color 0.3s ease;
+}
+.mansion-input:focus {
+    border-bottom-color: oklch(0.75 0.1 80) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.mansion-input::placeholder {
+    color: oklch(0.60 0.02 80 / 50%);
+    font-style: italic;
+}

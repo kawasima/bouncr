@@ -22,12 +22,12 @@ import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.Realm;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.Subgraph;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Subgraph;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -63,14 +63,10 @@ public class ApplicationsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateApplicationCreateRequest(ApplicationCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<ApplicationCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(value = MALFORMED, method = "GET")
@@ -80,9 +76,7 @@ public class ApplicationsResource {
         if (violations.isEmpty()) {
             context.putValue(applicationSearchParams);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(value = CONFLICT, method = "POST")
@@ -141,7 +135,7 @@ public class ApplicationsResource {
         }
 
         return em.createQuery(query)
-                .setHint("javax.persistence.fetchgraph", applicationGraph)
+                .setHint("jakarta.persistence.fetchgraph", applicationGraph)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

@@ -7,8 +7,8 @@ import net.unit8.bouncr.entity.UserProfileValue;
 import net.unit8.bouncr.entity.UserProfileVerification;
 import net.unit8.bouncr.util.RandomUtils;
 
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -107,7 +107,7 @@ public class UserProfileService {
         query.where(cb.equal(root.get("accountLower"), account.toLowerCase(Locale.US)));
         Long cnt = em.createQuery(query).getSingleResult();
         if (cnt > 0) {
-            return new HashSet<>(Collections.singletonList(new Problem.Violation<>("account", "conflicts")));
+            return new HashSet<>(Collections.singletonList(new Problem.Violation("account", "conflicts")));
         }
         return new HashSet<>();
     }

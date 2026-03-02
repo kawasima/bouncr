@@ -7,10 +7,10 @@ import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.hook.Hook;
 import net.unit8.bouncr.hook.license.entity.UserLicense;
 
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;

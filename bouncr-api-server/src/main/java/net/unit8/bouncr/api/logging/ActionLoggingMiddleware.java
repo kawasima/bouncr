@@ -10,7 +10,7 @@ import enkan.util.MixinUtils;
 import enkan.util.jpa.EntityTransactionManager;
 import net.unit8.bouncr.entity.UserAction;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -20,7 +20,7 @@ import static enkan.util.BeanBuilder.builder;
 @Middleware(name = "actionLogging", dependencies = {"entityManager"})
 public class ActionLoggingMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
     @Override
-    public HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
+    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, NNREQ, NNRES> chain) {
         request = MixinUtils.mixin(request, ActionRecordable.class);
         ActionRecord actionRecord = new ActionRecord();
         ((ActionRecordable)request).setActionRecord(actionRecord);

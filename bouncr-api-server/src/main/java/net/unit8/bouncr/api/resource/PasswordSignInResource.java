@@ -21,14 +21,14 @@ import net.unit8.bouncr.util.PasswordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -58,17 +58,13 @@ public class PasswordSignInResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePasswordSignInRequest(PasswordSignInRequest passwordSignInRequest, RestContext context) {
         if (passwordSignInRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<PasswordSignInRequest>> violations = validator.validate(passwordSignInRequest);
         if (violations.isEmpty()) {
             context.putValue(passwordSignInRequest);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     /**
@@ -128,14 +124,12 @@ public class PasswordSignInResource {
                 .addAttributeNodes("password", "salt", "initial", "createdAt");
 
         User user = em.createQuery(query)
-                .setHint("javax.persistence.fetchgraph", userGraph)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", userGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
 
         if (user != null && user.getUserLock() != null) {
-            context.setMessage(builder(Problem.valueOf(401,"Account is locked"))
-                    .set(Problem::setType, BouncrProblem.ACCOUNT_IS_LOCKED.problemUri())
-                    .build());
+            context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
             return false;
         }
 
@@ -148,21 +142,17 @@ public class PasswordSignInResource {
                             PasswordUtils.pbkdf2(
                                     passwordSignInRequest.getPassword(),
                                     user.getPasswordCredential().getSalt(),
-                                    100))) {
+                                    600_000))) {
                 context.putValue(user);
                 actionRecord.setActionType(USER_SIGNIN);
                 SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
                 if (status == EXPIRED || status == INITIAL) {
-                    context.setMessage(builder(Problem.valueOf(401,"Password must be changed"))
-                            .set(Problem::setType, BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri())
-                            .build());
+                    context.setMessage(Problem.valueOf(401, "Password must be changed", BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri()));
                     return false;
                 }
 
                 if (!signInService.validateOtpKey(user.getOtpKey(), passwordSignInRequest.getOneTimePassword())) {
-                    context.setMessage(builder(Problem.valueOf(401, "One time password is needed"))
-                            .set(Problem::setType, BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri())
-                            .build());
+                    context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
                     return false;
                 }
                 return true;

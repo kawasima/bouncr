@@ -22,14 +22,14 @@ import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.JoinType;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -56,24 +56,23 @@ public class SignUpResource {
     @Decision(MALFORMED)
     public Problem validate(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<SignUpCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        if (!violations.isEmpty()) {
+            return Problem.fromViolations(violations);
+        }
 
         config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, createRequest.getUserProfiles());
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
-        problem.getViolations().addAll(profileViolations);
 
-        if (problem.getViolations().isEmpty()) {
-            context.putValue(createRequest);
+        if (!profileViolations.isEmpty()) {
+            return Problem.valueOf(400);
         }
-        return problem.getViolations().isEmpty() ? null : problem;
+
+        context.putValue(createRequest);
+        return null;
     }
 
     @Decision(ALLOWED)
@@ -96,11 +95,7 @@ public class SignUpResource {
         violations.addAll(userProfileService.validateProfileUniqueness(createRequest.getUserProfiles()));
 
         if (!violations.isEmpty()) {
-            Problem problem = builder(Problem.valueOf(409))
-                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
-                    .build();
-            problem.getViolations().addAll(violations);
-            context.setMessage(problem);
+            context.setMessage(Problem.valueOf(409));
         }
         return !violations.isEmpty();
     }
@@ -114,7 +109,7 @@ public class SignUpResource {
         query.where(cb.equal(invitationRoot.get("code"), code));
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream()
                 .findAny()
                 .orElse(null);

@@ -8,12 +8,12 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.entity.Invitation;
 import net.unit8.bouncr.sign.JsonWebToken;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +35,7 @@ public class InvitationResource {
         Root<Invitation> invitationRoot = query.from(Invitation.class);
         query.where(cb.equal(invitationRoot.get("code"), params.get("code")));
         Invitation invitation = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (invitation != null) {
             context.putValue(invitation);

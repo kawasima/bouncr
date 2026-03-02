@@ -1,9 +1,10 @@
 package net.unit8.bouncr.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity
+@IdClass(RolePermissionId.class)
 @Table(name = "role_permissions")
 public class RolePermission implements Serializable {
     @Id

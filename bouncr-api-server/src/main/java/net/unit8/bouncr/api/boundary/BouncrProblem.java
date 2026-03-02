@@ -12,7 +12,9 @@ public enum BouncrProblem {
     OPENID_PROVIDER_RETURNS_ERROR,
     MISMATCH_STATE,
     MISMATCH_NONCE,
-    MISSING_SUBJECT;
+    MISSING_SUBJECT,
+    INVALID_ID_TOKEN_SIGNATURE,
+    INVALID_ID_TOKEN_CLAIMS;
 
     public URI problemUri() {
         return URI.create("/bouncr/problem/" + this.name());

@@ -13,14 +13,14 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.UserActionSearchParams;
 import net.unit8.bouncr.entity.UserAction;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -55,9 +55,7 @@ public class UserActionsResource {
         if (violations.isEmpty()) {
             context.putValue(userActionSearchParams);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(HANDLE_OK)
@@ -69,7 +67,6 @@ public class UserActionsResource {
         Root<UserAction> userActionRoot = query.from(UserAction.class);
         List<Predicate> predicates = new ArrayList<>();
         Optional<String> maybeActor = Optional.ofNullable(params.getActor());
-        System.out.println(principal.hasPermission("any_user:read"));
         if (principal.hasPermission("any_user:read")
                 && maybeActor.isPresent()) {
             String likeExpr = maybeActor.orElseThrow(UnreachableException::new)
@@ -86,7 +83,7 @@ public class UserActionsResource {
         query.orderBy(cb.desc(userActionRoot.get("createdAt")));
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

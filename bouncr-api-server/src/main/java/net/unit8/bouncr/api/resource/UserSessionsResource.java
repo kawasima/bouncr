@@ -13,14 +13,14 @@ import net.unit8.bouncr.api.boundary.UserSessionSearchParams;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserSession;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -44,9 +44,7 @@ public class UserSessionsResource {
         if (violations.isEmpty()) {
             context.putValue(userSessionSearchParams);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -73,7 +71,7 @@ public class UserSessionsResource {
         query.orderBy(cb.asc(userSessionRoot.get("id")));
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

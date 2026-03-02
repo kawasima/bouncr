@@ -44,3 +44,6 @@ yarn.lock
 
 /examples
 pom.xml.versionsBackup
+
+# Go binary
+bouncr-proxy/bouncr-proxy

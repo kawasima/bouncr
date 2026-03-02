@@ -2,12 +2,13 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Entity
+@IdClass(UserProfileVerificationId.class)
 @Table(name = "user_profile_verifications")
 public class UserProfileVerification implements Serializable {
     @Id

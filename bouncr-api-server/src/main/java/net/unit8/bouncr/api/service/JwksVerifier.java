@@ -1,0 +1,165 @@
+package net.unit8.bouncr.api.service;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.unit8.bouncr.entity.OidcProvider;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.Signature;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Verifies ID token signatures using JWKS (JSON Web Key Set).
+ * Caches JWKS per provider for 1 hour to avoid repeated HTTP calls.
+ */
+public class JwksVerifier {
+    private static final long CACHE_TTL_MS = TimeUnit.HOURS.toMillis(1);
+    private static final TypeReference<HashMap<String, Object>> JSON_REF = new TypeReference<>() {};
+
+    static {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+    }
+
+    private static final class CachedJwks {
+        final List<Map<String, Object>> keys;
+        final long fetchedAt;
+
+        CachedJwks(List<Map<String, Object>> keys) {
+            this.keys = keys;
+            this.fetchedAt = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - fetchedAt > CACHE_TTL_MS;
+        }
+    }
+
+    private final ConcurrentHashMap<Long, CachedJwks> cache = new ConcurrentHashMap<>();
+    private final OkHttpClient httpClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public JwksVerifier(OkHttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    /**
+     * Verifies the signature of an encoded JWT (header.payload.signature) using the provider's JWKS.
+     *
+     * @return true if the signature is valid, false otherwise
+     */
+    public boolean verify(String encodedJwt, OidcProvider provider) {
+        if (provider.getJwksUri() == null) {
+            // No JWKS URI configured — skip signature verification
+            return true;
+        }
+
+        String[] parts = encodedJwt.split("\\.", 3);
+        if (parts.length != 3) {
+            return false;
+        }
+
+        try {
+            Map<String, Object> header = objectMapper.readValue(
+                    Base64.getUrlDecoder().decode(parts[0]), JSON_REF);
+            String alg = (String) header.get("alg");
+            String kid = (String) header.get("kid");
+
+            List<Map<String, Object>> keys = getJwks(provider);
+            PublicKey publicKey = findPublicKey(keys, kid, alg);
+            if (publicKey == null) {
+                return false;
+            }
+
+            String jcaAlgorithm = toJcaAlgorithm(alg);
+            if (jcaAlgorithm == null) {
+                return false;
+            }
+
+            byte[] signingInput = (parts[0] + "." + parts[1]).getBytes("UTF-8");
+            byte[] signatureBytes = Base64.getUrlDecoder().decode(parts[2]);
+
+            Signature sig = Signature.getInstance(jcaAlgorithm, BouncyCastleProvider.PROVIDER_NAME);
+            sig.initVerify(publicKey);
+            sig.update(signingInput);
+            return sig.verify(signatureBytes);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> getJwks(OidcProvider provider) throws Exception {
+        CachedJwks cached = cache.get(provider.getId());
+        if (cached != null && !cached.isExpired()) {
+            return cached.keys;
+        }
+
+        try (Response response = httpClient.newCall(
+                new Request.Builder().url(provider.getJwksUri()).build()).execute()) {
+            try (InputStream in = response.body().byteStream()) {
+                Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
+                List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
+                cache.put(provider.getId(), new CachedJwks(keys));
+                return keys;
+            }
+        }
+    }
+
+    private PublicKey findPublicKey(List<Map<String, Object>> keys, String kid, String alg) throws Exception {
+        for (Map<String, Object> key : keys) {
+            String keyKid = (String) key.get("kid");
+            String kty = (String) key.get("kty");
+            if (kid != null && !kid.equals(keyKid)) {
+                continue;
+            }
+            if ("RSA".equals(kty)) {
+                return buildRsaPublicKey(key);
+            }
+        }
+        // If no kid match, try first RSA key
+        for (Map<String, Object> key : keys) {
+            if ("RSA".equals(key.get("kty"))) {
+                return buildRsaPublicKey(key);
+            }
+        }
+        return null;
+    }
+
+    private PublicKey buildRsaPublicKey(Map<String, Object> key) throws Exception {
+        byte[] nBytes = Base64.getUrlDecoder().decode((String) key.get("n"));
+        byte[] eBytes = Base64.getUrlDecoder().decode((String) key.get("e"));
+        BigInteger modulus = new BigInteger(1, nBytes);
+        BigInteger exponent = new BigInteger(1, eBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
+        return kf.generatePublic(new RSAPublicKeySpec(modulus, exponent));
+    }
+
+    private String toJcaAlgorithm(String jwtAlg) {
+        if (jwtAlg == null) return null;
+        switch (jwtAlg) {
+            case "RS256": return "SHA256withRSA";
+            case "RS384": return "SHA384withRSA";
+            case "RS512": return "SHA512withRSA";
+            case "PS256": return "SHA256withRSAandMGF1";
+            case "PS384": return "SHA384withRSAandMGF1";
+            case "PS512": return "SHA512withRSAandMGF1";
+            default: return null;
+        }
+    }
+}

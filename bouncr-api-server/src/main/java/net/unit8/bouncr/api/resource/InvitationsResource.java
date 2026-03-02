@@ -14,9 +14,9 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.entity.Invitation;
 import net.unit8.bouncr.util.RandomUtils;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.validation.ConstraintViolation;
 
 import java.util.Optional;
 import java.util.Set;
@@ -50,17 +50,13 @@ public class InvitationsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem vaidateCreateRequest(InvitationCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<InvitationCreateRequest>> violations = validator.validate(createRequest);
         if (violations.isEmpty()) {
             context.putValue(createRequest);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(POST)

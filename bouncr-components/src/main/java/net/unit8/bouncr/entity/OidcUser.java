@@ -1,8 +1,9 @@
 package net.unit8.bouncr.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
+@IdClass(OidcUserId.class)
 @Table(name ="oidc_users")
 public class OidcUser {
     @Id

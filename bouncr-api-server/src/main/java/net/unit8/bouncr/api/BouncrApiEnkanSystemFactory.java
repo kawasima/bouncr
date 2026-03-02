@@ -8,6 +8,7 @@ import enkan.component.eclipselink.EclipseLinkEntityManagerProvider;
 import enkan.component.flyway.FlywayMigration;
 import enkan.component.hikaricp.HikariCPComponent;
 import enkan.component.jackson.JacksonBeansConverter;
+import enkan.component.jedis.JedisProvider;
 import enkan.component.jetty.JettyComponent;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
@@ -19,6 +20,7 @@ import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
+import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
@@ -40,11 +42,18 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
 
     @Override
     public EnkanSystem create() {
+        KvsSettings kvsSettings = new KvsSettings();
+        kvsSettings.setBouncrTokenStoreFactory(deps -> {
+            JedisProvider redis = (JedisProvider) deps.get("redis");
+            return redis.createStore("BOUNCR_TOKEN", java.util.HashMap.class, 1800);
+        });
+
         BouncrConfiguration config = builder(new BouncrConfiguration())
                 .set(BouncrConfiguration::setPasswordPolicy,
                         builder(new PasswordPolicy())
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))
                                 .build())
+                .set(BouncrConfiguration::setKeyValueStoreSettings, kvsSettings)
                 .build();
         GrantBouncrUserRole grantBouncrUserRole = new GrantBouncrUserRole();
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
@@ -80,6 +89,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         .set(EclipseLinkEntityManagerProvider::registerClass, OidcUser.class)
                         .set(EclipseLinkEntityManagerProvider::registerClass, OidcApplication.class)
                         .build(),
+                "redis", new JedisProvider(),
                 "storeprovider", new StoreProvider(),
                 "flake", new Flake(),
                 "jwt", new JsonWebToken(),
@@ -93,7 +103,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         "username", Env.get("JDBC_USER"),
                         "password", Env.get("JDBC_PASSWORD"),
                         "schema", Env.getString("JDBC_SCHEMA", null))),
-                "app", new ApplicationComponent("net.unit8.bouncr.api.BouncrApplicationFactory"),
+                "app", new ApplicationComponent<>("net.unit8.bouncr.api.BouncrApplicationFactory"),
                 "http", builder(new JettyComponent())
                         .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
                         .build()
@@ -101,7 +111,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 component("http").using("app"),
                 component("app").using("config", "storeprovider", "realmCache", "jpa", "jwt",
                         "validator", "converter", "metrics"),
-                component("storeprovider").using("config"),
+                component("storeprovider").using("config", "redis"),
                 component("realmCache").using("jpa"),
                 component("jpa").using("datasource", "flyway"),
                 component("flyway").using("datasource"),

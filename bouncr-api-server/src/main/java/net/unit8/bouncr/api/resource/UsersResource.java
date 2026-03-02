@@ -20,17 +20,16 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.entity.*;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.Subgraph;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Subgraph;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
@@ -48,25 +47,23 @@ public class UsersResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateUserCreateRequest(UserCreateRequest createRequest, RestContext context, EntityManager em) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<UserCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        if (!violations.isEmpty()) {
+            return Problem.fromViolations(violations);
+        }
 
         config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, createRequest.getUserProfiles());
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
-        problem.getViolations().addAll(profileViolations);
 
-        if (problem.getViolations().isEmpty()) {
-            context.putValue(createRequest);
+        if (!profileViolations.isEmpty()) {
+            return Problem.valueOf(400);
         }
 
-        return problem.getViolations().isEmpty() ? null : problem;
+        context.putValue(createRequest);
+        return null;
     }
 
     @Decision(value = MALFORMED, method = "GET")
@@ -76,9 +73,7 @@ public class UsersResource {
         if (violations.isEmpty()) {
             context.putValue(userSearchParam);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
 
     }
 
@@ -110,11 +105,7 @@ public class UsersResource {
         violations.addAll(userProfileService.validateProfileUniqueness(createRequest.getUserProfiles()));
 
         if (!violations.isEmpty()) {
-            Problem problem = builder(Problem.valueOf(409))
-                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
-                    .build();
-            problem.getViolations().addAll(violations);
-            context.setMessage(problem);
+            context.setMessage(Problem.valueOf(409));
         }
         return !violations.isEmpty();
     }
@@ -166,8 +157,8 @@ public class UsersResource {
             userGraph.addSubgraph("groups").addAttributeNodes("name");
         }
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", userGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", userGraph)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

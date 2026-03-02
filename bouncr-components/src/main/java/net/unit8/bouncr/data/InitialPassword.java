@@ -1,6 +1,6 @@
 package net.unit8.bouncr.data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 
 public class InitialPassword implements Serializable {

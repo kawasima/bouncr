@@ -15,13 +15,13 @@ import net.unit8.bouncr.api.boundary.OidcProviderUpdateRequest;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.OidcProvider;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,17 +38,13 @@ public class OidcProviderResource {
     @Inject
     private BeansValidator validator;
 
-    @Decision(value = MALFORMED, method = "POST")
+    @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(OidcProviderUpdateRequest updateRequest, RestContext context) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<OidcProviderUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -97,7 +93,7 @@ public class OidcProviderResource {
         Root<OidcProvider> oidcProviderRoot = query.from(OidcProvider.class);
         query.where(cb.equal(oidcProviderRoot.get("name"), params.get("name")));
         OidcProvider oidcProvider = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (oidcProvider != null) {
             context.putValue(oidcProvider);

@@ -2,8 +2,8 @@ package net.unit8.bouncr.api.boundary;
 
 import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.List;
 

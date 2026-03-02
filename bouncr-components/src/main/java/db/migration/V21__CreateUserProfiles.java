@@ -3,6 +3,7 @@ package db.migration;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
@@ -45,13 +46,13 @@ public class V21__CreateUserProfiles extends BaseJavaMigration {
     }
 
     private void createProfileValues(Connection connection) throws SQLException {
-        DSLContext create = DSL.using(connection);
+        DSLContext create = DSL.using(connection, SQLDialect.H2);
 
         try (Statement stmt = connection.createStatement()) {
             String ddl = create.createTable(table("user_profile_values"))
                     .column(field("user_profile_field_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
-                    .column(field("value", SQLDataType.VARCHAR(255).nullable(false)))
+                    .column(field(name("value"), SQLDataType.VARCHAR(255).nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_profile_field_id"), field("user_id")),
                             constraint().foreignKey(field("user_profile_field_id"))

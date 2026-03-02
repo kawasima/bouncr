@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.component.SystemComponent;
 import enkan.component.jackson.JacksonBeansConverter;
 import enkan.data.DefaultHttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
@@ -21,10 +22,10 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaQuery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ class UserResourceTest {
 
         UserResource sat = new UserResource();
         ComponentInjector injector = new ComponentInjector(
-                Map.of("converter", system.getComponent("converter"),
+                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
                         "validator", system.getComponent("validator"),
                         "config", system.getComponent("config")));
         injector.inject(sat);
@@ -109,7 +110,7 @@ class UserResourceTest {
 
         UserResource sat = new UserResource();
         ComponentInjector injector = new ComponentInjector(
-                Map.of("converter", system.getComponent("converter"),
+                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
                         "validator", system.getComponent("validator"),
                         "config", system.getComponent("config")));
         injector.inject(sat);

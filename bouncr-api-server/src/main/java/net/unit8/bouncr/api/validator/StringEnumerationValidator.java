@@ -2,8 +2,8 @@ package net.unit8.bouncr.api.validator;
 
 import net.unit8.bouncr.api.constraints.StringEnumeration;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;

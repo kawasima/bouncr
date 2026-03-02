@@ -22,18 +22,17 @@ import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.domain.VerificationTargetSet;
 import net.unit8.bouncr.entity.*;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.Subgraph;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Subgraph;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
@@ -54,24 +53,23 @@ public class UserResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        if (!violations.isEmpty()) {
+            return Problem.fromViolations(violations);
+        }
 
         config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, updateRequest.getUserProfiles());
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(updateRequest.getUserProfiles());
-        problem.getViolations().addAll(profileViolations);
 
-        if (problem.getViolations().isEmpty()) {
-            context.putValue(updateRequest);
+        if (!profileViolations.isEmpty()) {
+            return Problem.valueOf(400);
         }
-        return problem.getViolations().isEmpty() ? null : problem;
+
+        context.putValue(updateRequest);
+        return null;
     }
 
     @Decision(AUTHORIZED)
@@ -138,8 +136,8 @@ public class UserResource {
         }
 
         User user = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", userGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", userGraph)
                 .getResultStream().findAny().orElse(null);
 
         if (user != null) {
@@ -163,11 +161,7 @@ public class UserResource {
         UserProfileService userProfileService = new UserProfileService(em);
         Set<Problem.Violation> violations = userProfileService.validateProfileUniqueness(updateRequest.getUserProfiles(), user);
         if (!violations.isEmpty()) {
-            Problem problem = builder(Problem.valueOf(409))
-                    .set(Problem::setType, BouncrProblem.CONFLICT.problemUri())
-                    .build();
-            problem.getViolations().addAll(violations);
-            context.setMessage(problem);
+            context.setMessage(Problem.valueOf(409));
         }
         return !violations.isEmpty();
     }

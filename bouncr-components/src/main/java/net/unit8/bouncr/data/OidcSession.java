@@ -17,6 +17,7 @@ public class OidcSession implements Serializable {
     private String nonce;
     private String state;
     private ResponseType responseType;
+    private String codeVerifier;
 
     public String getNonce() {
         return nonce;
@@ -40,5 +41,13 @@ public class OidcSession implements Serializable {
 
     public void setResponseType(ResponseType responseType) {
         this.responseType = responseType;
+    }
+
+    public String getCodeVerifier() {
+        return codeVerifier;
+    }
+
+    public void setCodeVerifier(String codeVerifier) {
+        this.codeVerifier = codeVerifier;
     }
 }

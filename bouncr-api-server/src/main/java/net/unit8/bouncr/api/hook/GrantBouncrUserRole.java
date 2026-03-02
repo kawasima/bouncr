@@ -7,10 +7,10 @@ import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.hook.Hook;
 
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.util.ArrayList;
 
 public class GrantBouncrUserRole implements Hook<RestContext> {

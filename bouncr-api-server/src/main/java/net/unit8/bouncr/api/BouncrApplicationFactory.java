@@ -78,6 +78,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 ar.all("/sign_in").to(PasswordSignInResource.class);
                 ar.all("/pre_sign_in").to(PreSignInResource.class);
                 ar.all("/sign_in/oidc/:name").to(OidcSignInResource.class);
+                ar.all("/sign_in/oidc_authorization/:name").to(OidcAuthorizationResource.class);
                 ar.all("/sign_up").to(SignUpResource.class);
                 ar.all("/user_profile_verification").to(UserProfileVerificationResource.class);
                 ar.all("/password_credential/reset_code").to(PasswordResetChallengeResource.class);
@@ -125,7 +126,7 @@ public class BouncrApplicationFactory implements ApplicationFactory {
 
         try {
             BouncrBackend bouncrBackend = builder(new BouncrBackend())
-                    .set(BouncrBackend::setKey, "abcdefghijklmnopqrstuvwxyzabcdef")
+                    .set(BouncrBackend::setKey, Env.getString("JWT_SECRET", "abcdefghijklmnopqrstuvwxyzabcdef"))
                     .build();
             app.use(new AuthenticationMiddleware<>(Collections
                     .singletonList(injector.inject(bouncrBackend))));
@@ -134,6 +135,8 @@ public class BouncrApplicationFactory implements ApplicationFactory {
         }
 
         app.use(builder(new ContentNegotiationMiddleware<>())
+                .set(ContentNegotiationMiddleware::setAllowedTypes,
+                        new HashSet<>(Arrays.asList("application/json", "text/html")))
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,
                         new HashSet<>(Arrays.asList("en", "ja")))
                 .build());
@@ -191,4 +194,5 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 .map(String::strip)
                 .collect(Collectors.toSet());
     }
+
 }

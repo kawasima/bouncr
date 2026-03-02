@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 
 public class PasswordResetRequest implements Serializable {

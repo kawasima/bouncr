@@ -9,7 +9,7 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OidcSession;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;

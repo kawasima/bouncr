@@ -11,8 +11,8 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import java.util.Map;
 import java.util.Objects;
 
@@ -61,7 +61,7 @@ public class UserSessionResource {
                 cb.equal(userSessionRoot.get("token"), params.get("token")));
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream()
                 .findAny()
                 .map(s -> { context.putValue(s); return s; })

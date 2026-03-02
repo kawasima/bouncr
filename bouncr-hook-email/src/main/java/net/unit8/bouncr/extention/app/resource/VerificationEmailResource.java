@@ -16,11 +16,11 @@ import net.unit8.bouncr.entity.UserProfileVerification;
 import net.unit8.bouncr.hook.email.config.MailConfig;
 import net.unit8.bouncr.hook.email.service.SendMailService;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -79,8 +79,8 @@ public class VerificationEmailResource {
         userGraph.addAttributeNodes("account", "userProfileValues");
 
         User user = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("javax.persistence.fetchgraph", userGraph)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.fetchgraph", userGraph)
                 .getResultStream().findAny().orElse(null);
 
         if (user != null) {

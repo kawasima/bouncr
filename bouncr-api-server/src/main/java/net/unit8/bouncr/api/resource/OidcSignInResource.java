@@ -19,6 +19,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.jodah.failsafe.Failsafe;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.service.JwksVerifier;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -34,11 +35,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
@@ -53,6 +54,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
 import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
 import static net.unit8.bouncr.entity.ResponseType.ID_TOKEN;
 import static net.unit8.bouncr.entity.ResponseType.TOKEN;
+import static net.unit8.bouncr.entity.TokenEndpointAuthMethod.CLIENT_SECRET_POST;
 
 /**
  * A Callback Endpoint from an OpenID Connect provider.
@@ -68,6 +70,8 @@ public class OidcSignInResource {
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .build();
+
+    private static final JwksVerifier JWKS_VERIFIER = new JwksVerifier(OKHTTP);
 
     @Inject
     private StoreProvider storeProvider;
@@ -93,14 +97,12 @@ public class OidcSignInResource {
             return false;
         }
         OidcProvider oidcProvider = findOidcProvider(params, context, em);
+        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
+        OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
-            String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
-            OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
             // Verify State
             if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.getState())) {
-                context.setMessage(builder(Problem.valueOf(401, "State doesn't match"))
-                        .set(Problem::setType, BouncrProblem.MISMATCH_STATE.problemUri())
-                        .build());
+                context.setMessage(Problem.valueOf(401, "State doesn't match", BouncrProblem.MISMATCH_STATE.problemUri()));
                 return false;
             }
         }
@@ -108,48 +110,77 @@ public class OidcSignInResource {
         oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api");
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
-            FormBody body = new FormBody.Builder()
+            FormBody.Builder bodyBuilder = new FormBody.Builder()
                     .add("grant_type", "authorization_code")
                     .add("code", params.get("code"))
-                    .add("redirect_uri", oidcProviderDto.getRedirectUri())
-                    .build();
-            Response response =  OKHTTP.newCall(new Request.Builder()
-                    .url(oidcProvider.getTokenEndpoint())
-                    .header("Authorization", "Basic " +
-                            Base64.getUrlEncoder().encodeToString((oidcProvider.getClientId() + ":" + oidcProvider.getClientSecret()).getBytes()))
-                    .post(body)
-                    .build())
-                    .execute();
+                    .add("redirect_uri", oidcProviderDto.getRedirectUri());
+
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(oidcProvider.getTokenEndpoint());
+
+            if (oidcProvider.getTokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
+                bodyBuilder.add("client_id", oidcProvider.getClientId())
+                           .add("client_secret", oidcProvider.getClientSecret());
+            } else {
+                requestBuilder.header("Authorization", "Basic " +
+                        Base64.getUrlEncoder().encodeToString(
+                                (oidcProvider.getClientId() + ":" + oidcProvider.getClientSecret()).getBytes()));
+            }
+
+            if (oidcProvider.isPkceEnabled() && oidcSession != null && oidcSession.getCodeVerifier() != null) {
+                bodyBuilder.add("code_verifier", oidcSession.getCodeVerifier());
+            }
+
+            Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute();
             if (response.code() == 503) throw new FalteringEnvironmentException();
 
-            try(InputStream in  = response.body().byteStream()) {
+            try (InputStream in = response.body().byteStream()) {
                 return jsonMapper.readValue(in, GENERAL_JSON_REF);
             }
         });
         String encodedIdToken = (String) res.get("id_token");
         if (encodedIdToken == null) {
-            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
-                    .set(Problem::setType, BouncrProblem.OPENID_PROVIDER_RETURNS_ERROR.problemUri())
-                    .build());
+            context.setMessage(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect"), BouncrProblem.OPENID_PROVIDER_RETURNS_ERROR.problemUri()));
             return false;
         }
+
+        // Verify ID token signature
+        if (!JWKS_VERIFIER.verify(encodedIdToken, oidcProvider)) {
+            context.setMessage(Problem.valueOf(401, "ID token signature verification failed", BouncrProblem.INVALID_ID_TOKEN_SIGNATURE.problemUri()));
+            return false;
+        }
+
         String[] tokens = encodedIdToken.split("\\.", 3);
         JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
         });
 
         // Verify Nonce
-        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
-        OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.getNonce())) {
-            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
-                    .set(Problem::setType, BouncrProblem.MISMATCH_NONCE.problemUri())
-                    .build());
+            context.setMessage(Problem.valueOf(401, "Nonce doesn't match", BouncrProblem.MISMATCH_NONCE.problemUri()));
+            return false;
+        }
+
+        // Verify iss claim
+        if (oidcProvider.getIssuer() != null && !oidcProvider.getIssuer().equals(claim.getIss())) {
+            context.setMessage(Problem.valueOf(401, "ID token issuer doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
+        }
+
+        // Verify aud claim
+        if (claim.getAud() != null && !oidcProvider.getClientId().equals(claim.getAud())) {
+            context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
+        }
+
+        // Verify exp claim
+        if (claim.getExp() != null && claim.getExp() < System.currentTimeMillis() / 1000) {
+            context.setMessage(Problem.valueOf(401, "ID token has expired", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
         }
 
         if (claim.getSub() == null) {
-            context.setMessage(builder(Problem.valueOf(401, Objects.toString(res.get("error"), "Can't authenticate by OpenID Connect")))
-                    .set(Problem::setType, BouncrProblem.MISSING_SUBJECT.problemUri())
-                    .build());
+            context.setMessage(Problem.valueOf(401, "ID token missing subject", BouncrProblem.MISSING_SUBJECT.problemUri()));
+            return false;
         }
         OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
         if (oidcUser == null) {
@@ -158,9 +189,8 @@ public class OidcSignInResource {
         }
 
         if (oidcUser.getUser().getUserLock() != null) {
-            context.setMessage(builder(Problem.valueOf(401, "Account is locked"))
-                    .set(Problem::setType, BouncrProblem.ACCOUNT_IS_LOCKED.problemUri())
-                    .build());
+            context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
+            return false;
         }
         context.putValue(oidcUser.getUser());
         return true;

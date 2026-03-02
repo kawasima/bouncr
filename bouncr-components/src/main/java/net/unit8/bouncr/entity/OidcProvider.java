@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.Locale;
 import java.util.Objects;
@@ -53,6 +53,16 @@ public class OidcProvider implements Serializable {
     @JsonProperty("redirect_uri")
     @Column(name = "redirect_uri")
     private String redirectUri;
+
+    @JsonProperty("jwks_uri")
+    @Column(name = "jwks_uri")
+    private String jwksUri;
+
+    private String issuer;
+
+    @JsonProperty("pkce_enabled")
+    @Column(name = "pkce_enabled")
+    private boolean pkceEnabled;
 
     public Long getId() {
         return id;
@@ -143,6 +153,30 @@ public class OidcProvider implements Serializable {
 
     public void setRedirectUri(String redirectUri) {
         this.redirectUri = redirectUri;
+    }
+
+    public String getJwksUri() {
+        return jwksUri;
+    }
+
+    public void setJwksUri(String jwksUri) {
+        this.jwksUri = jwksUri;
+    }
+
+    public String getIssuer() {
+        return issuer;
+    }
+
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
+    }
+
+    public boolean isPkceEnabled() {
+        return pkceEnabled;
+    }
+
+    public void setPkceEnabled(boolean pkceEnabled) {
+        this.pkceEnabled = pkceEnabled;
     }
 
     @Override

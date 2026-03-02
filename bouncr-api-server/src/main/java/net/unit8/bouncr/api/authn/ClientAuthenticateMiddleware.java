@@ -26,7 +26,7 @@ public class ClientAuthenticateMiddleware<NRES> extends AbstractWebMiddleware<Ht
     }
 
     @Override
-    public HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, ?, ?> chain) {
+    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, NNREQ, NNRES> chain) {
         request = MixinUtils.mixin(request, PrincipalAvailable.class);
         String clientDN = request.getHeaders().get("X-Client-DN");
         if (!isAuthenticated(request) && clientDN != null) {

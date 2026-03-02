@@ -14,13 +14,13 @@ import net.unit8.bouncr.api.boundary.GroupUsersRequest;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,9 +40,7 @@ public class GroupUsersResource {
     @Decision(value = MALFORMED, method = {"POST", "DELETE"})
     public Problem vaidateCreateRequest(GroupUsersRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return null;
     }
@@ -74,7 +72,7 @@ public class GroupUsersResource {
         query.where(cb.equal(groupRoot.get("name"), params.get("name")));
 
         Group group = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (group != null) {
             context.putValue(group);
@@ -91,7 +89,7 @@ public class GroupUsersResource {
         query.where(cb.equal(groupsJoin.get("id"), group.getId()));
         query.orderBy(cb.asc(userRoot.get("id")));
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
     }
 
@@ -102,7 +100,7 @@ public class GroupUsersResource {
         Root<User> userRoot = query.from(User.class);
         query.where(userRoot.get("account").in(createRequest));
         List<User> users = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);
@@ -123,7 +121,7 @@ public class GroupUsersResource {
         Root<User> userRoot = query.from(User.class);
         query.where(userRoot.get("account").in(createRequest));
         List<User> users = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);

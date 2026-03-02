@@ -17,11 +17,11 @@ import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Permission;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -38,14 +38,10 @@ public class PermissionsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validatePermissionCreateRequest(PermissionCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<PermissionCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(value = MALFORMED, method = "GET")
@@ -55,9 +51,7 @@ public class PermissionsResource {
         if (violations.isEmpty()) {
             context.putValue(converter.createFrom(permissionSearchParams, PermissionSearchParams.class));
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -118,7 +112,7 @@ public class PermissionsResource {
         query.orderBy(cb.asc(permissionRoot.get("id")));
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

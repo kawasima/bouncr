@@ -18,11 +18,11 @@ import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -39,17 +39,13 @@ public class RealmsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateRealmCreateRequest(RealmCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<RealmCreateRequest>> violations = validator.validate(createRequest);
         if (violations.isEmpty()) {
             context.putValue(converter.createFrom(createRequest, Realm.class));
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(value = MALFORMED, method = "GET")
@@ -59,9 +55,7 @@ public class RealmsResource {
         if (violations.isEmpty()) {
             context.putValue(converter.createFrom(applicationSearchParams, RealmSearchParams.class));
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -100,7 +94,7 @@ public class RealmsResource {
         query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
 
         Application application = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (application != null) {
             context.putValue(application);
@@ -140,7 +134,7 @@ public class RealmsResource {
 
 
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .setFirstResult(params.getOffset())
                 .setMaxResults(params.getLimit())
                 .getResultList();

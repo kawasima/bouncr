@@ -15,13 +15,13 @@ import net.unit8.bouncr.api.boundary.OidcApplicationUpdateRequest;
 import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.OidcApplication;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -40,14 +40,10 @@ public class OidcApplicationResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateUpdateRequest(OidcApplicationUpdateRequest updateRequest, RestContext context) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<OidcApplicationUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -92,7 +88,7 @@ public class OidcApplicationResource {
         Root<OidcApplication> oidcApplicationRoot = query.from(OidcApplication.class);
         query.where(cb.equal(oidcApplicationRoot.get("name"), params.get("name")));
         OidcApplication oidcApplication = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (oidcApplication != null) {
             context.putValue(oidcApplication);

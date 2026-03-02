@@ -7,11 +7,11 @@ import enkan.exception.MisconfigurationException;
 import net.unit8.bouncr.entity.Application;
 import net.unit8.bouncr.entity.Realm;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;

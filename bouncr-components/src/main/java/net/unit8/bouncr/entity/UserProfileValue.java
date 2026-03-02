@@ -2,10 +2,11 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity
+@IdClass(UserProfileValueId.class)
 @Table(name = "user_profile_values")
 public class UserProfileValue implements Serializable {
     @Id
@@ -18,6 +19,7 @@ public class UserProfileValue implements Serializable {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+    @Column(name = "\"value\"")
     private String value;
 
     public UserProfileField getUserProfileField() {

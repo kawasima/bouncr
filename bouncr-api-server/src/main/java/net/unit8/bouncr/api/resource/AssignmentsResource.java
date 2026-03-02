@@ -17,11 +17,11 @@ import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.Realm;
 import net.unit8.bouncr.entity.Role;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -161,9 +161,7 @@ public class AssignmentsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateForPost(AssignmentsRequest assignmentsRequest, RestContext context, EntityManager em) {
         if (assignmentsRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return validateInner((group, role, realm) -> builder(new Assignment())
                 .set(Assignment::setGroup, group)
@@ -176,9 +174,7 @@ public class AssignmentsResource {
     @Decision(value = MALFORMED, method = "DELETE")
     public Problem validateForDelete(AssignmentsRequest assignmentsRequest, RestContext context, EntityManager em) {
         if (assignmentsRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return validateInner((group, role, realm) -> findAssignment(group, role, realm, em),
                 assignmentsRequest, context, em);

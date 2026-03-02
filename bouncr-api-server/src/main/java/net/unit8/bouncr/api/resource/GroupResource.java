@@ -20,11 +20,11 @@ import net.unit8.bouncr.api.service.UniquenessCheckService;
 import net.unit8.bouncr.entity.Group;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
+import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
 import static enkan.util.BeanBuilder.builder;
@@ -42,17 +42,13 @@ public class GroupResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem vaidateCreateRequest(GroupCreateRequest updateRequest, RestContext context) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<GroupCreateRequest>> violations = validator.validate(updateRequest);
         if (violations.isEmpty()) {
             context.putValue(updateRequest);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(AUTHORIZED)
@@ -128,7 +124,7 @@ public class GroupResource {
         }
 
         Group group = em.createQuery(query)
-                .setHint("javax.persistence.fetchgraph", groupGraph)
+                .setHint("jakarta.persistence.fetchgraph", groupGraph)
                 .getResultStream().findAny().orElse(null);
         if (group != null) {
             context.putValue(group);

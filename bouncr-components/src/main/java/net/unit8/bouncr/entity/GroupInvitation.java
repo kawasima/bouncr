@@ -1,6 +1,6 @@
 package net.unit8.bouncr.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;

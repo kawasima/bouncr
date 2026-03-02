@@ -20,13 +20,13 @@ import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -48,15 +48,11 @@ public class PasswordCredentialResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreateRequest(PasswordCredentialCreateRequest createRequest, RestContext context, EntityManager em) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
         Set<ConstraintViolation<PasswordCredentialCreateRequest>> violations = validator.validate(createRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        Problem problem = Problem.fromViolations(violations);
         Optional.ofNullable(passwordPolicyService.validateCreatePassword(createRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
 
@@ -69,15 +65,11 @@ public class PasswordCredentialResource {
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdateRequest(PasswordCredentialUpdateRequest updateRequest, RestContext context, EntityManager em) {
         if (updateRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         PasswordPolicyService passwordPolicyService = new PasswordPolicyService(config.getPasswordPolicy(), em);
         Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(updateRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        Problem problem = Problem.fromViolations(violations);
         Optional.ofNullable(passwordPolicyService.validateUpdatePassword(updateRequest))
                 .ifPresent(violation -> problem.getViolations().add(violation));
 
@@ -90,14 +82,10 @@ public class PasswordCredentialResource {
     @Decision(value = MALFORMED, method = "DELETE")
     public Problem validateDeleteRequest(PasswordCredentialUpdateRequest deleteRequest, RestContext context, EntityManager em) {
         if (deleteRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<PasswordCredentialUpdateRequest>> violations = validator.validate(deleteRequest);
-        Problem problem = builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        Problem problem = Problem.fromViolations(violations);
 
         if (problem.getViolations().isEmpty()) {
             context.putValue(deleteRequest);
@@ -160,7 +148,7 @@ public class PasswordCredentialResource {
                 .filter(user -> user.getPasswordCredential() != null)
                 .filter(user ->
                         Arrays.equals(user.getPasswordCredential().getPassword(),
-                                PasswordUtils.pbkdf2(updateRequest.getOldPassword(), user.getPasswordCredential().getSalt(), 100))
+                                PasswordUtils.pbkdf2(updateRequest.getOldPassword(), user.getPasswordCredential().getSalt(), 600_000))
                 )
                 .isPresent();
     }
@@ -177,7 +165,7 @@ public class PasswordCredentialResource {
                 .set(PasswordCredential::setUser, user)
                 .set(PasswordCredential::setSalt, salt)
                 .set(PasswordCredential::setInitial, createRequest.isInitial())
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(createRequest.getPassword(), salt, 100))
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(createRequest.getPassword(), salt, 600_000))
                 .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
                 .build();
 
@@ -210,7 +198,7 @@ public class PasswordCredentialResource {
         EntityTransactionManager tx = new EntityTransactionManager(em);
         tx.required(() -> {
             passwordCredential.setSalt(salt);
-            passwordCredential.setPassword(PasswordUtils.pbkdf2(updateRequest.getNewPassword(), salt, 100));
+            passwordCredential.setPassword(PasswordUtils.pbkdf2(updateRequest.getNewPassword(), salt, 600_000));
             passwordCredential.setInitial(false);
             passwordCredential.setCreatedAt(LocalDateTime.now());
             em.merge(passwordCredential);
@@ -237,7 +225,7 @@ public class PasswordCredentialResource {
         CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
         Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);
         Join<User, PasswordCredential> userRoot = passwordCredentialRoot.join("user");
-        query.where(cb.equal(userRoot.get("name"), principal.getName()));
+        query.where(cb.equal(userRoot.get("account"), principal.getName()));
         EntityTransactionManager tx = new EntityTransactionManager(em);
         em.createQuery(query)
                 .getResultStream()

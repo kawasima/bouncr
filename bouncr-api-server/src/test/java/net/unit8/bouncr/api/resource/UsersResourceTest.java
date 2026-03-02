@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.component.SystemComponent;
 import enkan.component.jackson.JacksonBeansConverter;
 import enkan.data.DefaultHttpRequest;
 import enkan.data.HttpRequest;
@@ -21,11 +22,11 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.EntityGraph;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.util.Map;
 import java.util.Set;
 
@@ -92,7 +93,7 @@ class UsersResourceTest {
     void post() {
         UsersResource resource = new UsersResource();
         ComponentInjector injector = new ComponentInjector(
-                Map.of("converter", system.getComponent("converter"),
+                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
                         "config", system.getComponent("config")));
         injector.inject(resource);
         HttpRequest request = builder(new DefaultHttpRequest())
@@ -111,7 +112,7 @@ class UsersResourceTest {
     @Test
     void validate() {
         ComponentInjector injector = new ComponentInjector(
-                Map.of("converter", system.getComponent("converter"),
+                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
                         "validator", system.getComponent("validator"),
                         "config", system.getComponent("config")));
         UsersResource resource = injector.inject(new UsersResource());

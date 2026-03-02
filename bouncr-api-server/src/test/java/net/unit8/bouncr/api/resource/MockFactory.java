@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
-import javax.persistence.*;
-import javax.persistence.criteria.*;
+import jakarta.persistence.*;
+import jakarta.persistence.criteria.*;
 
 import java.util.Arrays;
 import java.util.List;

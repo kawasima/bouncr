@@ -10,11 +10,10 @@ import net.unit8.bouncr.hook.Hook;
 import net.unit8.bouncr.hook.license.entity.LicenseLastActivity;
 import net.unit8.bouncr.hook.license.entity.UserLicense;
 
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import java.net.URI;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +21,6 @@ import java.util.Optional;
 import static enkan.util.BeanBuilder.builder;
 
 public class LicenseCheckHook implements Hook<RestContext> {
-    private static final URI EXCEED_LICENSING_DEVICES = URI.create("/bouncr/problem/EXCEED_LICENSING_DEVICES");
     private LicenseConfig config;
 
     public LicenseCheckHook(LicenseConfig config) {
@@ -60,10 +58,7 @@ public class LicenseCheckHook implements Hook<RestContext> {
                     .orElse(null);
             if (userLicense == null
                     && licenses.size() >= config.getNumOfDevicesPerUser()) {
-                Problem problem = builder(Problem.valueOf(403))
-                        .set(Problem::setType, EXCEED_LICENSING_DEVICES)
-                        .build();
-                context.setMessage(problem);
+                context.setMessage(Problem.valueOf(403));
             } else {
                 if (userLicense != null) {
                     final LicenseLastActivity lastActivity = findLastActivity(em, userLicense);

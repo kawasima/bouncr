@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.*;
 
-public class Flake extends SystemComponent {
+public class Flake extends SystemComponent<Flake> {
     private Clock clock;
     private int sequence;
     private long lastTime;
@@ -58,7 +58,7 @@ public class Flake extends SystemComponent {
     }
 
     @Override
-    protected ComponentLifecycle lifecycle() {
+    protected ComponentLifecycle<Flake> lifecycle() {
         return new ComponentLifecycle<Flake>() {
             @Override
             public void start(Flake component) {

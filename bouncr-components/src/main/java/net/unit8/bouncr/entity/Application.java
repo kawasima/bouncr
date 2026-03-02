@@ -3,7 +3,7 @@ package net.unit8.bouncr.entity;
 import com.fasterxml.jackson.annotation.*;
 import net.unit8.bouncr.json.IndirectListFilter;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.List;

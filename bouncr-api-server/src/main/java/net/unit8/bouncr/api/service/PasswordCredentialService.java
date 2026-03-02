@@ -7,7 +7,7 @@ import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 import java.time.LocalDateTime;
 
@@ -28,7 +28,7 @@ public class PasswordCredentialService {
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
         passwordCredential = builder(new PasswordCredential())
                 .set(PasswordCredential::setUser, user)
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
                 .set(PasswordCredential::setSalt, salt)
                 .set(PasswordCredential::setInitial, false)
                 .build();
@@ -42,7 +42,7 @@ public class PasswordCredentialService {
         if (user.getPasswordCredential() == null) {
             PasswordCredential passwordCredential = builder(new PasswordCredential())
                     .set(PasswordCredential::setUser, user)
-                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
                     .set(PasswordCredential::setSalt, salt)
                     .set(PasswordCredential::setInitial, true)
                     .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
@@ -51,7 +51,7 @@ public class PasswordCredentialService {
             em.persist(passwordCredential);
         } else {
             builder(user.getPasswordCredential())
-                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 100))
+                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
                     .set(PasswordCredential::setSalt, salt)
                     .set(PasswordCredential::setInitial, true)
                     .set(PasswordCredential::setCreatedAt, LocalDateTime.now())

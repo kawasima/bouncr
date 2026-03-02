@@ -2,7 +2,7 @@ package net.unit8.bouncr.hook.license.entity;
 
 import net.unit8.bouncr.entity.User;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 
 @Entity

@@ -9,7 +9,7 @@ import net.unit8.bouncr.hook.Hook;
 import net.unit8.bouncr.hook.license.entity.LicenseLastActivity;
 import net.unit8.bouncr.hook.license.entity.UserLicense;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;

@@ -15,12 +15,12 @@ import net.unit8.bouncr.entity.PasswordResetChallenge;
 import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.RandomUtils;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import javax.validation.ConstraintViolation;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+import jakarta.validation.ConstraintViolation;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -47,18 +47,14 @@ public class PasswordResetChallengeResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(PasswordResetChallengeCreateRequest createRequest, RestContext context) {
         if (createRequest == null) {
-            return builder(Problem.valueOf(400, "request is empty"))
-                    .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                    .build();
+            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         Set<ConstraintViolation<PasswordResetChallengeCreateRequest>> violations = validator.validate(createRequest);
         if (violations.isEmpty()) {
             context.putValue(createRequest);
             config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
         }
-        return violations.isEmpty() ? null : builder(Problem.fromViolations(violations))
-                .set(Problem::setType, BouncrProblem.MALFORMED.problemUri())
-                .build();
+        return violations.isEmpty() ? null : Problem.fromViolations(violations);
     }
 
     @Decision(PROCESSABLE)
@@ -79,9 +75,7 @@ public class PasswordResetChallengeResource {
 
     @Decision(HANDLE_UNPROCESSABLE_ENTITY)
     public Problem unprocessable() {
-        return builder(Problem.valueOf(422, "Account not found"))
-                .set(Problem::setType, BouncrProblem.UNPROCESSABLE.problemUri())
-                .build();
+        return Problem.valueOf(422, "Account not found", BouncrProblem.UNPROCESSABLE.problemUri());
     }
 
     /**

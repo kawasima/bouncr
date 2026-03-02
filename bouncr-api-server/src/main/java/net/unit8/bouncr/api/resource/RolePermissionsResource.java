@@ -13,13 +13,13 @@ import net.unit8.bouncr.entity.Permission;
 import net.unit8.bouncr.entity.Role;
 import net.unit8.bouncr.entity.User;
 
-import javax.inject.Inject;
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
+import jakarta.inject.Inject;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -62,7 +62,7 @@ public class RolePermissionsResource {
         query.where(cb.equal(roleRoot.get("name"), params.get("name")));
 
         Role role = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultStream().findAny().orElse(null);
         if (role != null) {
             context.putValue(role);
@@ -79,7 +79,7 @@ public class RolePermissionsResource {
         query.where(cb.equal(rolesJoin.get("id"), role.getId()));
         query.orderBy(cb.asc(userRoot.get("id")));
         return em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
     }
 
@@ -90,7 +90,7 @@ public class RolePermissionsResource {
         Root<Permission> permissionRoot = query.from(Permission.class);
         query.where(permissionRoot.get("name").in(createRequest));
         List<Permission> permissions = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);
@@ -111,7 +111,7 @@ public class RolePermissionsResource {
         Root<Permission> permissionRoot = query.from(Permission.class);
         query.where(permissionRoot.get("name").in(deleteRequest));
         List<Permission> permissions = em.createQuery(query)
-                .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                 .getResultList();
 
         EntityTransactionManager tx = new EntityTransactionManager(em);

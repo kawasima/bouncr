@@ -6,8 +6,8 @@ import net.unit8.bouncr.entity.ResponseType;
 import net.unit8.bouncr.entity.TokenEndpointAuthMethod;
 import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.io.Serializable;
 
 public class OidcProviderCreateRequest implements Serializable {
@@ -54,6 +54,16 @@ public class OidcProviderCreateRequest implements Serializable {
     @Length(max = 255)
     @JsonProperty("redirect_uri")
     private String redirectUri;
+
+    @Length(max = 512)
+    @JsonProperty("jwks_uri")
+    private String jwksUri;
+
+    @Length(max = 512)
+    private String issuer;
+
+    @JsonProperty("pkce_enabled")
+    private boolean pkceEnabled;
 
     public String getName() {
         return name;
@@ -125,5 +135,29 @@ public class OidcProviderCreateRequest implements Serializable {
 
     public void setRedirectUri(String redirectUri) {
         this.redirectUri = redirectUri;
+    }
+
+    public String getJwksUri() {
+        return jwksUri;
+    }
+
+    public void setJwksUri(String jwksUri) {
+        this.jwksUri = jwksUri;
+    }
+
+    public String getIssuer() {
+        return issuer;
+    }
+
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
+    }
+
+    public boolean isPkceEnabled() {
+        return pkceEnabled;
+    }
+
+    public void setPkceEnabled(boolean pkceEnabled) {
+        this.pkceEnabled = pkceEnabled;
     }
 }

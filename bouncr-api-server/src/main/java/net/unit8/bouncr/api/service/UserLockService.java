@@ -6,11 +6,11 @@ import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.entity.UserAction;
 import net.unit8.bouncr.entity.UserLock;
 
-import javax.persistence.CacheStoreMode;
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.CacheStoreMode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,11 +36,16 @@ public class UserLockService {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
             Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
-            userActionCriteria.where(userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN, PASSWORD_CHANGED));
+            userActionCriteria.where(
+                    cb.and(
+                            cb.equal(userActionRoot.get("user"), user),
+                            userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN, PASSWORD_CHANGED)
+                    )
+            );
             userActionCriteria.orderBy(cb.desc(userActionRoot.get("createdAt")));
 
             List<UserAction> recentActions = em.createQuery(userActionCriteria)
-                    .setHint("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH)
+                    .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
                     .setMaxResults(config.getPasswordPolicy().getNumOfTrialsUntilLock())
                     .getResultList();
             if (recentActions.size() == config.getPasswordPolicy().getNumOfTrialsUntilLock() &&
