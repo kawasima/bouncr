@@ -30,7 +30,6 @@ import jakarta.persistence.criteria.*;
 import jakarta.validation.ConstraintViolation;
 import java.util.*;
 
-import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 

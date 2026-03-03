@@ -2,7 +2,7 @@ package net.unit8.bouncr;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -12,7 +12,7 @@ public class JacksonTest {
 
     @Test
     public void test() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
+        JsonMapper mapper = JsonMapper.builder().build();
         User u = mapper.readValue("{\"name\":\"kawasima\", \"email\":\"hoge\"}", User.class);
         System.out.println(u);
     }
@@ -41,12 +41,8 @@ public class JacksonTest {
 
         @Override
         public String toString() {
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                return mapper.writeValueAsString(this);
-            } catch(Exception e) {
-                throw new RuntimeException(e);
-            }
+            JsonMapper mapper = JsonMapper.builder().build();
+            return mapper.writeValueAsString(this);
         }
     }
 }

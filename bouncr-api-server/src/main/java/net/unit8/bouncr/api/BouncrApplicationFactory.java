@@ -2,6 +2,8 @@ package net.unit8.bouncr.api;
 
 import enkan.Application;
 import enkan.Env;
+import enkan.data.HttpRequest;
+import enkan.data.HttpResponse;
 import enkan.application.WebApplication;
 import enkan.config.ApplicationFactory;
 import enkan.endpoint.ResourceEndpoint;
@@ -39,9 +41,9 @@ import static enkan.util.Predicates.*;
  *
  * @author kawasima
  */
-public class BouncrApplicationFactory implements ApplicationFactory {
+public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest, HttpResponse> {
     @Override
-    public Application create(ComponentInjector injector) {
+    public Application<HttpRequest, HttpResponse> create(ComponentInjector injector) {
         WebApplication app = new WebApplication();
 
         // Routing
@@ -106,16 +108,16 @@ public class BouncrApplicationFactory implements ApplicationFactory {
                 new ActionRecordInjector()
         );
         // Enkan
-        app.use(new DefaultCharsetMiddleware<>());
+        app.use(new DefaultCharsetMiddleware());
         app.use(new MetricsMiddleware<>());
         app.use(NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
-        app.use(new ContentTypeMiddleware<>());
-        app.use(new ParamsMiddleware<>());
-        app.use(new MultipartParamsMiddleware<>());
-        app.use(new NestedParamsMiddleware<>());
-        app.use(new CookiesMiddleware<>());
-        app.use(builder(new CorsMiddleware<>())
+        app.use(new ContentTypeMiddleware());
+        app.use(new ParamsMiddleware());
+        app.use(new MultipartParamsMiddleware());
+        app.use(new NestedParamsMiddleware());
+        app.use(new CookiesMiddleware());
+        app.use(builder(new CorsMiddleware())
                 .set(CorsMiddleware::setHeaders, new HashSet<>(Arrays.asList(
                         "Origin", "Accept", "X-Requested-With", "Content-Type",
                         "Access-Control-Request-Method", "Access-Control-Request-Headers",
@@ -134,19 +136,19 @@ public class BouncrApplicationFactory implements ApplicationFactory {
             throw new RuntimeException(ioe);
         }
 
-        app.use(builder(new ContentNegotiationMiddleware<>())
+        app.use(builder(new ContentNegotiationMiddleware())
                 .set(ContentNegotiationMiddleware::setAllowedTypes,
                         new HashSet<>(Arrays.asList("application/json", "text/html")))
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,
                         new HashSet<>(Arrays.asList("en", "ja")))
                 .build());
         // Kotowari
-        app.use(builder(new ResourceMiddleware<>())
+        app.use(builder(new ResourceMiddleware())
                 .set(ResourceMiddleware::setUriPrefix, (String) null)
                 .build());
-        app.use(new RoutingMiddleware<>(routes));
+        app.use(new RoutingMiddleware(routes));
         app.use(new EntityManagerMiddleware<>());
-        app.use(new ActionLoggingMiddleware<>());
+        app.use(new ActionLoggingMiddleware());
         app.use(new SerDesMiddleware<>());
 
         boolean outputErrorReason = Objects.equals(Env.getString("enkan.env", "development"), "development");

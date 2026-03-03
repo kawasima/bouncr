@@ -1,8 +1,6 @@
 package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
@@ -25,7 +23,6 @@ public class Cert implements Serializable {
     private BigInteger serial;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    @JsonSerialize(using = LocalDateSerializer.class)
     private LocalDate expires;
 
     public Long getId() {

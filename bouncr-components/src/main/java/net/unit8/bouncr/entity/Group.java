@@ -1,14 +1,11 @@
 package net.unit8.bouncr.entity;
 
-import am.ik.yavi.core.Validated;
 import com.fasterxml.jackson.annotation.*;
 import net.unit8.bouncr.json.IndirectListFilter;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.*;
-
-import static am.ik.yavi.fn.Validations.combine;
 
 /**
  * The entity of groups.

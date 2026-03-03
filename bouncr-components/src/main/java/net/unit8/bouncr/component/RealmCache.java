@@ -11,19 +11,18 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class RealmCache extends SystemComponent<RealmCache> {
     @Inject
-    private EntityManagerProvider entityManagerProvider;
+    private EntityManagerProvider<?> entityManagerProvider;
     private List<Realm> cache;
     private List<Application> applications;
 
     @Override
-    protected ComponentLifecycle lifecycle() {
+    protected ComponentLifecycle<RealmCache> lifecycle() {
         return new ComponentLifecycle<RealmCache>() {
             @Override
             public void start(RealmCache realmCache) {
@@ -65,7 +64,7 @@ public class RealmCache extends SystemComponent<RealmCache> {
         applications = em.createQuery(query).getResultList();
 
         CriteriaQuery<Realm> realmQuery = builder.createQuery(Realm.class);
-        Root<Realm> realmRoot = realmQuery.from(Realm.class);
+        realmQuery.from(Realm.class);
         cache = em.createQuery(realmQuery).getResultList()
                 .stream()
                 .map(realm -> {

@@ -85,7 +85,7 @@ public class CertificateProvider extends SystemComponent<CertificateProvider> {
 
 
     @Override
-    protected ComponentLifecycle lifecycle() {
+    protected ComponentLifecycle<CertificateProvider> lifecycle() {
         return new ComponentLifecycle<CertificateProvider>() {
             @Override
             public void start(CertificateProvider component) {

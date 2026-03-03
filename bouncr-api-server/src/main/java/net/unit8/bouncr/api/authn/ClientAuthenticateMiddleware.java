@@ -5,7 +5,7 @@ import enkan.annotation.Middleware;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.data.PrincipalAvailable;
-import enkan.middleware.AbstractWebMiddleware;
+import enkan.middleware.WebMiddleware;
 import enkan.util.MixinUtils;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -20,13 +20,13 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
  * @author kawasima
  */
 @Middleware(name = "ClientAuthenticate", dependencies = {"authenticate"})
-public class ClientAuthenticateMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
+public class ClientAuthenticateMiddleware implements WebMiddleware {
     private boolean isAuthenticated(PrincipalAvailable request) {
         return request.getPrincipal() != null;
     }
 
     @Override
-    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, NNREQ, NNRES> chain) {
+    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, HttpResponse, NNREQ, NNRES> chain) {
         request = MixinUtils.mixin(request, PrincipalAvailable.class);
         String clientDN = request.getHeaders().get("X-Client-DN");
         if (!isAuthenticated(request) && clientDN != null) {
@@ -34,6 +34,6 @@ public class ClientAuthenticateMiddleware<NRES> extends AbstractWebMiddleware<Ht
             String account = IETFUtils.valueToString(cn.getFirst().getValue());
 
         }
-        return castToHttpResponse(chain.next(request));
+        return chain.next(request);
     }
 }

@@ -1,6 +1,6 @@
 package net.unit8.bouncr.entity;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.eclipse.persistence.indirection.IndirectList;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class UserTest {
     @Test
     void cyclicSerialize() {
-        ObjectMapper mapper = new ObjectMapper();
+        JsonMapper mapper = JsonMapper.builder().build();
         User user = builder(new User())
                 .set(User::setId, 1L)
                 .set(User::setAccount, "test")

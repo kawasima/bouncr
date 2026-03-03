@@ -3,8 +3,8 @@ package net.unit8.bouncr.component;
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
-import net.jodah.failsafe.CircuitBreaker;
-import net.jodah.failsafe.RetryPolicy;
+import dev.failsafe.CircuitBreaker;
+import dev.failsafe.RetryPolicy;
 import net.unit8.bouncr.component.config.*;
 import net.unit8.bouncr.hook.HookRepository;
 
@@ -19,7 +19,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 
 public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private Clock clock = Clock.systemDefaultZone();
@@ -41,17 +40,20 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     );
     private OidcConfiguration oidcConfiguration = new OidcConfiguration();
 
-    private RetryPolicy httpClientRetryPolicy = new RetryPolicy<>()
+    private RetryPolicy<Object> httpClientRetryPolicy = RetryPolicy.builder()
             .handle(SocketTimeoutException.class)
-            .withBackoff(3, 10, ChronoUnit.SECONDS);
-    private CircuitBreaker ldapClientCircuitBreaker = new CircuitBreaker<>()
+            .withBackoff(3, 10, ChronoUnit.SECONDS)
+            .build();
+    private CircuitBreaker<Object> ldapClientCircuitBreaker = CircuitBreaker.builder()
             .withFailureThreshold(5)
             .withSuccessThreshold(3)
             .withDelay(Duration.ofSeconds(5))
-            .handle(NamingException.class);
-    private RetryPolicy ldapRetryPolicy = new RetryPolicy<>()
+            .handle(NamingException.class)
+            .build();
+    private RetryPolicy<Object> ldapRetryPolicy = RetryPolicy.builder()
             .handle(CommunicationException.class)
-            .withBackoff(3, 10, ChronoUnit.SECONDS);
+            .withBackoff(3, 10, ChronoUnit.SECONDS)
+            .build();
 
     private HookRepository hookRepo = new HookRepository();
 
@@ -160,27 +162,27 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
         this.verificationPolicy = verificationPolicy;
     }
 
-    public RetryPolicy<Map<String, Object>> getHttpClientRetryPolicy() {
+    public RetryPolicy<Object> getHttpClientRetryPolicy() {
         return httpClientRetryPolicy;
     }
 
-    public void setHttpClientRetryPolicy(RetryPolicy httpClientRetryPolicy) {
+    public void setHttpClientRetryPolicy(RetryPolicy<Object> httpClientRetryPolicy) {
         this.httpClientRetryPolicy = httpClientRetryPolicy;
     }
 
-    public CircuitBreaker getLdapClientCircuitBreaker() {
+    public CircuitBreaker<Object> getLdapClientCircuitBreaker() {
         return ldapClientCircuitBreaker;
     }
 
-    public void setLdapClientCircuitBreaker(CircuitBreaker ldapClientCircuitBreaker) {
+    public void setLdapClientCircuitBreaker(CircuitBreaker<Object> ldapClientCircuitBreaker) {
         this.ldapClientCircuitBreaker = ldapClientCircuitBreaker;
     }
 
-    public RetryPolicy getLdapRetryPolicy() {
+    public RetryPolicy<Object> getLdapRetryPolicy() {
         return ldapRetryPolicy;
     }
 
-    public void setLdapRetryPolicy(RetryPolicy ldapRetryPolicy) {
+    public void setLdapRetryPolicy(RetryPolicy<Object> ldapRetryPolicy) {
         this.ldapRetryPolicy = ldapRetryPolicy;
     }
 

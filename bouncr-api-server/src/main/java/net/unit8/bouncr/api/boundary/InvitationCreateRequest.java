@@ -10,6 +10,22 @@ public class InvitationCreateRequest implements Serializable {
 
     private List<IdObject> groups;
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public List<IdObject> getGroups() {
+        return groups;
+    }
+
+    public void setGroups(List<IdObject> groups) {
+        this.groups = groups;
+    }
+
     public static class IdObject implements Serializable {
         private Long id;
 

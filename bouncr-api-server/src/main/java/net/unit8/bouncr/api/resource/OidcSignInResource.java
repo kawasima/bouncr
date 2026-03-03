@@ -1,8 +1,8 @@
 package net.unit8.bouncr.api.resource;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import enkan.collection.Headers;
 import enkan.collection.Parameters;
 import enkan.component.BeansConverter;
@@ -16,7 +16,7 @@ import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.jodah.failsafe.Failsafe;
+import dev.failsafe.Failsafe;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.service.JwksVerifier;
@@ -85,7 +85,7 @@ public class OidcSignInResource {
     @Inject
     private JsonWebToken jsonWebToken;
 
-    private ObjectMapper jsonMapper = new ObjectMapper();
+    private JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Decision(AUTHORIZED)
     public boolean authenticate(HttpRequest request,

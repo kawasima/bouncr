@@ -21,7 +21,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="border-b border-gold-muted bg-background/80 backdrop-blur-sm">
+    <header className="border-b border-gold-muted bg-background/90 backdrop-blur-sm shadow-[0_1px_8px_oklch(0.62_0.1_75_/_8%)]">
       <div className="container mx-auto flex h-16 items-center justify-between px-6">
         <Link
           to={ROUTES.HOME}

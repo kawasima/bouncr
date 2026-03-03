@@ -2,8 +2,6 @@ package net.unit8.bouncr.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
@@ -31,7 +29,6 @@ public class UserAction implements Serializable {
 
     @JsonProperty("created_at")
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    @JsonSerialize(using = LocalDateTimeSerializer.class)
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -1,8 +1,8 @@
 package net.unit8.bouncr.hook;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import tools.jackson.databind.json.JsonMapper;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import okhttp3.*;
 
 import java.net.SocketTimeoutException;
@@ -10,28 +10,23 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.stream.Stream;
 
 public class WebHook<T> implements Hook<T> {
     private static final OkHttpClient client = new OkHttpClient();
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final JsonMapper mapper = JsonMapper.builder().build();
     private static final MediaType JSON = MediaType.parse("application/json");
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
 
-    private RetryPolicy idempotent = new RetryPolicy<>()
+    private RetryPolicy<Response> idempotent = RetryPolicy.<Response>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .handle(SocketTimeoutException.class)
-            .handleIf(res -> Stream.of(res)
-                    .map(Response.class::cast)
-                    .map(Response::code)
-                    .anyMatch(code -> code >= 500));
+            .handleResultIf(res -> res.code() >= 500)
+            .build();
 
-    private RetryPolicy notIdempotent = new RetryPolicy<>()
+    private RetryPolicy<Response> notIdempotent = RetryPolicy.<Response>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
-            .handleIf(res -> Stream.of(res)
-                    .map(Response.class::cast)
-                    .map(Response::code)
-                    .anyMatch(code -> code >= 500));
+            .handleResultIf(res -> res.code() >= 500)
+            .build();
 
     private final String method;
     private final String url;
@@ -50,14 +45,14 @@ public class WebHook<T> implements Hook<T> {
 
     @Override
     public void run(T object) {
-        RetryPolicy retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
+        RetryPolicy<Response> retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
         Failsafe.with(retryPolicy)
                 .with(executor)
                 .onSuccess(response -> {
 
                 })
                 .get(() -> {
-                    RequestBody body = RequestBody.create(JSON, mapper.writeValueAsString(object));
+                    RequestBody body = RequestBody.create(mapper.writeValueAsString(object), JSON);
                     Request.Builder requestBuilder;
                     requestBuilder = new Request.Builder()
                             .url(url)

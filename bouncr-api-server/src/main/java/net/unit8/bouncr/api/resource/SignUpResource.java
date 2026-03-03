@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import enkan.component.BeansConverter;
 import enkan.util.BeanBuilder;
 import enkan.util.jpa.EntityTransactionManager;

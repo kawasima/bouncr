@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import net.unit8.bouncr.entity.OidcProvider;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -52,7 +52,7 @@ public class JwksVerifier {
 
     private final ConcurrentHashMap<Long, CachedJwks> cache = new ConcurrentHashMap<>();
     private final OkHttpClient httpClient;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     public JwksVerifier(OkHttpClient httpClient) {
         this.httpClient = httpClient;

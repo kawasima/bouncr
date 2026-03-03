@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import enkan.collection.Parameters;
 import kotowari.restful.Decision;
 import kotowari.restful.data.RestContext;

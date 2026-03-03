@@ -5,7 +5,7 @@ import enkan.annotation.Middleware;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.data.jpa.EntityManageable;
-import enkan.middleware.AbstractWebMiddleware;
+import enkan.middleware.WebMiddleware;
 import enkan.util.MixinUtils;
 import enkan.util.jpa.EntityTransactionManager;
 import net.unit8.bouncr.entity.UserAction;
@@ -18,19 +18,19 @@ import java.util.Optional;
 import static enkan.util.BeanBuilder.builder;
 
 @Middleware(name = "actionLogging", dependencies = {"entityManager"})
-public class ActionLoggingMiddleware<NRES> extends AbstractWebMiddleware<HttpRequest, NRES> {
+public class ActionLoggingMiddleware implements WebMiddleware {
     @Override
-    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, NRES, NNREQ, NNRES> chain) {
+    public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, HttpResponse, NNREQ, NNRES> chain) {
         request = MixinUtils.mixin(request, ActionRecordable.class);
         ActionRecord actionRecord = new ActionRecord();
         ((ActionRecordable)request).setActionRecord(actionRecord);
 
-        NRES response = chain.next(request);
+        HttpResponse response = chain.next(request);
 
         if (actionRecord.shouldBeRecorded()) {
             recordAction(request, actionRecord);
         }
-        return castToHttpResponse(response);
+        return response;
     }
 
     protected void recordAction(HttpRequest request, ActionRecord actionRecord) {

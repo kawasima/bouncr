@@ -6,16 +6,17 @@ import net.unit8.bouncr.component.config.HookPoint;
 import java.util.Optional;
 
 public class HookRepository {
-    private final Multimap<HookPoint, Hook> hooks = Multimap.empty();
+    private final Multimap<HookPoint, Hook<?>> hooks = Multimap.empty();
 
-    public void register(HookPoint point, Hook hook) {
+    public void register(HookPoint point, Hook<?> hook) {
         synchronized (hooks) {
             hooks.add(point, hook);
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void runHook(HookPoint point, Object message) {
         Optional.ofNullable(hooks.getAll(point))
-                .ifPresent(hooks -> hooks.forEach((hook) -> hook.run(message)));
+                .ifPresent(hooks -> hooks.forEach(hook -> ((Hook<Object>) hook).run(message)));
     }
 }
