@@ -125,18 +125,19 @@ public class JwksVerifier {
     private PublicKey findPublicKey(List<Map<String, Object>> keys, String kid, String alg) throws Exception {
         for (Map<String, Object> key : keys) {
             String keyKid = (String) key.get("kid");
-            String kty = (String) key.get("kty");
             if (kid != null && !kid.equals(keyKid)) {
                 continue;
             }
-            if ("RSA".equals(kty)) {
+            if ("RSA".equals(key.get("kty"))) {
                 return buildRsaPublicKey(key);
             }
         }
-        // If no kid match, try first RSA key
-        for (Map<String, Object> key : keys) {
-            if ("RSA".equals(key.get("kty"))) {
-                return buildRsaPublicKey(key);
+        // Fallback to first RSA key only when JWT header has no kid (single-key providers)
+        if (kid == null) {
+            for (Map<String, Object> key : keys) {
+                if ("RSA".equals(key.get("kty"))) {
+                    return buildRsaPublicKey(key);
+                }
             }
         }
         return null;
