@@ -102,8 +102,12 @@ public class OidcSignInResource {
 
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
-        // Verify State for all response types (RFC 6749 §10.12)
-        if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.state())) {
+        // OIDC session must exist to validate state and nonce (RFC 6749 §10.12)
+        if (oidcSession == null) {
+            context.setMessage(Problem.valueOf(401, "OIDC session not found", BouncrProblem.MISMATCH_STATE.problemUri()));
+            return false;
+        }
+        if (!Objects.equals(params.get("state"), oidcSession.state())) {
             context.setMessage(Problem.valueOf(401, "State doesn't match", BouncrProblem.MISMATCH_STATE.problemUri()));
             return false;
         }
@@ -131,12 +135,16 @@ public class OidcSignInResource {
                                 (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes()));
             }
 
-            if (oidcProvider.pkceEnabled() && oidcSession != null && oidcSession.codeVerifier() != null) {
+            if (oidcProvider.pkceEnabled() && oidcSession.codeVerifier() != null) {
                 bodyBuilder.add("code_verifier", oidcSession.codeVerifier());
             }
 
             Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute();
             if (response.code() == 503) throw new FalteringEnvironmentException();
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "";
+                throw new RuntimeException("Token endpoint returned " + response.code() + ": " + errorBody);
+            }
 
             try (InputStream in = response.body().byteStream()) {
                 return jsonMapper.readValue(in, GENERAL_JSON_REF);
@@ -158,8 +166,8 @@ public class OidcSignInResource {
         JwtClaim claim = jsonWebToken.decodePayload(tokens[1], new TypeReference<>() {
         });
 
-        // Verify Nonce
-        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.nonce())) {
+        // Verify Nonce (OpenID Connect Core §3.1.3.3)
+        if (!Objects.equals(claim.getNonce(), oidcSession.nonce())) {
             context.setMessage(Problem.valueOf(401, "Nonce doesn't match", BouncrProblem.MISMATCH_NONCE.problemUri()));
             return false;
         }
@@ -198,8 +206,9 @@ public class OidcSignInResource {
             }
         }
 
-        // Verify exp claim
-        if (claim.getExp() != null && claim.getExp() < System.currentTimeMillis() / 1000) {
+        // Verify exp claim (allow 30 seconds clock skew)
+        long clockSkewSeconds = 30;
+        if (claim.getExp() != null && claim.getExp() + clockSkewSeconds < System.currentTimeMillis() / 1000) {
             context.setMessage(Problem.valueOf(401, "ID token has expired", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
@@ -333,6 +342,13 @@ public class OidcSignInResource {
         actionRecord.setActor(user.account());
         actionRecord.setActionType(USER_SIGNIN);
 
+        // Clean up OIDC session to prevent replay
+        String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
+        if (oidcSessionId != null) {
+            storeProvider.getStore(OIDC_SESSION).delete(oidcSessionId);
+        }
+        String clearCookie = "OIDC_SESSION_ID=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+
         SignInService signInService = new SignInService(dsl, storeProvider, config);
         String token = signInService.createToken();
         UserSession userSession = signInService.createUserSession(request, user, token);
@@ -346,11 +362,13 @@ public class OidcSignInResource {
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
-                                "Location", uri.toString()
+                                "Location", uri.toString(),
+                                "Set-Cookie", clearCookie
                         ))
                         .build())
                 .orElse(builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 200)
+                        .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie))
                         .set(ApiResponse::setBody, userSession)
                         .build());
     }
