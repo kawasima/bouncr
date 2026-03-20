@@ -66,8 +66,8 @@ public class JwksVerifier {
      */
     public boolean verify(String encodedJwt, OidcProvider provider) {
         if (provider.jwksUri() == null) {
-            // No JWKS URI configured — skip signature verification
-            return true;
+            // No JWKS URI configured — cannot verify signature (OpenID Connect Core §3.1.3.3)
+            return false;
         }
 
         String[] parts = encodedJwt.split("\\.", 3);
