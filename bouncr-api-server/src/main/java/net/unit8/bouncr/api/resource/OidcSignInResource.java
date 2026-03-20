@@ -132,7 +132,7 @@ public class OidcSignInResource {
             } else {
                 requestBuilder.header("Authorization", "Basic " +
                         Base64.getEncoder().encodeToString(
-                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes()));
+                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             }
 
             if (oidcProvider.pkceEnabled() && oidcSession.codeVerifier() != null) {
@@ -183,27 +183,37 @@ public class OidcSignInResource {
         }
 
         // Verify aud claim (RFC 7519 §4.1.3 — aud can be string or array)
-        if (claim.getAud() != null) {
-            boolean audValid;
-            Object aud = claim.getAud();
-            if (aud instanceof String audStr) {
-                audValid = oidcProvider.clientId().equals(audStr);
-            } else if (aud instanceof List<?> audList) {
-                audValid = audList.contains(oidcProvider.clientId());
-            } else {
-                audValid = false;
-            }
-            if (!audValid) {
-                context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
-                return false;
-            }
+        if (claim.getAud() == null) {
+            context.setMessage(Problem.valueOf(401, "ID token missing audience", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
+        }
 
-            // Verify azp claim (OpenID Connect Core §3.1.3.3 — required when aud is multi-valued)
-            if (aud instanceof List && claim.getAzp() != null
-                    && !oidcProvider.clientId().equals(claim.getAzp())) {
+        boolean audValid;
+        Object aud = claim.getAud();
+        if (aud instanceof String audStr) {
+            audValid = oidcProvider.clientId().equals(audStr);
+        } else if (aud instanceof List<?> audList) {
+            audValid = audList.contains(oidcProvider.clientId());
+        } else {
+            audValid = false;
+        }
+        if (!audValid) {
+            context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
+        }
+
+        // Verify azp claim (OpenID Connect Core §3.1.3.3)
+        if (aud instanceof List<?> audList && audList.size() > 1) {
+            // When aud is multi-valued, azp MUST be present and match client_id
+            if (claim.getAzp() == null || !oidcProvider.clientId().equals(claim.getAzp())) {
                 context.setMessage(Problem.valueOf(401, "ID token authorized party doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
                 return false;
             }
+        }
+        // If azp is present in any case, it must match client_id
+        if (claim.getAzp() != null && !oidcProvider.clientId().equals(claim.getAzp())) {
+            context.setMessage(Problem.valueOf(401, "ID token authorized party doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
         }
 
         // Verify exp claim (allow 30 seconds clock skew)
