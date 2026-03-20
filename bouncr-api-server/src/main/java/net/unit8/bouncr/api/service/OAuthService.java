@@ -2,7 +2,7 @@ package net.unit8.bouncr.api.service;
 
 import enkan.collection.Headers;
 import enkan.data.HttpResponse;
-import net.unit8.bouncr.entity.OAuth2Error;
+import net.unit8.bouncr.data.OAuth2Error;
 
 import java.util.HashSet;
 import java.util.Set;

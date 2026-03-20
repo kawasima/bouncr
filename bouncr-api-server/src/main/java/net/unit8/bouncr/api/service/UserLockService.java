@@ -1,73 +1,51 @@
 package net.unit8.bouncr.api.service;
 
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.LockLevel;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserAction;
-import net.unit8.bouncr.entity.UserLock;
+import net.unit8.bouncr.data.LockLevel;
+import net.unit8.bouncr.data.User;
+import org.jooq.DSLContext;
 
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static enkan.util.BeanBuilder.builder;
-import static net.unit8.bouncr.entity.ActionType.*;
+import static net.unit8.bouncr.data.ActionType.*;
+import static org.jooq.impl.DSL.*;
 
 public class UserLockService {
     private final BouncrConfiguration config;
-    private final EntityManager em;
+    private final DSLContext dsl;
 
-    public UserLockService(EntityManager em, BouncrConfiguration config) {
-        this.em = em;
+    public UserLockService(DSLContext dsl, BouncrConfiguration config) {
+        this.dsl = dsl;
         this.config = config;
     }
 
-    /**
-     * Record the event of signing in
-     *
-     * @param user    the user entity
-     */
     public void lockUser(User user) {
-        if (user != null) {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<UserAction> userActionCriteria = cb.createQuery(UserAction.class);
-            Root<UserAction> userActionRoot = userActionCriteria.from(UserAction.class);
-            userActionCriteria.where(
-                    cb.and(
-                            cb.equal(userActionRoot.get("user"), user),
-                            userActionRoot.get("actionType").in(USER_SIGNIN, USER_FAILED_SIGNIN, PASSWORD_CHANGED)
-                    )
-            );
-            userActionCriteria.orderBy(cb.desc(userActionRoot.get("createdAt")));
+        if (user == null) return;
 
-            List<UserAction> recentActions = em.createQuery(userActionCriteria)
-                    .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                    .setMaxResults(config.getPasswordPolicy().getNumOfTrialsUntilLock())
-                    .getResultList();
-            if (recentActions.size() == config.getPasswordPolicy().getNumOfTrialsUntilLock() &&
-                    recentActions.stream()
-                            .allMatch(action -> action.getActionType() == USER_FAILED_SIGNIN) &&
-                    user.getUserLock() == null
-            ) {
-                em.persist(builder(new UserLock())
-                        .set(UserLock::setUser, user)
-                        .set(UserLock::setLockLevel, LockLevel.LOOSE)
-                        .set(UserLock::setLockedAt, LocalDateTime.now())
-                        .build());
-            }
+        int numTrials = config.getPasswordPolicy().getNumOfTrialsUntilLock();
+        List<String> recentActionNames = dsl.select(field("a.name", String.class).as("name"))
+                .from(table("user_actions").as("ua"))
+                .join(table("actions").as("a")).on(field("a.action_id").eq(field("ua.action_id")))
+                .where(field("ua.actor").eq(user.account()))
+                .and(field("a.name").in(USER_SIGNIN.name(), USER_FAILED_SIGNIN.name(), PASSWORD_CHANGED.name()))
+                .orderBy(field("ua.created_at").desc())
+                .limit(numTrials)
+                .fetch(rec -> rec.get(field("name", String.class)));
+
+        if (recentActionNames.size() == numTrials
+                && recentActionNames.stream().allMatch(name -> name.equals(USER_FAILED_SIGNIN.name()))
+                && user.userLock() == null) {
+            UserRepository repo = new UserRepository(dsl);
+            repo.lockUser(user.id(), LockLevel.LOOSE);
         }
     }
 
     public void unlockUser(User user) {
-        UserLock userLock = user.getUserLock();
-        if (userLock != null && userLock.getLockLevel() == LockLevel.LOOSE) {
-            em.remove(userLock);
+        if (user.userLock() != null && user.userLock().lockLevel() == LockLevel.LOOSE) {
+            UserRepository repo = new UserRepository(dsl);
+            repo.unlockUser(user.id());
         }
     }
-
-
 }

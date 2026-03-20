@@ -2,11 +2,12 @@ package net.unit8.bouncr.api.service;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
-import net.unit8.bouncr.entity.OidcProvider;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import net.unit8.bouncr.data.OidcProvider;
 
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -64,7 +65,7 @@ public class JwksVerifier {
      * @return true if the signature is valid, false otherwise
      */
     public boolean verify(String encodedJwt, OidcProvider provider) {
-        if (provider.getJwksUri() == null) {
+        if (provider.jwksUri() == null) {
             // No JWKS URI configured — skip signature verification
             return true;
         }
@@ -105,17 +106,17 @@ public class JwksVerifier {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> getJwks(OidcProvider provider) throws Exception {
-        CachedJwks cached = cache.get(provider.getId());
+        CachedJwks cached = cache.get(provider.id());
         if (cached != null && !cached.isExpired()) {
             return cached.keys;
         }
 
         try (Response response = httpClient.newCall(
-                new Request.Builder().url(provider.getJwksUri()).build()).execute()) {
+                new Request.Builder().url(provider.jwksUri()).build()).execute()) {
             try (InputStream in = response.body().byteStream()) {
                 Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
                 List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
-                cache.put(provider.getId(), new CachedJwks(keys));
+                cache.put(provider.id(), new CachedJwks(keys));
                 return keys;
             }
         }

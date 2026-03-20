@@ -35,7 +35,7 @@ public class V21__CreateUserProfiles extends BaseJavaMigration {
                     .column(field("min_length", SQLDataType.SMALLINT.nullable(true)))
                     .column(field("max_length", SQLDataType.SMALLINT.nullable(true)))
                     .column(field("needs_verification", SQLDataType.BOOLEAN.nullable(false)))
-                    .column(field("position", SQLDataType.TINYINT.nullable(false)))
+                    .column(field("position", SQLDataType.SMALLINT.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_profile_field_id")),
                             constraint().unique(field("name")),

@@ -1,143 +1,82 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.data.HttpRequest;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.apistandard.resourcefilter.ResourceField;
-import net.unit8.apistandard.resourcefilter.ResourceFilter;
-import net.unit8.bouncr.api.boundary.ApplicationCreateRequest;
-import net.unit8.bouncr.api.boundary.ApplicationSearchParams;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Application;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.Realm;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.ApplicationCreate;
+import net.unit8.bouncr.api.repository.ApplicationRepository;
+import net.unit8.bouncr.data.Application;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Subgraph;
-import jakarta.persistence.criteria.*;
-import jakarta.validation.ConstraintViolation;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
-import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class ApplicationsResource {
-    @Inject
-    private BeansConverter converter;
+    static final ContextKey<ApplicationCreate> CREATE_REQ = ContextKey.of(ApplicationCreate.class);
 
-    @Inject
-    private BeansValidator validator;
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem validateCreate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
+        }
+        return switch (BouncrJsonDecoders.APPLICATION_CREATE.decode(body)) {
+            case Ok<ApplicationCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
+            case Err<ApplicationCreate>(var issues) -> toProblem(issues);
+        };
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    @Decision(value = ALLOWED, method = "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("application:read") || p.hasPermission("any_application:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "POST")
-    public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("any_application:create"))
                 .isPresent();
     }
-    @Decision(value = MALFORMED, method = "POST")
-    public Problem validateApplicationCreateRequest(ApplicationCreateRequest createRequest, RestContext context) {
-        if (createRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
-        }
-        Set<ConstraintViolation<ApplicationCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validateApplicationSearchParams(Parameters params, RestContext context) {
-        ApplicationSearchParams applicationSearchParams = converter.createFrom(params, ApplicationSearchParams.class);
-        Set<ConstraintViolation<ApplicationSearchParams>> violations = validator.validate(applicationSearchParams);
-        if (violations.isEmpty()) {
-            context.putValue(applicationSearchParams);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(ApplicationCreateRequest createRequest, EntityManager em) {
-        UniquenessCheckService<Application> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Application.class, "nameLower",
-                Optional.ofNullable(createRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
-    }
-
-    @Decision(POST)
-    public Application create(ApplicationCreateRequest createRequest, EntityManager em) {
-        Application application  = converter.createFrom(createRequest, Application.class);
-        application.setWriteProtected(false);
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.persist(application));
-        em.detach(application);
-        return application;
+    public boolean isConflict(ApplicationCreate createRequest, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        return !repo.isNameUnique(createRequest.name());
     }
 
     @Decision(HANDLE_OK)
-    public List<Application> handleOk(ApplicationSearchParams params, UserPermissionPrincipal principal, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Application> query = cb.createQuery(Application.class);
-        Root<Application> applicationRoot = query.from(Application.class);
-        query.distinct(true);
-
-        List<Predicate> predicates = new ArrayList<>();
-        if (!principal.hasPermission("any_application:read")) {
-            Join<User, Group> userJoin = applicationRoot.join("realms")
-                    .join("assignments")
-                    .join("group")
-                    .join("users");
-            predicates.add(cb.equal(userJoin.get("id"), principal.getId()));
-        }
-
-        Optional.ofNullable(params.getQ())
-                .ifPresent(q -> {
-                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
-                    predicates.add(cb.like(applicationRoot.get("name"), likeExpr, '_'));
-                });
-        if (!predicates.isEmpty()) {
-            query.where(predicates.toArray(Predicate[]::new));
-        }
-
-        List<ResourceField> embedEntities = some(params.getEmbed(), embed -> new ResourceFilter().parse(embed))
-                .orElse(Collections.emptyList());
-        EntityGraph<Application> applicationGraph = em.createEntityGraph(Application.class);
-        applicationGraph.addAttributeNodes("name", "description", "passTo", "virtualPath", "topPage", "writeProtected");
-
-        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("realms"))) {
-            applicationGraph.addAttributeNodes("realms");
-            Subgraph<Realm> realmsGraph = applicationGraph.addSubgraph("realms");
-            realmsGraph.addAttributeNodes("name", "description", "url");
-        }
-
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.fetchgraph", applicationGraph)
-                .setFirstResult(params.getOffset())
-                .setMaxResults(params.getLimit())
-                .getResultList();
+    public List<Application> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        String q = params.get("q");
+        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
+        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        boolean embedRealms = Objects.equals(params.get("embed"), "realms");
+        return repo.search(q, embedRealms, offset, limit);
     }
 
+    @Decision(POST)
+    public Application create(ApplicationCreate createRequest, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        return repo.insert(createRequest.name(), createRequest.description(),
+                createRequest.virtualPath(), createRequest.passTo(), createRequest.topPage());
+    }
 }

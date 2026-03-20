@@ -1,57 +1,40 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.PermissionCreateRequest;
-import net.unit8.bouncr.api.boundary.PermissionSearchParams;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Permission;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PermissionCreate;
+import net.unit8.bouncr.api.repository.PermissionRepository;
+import net.unit8.bouncr.data.Permission;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.*;
-import jakarta.validation.ConstraintViolation;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class PermissionsResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<PermissionCreate> CREATE_REQ = ContextKey.of(PermissionCreate.class);
 
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validatePermissionCreateRequest(PermissionCreateRequest createRequest, RestContext context) {
-        if (createRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateCreate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<PermissionCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validatePermissionSearchParams(Parameters params, RestContext context) {
-        PermissionSearchParams permissionSearchParams = converter.createFrom(params, PermissionSearchParams.class);
-        Set<ConstraintViolation<PermissionSearchParams>> violations = validator.validate(permissionSearchParams);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(permissionSearchParams, PermissionSearchParams.class));
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.PERMISSION_CREATE.decode(body)) {
+            case Ok<PermissionCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
+            case Err<PermissionCreate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -74,58 +57,24 @@ public class PermissionsResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(PermissionCreateRequest createRequest, EntityManager em) {
-        UniquenessCheckService<Permission> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Permission.class, "nameLower",
-                Optional.ofNullable(createRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+    public boolean isConflict(PermissionCreate createRequest, DSLContext dsl) {
+        PermissionRepository repo = new PermissionRepository(dsl);
+        return !repo.isNameUnique(createRequest.name());
     }
 
     @Decision(HANDLE_OK)
-    public List<Permission> list(PermissionSearchParams params,
-                                 UserPermissionPrincipal principal,
-                                 EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        Root<Permission> permissionRoot = query.from(Permission.class);
-        query.distinct(true);
-
-        List<Predicate> predicates = new ArrayList<>();
-        Optional.ofNullable(params.getQ())
-                .ifPresent(q -> {
-                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
-                    predicates.add(cb.like(permissionRoot.get("name"), likeExpr, '_'));
-                });
-        if (!principal.hasPermission("any_permission:read")) {
-            Join<Permission, User> userRoot = permissionRoot.join("roles")
-                    .join("assignments")
-                    .join("group")
-                    .join("users");
-            predicates.add(cb.equal(userRoot.get("id"), principal.getId()));
-        }
-
-        if (!predicates.isEmpty()) {
-            query.where(predicates.toArray(Predicate[]::new));
-        }
-
-        query.orderBy(cb.asc(permissionRoot.get("id")));
-
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setFirstResult(params.getOffset())
-                .setMaxResults(params.getLimit())
-                .getResultList();
+    public List<Permission> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+        PermissionRepository repo = new PermissionRepository(dsl);
+        String q = params.get("q");
+        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
+        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        boolean isAdmin = principal.hasPermission("any_permission:read");
+        return repo.search(q, principal.getId(), isAdmin, offset, limit);
     }
 
     @Decision(POST)
-    public Permission create(PermissionCreateRequest createRequest, EntityManager em) {
-        Permission permission = converter.createFrom(createRequest, Permission.class);
-        permission.setWriteProtected(false);
-
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.persist(permission));
-        em.detach(permission);
-        return permission;
+    public Permission create(PermissionCreate createRequest, DSLContext dsl) {
+        PermissionRepository repo = new PermissionRepository(dsl);
+        return repo.insert(createRequest.name(), createRequest.description());
     }
 }

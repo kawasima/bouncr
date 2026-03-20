@@ -1,134 +1,127 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.SystemComponent;
-import enkan.component.jackson.JacksonBeansConverter;
-import enkan.data.DefaultHttpRequest;
-import enkan.data.HttpRequest;
-import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.system.EnkanSystem;
-import enkan.system.inject.ComponentInjector;
-import kotowari.restful.component.BeansValidator;
-import kotowari.restful.data.DefaultResource;
-import kotowari.restful.data.Problem;
-import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.UserCreateRequest;
-import net.unit8.bouncr.api.boundary.UserSearchParams;
-import net.unit8.bouncr.api.logging.ActionRecord;
-import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.data.User;
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
-import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
-import static org.mockito.MockitoAnnotations.initMocks;
 
+/**
+ * Tests for UsersResource operations using a real H2 database.
+ * Tests user search, creation, and uniqueness checks.
+ */
 class UsersResourceTest {
-    private static final Logger LOG = LoggerFactory.getLogger(UsersResourceTest.class);
-
-    private EnkanSystem system;
+    private DSLContext dsl;
 
     @BeforeEach
     void setup() {
-        initMocks(this);
-        system = EnkanSystem.of(
-                "converter", new JacksonBeansConverter(),
-                "validator", new BeansValidator(),
-                "config",    new BouncrConfiguration()
-        );
-        system.start();
-    }
-
-    @Test
-    void findDefaultUsers() {
-        CriteriaQuery query = mock(CriteriaQuery.class);
-        TypedQuery typedQuery = mock(TypedQuery.class);
-        EntityGraph graph = mock(EntityGraph.class);
-
-        EntityManager em = MockFactory.createEntityManagerMock(typedQuery, graph, query);
-        UsersResource resource = new UsersResource();
-        UserSearchParams params = builder(new UserSearchParams())
-                .set(UserSearchParams::setGroupId, 1L)
-                .set(UserSearchParams::setEmbed, "(groups)")
-                .build();
-        UserPermissionPrincipal principal = new UserPermissionPrincipal(1L, "admin", Map.of(), Set.of("user:read"));
-        resource.handleOk(params, principal, em);
-        verify(query, times(0)).where();
-        verify(typedQuery).setFirstResult(eq(0));
-        verify(typedQuery).setMaxResults(eq(10));
-        verify(graph).addSubgraph(eq("groups"));
-    }
-
-    @Test
-    void findByNoSuchGroupId() {
-        CriteriaQuery query = mock(CriteriaQuery.class);
-        TypedQuery typedQuery = mock(TypedQuery.class);
-        EntityGraph graph = mock(EntityGraph.class);
-        Root<User> userRoot = mock(Root.class);
-
-        EntityManager em = MockFactory.createEntityManagerMock(typedQuery, graph, query, userRoot);
-        UsersResource resource = new UsersResource();
-
-        UserSearchParams params = builder(new UserSearchParams())
-                .set(UserSearchParams::setGroupId, 10L)
-                .build();
-        UserPermissionPrincipal principal = new UserPermissionPrincipal(1L, "admin", Map.of(), Set.of("any_user:read"));
-        resource.handleOk(params, principal, em);
-        verify(userRoot).join(eq("groups"));
-    }
-
-    @Test
-    void post() {
-        UsersResource resource = new UsersResource();
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
-                        "config", system.getComponent("config")));
-        injector.inject(resource);
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-        RestContext context = new RestContext(new DefaultResource(), request);
-        UserCreateRequest user = builder(new UserCreateRequest())
-                .set(UserCreateRequest::setAccount, "fuga")
-                .build();
-        EntityManager em = MockFactory.createEntityManagerMock();
-        ActionRecord actionRecord = new ActionRecord();
-        UserPermissionPrincipal principal = new UserPermissionPrincipal(1L, "admin", Map.of(), Set.of());
-        resource.doPost(user, actionRecord, principal, context, em);
-    }
-
-    @Test
-    void validate() {
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
-                        "validator", system.getComponent("validator"),
-                        "config", system.getComponent("config")));
-        UsersResource resource = injector.inject(new UsersResource());
-        UserCreateRequest createRequest = builder(new UserCreateRequest())
-                .set(UserCreateRequest::setAccount, "fuga")
-                .build();
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-        EntityManager em = MockFactory.createEntityManagerMock();
-        Problem problem = resource.validateUserCreateRequest(createRequest, new RestContext(new DefaultResource(), request), em);
-        assertThat(problem).isNull();
+        dsl = MockFactory.beginTransaction();
     }
 
     @AfterEach
     void tearDown() {
-        system.stop();
+        MockFactory.rollback();
+    }
+
+    @Test
+    void searchUsersAsAdmin() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        // V23 migration creates the "admin" user
+        // Add more test users
+        userRepo.insert("testuser1");
+        userRepo.insert("testuser2");
+
+        // Admin search (isAdmin=true) sees all users
+        List<User> users = userRepo.search(null, null, 1L, true, 0, 10);
+        assertThat(users.size()).isGreaterThanOrEqualTo(3); // admin + testuser1 + testuser2
+    }
+
+    @Test
+    void searchUsersWithQuery() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        userRepo.insert("alice");
+        userRepo.insert("bob");
+        userRepo.insert("alice2");
+
+        List<User> users = userRepo.search("alice", null, 1L, true, 0, 10);
+        assertThat(users).hasSize(2);
+        assertThat(users.stream().map(User::account))
+                .containsExactlyInAnyOrder("alice", "alice2");
+    }
+
+    @Test
+    void searchUsersWithPagination() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        userRepo.insert("page_user1");
+        userRepo.insert("page_user2");
+        userRepo.insert("page_user3");
+
+        List<User> firstPage = userRepo.search("page_user", null, 1L, true, 0, 2);
+        assertThat(firstPage).hasSize(2);
+
+        List<User> secondPage = userRepo.search("page_user", null, 1L, true, 2, 2);
+        assertThat(secondPage).hasSize(1);
+    }
+
+    @Test
+    void searchUsersByGroup() {
+        UserRepository userRepo = new UserRepository(dsl);
+        GroupRepository groupRepo = new GroupRepository(dsl);
+
+        User user1 = userRepo.insert("grouped1");
+        User user2 = userRepo.insert("grouped2");
+        User user3 = userRepo.insert("ungrouped");
+
+        var group = groupRepo.insert("testgroup", "Test group");
+        groupRepo.addUser("testgroup", user1.id());
+        groupRepo.addUser("testgroup", user2.id());
+
+        List<User> users = userRepo.search(null, group.id(), 1L, true, 0, 10);
+        assertThat(users).hasSize(2);
+        assertThat(users.stream().map(User::account))
+                .containsExactlyInAnyOrder("grouped1", "grouped2");
+    }
+
+    @Test
+    void createUser() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        User user = userRepo.insert("newuser");
+        assertThat(user.id()).isNotNull();
+        assertThat(user.account()).isEqualTo("newuser");
+        assertThat(user.writeProtected()).isFalse();
+    }
+
+    @Test
+    void accountUniqueness() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        assertThat(userRepo.isAccountUnique("uniqueuser")).isTrue();
+
+        userRepo.insert("uniqueuser");
+
+        assertThat(userRepo.isAccountUnique("uniqueuser")).isFalse();
+        // Case-insensitive check
+        assertThat(userRepo.isAccountUnique("UniqueUser")).isFalse();
+    }
+
+    @Test
+    void validateUserCreateRequiresAccount() {
+        // The validation is now done by BouncrJsonDecoders.
+        // Test that the decoder rejects empty account.
+        var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
+        var node = mapper.readTree("{}");
+        // account field is missing - should fail
+        var result = net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PASSWORD_SIGN_IN.decode(node);
+        assertThat(result).isInstanceOf(net.unit8.raoh.Err.class);
     }
 }

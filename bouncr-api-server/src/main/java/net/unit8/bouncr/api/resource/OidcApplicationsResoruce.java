@@ -1,67 +1,48 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.OidcApplicationCreateRequest;
-import net.unit8.bouncr.api.boundary.OidcApplicationSearchParams;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
+import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.OidcApplication;
-import net.unit8.bouncr.entity.Permission;
+import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
 import java.security.KeyPair;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class OidcApplicationsResoruce {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<OidcApplicationCreate> CREATE_REQ = ContextKey.of(OidcApplicationCreate.class);
 
     @Inject
     private BouncrConfiguration config;
 
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validateSearchParams(Parameters params, RestContext context) {
-        OidcApplicationSearchParams searchParams = converter.createFrom(params, OidcApplicationSearchParams.class);
-        Set<ConstraintViolation<OidcApplicationSearchParams>> violations = validator.validate(searchParams);
-        if (violations.isEmpty()) {
-            context.putValue(searchParams);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validateCreateRequest(OidcApplicationCreateRequest createRequest, RestContext context) {
-        if (createRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateCreate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<OidcApplicationCreateRequest>> violations = validator.validate(createRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.OIDC_APPLICATION_CREATE.decode(body)) {
+            case Ok<OidcApplicationCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
+            case Err<OidcApplicationCreate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -84,57 +65,46 @@ public class OidcApplicationsResoruce {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(OidcApplicationCreateRequest createRequest, EntityManager em) {
-        UniquenessCheckService<OidcApplication> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(OidcApplication.class, "nameLower",
-                Optional.ofNullable(createRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+    public boolean isConflict(OidcApplicationCreate createRequest, DSLContext dsl) {
+        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        return !repo.isNameUnique(createRequest.name());
     }
 
     @Decision(HANDLE_OK)
-    public List<OidcApplication> list(OidcApplicationSearchParams params, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OidcApplication> query = cb.createQuery(OidcApplication.class);
-        Root<OidcApplication> oidcApplicationRoot = query.from(OidcApplication.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-        Optional.ofNullable(params.getQ())
-                .ifPresent(q -> {
-                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
-                    predicates.add(cb.like(oidcApplicationRoot.get("name"), likeExpr, '_'));
-                });
-        if (!predicates.isEmpty()) {
-            query.where(predicates.toArray(Predicate[]::new));
-        }
-        query.orderBy(cb.asc(oidcApplicationRoot.get("id")));
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setFirstResult(params.getOffset())
-                .setMaxResults(params.getLimit())
-                .getResultList();
+    public List<OidcApplication> list(Parameters params, DSLContext dsl) {
+        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        String q = params.get("q");
+        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
+        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        return repo.search(q, offset, limit);
     }
 
     @Decision(POST)
-    public OidcApplication create(OidcApplicationCreateRequest createRequest, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        OidcApplication oidcApplication = converter.createFrom(createRequest, OidcApplication.class);
-        oidcApplication.setClientId(RandomUtils.generateRandomString(16, config.getSecureRandom()));
-        oidcApplication.setClientSecret(RandomUtils.generateRandomString(32, config.getSecureRandom()));
+    public OidcApplication create(OidcApplicationCreate createRequest, DSLContext dsl) {
+        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+
+        String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
+        String clientSecret = RandomUtils.generateRandomString(32, config.getSecureRandom());
 
         KeyPair keyPair = KeyUtils.generate(2048, config.getSecureRandom());
-        oidcApplication.setPublicKey(keyPair.getPublic().getEncoded());
-        oidcApplication.setPrivateKey(keyPair.getPrivate().getEncoded());
+        byte[] publicKey = keyPair.getPublic().getEncoded();
+        byte[] privateKey = keyPair.getPrivate().getEncoded();
 
-        if (createRequest.getPermissions() != null) {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-            Root<Permission> root = query.from(Permission.class);
-            query.where(cb.in(root.get("name").in(createRequest.getPermissions())));
-            oidcApplication.setPermissions(em.createQuery(query).getResultList());
+        OidcApplication app = repo.insert(
+                createRequest.name(),
+                clientId,
+                clientSecret,
+                privateKey,
+                publicKey,
+                createRequest.homeUrl(),
+                createRequest.callbackUrl(),
+                createRequest.description()
+        );
+
+        if (createRequest.permissions() != null && !createRequest.permissions().isEmpty()) {
+            repo.setPermissions(app.id(), createRequest.permissions());
         }
-        tx.required(() -> em.persist(oidcApplication));
 
-        return oidcApplication;
+        return repo.findByName(createRequest.name()).orElse(app);
     }
 }

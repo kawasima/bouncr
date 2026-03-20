@@ -1,32 +1,30 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.BeansConverter;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.PasswordResetChallengeCreateRequest;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordResetChallengeCreate;
+import net.unit8.bouncr.api.repository.PasswordResetChallengeRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.entity.PasswordResetChallenge;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.data.PasswordResetChallenge;
+import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 /**
  * Password Reset.
@@ -35,47 +33,41 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods({"GET", "POST"})
 public class PasswordResetChallengeResource {
+    static final ContextKey<PasswordResetChallengeCreate> CREATE_REQ = ContextKey.of(PasswordResetChallengeCreate.class);
+    static final ContextKey<User> USER = ContextKey.of(User.class);
+    static final ContextKey<PasswordResetChallenge> CHALLENGE = ContextKey.of(PasswordResetChallenge.class);
+
     @Inject
     private BouncrConfiguration config;
 
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
-
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validate(PasswordResetChallengeCreateRequest createRequest, RestContext context) {
-        if (createRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<PasswordResetChallengeCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(createRequest);
-            config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.PASSWORD_RESET_CHALLENGE_CREATE.decode(body)) {
+            case Ok<PasswordResetChallengeCreate> ok -> {
+                context.put(CREATE_REQ, ok.value());
+                config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
+                yield null;
+            }
+            case Err<PasswordResetChallengeCreate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(PROCESSABLE)
-    public boolean existsAccount(PasswordResetChallengeCreateRequest createRequest,
+    public boolean existsAccount(PasswordResetChallengeCreate createRequest,
                                  RestContext context,
-                                 EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<User> query = cb.createQuery(User.class);
-        Root<User> userRoot = query.from(User.class);
-        query.where(cb.equal(userRoot.get("account"), createRequest.getAccount()));
-        User user = em.createQuery(query).getResultStream().findAny().orElse(null);
-
-        if (user != null) {
-            context.putValue(user);
-        }
-        return user != null;
+                                 DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        var user = userRepo.findByAccount(createRequest.account());
+        user.ifPresent(u -> context.put(USER, u));
+        return user.isPresent();
     }
 
     @Decision(HANDLE_UNPROCESSABLE_ENTITY)
     public Problem unprocessable() {
-        return Problem.valueOf(422, "Account not found", BouncrProblem.UNPROCESSABLE.problemUri());
+        return Problem.valueOf(422, "Account not found");
     }
 
     /**
@@ -85,27 +77,24 @@ public class PasswordResetChallengeResource {
      * So this endpoint returns Void.
      *
      * @param createRequest a creation request for the password reset challenge
-     * @param user an user entity
-     * @param context an REST context
-     * @param em an entity manager
+     * @param user a user record
+     * @param context a REST context
+     * @param dsl a jOOQ DSL context
      * @return null
      */
     @Decision(POST)
-    public Void create(PasswordResetChallengeCreateRequest createRequest,
-                                         User user,
-                                         RestContext context,
-                                         EntityManager em) {
-        PasswordResetChallenge passwordResetChallenge = converter.createFrom(createRequest, PasswordResetChallenge.class);
+    public Void create(PasswordResetChallengeCreate createRequest,
+                       User user,
+                       RestContext context,
+                       DSLContext dsl) {
+        PasswordResetChallengeRepository repo = new PasswordResetChallengeRepository(dsl);
 
-        passwordResetChallenge.setUser(user);
-        passwordResetChallenge.setCode(RandomUtils.generateRandomString(8));
-        passwordResetChallenge.setExpiresAt(LocalDateTime.now()
-                .plus(Duration.ofMinutes(120))); // TODO configuration
+        String code = RandomUtils.generateRandomString(8);
+        LocalDateTime expiresAt = LocalDateTime.now().plus(Duration.ofMinutes(120));
 
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.persist(passwordResetChallenge));
-        context.putValue(user);
-        context.putValue(passwordResetChallenge);
+        PasswordResetChallenge challenge = repo.insert(user.id(), code, expiresAt);
+        context.put(USER, user);
+        context.put(CHALLENGE, challenge);
 
         config.getHookRepo().runHook(HookPoint.AFTER_PASSWORD_RESET_CHALLENGE, context);
 

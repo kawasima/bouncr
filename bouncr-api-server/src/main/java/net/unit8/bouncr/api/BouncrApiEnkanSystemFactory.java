@@ -4,7 +4,7 @@ import enkan.Env;
 import enkan.collection.OptionMap;
 import enkan.component.ApplicationComponent;
 import enkan.component.builtin.HmacEncoder;
-import enkan.component.eclipselink.EclipseLinkEntityManagerProvider;
+import enkan.component.jooq.JooqProvider;
 import enkan.component.flyway.FlywayMigration;
 import enkan.component.hikaricp.HikariCPComponent;
 import enkan.component.jackson.JacksonBeansConverter;
@@ -13,7 +13,6 @@ import enkan.component.jetty.JettyComponent;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
-import kotowari.restful.component.BeansValidator;
 import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
@@ -22,9 +21,9 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
-import net.unit8.bouncr.entity.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.jooq.SQLDialect;
 
 import java.security.Security;
 import java.time.Duration;
@@ -42,11 +41,19 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
 
     @Override
     public EnkanSystem create() {
+        boolean useRedis = Env.get("REDIS_URL") != null;
+        String jdbcUrl = Env.getString("JDBC_URL", "jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
+        SQLDialect sqlDialect = jdbcUrl.startsWith("jdbc:postgresql") ? SQLDialect.POSTGRES : SQLDialect.H2;
+
         KvsSettings kvsSettings = new KvsSettings();
-        kvsSettings.setBouncrTokenStoreFactory(deps -> {
-            JedisProvider redis = (JedisProvider) deps.get("redis");
-            return redis.createStore("BOUNCR_TOKEN", java.util.HashMap.class, 1800);
-        });
+        // KvsSettings defaults to MemoryStore.
+        // When REDIS_URL is set, use Redis for token storage (production / docker-compose).
+        if (useRedis) {
+            kvsSettings.setBouncrTokenStoreFactory(deps -> {
+                JedisProvider redis = (JedisProvider) deps.get("redis");
+                return redis.createStore("BOUNCR_TOKEN", java.util.HashMap.class, 1800);
+            });
+        }
 
         BouncrConfiguration config = builder(new BouncrConfiguration())
                 .set(BouncrConfiguration::setPasswordPolicy,
@@ -59,63 +66,78 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
         config.getHookRepo().register(HookPoint.BEFORE_SIGN_UP, grantBouncrUserRole);
 
-        return EnkanSystem.of(
-                "hmac", new HmacEncoder(),
-                "config", config,
-                "validator", new BeansValidator(),
-                "converter", new JacksonBeansConverter(),
-                "jpa", builder(new EclipseLinkEntityManagerProvider())
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Application.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Realm.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, User.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Group.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Role.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Permission.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, RolePermission.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Assignment.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileField.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileValue.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserProfileVerification.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordCredential.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, PasswordResetChallenge.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserSession.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserAction.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, OtpKey.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, UserLock.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, Invitation.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, GroupInvitation.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcInvitation.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcProvider.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcUser.class)
-                        .set(EclipseLinkEntityManagerProvider::registerClass, OidcApplication.class)
-                        .build(),
-                "redis", new JedisProvider(),
-                "storeprovider", new StoreProvider(),
-                "flake", new Flake(),
-                "jwt", new JsonWebToken(),
-                "realmCache", new RealmCache(),
-                "flyway", builder(new FlywayMigration())
-                        .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
-                        .build(),
-                "metrics", new MetricsComponent(),
-                "datasource", new HikariCPComponent(OptionMap.of(
-                        "uri", Env.getString("JDBC_URL", "jdbc:h2:mem:test"),
-                        "username", Env.get("JDBC_USER"),
-                        "password", Env.get("JDBC_PASSWORD"),
-                        "schema", Env.getString("JDBC_SCHEMA", null))),
-                "app", new ApplicationComponent<>("net.unit8.bouncr.api.BouncrApplicationFactory"),
-                "http", builder(new JettyComponent())
-                        .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
-                        .build()
-        ).relationships(
-                component("http").using("app"),
-                component("app").using("config", "storeprovider", "realmCache", "jpa", "jwt",
-                        "validator", "converter", "metrics"),
-                component("storeprovider").using("config", "redis"),
-                component("realmCache").using("jpa"),
-                component("jpa").using("datasource", "flyway"),
-                component("flyway").using("datasource"),
-                component("jwt").using("config")
-        );
+        if (useRedis) {
+            return EnkanSystem.of(
+                    "hmac", new HmacEncoder(),
+                    "config", config,
+                    "converter", new JacksonBeansConverter(),
+                    "jooq", builder(new JooqProvider())
+                            .set(JooqProvider::setDialect, sqlDialect)
+                            .build(),
+                    "redis", new JedisProvider(),
+                    "storeprovider", new StoreProvider(),
+                    "flake", new Flake(),
+                    "jwt", new JsonWebToken(),
+                    "realmCache", new RealmCache(),
+                    "flyway", builder(new FlywayMigration())
+                            .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
+                            .build(),
+                    "metrics", new MetricsComponent(),
+                    "datasource", new HikariCPComponent(OptionMap.of(
+                            "uri", jdbcUrl,
+                            "username", Env.get("JDBC_USER"),
+                            "password", Env.get("JDBC_PASSWORD"),
+                            "schema", Env.getString("JDBC_SCHEMA", null))),
+                    "app", new ApplicationComponent<>("net.unit8.bouncr.api.BouncrApplicationFactory"),
+                    "http", builder(new JettyComponent())
+                            .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
+                            .build()
+            ).relationships(
+                    component("http").using("app"),
+                    component("app").using("config", "storeprovider", "realmCache", "jooq", "jwt",
+                            "converter", "metrics"),
+                    component("storeprovider").using("config", "redis"),
+                    component("realmCache").using("jooq", "flyway"),
+                    component("jooq").using("datasource"),
+                    component("flyway").using("datasource"),
+                    component("jwt").using("config")
+            );
+        } else {
+            // No Redis — MemoryStore for all KVS (development without Docker)
+            return EnkanSystem.of(
+                    "hmac", new HmacEncoder(),
+                    "config", config,
+                    "converter", new JacksonBeansConverter(),
+                    "jooq", builder(new JooqProvider())
+                            .set(JooqProvider::setDialect, sqlDialect)
+                            .build(),
+                    "storeprovider", new StoreProvider(),
+                    "flake", new Flake(),
+                    "jwt", new JsonWebToken(),
+                    "realmCache", new RealmCache(),
+                    "flyway", builder(new FlywayMigration())
+                            .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
+                            .build(),
+                    "metrics", new MetricsComponent(),
+                    "datasource", new HikariCPComponent(OptionMap.of(
+                            "uri", jdbcUrl,
+                            "username", Env.get("JDBC_USER"),
+                            "password", Env.get("JDBC_PASSWORD"),
+                            "schema", Env.getString("JDBC_SCHEMA", null))),
+                    "app", new ApplicationComponent<>("net.unit8.bouncr.api.BouncrApplicationFactory"),
+                    "http", builder(new JettyComponent())
+                            .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
+                            .build()
+            ).relationships(
+                    component("http").using("app"),
+                    component("app").using("config", "storeprovider", "realmCache", "jooq", "jwt",
+                            "converter", "metrics"),
+                    component("storeprovider").using("config"),
+                    component("realmCache").using("jooq", "flyway"),
+                    component("jooq").using("datasource"),
+                    component("flyway").using("datasource"),
+                    component("jwt").using("config")
+            );
+        }
     }
 }

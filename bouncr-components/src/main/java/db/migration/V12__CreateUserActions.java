@@ -1,11 +1,12 @@
 package db.migration;
 
-import net.unit8.bouncr.entity.ActionType;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
+
+import net.unit8.bouncr.data.ActionType;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,7 +34,7 @@ public class V12__CreateUserActions extends BaseJavaMigration {
                     .column(field("action_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("actor", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("actor_ip", SQLDataType.VARCHAR(50).nullable(false)))
-                    .column(field("options", SQLDataType.CLOB))
+                    .column(field("options", SQLDataType.VARCHAR(4000)))
                     .column(field("created_at", SQLDataType.TIMESTAMP.nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_action_id"))

@@ -27,14 +27,14 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.5.1</version>
+                <version>3.4.5</version>
                 <configuration>
                     <container>
                         <mainClass>net.unit8.bouncr.api.Main</mainClass>
                         <workingDirectory>/app</workingDirectory>
                     </container>
                     <from>
-                        <image>gcr.io/distroless/java:11</image>
+                        <image>eclipse-temurin:25-jre</image>
                     </from>
                     <to>
                         <image>bouncr/bouncr-api-server</image>
@@ -44,7 +44,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>3.5.0</version>
                 <configuration>
                     <mainClass>net.unit8.bouncr.api.Main</mainClass>
                 </configuration>
@@ -53,6 +53,7 @@
     </build>
 
     <dependencies>
+        <!-- Enkan / Kotowari -->
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jetty</artifactId>
@@ -60,14 +61,6 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>kotowari-restful</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>kotowari-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-eclipselink</artifactId>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -88,7 +81,11 @@
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jedis</artifactId>
-            <version>0.11.0</version>
+            <version>0.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jooq</artifactId>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
@@ -98,28 +95,80 @@
                     <groupId>net.unit8.enkan</groupId>
                     <artifactId>enkan-web</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-component-eclipselink</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.jodah</groupId>
+                    <artifactId>failsafe</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>javax.annotation</groupId>
+                    <artifactId>javax.annotation-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-json-provider</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-ldaptive</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-component-eclipselink</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.jodah</groupId>
+                    <artifactId>failsafe</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>javax.annotation</groupId>
+                    <artifactId>javax.annotation-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-json-provider</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
+        <!-- Raoh (JSON/jOOQ decoders) -->
+        <dependency>
+            <groupId>net.unit8.raoh</groupId>
+            <artifactId>raoh-json</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.raoh</groupId>
+            <artifactId>raoh-jooq</artifactId>
+        </dependency>
+
+        <!-- Jackson -->
         <dependency>
             <groupId>tools.jackson.jakarta.rs</groupId>
             <artifactId>jackson-jakarta-rs-json-provider</artifactId>
         </dependency>
 
+        <!-- jOOQ -->
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+        </dependency>
+
+        <!-- HTTP / Resilience -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
         </dependency>
-
         <dependency>
             <groupId>dev.failsafe</groupId>
             <artifactId>failsafe</artifactId>
         </dependency>
 
+        <!-- Crypto -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
@@ -129,16 +178,11 @@
             <artifactId>bcpkix-jdk18on</artifactId>
         </dependency>
 
+        <!-- Misc -->
         <dependency>
             <groupId>is.tagomor.woothee</groupId>
             <artifactId>woothee-java</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>org.jooq</groupId>
-            <artifactId>jooq</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.unit8.apistandard</groupId>
             <artifactId>parameter-parser</artifactId>
@@ -148,26 +192,18 @@
             <artifactId>bouncr-components</artifactId>
         </dependency>
 
+        <!-- Test -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.jsr107.ri</groupId>
-            <artifactId>cache-ri-impl</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
-
 
     <profiles>
         <profile>
@@ -185,7 +221,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>build-helper-maven-plugin</artifactId>
-                        <version>3.0.0</version>
+                        <version>3.6.0</version>
                         <executions>
                             <execution>
                                 <id>add-dev-source</id>
@@ -208,10 +244,6 @@
                             <executable>java</executable>
                             <mainClass>backendexample.ReplMain</mainClass>
                             <environmentVariables>
-                                <JDBC_URL>jdbc:postgresql://localhost:5432/bouncr</JDBC_URL>
-                                <JDBC_USER>bouncr</JDBC_USER>
-                                <JDBC_PASSWORD>bouncr</JDBC_PASSWORD>
-                                <REDIS_URL>redis://localhost:6379</REDIS_URL>
                                 <JWT_SECRET>abcdefghijklmnopqrstuvwxyzabcdef</JWT_SECRET>
                                 <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
                             </environmentVariables>
@@ -221,26 +253,16 @@
             </build>
             <dependencies>
                 <dependency>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-devel</artifactId>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                    <scope>runtime</scope>
                 </dependency>
-                <dependency>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-repl-pseudo</artifactId>
-                </dependency>
-
-                <dependency>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-repl-jshell</artifactId>
-                </dependency>
-
                 <dependency>
                     <groupId>org.postgresql</groupId>
                     <artifactId>postgresql</artifactId>
                     <version>42.7.5</version>
                     <scope>runtime</scope>
                 </dependency>
-
                 <dependency>
                     <groupId>org.flywaydb</groupId>
                     <artifactId>flyway-database-postgresql</artifactId>
@@ -249,62 +271,9 @@
                 </dependency>
 
                 <dependency>
-                    <groupId>org.apache.directory.server</groupId>
-                    <artifactId>apacheds-all</artifactId>
-                    <version>2.0.0-M24</version>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>*</groupId>
-                            <artifactId>*</artifactId>
-                        </exclusion>
-                    </exclusions>
-                </dependency>
-
-                <dependency>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-simple</artifactId>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
-            <id>hazelcast</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.hazelcast</groupId>
-                    <artifactId>hazelcast-client</artifactId>
-                    <version>3.11</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
-            <id>log4j2</id>
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-api</artifactId>
-                    <version>2.11.1</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-core</artifactId>
-                    <version>2.11.1</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-slf4j-impl</artifactId>
-                    <version>2.11.1</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
-            <id>slf4j-simple</id>
-            <dependencies>
-                <dependency>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
+                    <scope>runtime</scope>
                 </dependency>
             </dependencies>
         </profile>

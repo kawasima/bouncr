@@ -8,6 +8,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OidcSession;
+import net.unit8.bouncr.util.RandomUtils;
 
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;
@@ -32,7 +33,9 @@ public class PreSignInResource {
     @Decision(POST)
     public OidcSession post(RestContext context) {
         String oidcSessionId = UUID.randomUUID().toString();
-        OidcSession oidcSession = OidcSession.create(config.getSecureRandom());
+        String nonce = RandomUtils.generateRandomString(32, config.getSecureRandom());
+        String state = RandomUtils.generateRandomString(8, config.getSecureRandom());
+        OidcSession oidcSession = new OidcSession(nonce, state, null, null);
         storeProvider.getStore(OIDC_SESSION).write(oidcSessionId, oidcSession);
 
         Cookie cookie = Cookie.create(COOKIE_NAME, oidcSessionId);

@@ -1,163 +1,114 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.SystemComponent;
-import enkan.component.jackson.JacksonBeansConverter;
-import enkan.data.DefaultHttpRequest;
-import enkan.data.HttpRequest;
-import enkan.system.EnkanSystem;
-import enkan.system.inject.ComponentInjector;
-import kotowari.restful.component.BeansValidator;
-import kotowari.restful.data.DefaultResource;
-import kotowari.restful.data.Problem;
-import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
-import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
-import net.unit8.bouncr.api.resource.PasswordCredentialResource;
-import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.PasswordCredential;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.util.PasswordUtils;
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
-
-import java.util.Map;
-import java.util.stream.Stream;
-
-import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+/**
+ * Tests for password credential operations using a real H2 database.
+ */
 public class PasswordCredentialResourceTest {
-    private static final Logger LOG = LoggerFactory.getLogger(PasswordCredentialResourceTest.class);
-
-    private EnkanSystem system;
+    private DSLContext dsl;
 
     @BeforeEach
     void setup() {
-        system = EnkanSystem.of(
-                "converter", new JacksonBeansConverter(),
-                "validator", new BeansValidator(),
-                "config",    new BouncrConfiguration()
-        );
-        system.start();
-    }
-
-    @Test
-    void validateCreateRequest_Error() {
-        TypedQuery query = mock(TypedQuery.class);
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-
-        RestContext context = new RestContext(new DefaultResource(), request);
-        PasswordCredentialResource resource = new PasswordCredentialResource();
-        PasswordCredentialCreateRequest createRequest = new PasswordCredentialCreateRequest();
-
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
-                        "validator", system.getComponent("validator")));
-
-        injector.inject(resource);
-        Problem problem = resource.validateCreateRequest(createRequest, context, em);
-        assertThat(problem).isNotNull();
-    }
-
-    @Test
-    void validateCreateRequest_Success() {
-        TypedQuery query = mock(TypedQuery.class);
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-
-        RestContext context = new RestContext(new DefaultResource(), request);
-        PasswordCredentialResource resource = new PasswordCredentialResource();
-        PasswordCredentialCreateRequest createRequest = new PasswordCredentialCreateRequest();
-        createRequest.setAccount("test_user");
-        createRequest.setPassword("pass1234");
-
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
-                        "validator", system.getComponent("validator")));
-
-        injector.inject(resource);
-        Problem problem = resource.validateCreateRequest(createRequest, context, em);
-        assertThat(problem).isNull();
-    }
-
-    @Test
-    void userProcessableInPost_Successful() {
-        TypedQuery query = mock(TypedQuery.class);
-        User user = builder(new User())
-                .set(User::setId, 1L)
-                .set(User::setAccount, "test_user")
-                .build();
-        when(query.getResultStream()).thenReturn(Stream.of(user));
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-
-        RestContext context = new RestContext(new DefaultResource(), request);
-        PasswordCredentialResource resource = new PasswordCredentialResource();
-        PasswordCredentialCreateRequest createRequest = new PasswordCredentialCreateRequest();
-        createRequest.setAccount("test_user");
-        createRequest.setPassword("pass1234");
-
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
-                        "validator", system.getComponent("validator")));
-
-        injector.inject(resource);
-        boolean ret = resource.userProcessableInPost(createRequest, context, em);
-        assertThat(ret).isTrue();
-    }
-
-    @Test
-    void userProcessableInPut_Successful() {
-        TypedQuery query = mock(TypedQuery.class);
-        PasswordCredential credential = builder(new PasswordCredential())
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2("pass1234", "saltsalt", 600_000))
-                .set(PasswordCredential::setSalt, "saltsalt")
-                .build();
-        User user = builder(new User())
-                .set(User::setId, 1L)
-                .set(User::setAccount, "test_user")
-                .set(User::setPasswordCredential, credential)
-                .build();
-        when(query.getResultStream()).thenReturn(Stream.of(user));
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        HttpRequest request = builder(new DefaultHttpRequest())
-                .set(HttpRequest::setRequestMethod, "POST")
-                .build();
-
-        RestContext context = new RestContext(new DefaultResource(), request);
-        PasswordCredentialResource resource = new PasswordCredentialResource();
-        PasswordCredentialUpdateRequest updateRequest = builder(new PasswordCredentialUpdateRequest())
-                .set(PasswordCredentialUpdateRequest::setAccount, "test_user")
-                .set(PasswordCredentialUpdateRequest::setOldPassword, "pass1234")
-                .set(PasswordCredentialUpdateRequest::setNewPassword, "pass5678")
-                .build();
-
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("config",   system.getComponent("config"),
-                        "validator", system.getComponent("validator")));
-
-        injector.inject(resource);
-        boolean ret = resource.userProcessableInPut(updateRequest, context, em);
-        assertThat(ret).isTrue();
+        dsl = MockFactory.beginTransaction();
     }
 
     @AfterEach
     void tearDown() {
-        system.stop();
+        MockFactory.rollback();
+    }
+
+    @Test
+    void createPasswordCredential() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("test_user");
+
+        String salt = "abcdef1234567890";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+
+        userRepo.insertPasswordCredential(user.id(), hash, salt, true);
+
+        // Verify the credential is stored by loading user for sign-in
+        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        assertThat(loaded.passwordCredential()).isNotNull();
+        assertThat(loaded.passwordCredential().salt()).isEqualTo(salt);
+        assertThat(loaded.passwordCredential().initial()).isTrue();
+        assertThat(loaded.passwordCredential().password()).isEqualTo(hash);
+    }
+
+    @Test
+    void updatePasswordCredential() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("test_user");
+
+        // Create initial credential
+        String salt1 = "saltsaltsaltsalt";
+        byte[] hash1 = PasswordUtils.pbkdf2("pass1234", salt1, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash1, salt1, true);
+
+        // Update credential (upsert)
+        String salt2 = "newsaltnewsaltne";
+        byte[] hash2 = PasswordUtils.pbkdf2("pass5678", salt2, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash2, salt2, false);
+
+        // Verify the credential is updated
+        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        assertThat(loaded.passwordCredential()).isNotNull();
+        assertThat(loaded.passwordCredential().salt()).isEqualTo(salt2);
+        assertThat(loaded.passwordCredential().initial()).isFalse();
+        assertThat(loaded.passwordCredential().password()).isEqualTo(hash2);
+    }
+
+    @Test
+    void verifyPasswordMatch() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("test_user");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, false);
+
+        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        assertThat(loaded.passwordCredential().password()).isEqualTo(checkHash);
+    }
+
+    @Test
+    void verifyPasswordMismatch() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("test_user");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, false);
+
+        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpassword", loaded.passwordCredential().salt(), 600_000);
+        assertThat(loaded.passwordCredential().password()).isNotEqualTo(wrongHash);
+    }
+
+    @Test
+    void deletePasswordCredential() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("test_user");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, false);
+
+        // Delete
+        userRepo.deletePasswordCredential(user.id());
+
+        // Verify it's gone
+        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        assertThat(loaded.passwordCredential()).isNull();
     }
 }

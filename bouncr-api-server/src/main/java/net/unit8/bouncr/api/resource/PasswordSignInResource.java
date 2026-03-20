@@ -1,47 +1,47 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.BeansConverter;
 import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserSession;
+import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserSession;
 import net.unit8.bouncr.util.PasswordUtils;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
 import java.util.Arrays;
-import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.EXPIRED;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.INITIAL;
-import static net.unit8.bouncr.entity.ActionType.USER_FAILED_SIGNIN;
-import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
+import static net.unit8.bouncr.data.ActionType.USER_FAILED_SIGNIN;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
+import static net.unit8.bouncr.data.ActionType.USER_SIGNIN;
 
 @AllowedMethods("POST")
 public class PasswordSignInResource {
     private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResource.class);
+    static final ContextKey<PasswordSignIn> SIGN_IN_REQ = ContextKey.of(PasswordSignIn.class);
+    static final ContextKey<User> USER = ContextKey.of(User.class);
+    static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -49,101 +49,47 @@ public class PasswordSignInResource {
     @Inject
     private BouncrConfiguration config;
 
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
-
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validatePasswordSignInRequest(PasswordSignInRequest passwordSignInRequest, RestContext context) {
-        if (passwordSignInRequest == null) {
+    public Problem validate(JsonNode body, RestContext context) {
+        if (body == null) {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
-        Set<ConstraintViolation<PasswordSignInRequest>> violations = validator.validate(passwordSignInRequest);
-        if (violations.isEmpty()) {
-            context.putValue(passwordSignInRequest);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.PASSWORD_SIGN_IN.decode(body)) {
+            case Ok<PasswordSignIn> ok -> { context.put(SIGN_IN_REQ, ok.value()); yield null; }
+            case Err<PasswordSignIn>(var issues) -> toProblem(issues);
+        };
     }
 
-    /**
-     * Authenticate the given request.
-     *
-     * <p>Authentication flow</p>
-     * <ul>
-     *     <li>
-     *         Find an user by the given account
-     *         <ul>
-     *             <li>
-     *                 Found
-     *                 <ul>
-     *                     <li>Check whether account is locked</li>
-     *                     <li>Check whether the given password matches the registered password</li>
-     *                     <li>Check whether the given code matches OTP password</li>
-     *                 </ul>
-     *             </li>
-     *             <li>
-     *                 Not found
-     *                 <ul>
-     *                     <li>Fail to sign in</li>
-     *                 </ul>
-     *             </li>
-     *         </ul>
-     *     </li>
-     *     <li>Logging the request of sign in</li>
-     * </ul>
-     *
-     * @param passwordSignInRequest A request to sign in
-     * @param actionRecord an action record
-     * @param context REST context
-     * @param em Entity manager
-     * @return Whether request is authenticated successfully
-     */
     @Decision(AUTHORIZED)
-    public boolean authenticate(PasswordSignInRequest passwordSignInRequest,
+    public boolean authenticate(PasswordSignIn signInRequest,
                                 ActionRecord actionRecord,
                                 RestContext context,
-                                final EntityManager em) {
+                                DSLContext dsl) {
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return false;
         }
-        SignInService signInService = new SignInService(em, storeProvider, config);
-        UserLockService userLockService = new UserLockService(em, config);
+        SignInService signInService = new SignInService(dsl, storeProvider, config);
+        UserLockService userLockService = new UserLockService(dsl, config);
+        UserRepository userRepo = new UserRepository(dsl);
 
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<User> query = cb.createQuery(User.class);
-        Root<User> userRoot = query.from(User.class);
-        query.where(cb.equal(userRoot.get("account"), passwordSignInRequest.getAccount()));
-        EntityGraph<User> userGraph = em.createEntityGraph(User.class);
-        userGraph.addAttributeNodes("account", "userProfileValues", "otpKey", "userLock");
-        userGraph.addSubgraph("otpKey").addAttributeNodes("key");
-        userGraph.addSubgraph("userLock").addAttributeNodes("lockedAt");
-        userGraph.addSubgraph("passwordCredential")
-                .addAttributeNodes("password", "salt", "initial", "createdAt");
+        User user = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
 
-        User user = em.createQuery(query)
-                .setHint("jakarta.persistence.fetchgraph", userGraph)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-
-        if (user != null && user.getUserLock() != null) {
+        if (user != null && user.userLock() != null) {
             context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
             return false;
         }
 
-        // Check if the given password matches the registered password
         if (user != null) {
-            actionRecord.setActor(user.getAccount());
-            if (user.getPasswordCredential() != null &&
+            actionRecord.setActor(user.account());
+            if (user.passwordCredential() != null &&
                     Arrays.equals(
-                            user.getPasswordCredential().getPassword(),
+                            user.passwordCredential().password(),
                             PasswordUtils.pbkdf2(
-                                    passwordSignInRequest.getPassword(),
-                                    user.getPasswordCredential().getSalt(),
+                                    signInRequest.password(),
+                                    user.passwordCredential().salt(),
                                     600_000))) {
-                context.putValue(user);
+                context.put(USER, user);
                 actionRecord.setActionType(USER_SIGNIN);
                 SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
                 if (status == EXPIRED || status == INITIAL) {
@@ -151,7 +97,7 @@ public class PasswordSignInResource {
                     return false;
                 }
 
-                if (!signInService.validateOtpKey(user.getOtpKey(), passwordSignInRequest.getOneTimePassword())) {
+                if (!signInService.validateOtpKey(user.otpKey(), signInRequest.oneTimePassword())) {
                     context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
                     return false;
                 }
@@ -171,19 +117,17 @@ public class PasswordSignInResource {
     }
 
     @Decision(POST)
-    public UserSession doPost(User user, HttpRequest request, RestContext context, EntityManager em) {
-        SignInService signInService = new SignInService(em, storeProvider, config);
+    public boolean doPost(User user, HttpRequest request, RestContext context, DSLContext dsl) {
+        SignInService signInService = new SignInService(dsl, storeProvider, config);
         String token = signInService.createToken();
         UserSession userSession = signInService.createUserSession(request, user, token);
-        context.putValue(userSession);
+        context.put(SESSION, userSession);
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
-        return userSession;
+        return true;
     }
 
     @Decision(HANDLE_CREATED)
     public UserSession handleCreated(UserSession userSession) {
         return userSession;
     }
-
-
 }

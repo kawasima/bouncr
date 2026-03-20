@@ -1,31 +1,31 @@
 package net.unit8.bouncr.api.resource;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 import enkan.collection.Headers;
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.exception.FalteringEnvironmentException;
 import enkan.util.CodecUtils;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import dev.failsafe.Failsafe;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.repository.InvitationRepository;
+import net.unit8.bouncr.api.repository.OidcProviderRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.JwksVerifier;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.data.OidcSession;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
@@ -34,14 +34,10 @@ import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -51,10 +47,10 @@ import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OIDC_SESSION;
-import static net.unit8.bouncr.entity.ActionType.USER_SIGNIN;
-import static net.unit8.bouncr.entity.ResponseType.ID_TOKEN;
-import static net.unit8.bouncr.entity.ResponseType.TOKEN;
-import static net.unit8.bouncr.entity.TokenEndpointAuthMethod.CLIENT_SECRET_POST;
+import static net.unit8.bouncr.data.ActionType.USER_SIGNIN;
+import static net.unit8.bouncr.data.ResponseType.ID_TOKEN;
+import static net.unit8.bouncr.data.ResponseType.TOKEN;
+import static net.unit8.bouncr.data.TokenEndpointAuthMethod.CLIENT_SECRET_POST;
 
 /**
  * A Callback Endpoint from an OpenID Connect provider.
@@ -73,11 +69,13 @@ public class OidcSignInResource {
 
     private static final JwksVerifier JWKS_VERIFIER = new JwksVerifier(OKHTTP);
 
-    @Inject
-    private StoreProvider storeProvider;
+    static final ContextKey<User> USER = ContextKey.of(User.class);
+    static final ContextKey<Invitation> INVITATION = ContextKey.of(Invitation.class);
+    static final ContextKey<OidcProvider> OIDC_PROVIDER = ContextKey.of(OidcProvider.class);
+    static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 
     @Inject
-    private BeansConverter converter;
+    private StoreProvider storeProvider;
 
     @Inject
     private BouncrConfiguration config;
@@ -85,50 +83,58 @@ public class OidcSignInResource {
     @Inject
     private JsonWebToken jsonWebToken;
 
-    private JsonMapper jsonMapper = JsonMapper.builder().build();
+    private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Decision(AUTHORIZED)
     public boolean authenticate(HttpRequest request,
-                              Parameters params,
-                              RestContext context,
-                              EntityManager em) {
+                                Parameters params,
+                                RestContext context,
+                                DSLContext dsl) {
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return false;
         }
-        OidcProvider oidcProvider = findOidcProvider(params, context, em);
+        OidcProviderRepository providerRepo = new OidcProviderRepository(dsl);
+        OidcProvider oidcProvider = providerRepo.findByName(params.get("name")).orElse(null);
+        if (oidcProvider != null) {
+            context.put(OIDC_PROVIDER, oidcProvider);
+        }
+
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
-        if (oidcProvider.getResponseType() == ID_TOKEN || oidcProvider.getResponseType() == TOKEN) {
+        if (oidcProvider != null && (oidcProvider.responseType() == ID_TOKEN || oidcProvider.responseType() == TOKEN)) {
             // Verify State
-            if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.getState())) {
+            if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.state())) {
                 context.setMessage(Problem.valueOf(401, "State doesn't match", BouncrProblem.MISMATCH_STATE.problemUri()));
                 return false;
             }
         }
-        OidcProviderDto oidcProviderDto = converter.createFrom(oidcProvider, OidcProviderDto.class);
-        oidcProviderDto.setRedirectUriBase(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api");
+
+        String redirectUriBase = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api";
+        String redirectUri = oidcProvider != null && oidcProvider.redirectUri() != null
+                ? oidcProvider.redirectUri().toString()
+                : redirectUriBase + "/sign_in/oidc/" + (oidcProvider != null ? oidcProvider.name() : params.get("name"));
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             FormBody.Builder bodyBuilder = new FormBody.Builder()
                     .add("grant_type", "authorization_code")
                     .add("code", params.get("code"))
-                    .add("redirect_uri", oidcProviderDto.getRedirectUri());
+                    .add("redirect_uri", redirectUri);
 
             Request.Builder requestBuilder = new Request.Builder()
-                    .url(oidcProvider.getTokenEndpoint());
+                    .url(oidcProvider.tokenEndpoint());
 
-            if (oidcProvider.getTokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
-                bodyBuilder.add("client_id", oidcProvider.getClientId())
-                           .add("client_secret", oidcProvider.getClientSecret());
+            if (oidcProvider.tokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
+                bodyBuilder.add("client_id", oidcProvider.clientId())
+                        .add("client_secret", oidcProvider.clientSecret());
             } else {
                 requestBuilder.header("Authorization", "Basic " +
                         Base64.getUrlEncoder().encodeToString(
-                                (oidcProvider.getClientId() + ":" + oidcProvider.getClientSecret()).getBytes()));
+                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes()));
             }
 
-            if (oidcProvider.isPkceEnabled() && oidcSession != null && oidcSession.getCodeVerifier() != null) {
-                bodyBuilder.add("code_verifier", oidcSession.getCodeVerifier());
+            if (oidcProvider.pkceEnabled() && oidcSession != null && oidcSession.codeVerifier() != null) {
+                bodyBuilder.add("code_verifier", oidcSession.codeVerifier());
             }
 
             Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute();
@@ -155,19 +161,19 @@ public class OidcSignInResource {
         });
 
         // Verify Nonce
-        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.getNonce())) {
+        if (oidcSession != null && !Objects.equals(claim.getNonce(), oidcSession.nonce())) {
             context.setMessage(Problem.valueOf(401, "Nonce doesn't match", BouncrProblem.MISMATCH_NONCE.problemUri()));
             return false;
         }
 
         // Verify iss claim
-        if (oidcProvider.getIssuer() != null && !oidcProvider.getIssuer().equals(claim.getIss())) {
+        if (oidcProvider.issuer() != null && !oidcProvider.issuer().equals(claim.getIss())) {
             context.setMessage(Problem.valueOf(401, "ID token issuer doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
 
         // Verify aud claim
-        if (claim.getAud() != null && !oidcProvider.getClientId().equals(claim.getAud())) {
+        if (claim.getAud() != null && !oidcProvider.clientId().equals(claim.getAud())) {
             context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
@@ -182,40 +188,37 @@ public class OidcSignInResource {
             context.setMessage(Problem.valueOf(401, "ID token missing subject", BouncrProblem.MISSING_SUBJECT.problemUri()));
             return false;
         }
-        OidcUser oidcUser = findOidcUser(oidcProvider, claim.getSub(), em);
+
+        OidcUser oidcUser = findOidcUser(dsl, oidcProvider, claim.getSub());
         if (oidcUser == null) {
-            createInvitation(tokens[1], oidcProvider, request, context, em);
+            createInvitation(dsl, tokens[1], oidcProvider, request, context);
             return false;
         }
 
-        if (oidcUser.getUser().getUserLock() != null) {
-            context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
-            return false;
+        // Check user lock by loading full user
+        User user = oidcUser.user();
+        if (user != null) {
+            UserRepository userRepo = new UserRepository(dsl);
+            if (userRepo.isLocked(user.id())) {
+                context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
+                return false;
+            }
         }
-        context.putValue(oidcUser.getUser());
+
+        context.put(USER, user);
         return true;
     }
 
-    private void createInvitation(String payload,
-                                         OidcProvider oidcProvider,
-                                         HttpRequest request,
-                                         RestContext context,
-                                         EntityManager em) {
-        Invitation invitation = builder(new Invitation())
-                .set(Invitation::setCode, RandomUtils.generateRandomString(8, config.getSecureRandom()))
-                .set(Invitation::setInvitedAt, LocalDateTime.now())
-                .build();
-        OidcInvitation oidcInvitation = builder(new OidcInvitation())
-                .set(OidcInvitation::setInvitation, invitation)
-                .set(OidcInvitation::setOidcProvider, oidcProvider)
-                .set(OidcInvitation::setOidcPayload, payload)
-                .build();
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            em.persist(invitation);
-            em.persist(oidcInvitation);
-        });
-        context.putValue(invitation);
+    private void createInvitation(DSLContext dsl,
+                                  String payload,
+                                  OidcProvider oidcProvider,
+                                  HttpRequest request,
+                                  RestContext context) {
+        InvitationRepository invitationRepo = new InvitationRepository(dsl);
+        String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
+        Invitation invitation = invitationRepo.insert(null, code, LocalDateTime.now(), null);
+        invitationRepo.insertOidcInvitation(invitation.id(), oidcProvider.id(), payload);
+        context.put(INVITATION, invitation);
     }
 
     private ApiResponse handleInvitation(Invitation invitation) {
@@ -224,19 +227,20 @@ public class OidcSignInResource {
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
-                                "Location", uriInterpolator.interpolate(uri, "code", invitation.getCode()).toString()
+                                "Location", uriInterpolator.interpolate(uri, "code", invitation.code()).toString()
                         ))
                         .build())
                 .orElse(
                         builder(new ApiResponse())
                                 .set(ApiResponse::setStatus, 202)
                                 .set(ApiResponse::setBody, Map.of(
-                                        "code", invitation.getCode(),
+                                        "code", invitation.code(),
                                         "message", ""
                                 ))
                                 .build()
                 );
     }
+
     @Decision(HANDLE_UNAUTHORIZED)
     public ApiResponse handleUnauthorized(Invitation invitation, RestContext context) {
         if (invitation != null) {
@@ -293,32 +297,11 @@ public class OidcSignInResource {
                         .build());
     }
 
-
-    private OidcProvider findOidcProvider(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OidcProvider> query = cb.createQuery(OidcProvider.class);
-        Root<OidcProvider> root = query.from(OidcProvider.class);
-        query.where(cb.equal(root.get("name"), params.get("name")));
-
-        OidcProvider oidcProvider = em.createQuery(query)
-                .getResultStream()
-                .findAny()
+    private OidcUser findOidcUser(DSLContext dsl, OidcProvider oidcProvider, String sub) {
+        UserRepository userRepo = new UserRepository(dsl);
+        return userRepo.findOidcUser(oidcProvider.id(), sub)
+                .map(ou -> new OidcUser(oidcProvider, ou.user(), ou.oidcSub()))
                 .orElse(null);
-        if (oidcProvider != null) {
-            context.putValue(oidcProvider);
-        }
-        return oidcProvider;
-    }
-
-
-    private OidcUser findOidcUser(OidcProvider oidcProvider, String sub, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OidcUser> query = cb.createQuery(OidcUser.class);
-        Root<OidcUser> root = query.from(OidcUser.class);
-        root.fetch("user");
-        query.where(cb.equal(root.get("oidcSub"), sub),
-                cb.equal(root.get("oidcProvider"), oidcProvider));
-        return em.createQuery(query).getResultStream().findAny().orElse(null);
     }
 
     @Decision(HANDLE_OK)
@@ -326,20 +309,20 @@ public class OidcSignInResource {
                               HttpRequest request,
                               ActionRecord actionRecord,
                               RestContext context,
-                              EntityManager em) {
-        actionRecord.setActor(user.getAccount());
+                              DSLContext dsl) {
+        actionRecord.setActor(user.account());
         actionRecord.setActionType(USER_SIGNIN);
 
-        SignInService signInService = new SignInService(em, storeProvider, config);
+        SignInService signInService = new SignInService(dsl, storeProvider, config);
         String token = signInService.createToken();
         UserSession userSession = signInService.createUserSession(request, user, token);
-        context.putValue(userSession);
+        context.put(SESSION, userSession);
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
 
         UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
         return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
-                .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.getToken()))
-                .map(uri -> uriInterpolator.interpolate(uri, "account", user.getAccount()))
+                .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.token()))
+                .map(uri -> uriInterpolator.interpolate(uri, "account", user.account()))
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
@@ -350,122 +333,5 @@ public class OidcSignInResource {
                         .set(ApiResponse::setStatus, 200)
                         .set(ApiResponse::setBody, userSession)
                         .build());
-    }
-
-    public static class OidcProviderDto implements Serializable {
-        private Long id;
-        private String name;
-        @JsonProperty("client_id")
-        private String clientId;
-        private String scope;
-        private String state = RandomUtils.generateRandomString(8);
-        @JsonProperty("response_type")
-        private String responseType;
-        @JsonProperty("token_endpoint")
-        private String tokenEndpoint;
-        @JsonProperty("authorization_endpoint")
-        private String authorizationEndpoint;
-        private String nonce = RandomUtils.generateRandomString(32);
-        @JsonProperty("redirect_uri")
-        private String redirectUri;
-        private String redirectUriBase;
-
-        public void setRedirectUri(String redirectUri) {
-            this.redirectUri = redirectUri;
-        }
-
-        public String getRedirectUri() {
-            return Optional.ofNullable(redirectUri)
-                    .orElse(redirectUriBase + "/sign_in/oidc/" + name);
-        }
-
-        public String getAuthorizationUrl() {
-            return authorizationEndpoint + "?response_type=" + CodecUtils.urlEncode(responseType)
-                    + "&client_id=" + clientId
-                    + "&redirect_uri=" + CodecUtils.urlEncode(getRedirectUri())
-                    + "&state=" + state
-                    + "&scope=" + scope
-                    + "&nonce=" + nonce;
-        }
-
-        public Long getId() {
-            return id;
-        }
-
-        public void setId(Long id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getClientId() {
-            return clientId;
-        }
-
-        public void setClientId(String clientId) {
-            this.clientId = clientId;
-        }
-
-        public String getScope() {
-            return scope;
-        }
-
-        public void setScope(String scope) {
-            this.scope = scope;
-        }
-
-        public String getState() {
-            return state;
-        }
-
-        public void setState(String state) {
-            this.state = state;
-        }
-
-        public String getResponseType() {
-            return responseType;
-        }
-
-        public void setResponseType(String responseType) {
-            this.responseType = responseType;
-        }
-
-        public String getTokenEndpoint() {
-            return tokenEndpoint;
-        }
-
-        public void setTokenEndpoint(String tokenEndpoint) {
-            this.tokenEndpoint = tokenEndpoint;
-        }
-
-        public String getAuthorizationEndpoint() {
-            return authorizationEndpoint;
-        }
-
-        public void setAuthorizationEndpoint(String authorizationEndpoint) {
-            this.authorizationEndpoint = authorizationEndpoint;
-        }
-
-        public String getNonce() {
-            return nonce;
-        }
-
-        public void setNonce(String nonce) {
-            this.nonce = nonce;
-        }
-
-        public String getRedirectUriBase() {
-            return redirectUriBase;
-        }
-
-        public void setRedirectUriBase(String redirectUriBase) {
-            this.redirectUriBase = redirectUriBase;
-        }
     }
 }

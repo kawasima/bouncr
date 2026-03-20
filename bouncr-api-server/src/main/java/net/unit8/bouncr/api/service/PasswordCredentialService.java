@@ -1,65 +1,38 @@
 package net.unit8.bouncr.api.service;
 
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.data.InitialPassword;
+import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.entity.PasswordCredential;
-import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
-
-import jakarta.persistence.EntityManager;
-
-import java.time.LocalDateTime;
-
-import static enkan.util.BeanBuilder.builder;
+import org.jooq.DSLContext;
 
 public class PasswordCredentialService {
-    private final EntityManager em;
+    private final DSLContext dsl;
     private final BouncrConfiguration config;
 
-    public PasswordCredentialService(EntityManager em, BouncrConfiguration config) {
-        this.em = em;
+    public PasswordCredentialService(DSLContext dsl, BouncrConfiguration config) {
+        this.dsl = dsl;
         this.config = config;
     }
 
     public void changePassword(User user, String password) {
-        PasswordCredential passwordCredential = em.find(PasswordCredential.class, user);
-        em.remove(passwordCredential);
+        UserRepository repo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        passwordCredential = builder(new PasswordCredential())
-                .set(PasswordCredential::setUser, user)
-                .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
-                .set(PasswordCredential::setSalt, salt)
-                .set(PasswordCredential::setInitial, false)
-                .build();
-        em.persist(passwordCredential);
+        byte[] hash = PasswordUtils.pbkdf2(password, salt, 600_000);
+        repo.deletePasswordCredential(user.id());
+        repo.insertPasswordCredential(user.id(), hash, salt, false);
     }
 
     public InitialPassword initializePassword(User user) {
         String password = RandomUtils.generateRandomString(8, config.getSecureRandom());
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
+        byte[] hash = PasswordUtils.pbkdf2(password, salt, 600_000);
 
-        if (user.getPasswordCredential() == null) {
-            PasswordCredential passwordCredential = builder(new PasswordCredential())
-                    .set(PasswordCredential::setUser, user)
-                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
-                    .set(PasswordCredential::setSalt, salt)
-                    .set(PasswordCredential::setInitial, true)
-                    .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
-                    .build();
-            user.setPasswordCredential(passwordCredential);
-            em.persist(passwordCredential);
-        } else {
-            builder(user.getPasswordCredential())
-                    .set(PasswordCredential::setPassword, PasswordUtils.pbkdf2(password, salt, 600_000))
-                    .set(PasswordCredential::setSalt, salt)
-                    .set(PasswordCredential::setInitial, true)
-                    .set(PasswordCredential::setCreatedAt, LocalDateTime.now())
-                    .build();
-        }
-        return builder(new InitialPassword())
-                .set(InitialPassword::setPassword, password)
-                .build();
+        UserRepository repo = new UserRepository(dsl);
+        repo.insertPasswordCredential(user.id(), hash, salt, true);
 
+        return new InitialPassword(password);
     }
 }

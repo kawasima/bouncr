@@ -1,53 +1,60 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.RolePermissionsRequest;
-import net.unit8.bouncr.entity.Permission;
-import net.unit8.bouncr.entity.Role;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.repository.RolePermissionRepository;
+import net.unit8.bouncr.api.repository.RoleRepository;
+import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.Role;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.Root;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
+import net.unit8.bouncr.api.repository.PermissionRepository;
+
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST", "DELETE"})
 public class RolePermissionsResource {
-    @Inject
-    private BeansConverter converter;
+    @SuppressWarnings("unchecked")
+    static final ContextKey<List<String>> PERMISSION_NAMES = (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of(List.class);
+    static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
-    @Inject
-    private BeansValidator validator;
+    @Decision(value = MALFORMED, method = {"POST", "DELETE"})
+    public Problem validateRequest(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
+        }
+        return switch (BouncrJsonDecoders.ROLE_PERMISSIONS.decode(body)) {
+            case Ok<List<String>> ok -> { context.put(PERMISSION_NAMES, ok.value()); yield null; }
+            case Err<List<String>>(var issues) -> toProblem(issues);
+        };
+    }
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:read") || p.hasPermission("any_role:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= { "POST", "DELETE" })
+    @Decision(value = ALLOWED, method = {"POST", "DELETE"})
     public boolean isModifyAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:update") || p.hasPermission("any_role:update"))
@@ -55,74 +62,40 @@ public class RolePermissionsResource {
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Role> query = cb.createQuery(Role.class);
-        Root<Role> roleRoot = query.from(Role.class);
-        query.where(cb.equal(roleRoot.get("name"), params.get("name")));
-
-        Role role = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-        if (role != null) {
-            context.putValue(role);
-        }
-        return role != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        RoleRepository repo = new RoleRepository(dsl);
+        Optional<Role> role = repo.findByName(params.get("name"), false);
+        role.ifPresent(r -> context.put(ROLE, r));
+        return role.isPresent();
     }
 
     @Decision(HANDLE_OK)
-    public List<Permission> list(Role role, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        Root<Permission> userRoot = query.from(Permission.class);
-        Join<Role, User> rolesJoin = userRoot.join("roles");
-        query.where(cb.equal(rolesJoin.get("id"), role.getId()));
-        query.orderBy(cb.asc(userRoot.get("id")));
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultList();
+    public List<Permission> list(Role role, DSLContext dsl) {
+        RolePermissionRepository repo = new RolePermissionRepository(dsl);
+        return repo.findPermissionsByRole(role.name());
     }
 
     @Decision(POST)
-    public RolePermissionsRequest create(RolePermissionsRequest createRequest, Role role, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        Root<Permission> permissionRoot = query.from(Permission.class);
-        query.where(permissionRoot.get("name").in(createRequest));
-        List<Permission> permissions = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultList();
-
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-
-        tx.required(() -> {
-            HashSet<Permission> rolePermissions = new HashSet<>(role.getPermissions());
-            rolePermissions.addAll(permissions);
-            role.setPermissions(new ArrayList<>(rolePermissions));
-        });
-
-        return createRequest;
+    public List<String> create(List<String> permissionNames, Role role, DSLContext dsl) {
+        RolePermissionRepository repo = new RolePermissionRepository(dsl);
+        List<Long> permissionIds = findPermissionIdsByNames(dsl, permissionNames);
+        for (Long permissionId : permissionIds) {
+            repo.addPermission(role.id(), permissionId);
+        }
+        return permissionNames;
     }
 
     @Decision(DELETE)
-    public RolePermissionsRequest delete(RolePermissionsRequest deleteRequest, Role role, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Permission> query = cb.createQuery(Permission.class);
-        Root<Permission> permissionRoot = query.from(Permission.class);
-        query.where(permissionRoot.get("name").in(deleteRequest));
-        List<Permission> permissions = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultList();
-
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-
-        tx.required(() -> {
-            HashSet<Permission> rolePermissions = new HashSet<>(role.getPermissions());
-            rolePermissions.removeAll(permissions);
-            role.setPermissions(new ArrayList<>(rolePermissions));
-        });
-
-        return deleteRequest;
+    public List<String> delete(List<String> permissionNames, Role role, DSLContext dsl) {
+        RolePermissionRepository repo = new RolePermissionRepository(dsl);
+        List<Long> permissionIds = findPermissionIdsByNames(dsl, permissionNames);
+        for (Long permissionId : permissionIds) {
+            repo.removePermission(role.id(), permissionId);
+        }
+        return permissionNames;
     }
 
+    private List<Long> findPermissionIdsByNames(DSLContext dsl, List<String> names) {
+        return new PermissionRepository(dsl).findIdsByNames(names);
+    }
 }

@@ -9,18 +9,27 @@ import enkan.config.ApplicationFactory;
 import enkan.endpoint.ResourceEndpoint;
 import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
-import enkan.middleware.jpa.EntityManagerMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
 import enkan.security.bouncr.BouncrBackend;
 import enkan.system.inject.ComponentInjector;
 import is.tagomor.woothee.Classifier;
 import kotowari.inject.ParameterInjector;
-import kotowari.inject.parameter.*;
+import kotowari.inject.parameter.ConversationInjector;
+import kotowari.inject.parameter.ConversationStateInjector;
+import kotowari.inject.parameter.FlashInjector;
+import kotowari.inject.parameter.HttpRequestInjector;
+import kotowari.inject.parameter.LocaleInjector;
+import kotowari.inject.parameter.ParametersInjector;
+import kotowari.inject.parameter.PrincipalInjector;
+import kotowari.inject.parameter.SessionInjector;
 import kotowari.middleware.RoutingMiddleware;
 import kotowari.middleware.SerDesMiddleware;
 import kotowari.restful.middleware.ResourceInvokerMiddleware;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.api.logging.ActionLoggingMiddleware;
+import enkan.middleware.jooq.JooqDslContextMiddleware;
+import enkan.middleware.jooq.JooqTransactionMiddleware;
+import net.unit8.bouncr.api.inject.DSLContextInjector;
 import net.unit8.bouncr.api.logging.ActionRecordInjector;
 import net.unit8.bouncr.api.resource.*;
 import net.unit8.bouncr.util.DigestUtils;
@@ -104,13 +113,13 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 new ConversationInjector(),
                 new ConversationStateInjector(),
                 new LocaleInjector(),
-                new EntityManagerInjector(),
+                new DSLContextInjector(),
                 new ActionRecordInjector()
         );
         // Enkan
         app.use(new DefaultCharsetMiddleware());
         app.use(new MetricsMiddleware<>());
-        app.use(NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
+        app.use((java.util.function.Predicate<HttpRequest>) NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
         app.use(new ParamsMiddleware());
@@ -147,7 +156,8 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 .set(ResourceMiddleware::setUriPrefix, (String) null)
                 .build());
         app.use(new RoutingMiddleware(routes));
-        app.use(new EntityManagerMiddleware<>());
+        app.use(new JooqDslContextMiddleware<>());
+        app.use(new JooqTransactionMiddleware<>());
         app.use(new ActionLoggingMiddleware());
         app.use(new SerDesMiddleware<>());
 

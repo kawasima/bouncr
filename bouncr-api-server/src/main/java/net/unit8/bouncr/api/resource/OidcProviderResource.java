@@ -1,50 +1,41 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.OidcProviderUpdateRequest;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.OidcProvider;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcProviderUpdate;
+import net.unit8.bouncr.api.repository.OidcProviderRepository;
+import net.unit8.bouncr.data.OidcProvider;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class OidcProviderResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<OidcProviderUpdate> UPDATE_REQ = ContextKey.of(OidcProviderUpdate.class);
+    static final ContextKey<OidcProvider> OIDC_PROVIDER = ContextKey.of(OidcProvider.class);
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(OidcProviderUpdateRequest updateRequest, RestContext context) {
-        if (updateRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateUpdate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<OidcProviderUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.OIDC_PROVIDER_UPDATE.decode(body)) {
+            case Ok<OidcProviderUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Err<OidcProviderUpdate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -74,53 +65,52 @@ public class OidcProviderResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(Parameters params, OidcProviderUpdateRequest updateRequest, EntityManager em) {
-        if (Objects.equals(params.get("name"), updateRequest.getName())) {
+    public boolean isConflict(OidcProviderUpdate updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest.name(), params.get("name"))) {
             return false;
         }
-
-        UniquenessCheckService<OidcProvider> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(OidcProvider.class, "nameLower",
-                Optional.ofNullable(updateRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+        OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        return !repo.isNameUnique(updateRequest.name());
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OidcProvider> query = cb.createQuery(OidcProvider.class);
-        Root<OidcProvider> oidcProviderRoot = query.from(OidcProvider.class);
-        query.where(cb.equal(oidcProviderRoot.get("name"), params.get("name")));
-        OidcProvider oidcProvider = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-        if (oidcProvider != null) {
-            context.putValue(oidcProvider);
-        }
-        return oidcProvider != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        Optional<OidcProvider> oidcProvider = repo.findByName(params.get("name"));
+        oidcProvider.ifPresent(p -> context.put(OIDC_PROVIDER, p));
+        return oidcProvider.isPresent();
     }
 
     @Decision(HANDLE_OK)
     public OidcProvider find(OidcProvider oidcProvider) {
-        // Excludes a client secret
-        oidcProvider.setClientSecret(null);
         return oidcProvider;
     }
 
     @Decision(PUT)
-    public OidcProvider update(OidcProviderUpdateRequest updateRequest, OidcProvider oidcProvider, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> converter.copy(updateRequest, oidcProvider));
-        return oidcProvider;
+    public OidcProvider update(OidcProviderUpdate updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
+        OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        repo.update(
+                oidcProvider.name(),
+                updateRequest.name(),
+                updateRequest.clientId(),
+                updateRequest.clientSecret(),
+                updateRequest.scope(),
+                updateRequest.responseType(),
+                updateRequest.tokenEndpoint(),
+                updateRequest.authorizationEndpoint(),
+                updateRequest.tokenEndpointAuthMethod(),
+                updateRequest.redirectUri(),
+                updateRequest.jwksUri(),
+                updateRequest.issuer(),
+                updateRequest.pkceEnabled()
+        );
+        return repo.findByName(updateRequest.name()).orElseThrow();
     }
 
     @Decision(DELETE)
-    public Void delete(OidcProvider oidcProvider, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(oidcProvider));
-        em.detach(oidcProvider);
+    public Void delete(OidcProvider oidcProvider, DSLContext dsl) {
+        OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        repo.delete(oidcProvider.name());
         return null;
     }
-
 }

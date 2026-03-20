@@ -1,50 +1,41 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.RoleUpdateRequest;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Role;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RoleUpdate;
+import net.unit8.bouncr.api.repository.RoleRepository;
+import net.unit8.bouncr.data.Role;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class RoleResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<RoleUpdate> UPDATE_REQ = ContextKey.of(RoleUpdate.class);
+    static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(RoleUpdateRequest updateRequest, RestContext context) {
-        if (updateRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateUpdate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<RoleUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.ROLE_UPDATE.decode(body)) {
+            case Ok<RoleUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Err<RoleUpdate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -52,21 +43,21 @@ public class RoleResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:read") || p.hasPermission("any_role:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:update") || p.hasPermission("any_role:update"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("role:delete") || p.hasPermission("any_role:delete"))
@@ -74,50 +65,38 @@ public class RoleResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(RoleUpdateRequest updateRequest, Parameters params, EntityManager em) {
-        if (Objects.equals(updateRequest.getName(), params.get("name"))) {
+    public boolean isConflict(RoleUpdate updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest.name(), params.get("name"))) {
             return false;
         }
-        UniquenessCheckService<Role> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Role.class, "nameLower",
-                Optional.ofNullable(updateRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+        RoleRepository repo = new RoleRepository(dsl);
+        return !repo.isNameUnique(updateRequest.name());
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Role> query = cb.createQuery(Role.class);
-        Root<Role> roleRoot = query.from(Role.class);
-        query.where(cb.equal(roleRoot.get("name"), params.get("name")));
-
-        Role role = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-        if (role != null) {
-            context.putValue(role);
-        }
-        return role != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        RoleRepository repo = new RoleRepository(dsl);
+        Optional<Role> role = repo.findByName(params.get("name"), false);
+        role.ifPresent(r -> context.put(ROLE, r));
+        return role.isPresent();
     }
 
     @Decision(HANDLE_OK)
-    public Role handleOk(Role role) {
+    public Role find(Role role) {
         return role;
     }
 
     @Decision(PUT)
-    public Role update(RoleUpdateRequest updateRequest, Role role, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> converter.copy(updateRequest, role));
-        em.detach(role);
-        return role;
+    public Role update(RoleUpdate updateRequest, Role role, DSLContext dsl) {
+        RoleRepository repo = new RoleRepository(dsl);
+        repo.update(role.name(), updateRequest.name(), updateRequest.description());
+        return repo.findByName(updateRequest.name(), false).orElseThrow();
     }
 
     @Decision(DELETE)
-    public Void delete(Role role, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(role));
+    public Void delete(Role role, DSLContext dsl) {
+        RoleRepository repo = new RoleRepository(dsl);
+        repo.delete(role.name());
         return null;
     }
 }

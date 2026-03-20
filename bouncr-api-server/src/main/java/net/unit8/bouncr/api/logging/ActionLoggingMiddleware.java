@@ -2,22 +2,19 @@ package net.unit8.bouncr.api.logging;
 
 import enkan.MiddlewareChain;
 import enkan.annotation.Middleware;
+import enkan.data.Extendable;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
-import enkan.data.jpa.EntityManageable;
 import enkan.middleware.WebMiddleware;
 import enkan.util.MixinUtils;
-import enkan.util.jpa.EntityTransactionManager;
-import net.unit8.bouncr.entity.UserAction;
+import net.unit8.bouncr.api.repository.UserActionRepository;
+import org.jooq.DSLContext;
 
-import jakarta.persistence.EntityManager;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
-
-@Middleware(name = "actionLogging", dependencies = {"entityManager"})
+@Middleware(name = "actionLogging", dependencies = {"jooqDslContext"})
 public class ActionLoggingMiddleware implements WebMiddleware {
     @Override
     public <NNREQ, NNRES> HttpResponse handle(HttpRequest request, MiddlewareChain<HttpRequest, HttpResponse, NNREQ, NNRES> chain) {
@@ -41,16 +38,18 @@ public class ActionLoggingMiddleware implements WebMiddleware {
 
         if (actor == null) return;
 
-        EntityManager em = ((EntityManageable) request).getEntityManager();
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        UserAction userAction = builder(new UserAction())
-                .set(UserAction::setActorIp, request.getRemoteAddr())
-                .set(UserAction::setActor, actor)
-                .set(UserAction::setActionType, actionRecord.getActionType())
-                .set(UserAction::setOptions,actionRecord.getDescription())
-                    .set(UserAction::setCreatedAt, LocalDateTime.now())
-                .build();
-        tx.required(() -> em.persist(userAction));
+        DSLContext dsl = null;
+        if (request instanceof Extendable e) {
+            dsl = e.getExtension("jooqDslContext");
+        }
+        if (dsl == null) return;
 
+        UserActionRepository repo = new UserActionRepository(dsl);
+        repo.insert(
+                actionRecord.getActionType().getName(),
+                actor,
+                request.getRemoteAddr(),
+                actionRecord.getDescription(),
+                LocalDateTime.now());
     }
 }

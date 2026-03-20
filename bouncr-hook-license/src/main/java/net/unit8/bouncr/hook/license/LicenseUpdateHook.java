@@ -2,14 +2,13 @@ package net.unit8.bouncr.hook.license;
 
 import enkan.collection.Headers;
 import enkan.data.Cookie;
-import enkan.data.jpa.EntityManageable;
+import enkan.data.Extendable;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.hook.Hook;
-import net.unit8.bouncr.hook.license.entity.LicenseLastActivity;
 import net.unit8.bouncr.hook.license.entity.UserLicense;
+import org.jooq.DSLContext;
 
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -17,7 +16,7 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
+import static org.jooq.impl.DSL.*;
 
 public class LicenseUpdateHook implements Hook<RestContext> {
     private final LicenseConfig config;
@@ -28,26 +27,34 @@ public class LicenseUpdateHook implements Hook<RestContext> {
 
     @Override
     public void run(RestContext context) {
-        final EntityManager em = ((EntityManageable) context.getRequest()).getEntityManager();
-        context.getValue(User.class).ifPresent(user -> {
-            UserLicense userLicense = context.getValue(UserLicense.class).orElseGet(() -> {
+        DSLContext dsl = null;
+        if (context.getRequest() instanceof Extendable e) {
+            dsl = e.getExtension("jooqDslContext");
+        }
+        if (dsl == null) return;
+
+        DSLContext finalDsl = dsl;
+        context.getByType(User.class).ifPresent(user -> {
+            UserLicense userLicense = context.getByType(UserLicense.class).orElseGet(() -> {
                 LicenseKey newLicenseKey = LicenseKey.createNew();
 
-                UserLicense userLic = builder(new UserLicense())
-                        .set(UserLicense::setUser, user)
-                        .set(UserLicense::setLicenseKey, newLicenseKey.asBytes())
-                        .build();
+                String userAgent = Optional.ofNullable(context.getRequest().getHeaders())
+                        .map(headers -> headers.get("User-Agent"))
+                        .map(ua -> ua.substring(0, Math.min(ua.length() - 1, 255)))
+                        .orElse(null);
 
-                LicenseLastActivity lastActivity = builder(new LicenseLastActivity())
-                        .set(LicenseLastActivity::setUserLicense, userLic)
-                        .set(LicenseLastActivity::setUserAgent, Optional.ofNullable(context.getRequest().getHeaders())
-                                .map(headers -> headers.get("User-Agent"))
-                                .map(ua -> ua.substring(0, Math.min(ua.length()-1, 255)))
-                                .orElse(null))
-                        .set(LicenseLastActivity::setLastUsedAt, LocalDateTime.now())
-                        .build();
-                em.persist(userLic);
-                em.persist(lastActivity);
+                Long userLicenseId = finalDsl.insertInto(table("user_licenses"))
+                        .set(field("user_id"), user.id())
+                        .set(field("license_key"), newLicenseKey.asBytes())
+                        .returningResult(field("user_license_id", Long.class))
+                        .fetchOne()
+                        .get(field("user_license_id", Long.class));
+
+                finalDsl.insertInto(table("license_last_activities"))
+                        .set(field("user_license_id"), userLicenseId)
+                        .set(field("user_agent"), userAgent)
+                        .set(field("last_used_at"), LocalDateTime.now())
+                        .execute();
 
                 Cookie cookie = Cookie.create(config.getCookieName(), newLicenseKey.asString());
                 ZoneId zone = ZoneId.systemDefault();
@@ -60,7 +67,7 @@ public class LicenseUpdateHook implements Hook<RestContext> {
                 cookie.setPath("/");
                 context.setHeaders(Headers.of("Set-Cookie", cookie.toHttpString()));
 
-                return userLic;
+                return new UserLicense(userLicenseId, user.id(), newLicenseKey.asBytes());
             });
         });
     }

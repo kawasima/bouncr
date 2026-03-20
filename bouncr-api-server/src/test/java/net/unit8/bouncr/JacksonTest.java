@@ -8,13 +8,16 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class JacksonTest {
 
     @Test
     public void test() throws Exception {
         JsonMapper mapper = JsonMapper.builder().build();
         User u = mapper.readValue("{\"name\":\"kawasima\", \"email\":\"hoge\"}", User.class);
-        System.out.println(u);
+        assertThat(u.getName()).isEqualTo("kawasima");
+        assertThat(u.getAdditionalProperties()).containsEntry("email", "hoge");
     }
 
     public static class User {
@@ -37,12 +40,6 @@ public class JacksonTest {
         @JsonAnySetter
         public void setAdditionalProperties(String name, Object value) {
             additionalProperties.put(name, value);
-        }
-
-        @Override
-        public String toString() {
-            JsonMapper mapper = JsonMapper.builder().build();
-            return mapper.writeValueAsString(this);
         }
     }
 }

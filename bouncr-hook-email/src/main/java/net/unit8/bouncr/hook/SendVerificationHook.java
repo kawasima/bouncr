@@ -2,10 +2,10 @@ package net.unit8.bouncr.hook;
 
 import enkan.Env;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.domain.VerificationTargetSet;
-import net.unit8.bouncr.entity.User;
-import net.unit8.bouncr.entity.UserProfileField;
-import net.unit8.bouncr.entity.UserProfileValue;
+import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserProfileValue;
+import net.unit8.bouncr.data.UserProfileVerification;
+import net.unit8.bouncr.data.VerificationTargetSet;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,40 +19,49 @@ public class SendVerificationHook extends AbstractSendMailHook {
     protected Map<String, Object> createContext(RestContext context) {
         Map<String, Object> variables = new HashMap<>();
 
-        context.getValue(User.class).ifPresent(user -> {
+        context.getByType(User.class).ifPresent(user -> {
             variables.put("baseUrl", Env.getString("EMAIL_BASE_URL", "http://localhost:3000/bouncr/api"));
             variables.put("user", user);
-            variables.put("email", user.getUserProfileValues().stream()
-                    .filter(v -> Objects.equals(v.getUserProfileField().getJsonName(), "email"))
-                    .map(UserProfileValue::getValue)
+            variables.put("email", user.userProfileValues().stream()
+                    .filter(v -> Objects.equals(v.userProfileField().jsonName(), "email"))
+                    .map(UserProfileValue::value)
                     .findAny()
                     .orElse("Unknown"));
         });
 
-        context.getValue(VerificationTargetSet.class).ifPresent(verifications -> {
-            verifications.stream()
-                    .filter(verification -> verification.getUserProfileField().getJsonName().equals("email"))
-                    .findAny()
-                    .ifPresent(verification -> variables.put("code", verification.getCode()));
+        context.getByType(VerificationTargetSet.class).ifPresent(verifications -> {
+            // Find the email field ID from the user's profile values, then match against verifications
+            context.getByType(User.class).ifPresent(user -> {
+                user.userProfileValues().stream()
+                        .filter(v -> Objects.equals(v.userProfileField().jsonName(), "email"))
+                        .findAny()
+                        .ifPresent(emailValue -> {
+                            Long emailFieldId = emailValue.userProfileField().id();
+                            verifications.stream()
+                                    .filter(v -> Objects.equals(v.id().userProfileField(), emailFieldId))
+                                    .findAny()
+                                    .ifPresent(verification -> variables.put("code", verification.code()));
+                        });
+            });
         });
         return variables;
     }
 
     @Override
     protected Optional<UserProfileValue> findEmailField(RestContext context) {
-        return context.getValue(VerificationTargetSet.class).flatMap(verificationTargetSet -> verificationTargetSet.stream()
-                .filter(v -> v.getUserProfileField().getJsonName().equals("email"))
-                .map(v -> {
-                    UserProfileField emailField = v.getUserProfileField();
-                    return context.getValue(User.class)
-                            .map(User::getUserProfileValues)
-                            .map(values -> values.stream()
-                                    .filter(value -> value.getUserProfileField().equals(emailField))
-                                    .findAny()
-                                    .orElse(null))
-                            .orElse(null);
-                })
-                .findAny());
+        return context.getByType(VerificationTargetSet.class).flatMap(verificationTargetSet ->
+                context.getByType(User.class).flatMap(user -> {
+                    // Find the email profile value
+                    Optional<UserProfileValue> emailValue = user.userProfileValues().stream()
+                            .filter(v -> Objects.equals(v.userProfileField().jsonName(), "email"))
+                            .findAny();
+                    // Only return it if there's a matching verification for the email field
+                    return emailValue.filter(ev -> {
+                        Long emailFieldId = ev.userProfileField().id();
+                        return verificationTargetSet.stream()
+                                .anyMatch(v -> Objects.equals(v.id().userProfileField(), emailFieldId));
+                    });
+                }));
     }
 
     @Override

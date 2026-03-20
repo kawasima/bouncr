@@ -1,53 +1,41 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.data.HttpRequest;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.apistandard.resourcefilter.ResourceField;
-import net.unit8.apistandard.resourcefilter.ResourceFilter;
-import net.unit8.bouncr.api.boundary.ApplicationUpdateRequest;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Application;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.ApplicationUpdate;
+import net.unit8.bouncr.api.repository.ApplicationRepository;
+import net.unit8.bouncr.data.Application;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
-import java.util.*;
+import java.util.Objects;
+import java.util.Optional;
 
-import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class ApplicationResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<ApplicationUpdate> UPDATE_REQ = ContextKey.of(ApplicationUpdate.class);
+    static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(ApplicationUpdateRequest updateRequest, RestContext context) {
-        if (updateRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateUpdate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-
-        Set<ConstraintViolation<ApplicationUpdateRequest>> violations = validator.validate(updateRequest);
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.APPLICATION_UPDATE.decode(body)) {
+            case Ok<ApplicationUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Err<ApplicationUpdate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -55,21 +43,21 @@ public class ApplicationResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    @Decision(value = ALLOWED, method = "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("application:read") || p.hasPermission("any_application:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("application:update") || p.hasPermission("any_application:update"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("application:delete") || p.hasPermission("any_application:delete"))
@@ -77,66 +65,40 @@ public class ApplicationResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(ApplicationUpdateRequest updateRequest, Parameters params, EntityManager em) {
-        if (Objects.equals(updateRequest.getName(), params.get("name"))) {
+    public boolean isConflict(ApplicationUpdate updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest.name(), params.get("name"))) {
             return false;
         }
-        UniquenessCheckService<Application> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Application.class, "nameLower",
-                Optional.ofNullable(updateRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        return !repo.isNameUnique(updateRequest.name());
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Application> query = cb.createQuery(Application.class);
-        Root<Application> applicationRoot = query.from(Application.class);
-        query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
-
-        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
-                .orElse(Collections.emptyList());
-
-        EntityGraph<Application> applicationGraph = em.createEntityGraph(Application.class);
-        applicationGraph.addAttributeNodes("name", "description", "virtualPath", "passTo", "topPage");
-
-        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("realms"))) {
-            applicationRoot.fetch("realms", JoinType.LEFT);
-            query.distinct(true);
-            applicationGraph.addSubgraph("realms")
-                    .addAttributeNodes("name", "description", "url");
-
-        }
-
-        Application application = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("jakarta.persistence.fetchgraph", applicationGraph)
-                .getResultStream().findAny().orElse(null);
-        if (application != null) {
-            context.putValue(application);
-        }
-        return application != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        boolean embedRealms = Objects.equals(params.get("embed"), "realms");
+        Optional<Application> application = repo.findByName(params.get("name"), embedRealms);
+        application.ifPresent(a -> context.put(APPLICATION, a));
+        return application.isPresent();
     }
 
     @Decision(HANDLE_OK)
-    public Application find(Application application, EntityManager em) {
-        em.detach(application);
+    public Application find(Application application) {
         return application;
     }
 
     @Decision(PUT)
-    public Application update(ApplicationUpdateRequest updateRequest, Application application, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> converter.copy(updateRequest, application));
-        em.detach(application);
-        return application;
+    public Application update(ApplicationUpdate updateRequest, Application application, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        repo.update(application.name(), updateRequest.name(), updateRequest.description(),
+                updateRequest.virtualPath(), updateRequest.passTo(), updateRequest.topPage());
+        return repo.findByName(updateRequest.name(), false).orElseThrow();
     }
 
     @Decision(DELETE)
-    public Void delete(Application application, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(application));
+    public Void delete(Application application, DSLContext dsl) {
+        ApplicationRepository repo = new ApplicationRepository(dsl);
+        repo.delete(application.name());
         return null;
     }
 }

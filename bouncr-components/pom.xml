@@ -15,7 +15,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <eclipselink.version>4.0.8</eclipselink.version>
     </properties>
 
     <repositories>
@@ -26,37 +25,6 @@
             <snapshots><enabled>true</enabled></snapshots>
         </repository>
     </repositories>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>net.unit8.maven.plugins</groupId>
-                <artifactId>staticweave-nopu-maven-plugin</artifactId>
-                <version>0.2.0</version>
-                <executions>
-                    <execution>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>weave</goal>
-                        </goals>
-                        <configuration>
-                            <packages>
-                                <package>net.unit8.bouncr.entity</package>
-                            </packages>
-                            <logLevel>ALL</logLevel>
-                        </configuration>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.eclipse.persistence</groupId>
-                        <artifactId>org.eclipse.persistence.jpa</artifactId>
-                        <version>${eclipselink.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-        </plugins>
-    </build>
 
     <dependencies>
         <dependency>
@@ -73,10 +41,6 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-eclipselink</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-metrics</artifactId>
         </dependency>
         <dependency>
@@ -86,6 +50,22 @@
                 <exclusion>
                     <groupId>net.unit8.enkan</groupId>
                     <artifactId>enkan-web</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.unit8.enkan</groupId>
+                    <artifactId>enkan-component-eclipselink</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.jodah</groupId>
+                    <artifactId>failsafe</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>javax.annotation</groupId>
+                    <artifactId>javax.annotation-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-json-provider</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -112,27 +92,19 @@
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>am.ik.yavi</groupId>
-            <artifactId>yavi</artifactId>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jooq</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.unit8.raoh</groupId>
+            <artifactId>raoh-jooq</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>5.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate.validator</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>8.0.1.Final</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.expressly</groupId>
-            <artifactId>expressly</artifactId>
-            <version>5.0.0</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

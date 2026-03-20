@@ -1,84 +1,108 @@
 package net.unit8.bouncr.api.resource;
 
-import net.unit8.bouncr.api.boundary.GroupUsersRequest;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.data.Group;
+import net.unit8.bouncr.data.User;
+import org.jooq.DSLContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
-import java.util.Arrays;
 import java.util.List;
 
-import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
+/**
+ * Tests for GroupUsersResource using a real H2 database.
+ * Verifies that adding/removing users from groups works correctly via jOOQ.
+ */
 class GroupUsersResourceTest {
-    @Test
-    void create() {
-        TypedQuery query = mock(TypedQuery.class);
-        Mockito.when(query.getResultList()).thenReturn(
-                List.of(
-                        builder(new User()).set(User::setId, 2L).set(User::setAccount, "test2").build(),
-                        builder(new User()).set(User::setId, 3L).set(User::setAccount, "test3").build()
-                )
-        );
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        final GroupUsersResource resource = new GroupUsersResource();
-        final GroupUsersRequest groupUsersRequest = new GroupUsersRequest();
-        groupUsersRequest.addAll(Arrays.asList("test2", "test3"));
+    private DSLContext dsl;
 
-        final List<User> users = List.of(
-                builder(new User()).set(User::setId, 1L).set(User::setAccount, "test1").build(),
-                builder(new User()).set(User::setId, 2L).set(User::setAccount, "test2").build()
-        );
-        final Group group = builder(new Group())
-                .set(Group::setUsers, users)
-                .build();
-
-        resource.create(groupUsersRequest, group, em);
-
-        assertThat(group.getUsers()).containsExactly(
-                builder(new User()).set(User::setId, 1L).set(User::setAccount, "test1").build(),
-                builder(new User()).set(User::setId, 2L).set(User::setAccount, "test2").build(),
-                builder(new User()).set(User::setId, 3L).set(User::setAccount, "test3").build()
-        );
+    @BeforeEach
+    void setup() {
+        dsl = MockFactory.beginTransaction();
     }
 
-    /**
-     * Group has users(test1, test2, test3).
-     * Delete test1 and test2 users.
-     * Then, the group has only test2 user.
-     */
+    @AfterEach
+    void tearDown() {
+        MockFactory.rollback();
+    }
+
     @Test
-    void delete() {
-        TypedQuery query = mock(TypedQuery.class);
-        Mockito.when(query.getResultList()).thenReturn(
-                List.of(
-                        builder(new User()).set(User::setId, 1L).set(User::setAccount, "test1").build(),
-                        builder(new User()).set(User::setId, 3L).set(User::setAccount, "test3").build()
-                )
-        );
-        final EntityManager em = MockFactory.createEntityManagerMock(query);
-        final GroupUsersResource resource = new GroupUsersResource();
-        final GroupUsersRequest groupUsersRequest = new GroupUsersRequest();
-        groupUsersRequest.addAll(Arrays.asList("test1", "test3"));
+    void addUsersToGroup() {
+        UserRepository userRepo = new UserRepository(dsl);
+        GroupRepository groupRepo = new GroupRepository(dsl);
 
-        final List<User> users = List.of(
-                builder(new User()).set(User::setId, 1L).set(User::setAccount, "test1").build(),
-                builder(new User()).set(User::setId, 2L).set(User::setAccount, "test2").build(),
-                builder(new User()).set(User::setId, 3L).set(User::setAccount, "test3").build()
-        );
-        final Group group = builder(new Group())
-                .set(Group::setUsers, users)
-                .build();
+        // Create test users
+        User user1 = userRepo.insert("test1");
+        User user2 = userRepo.insert("test2");
+        User user3 = userRepo.insert("test3");
 
-        resource.delete(groupUsersRequest, group, em);
+        // Create a test group
+        Group group = groupRepo.insert("testgroup", "Test group");
 
-        assertThat(group.getUsers()).containsExactly(
-                builder(new User()).set(User::setId, 2L).set(User::setAccount, "test2").build()
-        );
+        // Add user1 to the group
+        groupRepo.addUser("testgroup", user1.id());
+
+        // Verify initial state
+        Group groupWithUsers = groupRepo.findByName("testgroup", true).orElseThrow();
+        assertThat(groupWithUsers.users()).hasSize(1);
+        assertThat(groupWithUsers.users().getFirst().account()).isEqualTo("test1");
+
+        // Add user2 and user3
+        groupRepo.addUser("testgroup", user2.id());
+        groupRepo.addUser("testgroup", user3.id());
+
+        // Verify all three users are in the group
+        groupWithUsers = groupRepo.findByName("testgroup", true).orElseThrow();
+        assertThat(groupWithUsers.users()).hasSize(3);
+        assertThat(groupWithUsers.users().stream().map(User::account))
+                .containsExactlyInAnyOrder("test1", "test2", "test3");
+    }
+
+    @Test
+    void removeUsersFromGroup() {
+        UserRepository userRepo = new UserRepository(dsl);
+        GroupRepository groupRepo = new GroupRepository(dsl);
+
+        // Create test users
+        User user1 = userRepo.insert("test1");
+        User user2 = userRepo.insert("test2");
+        User user3 = userRepo.insert("test3");
+
+        // Create a group and add all users
+        Group group = groupRepo.insert("testgroup", "Test group");
+        groupRepo.addUser("testgroup", user1.id());
+        groupRepo.addUser("testgroup", user2.id());
+        groupRepo.addUser("testgroup", user3.id());
+
+        // Remove user1 and user3
+        groupRepo.removeUser("testgroup", user1.id());
+        groupRepo.removeUser("testgroup", user3.id());
+
+        // Verify only user2 remains
+        Group groupWithUsers = groupRepo.findByName("testgroup", true).orElseThrow();
+        assertThat(groupWithUsers.users()).hasSize(1);
+        assertThat(groupWithUsers.users().getFirst().account()).isEqualTo("test2");
+    }
+
+    @Test
+    void listGroupUsers() {
+        UserRepository userRepo = new UserRepository(dsl);
+        GroupRepository groupRepo = new GroupRepository(dsl);
+
+        User user1 = userRepo.insert("alpha");
+        User user2 = userRepo.insert("beta");
+        Group group = groupRepo.insert("mygroup", "My group");
+        groupRepo.addUser("mygroup", user1.id());
+        groupRepo.addUser("mygroup", user2.id());
+
+        Group loaded = groupRepo.findByName("mygroup", true).orElseThrow();
+        List<User> users = loaded.users();
+        assertThat(users).hasSize(2);
+        assertThat(users.stream().map(User::account))
+                .containsExactlyInAnyOrder("alpha", "beta");
     }
 }

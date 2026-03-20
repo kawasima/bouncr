@@ -1,90 +1,110 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.eclipselink.EclipseLinkEntityManagerProvider;
-import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.system.EnkanSystem;
-import enkan.util.jpa.EntityTransactionManager;
-import net.unit8.bouncr.BouncrTestSystemFactory;
-import net.unit8.bouncr.api.boundary.UserSearchParams;
-import net.unit8.bouncr.entity.Application;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.Realm;
-import net.unit8.bouncr.entity.Role;
+import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.data.User;
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import jakarta.persistence.EntityManager;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import static enkan.util.BeanBuilder.builder;
+import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for user operations using a real H2 database with Flyway migrations.
+ * Verifies that the admin user and initial data from V23 migration are present.
+ */
 class UsersResourceWithDbTest {
-    private EnkanSystem system;
+    private DSLContext dsl;
 
     @BeforeEach
     void setup() {
-        system = new BouncrTestSystemFactory().create();
-        system.start();
+        dsl = MockFactory.beginTransaction();
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockFactory.rollback();
     }
 
     @Test
-    void test() {
-        final UsersResource resource = new UsersResource();
-        final EclipseLinkEntityManagerProvider jpa = system.getComponent("jpa", EclipseLinkEntityManagerProvider.class);
-        EntityManager em = jpa.getEntityManagerFactory().createEntityManager();
+    void adminUserExistsAfterMigration() {
+        UserRepository userRepo = new UserRepository(dsl);
 
-        final UserSearchParams userSearchParams = builder(new UserSearchParams()).build();
-        final UserPermissionPrincipal principal = new UserPermissionPrincipal(2L, "test1", Map.of(), Set.of());
-
-        try {
-
-            resource.handleOk(userSearchParams, principal, em);
-        } finally {
-            em.close();
-        }
+        User admin = userRepo.findByAccount("admin").orElseThrow();
+        assertThat(admin.account()).isEqualTo("admin");
+        assertThat(admin.writeProtected()).isTrue();
     }
 
-    private void insertTestUser(EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
+    @Test
+    void adminUserHasProfileValues() {
+        UserRepository userRepo = new UserRepository(dsl);
 
-        Application testApp = builder(new Application())
-                .set(Application::setName, "test")
-                .set(Application::setDescription, "test")
-                .set(Application::setVirtualPath, "/test")
-                .set(Application::setTopPage, "/test")
-                .set(Application::setPassTo, "/test")
-                .set(Application::setNameLower, "test")
-                .set(Application::setWriteProtected, false)
-                .build();
-        Realm realm = builder(new Realm())
-                .set(Realm::setName, "testRealm")
-                .set(Realm::setNameLower, "testrealm")
-                .set(Realm::setDescription, "testRealm")
-                .set(Realm::setUrl, ".*")
-                .set(Realm::setApplication, testApp)
-                .set(Realm::setWriteProtected, false)
-                .build();
-        testApp.setRealms(List.of(realm));
-
-        final Role role = builder(new Role())
-                .set(Role::setName, "test")
-                .set(Role::setNameLower, "test")
-                .set(Role::setDescription, "test")
-                .set(Role::setWriteProtected, false)
-                .build();
-
-        final Group group = builder(new Group())
-                .set(Group::setName, "test")
-                .set(Group::setNameLower, "test")
-                .set(Group::setDescription, "test")
-                .set(Group::setWriteProtected, false)
-                .build();
+        User admin = userRepo.findByAccount("admin").orElseThrow();
+        User full = userRepo.findByIdFull(admin.id(), false, false).orElseThrow();
+        assertThat(full.userProfileValues()).isNotEmpty();
+        assertThat(full.userProfileValues().stream()
+                .filter(v -> "email".equals(v.userProfileField().jsonName()))
+                .findFirst()
+                .orElseThrow()
+                .value()).isEqualTo("admin@example.com");
     }
-    @AfterEach
-    void stopSystem() {
-        system.stop();
+
+    @Test
+    void adminUserHasGroups() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        User admin = userRepo.findByAccount("admin").orElseThrow();
+        User full = userRepo.findByIdFull(admin.id(), true, false).orElseThrow();
+        assertThat(full.groups()).isNotEmpty();
+        assertThat(full.groups().stream().map(g -> g.name()))
+                .contains("BOUNCR_ADMIN", "BOUNCR_USER");
+    }
+
+    @Test
+    void adminUserHasPermissions() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        User admin = userRepo.findByAccount("admin").orElseThrow();
+        var permissionsByRealm = userRepo.getPermissionsByRealm(admin.id());
+        assertThat(permissionsByRealm).isNotEmpty();
+        // Admin should have admin permissions from V23 migration
+        List<String> allPermissions = permissionsByRealm.values().stream()
+                .flatMap(List::stream)
+                .toList();
+        assertThat(allPermissions).contains("any_user:read", "any_user:create");
+    }
+
+    @Test
+    void searchUsersInSameGroup() {
+        UserRepository userRepo = new UserRepository(dsl);
+        GroupRepository groupRepo = new GroupRepository(dsl);
+
+        User user1 = userRepo.insert("member1");
+        User user2 = userRepo.insert("member2");
+        User user3 = userRepo.insert("outsider");
+
+        var group = groupRepo.insert("shared_group", "A shared group");
+        groupRepo.addUser("shared_group", user1.id());
+        groupRepo.addUser("shared_group", user2.id());
+
+        // Non-admin search: user1 can only see users in same groups
+        List<User> visible = userRepo.search(null, null, user1.id(), false, 0, 100);
+        assertThat(visible.stream().map(User::account))
+                .contains("member2")
+                .doesNotContain("outsider");
+    }
+
+    @Test
+    void deleteUser() {
+        UserRepository userRepo = new UserRepository(dsl);
+
+        User user = userRepo.insert("deleteme");
+        assertThat(userRepo.findByAccount("deleteme")).isPresent();
+
+        userRepo.delete(user.id());
+        assertThat(userRepo.findByAccount("deleteme")).isEmpty();
     }
 }

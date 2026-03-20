@@ -20,7 +20,7 @@ public class V14__CreateCertificateCredentials extends BaseJavaMigration {
             String ddl = create.createTable(table("certificate_credentials"))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("client_dn", SQLDataType.VARCHAR(150).nullable(false)))
-                    .column(field("certificate", SQLDataType.BLOB.nullable(false)))
+                    .column(field("certificate", SQLDataType.VARBINARY(10000).nullable(false)))
                     .constraints(
                             constraint().primaryKey(field("user_id")),
                             constraint().foreignKey(field("user_id")).references(table("users"), field("user_id")).onDeleteCascade()

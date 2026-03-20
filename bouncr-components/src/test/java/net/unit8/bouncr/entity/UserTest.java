@@ -1,29 +1,24 @@
 package net.unit8.bouncr.entity;
 
 import tools.jackson.databind.json.JsonMapper;
-import org.eclipse.persistence.indirection.IndirectList;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import net.unit8.bouncr.data.LockLevel;
+import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserLock;
 
-import static enkan.util.BeanBuilder.builder;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 class UserTest {
     @Test
     void cyclicSerialize() {
         JsonMapper mapper = JsonMapper.builder().build();
-        User user = builder(new User())
-                .set(User::setId, 1L)
-                .set(User::setAccount, "test")
-                .set(User::setGroups, new IndirectList<>())
-                .build();
-        UserLock userLock = builder(new UserLock())
-                .set(UserLock::setUser, user)
-                .set(UserLock::setLockedAt, LocalDateTime.now())
-                .set(UserLock::setLockLevel, LockLevel.LOOSE)
-                .build();
-        user.setUserLock(userLock);
+        User user = new User(1L, "test", false,
+                List.of(), null, null, null, null, null, null, null);
+        UserLock userLock = new UserLock(user, LockLevel.LOOSE, LocalDateTime.now());
 
         assertThatCode(() -> {
             mapper.writerFor(User.class).writeValueAsString(user);

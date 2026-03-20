@@ -1,48 +1,37 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.UserUpdateRequest;
 import net.unit8.bouncr.api.logging.ActionRecord;
-import net.unit8.bouncr.api.service.SignInService;
-import net.unit8.bouncr.api.service.UserProfileService;
+import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.domain.VerificationTargetSet;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.data.*;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Subgraph;
-import jakarta.persistence.criteria.*;
-import jakarta.validation.ConstraintViolation;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class UserResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<User> USER = ContextKey.of(User.class);
+    static final ContextKey<Map> USER_PROFILES = ContextKey.of("userProfiles", Map.class);
+    static final ContextKey<VerificationTargetSet> VERIFICATIONS = ContextKey.of(VerificationTargetSet.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -51,24 +40,54 @@ public class UserResource {
     private StoreProvider storeProvider;
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem validateUpdateRequest(UserUpdateRequest updateRequest, RestContext context, EntityManager em) {
-        if (updateRequest == null) {
+    public Problem validateUpdateRequest(JsonNode body, RestContext context, DSLContext dsl) {
+        if (body == null) {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
-        Set<ConstraintViolation<UserUpdateRequest>> violations = validator.validate(updateRequest);
-        if (!violations.isEmpty()) {
-            return Problem.fromViolations(violations);
+
+        // Extract user profile fields dynamically
+        Map<String, Object> userProfiles = new HashMap<>();
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+        List<UserProfileField> allFields = fieldRepo.findAll();
+        Set<String> profileFieldNames = allFields.stream()
+                .map(UserProfileField::jsonName)
+                .collect(Collectors.toSet());
+
+        for (String fieldName : body.propertyNames()) {
+            if (profileFieldNames.contains(fieldName)) {
+                userProfiles.put(fieldName, body.get(fieldName).asText());
+            }
         }
 
-        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, updateRequest.getUserProfiles());
-        UserProfileService userProfileService = new UserProfileService(em);
-        Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(updateRequest.getUserProfiles());
+        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, userProfiles);
+
+        // Validate profiles
+        List<Problem.Violation> profileViolations = new ArrayList<>();
+        for (UserProfileField f : allFields) {
+            Object value = userProfiles.get(f.jsonName());
+            if (value == null) {
+                if (f.isRequired()) {
+                    profileViolations.add(new Problem.Violation(f.jsonName(), "is required"));
+                }
+                continue;
+            }
+            String strValue = Objects.toString(value);
+            if (f.maxLength() != null && strValue.length() > f.maxLength()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.maxLength()));
+            }
+            if (f.minLength() != null && strValue.length() < f.minLength()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.minLength()));
+            }
+            if (f.regularExpression() != null && !java.util.regex.Pattern.compile(f.regularExpression()).matcher(strValue).matches()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.regularExpression()));
+            }
+        }
 
         if (!profileViolations.isEmpty()) {
             return Problem.valueOf(400);
         }
 
-        context.putValue(updateRequest);
+        context.put(USER_PROFILES, userProfiles);
         return null;
     }
 
@@ -77,7 +96,7 @@ public class UserResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal, Parameters params) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("user:read")
@@ -86,7 +105,7 @@ public class UserResource {
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal, Parameters params) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("user:update")
@@ -95,7 +114,7 @@ public class UserResource {
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal, Parameters params) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("user:delete")
@@ -104,149 +123,157 @@ public class UserResource {
                 .isPresent();
     }
 
-
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<User> query = builder.createQuery(User.class);
-        Root<User> userRoot = query.from(User.class);
-        userRoot.fetch("userProfileValues", JoinType.LEFT);
-        query.where(builder.equal(userRoot.get("account"), params.get("account")));
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        String account = params.get("account");
 
         List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
 
-        EntityGraph<User> userGraph = em.createEntityGraph(User.class);
-        userGraph.addAttributeNodes("account", "userProfileValues");
-        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"))) {
-            userRoot.fetch("groups", JoinType.LEFT);
-            query.distinct(true);
-            userGraph.addAttributeNodes("groups");
-            userGraph.addSubgraph("groups")
-                    .addAttributeNodes("name", "description");
+        boolean embedGroups = embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("groups"));
+        boolean embedPermissions = embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("permissions"));
+        boolean embedOidcProviders = embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("oidc_providers"));
+
+        Optional<User> maybeUser = userRepo.findByAccount(account);
+        if (maybeUser.isEmpty()) return false;
+
+        User basicUser = maybeUser.get();
+        // Reload with full profile data and embeds
+        User user = userRepo.findByIdFull(basicUser.id(), embedGroups, embedPermissions).orElse(null);
+        if (user == null) return false;
+
+        // Load OIDC providers if requested
+        UserRepository userRepo2 = new UserRepository(dsl);
+        if (embedOidcProviders) {
+            List<OidcUser> oidcUsers = userRepo2.loadOidcUsers(user.id());
+            user = new User(user.id(), user.account(), user.writeProtected(),
+                    user.groups(), user.userProfileValues(), user.userLock(),
+                    user.passwordCredential(), user.otpKey(), oidcUsers,
+                    user.permissions(), user.unverifiedProfiles());
         }
 
-        // OIDC provider
-        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("oidc_providers"))) {
-            userRoot.fetch("oidcUsers", JoinType.LEFT);
-            userGraph.addAttributeNodes("oidcUsers");
-            Subgraph<Object> oidcUsersGraph = userGraph.addSubgraph("oidcUsers");
-            oidcUsersGraph.addSubgraph("oidcProvider")
-                    .addAttributeNodes("name");
+        // Load unverified profiles
+        List<String> unverifiedProfiles = userRepo2.loadUnverifiedProfiles(user.id());
+        if (!unverifiedProfiles.isEmpty()) {
+            user = new User(user.id(), user.account(), user.writeProtected(),
+                    user.groups(), user.userProfileValues(), user.userLock(),
+                    user.passwordCredential(), user.otpKey(), user.oidcUsers(),
+                    user.permissions(), unverifiedProfiles);
         }
 
-        User user = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("jakarta.persistence.fetchgraph", userGraph)
-                .getResultStream().findAny().orElse(null);
-
-        if (user != null) {
-            final UserProfileService userProfileService = new UserProfileService(em);
-            final List<UserProfileVerification> userProfileVerifications = userProfileService.findUserProfileVerifications(user.getAccount());
-            user.setUnverifiedProfiles(userProfileVerifications.stream()
-                    .map(UserProfileVerification::getUserProfileField)
-                    .filter(Objects::nonNull)
-                    .map(UserProfileField::getJsonName)
-                    .collect(Collectors.toList()));
-            context.putValue(user);
-        }
-        return user != null;
+        context.put(USER, user);
+        return true;
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean conflict(UserUpdateRequest updateRequest,
-                            User user,
-                            RestContext context,
-                            EntityManager em) {
-        UserProfileService userProfileService = new UserProfileService(em);
-        Set<Problem.Violation> violations = userProfileService.validateProfileUniqueness(updateRequest.getUserProfiles(), user);
-        if (!violations.isEmpty()) {
-            context.setMessage(Problem.valueOf(409));
+    public boolean conflict(User user, Map userProfiles, RestContext context, DSLContext dsl) {
+        if (userProfiles == null || userProfiles.isEmpty()) return false;
+
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+        UserRepository userRepo = new UserRepository(dsl);
+        List<UserProfileField> identityFields = fieldRepo.findIdentityFields();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profiles = userProfiles;
+
+        for (UserProfileField f : identityFields) {
+            Object value = profiles.get(f.jsonName());
+            if (value == null) continue;
+
+            if (userRepo.isProfileIdentityConflict(f.jsonName(), value, user.id())) {
+                context.setMessage(Problem.valueOf(409));
+                return true;
+            }
         }
-        return !violations.isEmpty();
+        return false;
     }
 
     @Decision(HANDLE_OK)
-    public User handleOk(User user, Parameters params, EntityManager em) {
+    public User handleOk(User user, Parameters params, DSLContext dsl) {
         List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
 
         if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("permissions"))) {
-            SignInService signInService = new SignInService(em, storeProvider, config);
-            Set<String> permissions = signInService.getPermissionsByRealm(user).values()
+            UserRepository userRepo = new UserRepository(dsl);
+            Set<String> permissions = userRepo.getPermissionsByRealm(user.id()).values()
                     .stream()
                     .flatMap(Collection::stream)
                     .collect(Collectors.toSet());
-            user.setPermissions(new ArrayList<>(permissions));
+            user = new User(user.id(), user.account(), user.writeProtected(),
+                    user.groups(), user.userProfileValues(), user.userLock(),
+                    user.passwordCredential(), user.otpKey(), user.oidcUsers(),
+                    new ArrayList<>(permissions), user.unverifiedProfiles());
         }
 
         return user;
     }
 
+    @SuppressWarnings("unchecked")
     @Decision(PUT)
-    public User update(UserUpdateRequest updateRequest,
-                       User user,
+    public User update(User user,
+                       Map userProfiles,
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
                        RestContext context,
-                       EntityManager em) {
-        UserProfileService userProfileService = new UserProfileService(em);
-        List<UserProfileValue> newValues = new ArrayList<>(userProfileService
-                .convertToUserProfileValues(updateRequest.getUserProfiles()));
+                       DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+
         config.getHookRepo().runHook(HookPoint.BEFORE_UPDATE_USER, context);
 
-        EntityTransactionManager tm = new EntityTransactionManager(em);
-        tm.required(() -> {
-            converter.copy(updateRequest, user);
-            List<UserProfileValue> removeValues = new ArrayList<>();
-            List<UserProfileValue> updatedValues = new ArrayList<>();
-            user.getUserProfileValues().forEach(v -> {
-                Optional<UserProfileValue> maybeNewValue = newValues.stream()
-                        .filter(newValue -> newValue.getUserProfileField().getId().equals(v.getUserProfileField().getId()))
-                        .findAny();
+        Map<String, Object> profiles = userProfiles != null ? userProfiles : Collections.emptyMap();
+        List<UserProfileValue> currentValues = userRepo.loadProfileValues(user.id());
 
-                maybeNewValue.ifPresentOrElse(
-                        newValue -> {
-                            if (!Objects.equals(v.getValue(), newValue.getValue())) {
-                                v.setValue(newValue.getValue());
-                                updatedValues.add(v);
-                            }
-                            newValues.remove(newValue);
-                        },
-                        () -> removeValues.add(v)
-                );
-            });
-            newValues.forEach(v -> v.setUser(user));
-            user.getUserProfileValues().addAll(newValues);
+        // Track updated and new profile values for verification
+        List<UserProfileField> updatedFields = new ArrayList<>();
 
-            // Verifications for updated profiles
-            final Set<UserProfileVerification> currentVerifications = new HashSet<>(userProfileService
-                    .findUserProfileVerifications(user.getAccount()));
-            VerificationTargetSet verifications = new VerificationTargetSet(userProfileService
-                    .createProfileVerification(Stream.concat(newValues.stream(), updatedValues.stream()))
-                    .stream()
-                    .map(newVerification -> currentVerifications.stream()
-                                        .filter(v -> v.getUserProfileField().equals(newVerification.getUserProfileField()))
-                                        .findAny()
-                                        .orElseGet(() -> {
-                                            newVerification.setUser(user);
-                                            em.persist(newVerification);
-                                            return newVerification;
-                                        }))
-                    .collect(Collectors.toSet()));
+        for (Map.Entry<String, Object> entry : ((Map<String, Object>) profiles).entrySet()) {
+            Optional<UserProfileField> maybeField = fieldRepo.findByJsonName(entry.getKey());
+            if (maybeField.isEmpty()) continue;
+            UserProfileField profileField = maybeField.get();
 
-            if (!verifications.isEmpty()) {
-                context.putValue(verifications);
+            String newValue = entry.getValue() != null ? entry.getValue().toString() : null;
+            Optional<UserProfileValue> existingValue = currentValues.stream()
+                    .filter(v -> v.userProfileField().id().equals(profileField.id()))
+                    .findAny();
+
+            if (existingValue.isPresent()) {
+                if (!Objects.equals(existingValue.get().value(), newValue)) {
+                    userRepo.setProfileValue(user.id(), profileField.id(), newValue);
+                    updatedFields.add(profileField);
+                }
+            } else {
+                if (newValue != null) {
+                    userRepo.setProfileValue(user.id(), profileField.id(), newValue);
+                    updatedFields.add(profileField);
+                }
             }
+        }
 
-            config.getHookRepo().runHook(HookPoint.AFTER_UPDATE_USER, context);
-        });
+        // Create verifications for updated fields that need verification
+        List<UserProfileVerification> newVerifications = updatedFields.stream()
+                .filter(UserProfileField::needsVerification)
+                .map(f -> {
+                    String code = net.unit8.bouncr.util.RandomUtils.generateRandomString(6);
+                    java.time.LocalDateTime expiresAt = java.time.LocalDateTime.now().plusDays(1);
+                    userRepo.upsertProfileVerification(user.id(), f.id(), code, expiresAt);
+                    return new UserProfileVerification(
+                            new UserProfileVerificationId(f.id(), user.id()),
+                            code, expiresAt);
+                })
+                .collect(Collectors.toList());
+
+        if (!newVerifications.isEmpty()) {
+            context.put(VERIFICATIONS, new VerificationTargetSet(newVerifications));
+        }
+
+        config.getHookRepo().runHook(HookPoint.AFTER_UPDATE_USER, context);
+
         actionRecord.setActionType(ActionType.USER_MODIFIED);
         actionRecord.setActor(principal.getName());
-        actionRecord.setDescription(user.getAccount());
+        actionRecord.setDescription(user.account());
 
-        em.detach(user);
-        return user;
+        return userRepo.findByIdFull(user.id(), false, false).orElse(user);
     }
 
     @Decision(DELETE)
@@ -254,27 +281,20 @@ public class UserResource {
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
                        RestContext context,
-                       EntityManager em) {
-        EntityTransactionManager tm = new EntityTransactionManager(em);
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<UserProfileVerification> query = cb.createQuery(UserProfileVerification.class);
-        Root<UserProfileVerification> userProfileVerificationRoot = query.from(UserProfileVerification.class);
-        Join<UserProfileVerification, User> userJoin = userProfileVerificationRoot.join("user");
-        query.where(cb.equal(userJoin.get("id"), user.getId()));
-
+                       DSLContext dsl) {
         config.getHookRepo().runHook(HookPoint.BEFORE_DELETE_USER, context);
-        tm.required(() -> {
-            em.createQuery(query)
-                    .getResultStream()
-                    .forEach(em::remove);
-            em.remove(user);
-            config.getHookRepo().runHook(HookPoint.AFTER_DELETE_USER, context);
-        });
+
+        UserRepository userRepo = new UserRepository(dsl);
+        userRepo.deleteProfileVerifications(user.id());
+        userRepo.delete(user.id());
+
+        config.getHookRepo().runHook(HookPoint.AFTER_DELETE_USER, context);
+
         actionRecord.setActionType(ActionType.USER_DELETED);
         actionRecord.setActor(principal.getName());
-        actionRecord.setDescription(user.getAccount());
+        actionRecord.setDescription(user.account());
 
-        em.detach(user);
         return null;
     }
+
 }

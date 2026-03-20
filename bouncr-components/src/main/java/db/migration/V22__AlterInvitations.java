@@ -22,7 +22,7 @@ public class V22__AlterInvitations extends BaseJavaMigration {
         try(Statement stmt = connection.createStatement()) {
             DSLContext create = DSL.using(connection);
             String ddl = create.alterTable(table("oidc_invitations"))
-                    .renameColumn(field("oidc_sub")).to(field("oidc_payload", SQLDataType.CLOB))
+                    .renameColumn(field("oidc_sub")).to(field("oidc_payload", SQLDataType.VARCHAR(4000)))
                     .getSQL();
             if (create.configuration().dialect() == SQLDialect.MYSQL) {
                 Matcher m = Pattern.compile("\\s+RENAME\\s+COLUMN\\s+(\\w+)\\s+TO\\s+", Pattern.CASE_INSENSITIVE).matcher(ddl);

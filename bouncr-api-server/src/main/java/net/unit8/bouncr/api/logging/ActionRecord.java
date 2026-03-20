@@ -1,8 +1,8 @@
 package net.unit8.bouncr.api.logging;
 
-import net.unit8.bouncr.entity.ActionType;
-
 import java.io.Serializable;
+
+import net.unit8.bouncr.data.ActionType;
 
 public class ActionRecord implements Serializable {
     private ActionType actionType;

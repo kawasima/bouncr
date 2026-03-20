@@ -1,65 +1,85 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.SystemComponent;
-import enkan.component.jackson.JacksonBeansConverter;
-import enkan.data.DefaultHttpRequest;
-import enkan.system.EnkanSystem;
-import enkan.system.inject.ComponentInjector;
-import kotowari.restful.component.BeansValidator;
-import kotowari.restful.data.DefaultResource;
-import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.PasswordSignInRequest;
-import net.unit8.bouncr.api.logging.ActionRecord;
-import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.util.PasswordUtils;
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import jakarta.persistence.EntityManager;
+import java.util.Arrays;
 
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static enkan.util.BeanBuilder.builder;
-
+/**
+ * Tests for password sign-in logic using a real H2 database.
+ * Tests the authentication flow: load user with credentials, verify password.
+ */
 public class PasswordSignInResourceTest {
-    private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResourceTest.class);
-
-    private EnkanSystem system;
+    private DSLContext dsl;
 
     @BeforeEach
     void setup() {
-        system = EnkanSystem.of(
-                "converter", new JacksonBeansConverter(),
-                "validator", new BeansValidator(),
-                "config",    new BouncrConfiguration()
-        );
-        system.start();
-    }
-
-    @Test
-    void authenticationSuccessful() {
-        ComponentInjector injector = new ComponentInjector(
-                Map.<String, SystemComponent<?>>of("converter", system.getComponent("converter"),
-                        "validator", system.getComponent("validator"),
-                        "config", system.getComponent("config")));
-
-        final PasswordSignInResource resource = injector.inject(new PasswordSignInResource());
-        PasswordSignInRequest request = builder(new PasswordSignInRequest())
-                .set(PasswordSignInRequest::setAccount, "kawasima")
-                .set(PasswordSignInRequest::setPassword, "pass1234")
-                .build();
-        ActionRecord record = builder(new ActionRecord())
-                .build();
-        final RestContext context = new RestContext(new DefaultResource(), new DefaultHttpRequest());
-        final EntityManager em = MockFactory.createEntityManagerMock();
-
-        resource.authenticate(request, record, context, em);
+        dsl = MockFactory.beginTransaction();
     }
 
     @AfterEach
     void tearDown() {
-        system.stop();
+        MockFactory.rollback();
+    }
+
+    @Test
+    void authenticationSuccessful() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("kawasima");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, false);
+
+        // Simulate authentication: load user and verify password
+        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        assertThat(loaded.passwordCredential()).isNotNull();
+
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        assertThat(Arrays.equals(loaded.passwordCredential().password(), checkHash)).isTrue();
+    }
+
+    @Test
+    void authenticationFailedWrongPassword() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("kawasima");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, false);
+
+        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpass", loaded.passwordCredential().salt(), 600_000);
+        assertThat(Arrays.equals(loaded.passwordCredential().password(), wrongHash)).isFalse();
+    }
+
+    @Test
+    void authenticationFailedUserNotFound() {
+        UserRepository userRepo = new UserRepository(dsl);
+        assertThat(userRepo.findByAccountForSignIn("nonexistent")).isEmpty();
+    }
+
+    @Test
+    void authenticationWithInitialPassword() {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.insert("kawasima");
+
+        String salt = "saltsaltsaltsalt";
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        userRepo.insertPasswordCredential(user.id(), hash, salt, true);
+
+        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        assertThat(loaded.passwordCredential().initial()).isTrue();
+
+        // Password still matches even though it's initial
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        assertThat(Arrays.equals(loaded.passwordCredential().password(), checkHash)).isTrue();
     }
 }

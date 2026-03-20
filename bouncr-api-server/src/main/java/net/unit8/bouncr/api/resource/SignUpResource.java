@@ -1,39 +1,30 @@
 package net.unit8.bouncr.api.resource;
 
 import tools.jackson.core.type.TypeReference;
-import enkan.component.BeansConverter;
-import enkan.util.BeanBuilder;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.SignUpCreateRequest;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
+import net.unit8.bouncr.api.repository.InvitationRepository;
+import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
-import net.unit8.bouncr.api.service.UserProfileService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
-import net.unit8.bouncr.data.InitialPassword;
-import net.unit8.bouncr.domain.VerificationTargetSet;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
+import net.unit8.bouncr.util.RandomUtils;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Root;
-import jakarta.validation.ConstraintViolation;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
@@ -41,11 +32,13 @@ import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"POST"})
 public class SignUpResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<String> ACCOUNT = ContextKey.of("account", String.class);
+    static final ContextKey<String> CODE = ContextKey.of("code", String.class);
+    static final ContextKey<Boolean> ENABLE_PASSWORD = ContextKey.of("enablePassword", Boolean.class);
+    static final ContextKey<Map> USER_PROFILES = ContextKey.of("userProfiles", Map.class);
+    static final ContextKey<User> USER_KEY = ContextKey.of(User.class);
+    static final ContextKey<VerificationTargetSet> VERIFICATION_TARGET_SET = ContextKey.of(VerificationTargetSet.class);
+    static final ContextKey<InitialPassword> INITIAL_PASSWORD = ContextKey.of(InitialPassword.class);
 
     @Inject
     private JsonWebToken jsonWebToken;
@@ -54,24 +47,74 @@ public class SignUpResource {
     private BouncrConfiguration config;
 
     @Decision(MALFORMED)
-    public Problem validate(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
-        if (createRequest == null) {
+    public Problem validate(JsonNode body, RestContext context, DSLContext dsl) {
+        if (body == null) {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
-        Set<ConstraintViolation<SignUpCreateRequest>> violations = validator.validate(createRequest);
-        if (!violations.isEmpty()) {
-            return Problem.fromViolations(violations);
+        // Extract account
+        JsonNode accountNode = body.get("account");
+        if (accountNode == null || accountNode.asText().isBlank()) {
+            return Problem.valueOf(400, "account is required", BouncrProblem.MALFORMED.problemUri());
+        }
+        String account = accountNode.asText();
+        if (account.length() > 100 || !account.matches("^\\w+$")) {
+            return Problem.valueOf(400, "account format is invalid", BouncrProblem.MALFORMED.problemUri());
+        }
+        context.put(ACCOUNT, account);
+
+        // Extract code
+        JsonNode codeNode = body.get("code");
+        if (codeNode != null && !codeNode.isNull()) {
+            context.put(CODE, codeNode.asText());
         }
 
-        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, createRequest.getUserProfiles());
-        UserProfileService userProfileService = new UserProfileService(em);
-        Set<Problem.Violation> profileViolations = userProfileService.validateUserProfile(createRequest.getUserProfiles());
+        // Extract enable_password_credential
+        JsonNode enablePwdNode = body.get("enable_password_credential");
+        boolean enablePassword = enablePwdNode == null || enablePwdNode.asBoolean(true);
+        context.put(ENABLE_PASSWORD, enablePassword);
+
+        // Extract user profile fields dynamically
+        Map<String, Object> userProfiles = new HashMap<>();
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+        List<UserProfileField> allFields = fieldRepo.findAll();
+        Set<String> knownNonProfileFields = new HashSet<>(List.of("account", "enable_password_credential", "code"));
+
+        for (UserProfileField f : allFields) {
+            JsonNode fieldNode = body.get(f.jsonName());
+            if (fieldNode != null && !fieldNode.isNull()) {
+                userProfiles.put(f.jsonName(), fieldNode.asText());
+            }
+        }
+
+        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, userProfiles);
+
+        // Validate profiles
+        List<Problem.Violation> profileViolations = new ArrayList<>();
+        for (UserProfileField f : allFields) {
+            Object value = userProfiles.get(f.jsonName());
+            if (value == null) {
+                if (f.isRequired()) {
+                    profileViolations.add(new Problem.Violation(f.jsonName(), "is required"));
+                }
+                continue;
+            }
+            String strValue = Objects.toString(value);
+            if (f.maxLength() != null && strValue.length() > f.maxLength()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.maxLength()));
+            }
+            if (f.minLength() != null && strValue.length() < f.minLength()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.minLength()));
+            }
+            if (f.regularExpression() != null && !Pattern.compile(f.regularExpression()).matcher(strValue).matches()) {
+                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.regularExpression()));
+            }
+        }
 
         if (!profileViolations.isEmpty()) {
             return Problem.valueOf(400);
         }
 
-        context.putValue(createRequest);
+        context.put(USER_PROFILES, userProfiles);
         return null;
     }
 
@@ -85,14 +128,30 @@ public class SignUpResource {
         return Problem.valueOf(403, "Signing up is NOT allowed");
     }
 
+    @SuppressWarnings("unchecked")
     @Decision(CONFLICT)
-    public boolean conflict(SignUpCreateRequest createRequest,
-                            RestContext context,
-                            EntityManager em) {
-        UserProfileService userProfileService = new UserProfileService(em);
+    public boolean conflict(String account, Map userProfiles, RestContext context, DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        List<Problem.Violation> violations = new ArrayList<>();
 
-        Set<Problem.Violation> violations = userProfileService.validateAccountUniqueness(createRequest.getAccount());
-        violations.addAll(userProfileService.validateProfileUniqueness(createRequest.getUserProfiles()));
+        // Check account uniqueness
+        if (!userRepo.isAccountUnique(account)) {
+            violations.add(new Problem.Violation("account", "conflicts"));
+        }
+
+        // Check profile identity uniqueness
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+        List<UserProfileField> identityFields = fieldRepo.findIdentityFields();
+        Map<String, Object> profiles = userProfiles != null ? userProfiles : Collections.emptyMap();
+
+        for (UserProfileField f : identityFields) {
+            Object value = profiles.get(f.jsonName());
+            if (value == null) continue;
+            Optional<Long> existingUserId = userRepo.findUserIdByProfileIdentity(f.jsonName(), value.toString());
+            if (existingUserId.isPresent()) {
+                violations.add(new Problem.Violation(f.jsonName(), "conflicts"));
+            }
+        }
 
         if (!violations.isEmpty()) {
             context.setMessage(Problem.valueOf(409));
@@ -100,89 +159,92 @@ public class SignUpResource {
         return !violations.isEmpty();
     }
 
-    private Invitation findInvitation(String code, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Invitation> query = cb.createQuery(Invitation.class);
-        Root<Invitation> invitationRoot = query.from(Invitation.class);
-        invitationRoot.fetch("groupInvitations", JoinType.LEFT);
-        invitationRoot.fetch("oidcInvitations", JoinType.LEFT);
-        query.where(cb.equal(invitationRoot.get("code"), code));
-
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream()
-                .findAny()
-                .orElse(null);
-    }
-
+    @SuppressWarnings("unchecked")
     @Decision(POST)
-    public SignUpResponse create(SignUpCreateRequest createRequest, RestContext context, EntityManager em) {
-        User user = converter.createFrom(createRequest, User.class);
-        UserProfileService userProfileService = new UserProfileService(em);
-        // Process user profiles
-        List<UserProfileValue> userProfileValues = userProfileService
-                .convertToUserProfileValues(createRequest.getUserProfiles());
-        user.setUserProfileValues(userProfileValues.stream()
-                .map(v -> { v.setUser(user); return v; })
-                .collect(Collectors.toList()));
-        // Process user profile verifications
-        List<UserProfileVerification> profileVerifications = userProfileService
-                .createProfileVerification(userProfileValues).stream()
-                .map(v -> {
-                    v.setUser(user);
-                    return v;
+    public SignUpResponse create(String account,
+                                Boolean enablePassword,
+                                String code,
+                                Map userProfiles,
+                                RestContext context,
+                                DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
+        InvitationRepository invitationRepo = new InvitationRepository(dsl);
+
+        // Create user
+        User user = userRepo.insert(account);
+        context.put(USER_KEY, user);
+
+        // Set profile values and track which need verification
+        Map<String, Object> profiles = userProfiles != null ? userProfiles : Collections.emptyMap();
+        List<UserProfileField> verificationFields = new ArrayList<>();
+
+        for (Map.Entry<String, Object> entry : ((Map<String, Object>) profiles).entrySet()) {
+            fieldRepo.findByJsonName(entry.getKey()).ifPresent(field -> {
+                userRepo.setProfileValue(user.id(), field.id(), entry.getValue().toString());
+                if (field.needsVerification()) {
+                    verificationFields.add(field);
+                }
+            });
+        }
+
+        // Create profile verifications
+        List<UserProfileVerification> profileVerifications = verificationFields.stream()
+                .map(f -> {
+                    String verificationCode = RandomUtils.generateRandomString(6);
+                    LocalDateTime expiresAt = LocalDateTime.now().plusDays(1);
+                    userRepo.insertProfileVerification(f.id(), user.id(), verificationCode, expiresAt);
+                    return new UserProfileVerification(
+                            new UserProfileVerificationId(f.id(), user.id()),
+                            verificationCode, expiresAt);
                 })
                 .collect(Collectors.toList());
 
-        user.setWriteProtected(false);
-        context.putValue(user);
+        if (!profileVerifications.isEmpty()) {
+            context.put(VERIFICATION_TARGET_SET, new VerificationTargetSet(profileVerifications));
+        }
 
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_UP, context);
 
-        Optional<Invitation> invitation = Optional.ofNullable(createRequest.getCode())
-                .map(code -> findInvitation(code, em));
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> {
-            invitation.ifPresent(invi -> {
-                List<Group> groups = Optional.ofNullable(user.getGroups())
-                        .filter(gs -> !gs.isEmpty())
-                        .orElseGet(ArrayList::new);
-                groups.addAll(invi.getGroupInvitations()
-                        .stream()
-                        .map(GroupInvitation::getGroup)
-                        .collect(Collectors.toList()));
-                user.setGroups(groups);
-                invi.getOidcInvitations()
-                        .forEach(oidcInvitation -> {
-                            OidcUser oidcUser = BeanBuilder.builder(new OidcUser())
-                                    .set(OidcUser::setUser, user)
-                                    .set(OidcUser::setOidcProvider, oidcInvitation.getOidcProvider())
-                                    .set(OidcUser::setOidcSub, jsonWebToken.decodePayload(oidcInvitation.getOidcPayload(), new TypeReference<JwtClaim>() {}).getSub())
-                                    .build();
-                            em.persist(oidcUser);
-                        });
+        // Handle invitation
+        Optional<Invitation> invitation = Optional.ofNullable(code)
+                .flatMap(invitationRepo::findByCode);
 
-            });
-            invitation.ifPresent(em::remove);
-            em.persist(user);
-            context.putValue(user);
-            profileVerifications.forEach(em::persist);
-            context.putValue(new VerificationTargetSet(profileVerifications));
-            if (createRequest.isEnablePasswordCredential()) {
-                PasswordCredentialService passwordCredentialService = new PasswordCredentialService(em, config);
-                InitialPassword initialPassword = passwordCredentialService.initializePassword(user);
-                context.putValue(initialPassword);
+        invitation.ifPresent(invi -> {
+            // Add user to invitation groups
+            if (invi.groupInvitations() != null) {
+                for (GroupInvitation gi : invi.groupInvitations()) {
+                    userRepo.addToGroup(user.id(), gi.group().id());
+                }
             }
-            config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
+
+            // Handle OIDC invitations
+            if (invi.oidcInvitations() != null) {
+                for (OidcInvitation oidcInvitation : invi.oidcInvitations()) {
+                    JwtClaim claim = jsonWebToken.decodePayload(oidcInvitation.oidcPayload(), new TypeReference<JwtClaim>() {});
+                    userRepo.insertOidcUser(oidcInvitation.id(), user.id(), claim.getSub());
+                }
+            }
+
+            // Delete invitation
+            invitationRepo.delete(invi.code());
         });
 
+        // Initialize password if requested
+        InitialPassword initialPassword = null;
+        if (enablePassword != null && enablePassword) {
+            PasswordCredentialService passwordCredentialService = new PasswordCredentialService(dsl, config);
+            initialPassword = passwordCredentialService.initializePassword(user);
+            context.put(INITIAL_PASSWORD, initialPassword);
+        }
+
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
+
         return builder(new SignUpResponse())
-                .set(SignUpResponse::setId, user.getId())
-                .set(SignUpResponse::setAccount, user.getAccount())
-                .set(SignUpResponse::setUserProfiles, user.getUserProfiles())
-                .set(SignUpResponse::setPassword, context.getValue(InitialPassword.class)
-                        .map(InitialPassword::getPassword)
-                        .orElse(null))
+                .set(SignUpResponse::setId, user.id())
+                .set(SignUpResponse::setAccount, user.account())
+                .set(SignUpResponse::setUserProfiles, (Map<String, Object>) profiles)
+                .set(SignUpResponse::setPassword, initialPassword != null ? initialPassword.password() : null)
                 .build();
     }
 }

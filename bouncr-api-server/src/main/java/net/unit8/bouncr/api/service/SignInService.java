@@ -2,49 +2,46 @@ package net.unit8.bouncr.api.service;
 
 import enkan.data.HttpRequest;
 import net.unit8.bouncr.api.authn.OneTimePasswordGenerator;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.repository.UserSessionRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
-import net.unit8.bouncr.entity.*;
+import net.unit8.bouncr.data.OtpKey;
+import net.unit8.bouncr.data.PasswordCredential;
+import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserSession;
+import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Subgraph;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.Root;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
 public class SignInService {
     private final BouncrConfiguration config;
-    private final EntityManager em;
+    private final DSLContext dsl;
     private final StoreProvider storeProvider;
 
     private static final Logger LOG = LoggerFactory.getLogger(SignInService.class);
 
-    public SignInService(EntityManager em, StoreProvider storeProvider, BouncrConfiguration config) {
+    public SignInService(DSLContext dsl, StoreProvider storeProvider, BouncrConfiguration config) {
         this.config = config;
         this.storeProvider = storeProvider;
-        this.em = em;
+        this.dsl = dsl;
     }
 
     public boolean validateOtpKey(OtpKey otpKey, String code) {
         if (otpKey == null) return true;
 
         return new OneTimePasswordGenerator(30)
-                .generateTotpSet(otpKey.getKey(), 5)
+                .generateTotpSet(otpKey.key(), 5)
                 .stream()
                 .map(n -> String.format(Locale.US, "%06d", n))
                 .collect(Collectors.toSet())
@@ -52,13 +49,13 @@ public class SignInService {
     }
 
     public PasswordCredentialStatus validatePasswordCredentialAttributes(User user) {
-        PasswordCredential passwordCredential = user.getPasswordCredential();
-        if (passwordCredential.isInitial()) {
+        PasswordCredential passwordCredential = user.passwordCredential();
+        if (passwordCredential.initial()) {
             return INITIAL;
         }
 
         if (config.getPasswordPolicy().getExpires() != null) {
-            Instant createdAt = passwordCredential.getCreatedAt().toInstant(ZoneId.systemDefault().getRules().getOffset(Instant.now()));
+            Instant createdAt = passwordCredential.createdAt().toInstant(ZoneId.systemDefault().getRules().getOffset(Instant.now()));
             return (createdAt.plus(config.getPasswordPolicy().getExpires()).isBefore(config.getClock().instant())) ?
                     EXPIRED : VALID;
         }
@@ -73,58 +70,23 @@ public class SignInService {
     public UserSession createUserSession(HttpRequest request, User user, String token) {
         String userAgent = some(request.getHeaders().get("User-Agent"),
                 ua -> ua.substring(0, Math.min(ua.length(), 255))).orElse("");
-        UserSession userSession = builder(new UserSession())
-                .set(UserSession::setToken, token)
-                .set(UserSession::setUser, user)
-                .set(UserSession::setRemoteAddress, request.getRemoteAddr())
-                .set(UserSession::setUserAgent, userAgent)
-                .set(UserSession::setCreatedAt, LocalDateTime.now())
-                .build();
-        HashMap<String, Object> profileMap = new HashMap<>(user.getUserProfileValues()
-                .stream()
-                .collect(Collectors.toMap(v -> v.getUserProfileField().getJsonName(), UserProfileValue::getValue)));
+
+        UserSessionRepository sessionRepo = new UserSessionRepository(dsl);
+        UserSession userSession = sessionRepo.insert(user.id(), token, request.getRemoteAddr(), userAgent, LocalDateTime.now());
+
+        UserRepository userRepo = new UserRepository(dsl);
+        HashMap<String, Object> profileMap = new HashMap<>(
+                userRepo.loadProfileValues(user.id()).stream()
+                        .collect(Collectors.toMap(v -> v.userProfileField().jsonName(), v -> v.value())));
         profileMap.put("iss", "bouncr");
-        profileMap.put("uid", Long.toString(user.getId()));
-        profileMap.put("sub", user.getAccount());
-        profileMap.put("permissionsByRealm", getPermissionsByRealm(user));
+        profileMap.put("uid", Long.toString(user.id()));
+        profileMap.put("sub", user.account());
+        profileMap.put("permissionsByRealm", userRepo.getPermissionsByRealm(user.id()));
         LOG.debug("signIn profileMap = {}", profileMap);
         storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
 
         return userSession;
     }
-
-    public Map<String, List<String>> getPermissionsByRealm(User user) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Assignment> assignmentCriteria = cb.createQuery(Assignment.class);
-        Root<Assignment> assignmentRoot = assignmentCriteria.from(Assignment.class);
-        Join<Group, Assignment> groupJoin = assignmentRoot.join("group");
-        Join<User, Group> userJoin = groupJoin.join("users");
-        assignmentRoot.fetch("role").fetch("permissions");
-        assignmentCriteria.where(cb.equal(userJoin.get("id"), user.getId()));
-
-        EntityGraph<Assignment> assignmentGraph = em.createEntityGraph(Assignment.class);
-        assignmentGraph.addAttributeNodes("realm", "role");
-        Subgraph<Role> roleGraph = assignmentGraph.addSubgraph("role");
-        roleGraph.addAttributeNodes("permissions");
-        Subgraph<Permission> permissionsGraph = roleGraph.addSubgraph("permissions");
-        permissionsGraph.addAttributeNodes("name");
-
-        return em.createQuery(assignmentCriteria)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setHint("jakarta.persistence.fetchgraph", assignmentGraph)
-                .getResultStream()
-                .collect(Collectors.groupingBy(Assignment::getRealm))
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        e -> e.getKey().getId().toString(),
-                        e -> new ArrayList<>(e.getValue().stream()
-                                .flatMap(v -> v.getRole().getPermissions().stream())
-                                .map(Permission::getName)
-                                .collect(Collectors.toSet()))));
-    }
-
-
 
     public enum PasswordCredentialStatus {
         VALID,

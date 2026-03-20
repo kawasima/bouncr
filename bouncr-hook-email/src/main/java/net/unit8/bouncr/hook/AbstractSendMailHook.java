@@ -1,7 +1,7 @@
 package net.unit8.bouncr.hook;
 
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.entity.UserProfileValue;
+import net.unit8.bouncr.data.UserProfileValue;
 import net.unit8.bouncr.hook.email.config.MailConfig;
 import net.unit8.bouncr.hook.email.service.SendMailService;
 
@@ -18,7 +18,7 @@ public abstract class AbstractSendMailHook implements Hook<RestContext> {
     public void run(RestContext context) {
         final SendMailService sendMailService = new SendMailService(mailConfig);
         findEmailField(context).ifPresent(value -> {
-            String email = value.getValue();
+            String email = value.value();
             sendMailService.send(email, getMetaKey(), createContext(context));
         });
     }

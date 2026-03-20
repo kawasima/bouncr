@@ -1,54 +1,41 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.data.HttpRequest;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.apistandard.resourcefilter.ResourceField;
-import net.unit8.apistandard.resourcefilter.ResourceFilter;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.GroupCreateRequest;
-import net.unit8.bouncr.api.boundary.GroupUpdateRequest;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.User;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.GroupUpdate;
+import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.data.Group;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityGraph;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.*;
-import jakarta.validation.ConstraintViolation;
-import java.util.*;
+import java.util.Objects;
+import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
-import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class GroupResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<GroupUpdate> UPDATE_REQ = ContextKey.of(GroupUpdate.class);
+    static final ContextKey<Group> GROUP = ContextKey.of(Group.class);
 
     @Decision(value = MALFORMED, method = "PUT")
-    public Problem vaidateCreateRequest(GroupCreateRequest updateRequest, RestContext context) {
-        if (updateRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateUpdate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<GroupCreateRequest>> violations = validator.validate(updateRequest);
-        if (violations.isEmpty()) {
-            context.putValue(updateRequest);
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.GROUP_UPDATE.decode(body)) {
+            case Ok<GroupUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Err<GroupUpdate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -56,21 +43,21 @@ public class GroupResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("group:read") || p.hasPermission("any_group:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "PUT")
+    @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("group:update") || p.hasPermission("any_group:update"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "DELETE")
+    @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("group:delete") || p.hasPermission("any_group:update"))
@@ -78,78 +65,39 @@ public class GroupResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(GroupUpdateRequest updateRequest, Parameters params, EntityManager em) {
-        if (Objects.equals(updateRequest.getName(), params.get("name"))) {
+    public boolean isConflict(GroupUpdate updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest.name(), params.get("name"))) {
             return false;
         }
-        UniquenessCheckService<Group> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Group.class, "nameLower",
-                Optional.ofNullable(updateRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
+        GroupRepository repo = new GroupRepository(dsl);
+        return !repo.isNameUnique(updateRequest.name());
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params,
-                          UserPermissionPrincipal principal,
-                          HttpRequest request,
-                          RestContext context,
-                          EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Group> query = cb.createQuery(Group.class);
-        Root<Group> groupRoot = query.from(Group.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-        predicates.add(cb.equal(groupRoot.get("name"), params.get("name")));
-        if ((request.getRequestMethod().equalsIgnoreCase("GET") && !principal.hasPermission("any_group:read"))
-                || (request.getRequestMethod().equalsIgnoreCase("PUT") && !principal.hasPermission("any_group:update"))
-                || (request.getRequestMethod().equalsIgnoreCase("DELETE") && !principal.hasPermission("any_group:delete"))) {
-            Join<Group, User> userRoot = groupRoot.join("users");
-            predicates.add(cb.equal(userRoot.get("id"), principal.getId()));
-        }
-
-        if (!predicates.isEmpty()) {
-            query.where(predicates.toArray(Predicate[]::new));
-        }
-
-        List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
-                .orElse(Collections.emptyList());
-        EntityGraph<Group> groupGraph = em.createEntityGraph(Group.class);
-        groupGraph.addAttributeNodes("name", "description");
-
-        if (embedEntities.stream().anyMatch(r -> r.getName().equalsIgnoreCase("users"))) {
-            groupGraph.addAttributeNodes("users");
-            groupGraph.addSubgraph("users")
-                    .addAttributeNodes("account");
-        }
-
-        Group group = em.createQuery(query)
-                .setHint("jakarta.persistence.fetchgraph", groupGraph)
-                .getResultStream().findAny().orElse(null);
-        if (group != null) {
-            context.putValue(group);
-        }
-        return group != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        GroupRepository repo = new GroupRepository(dsl);
+        boolean embedUsers = Objects.equals(params.get("embed"), "users");
+        Optional<Group> group = repo.findByName(params.get("name"), embedUsers);
+        group.ifPresent(g -> context.put(GROUP, g));
+        return group.isPresent();
     }
 
     @Decision(HANDLE_OK)
-    public Group find(Group group, EntityManager em) {
-        em.detach(group);
+    public Group find(Group group) {
         return group;
     }
 
     @Decision(PUT)
-    public Group update(GroupUpdateRequest updateRequest, Group group, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> converter.copy(updateRequest, group));
-        em.detach(group);
-        return group;
+    public Group update(GroupUpdate updateRequest, Group group, DSLContext dsl) {
+        GroupRepository repo = new GroupRepository(dsl);
+        repo.update(group.name(), updateRequest.name(), updateRequest.description());
+        return repo.findByName(updateRequest.name(), false).orElseThrow();
     }
 
     @Decision(DELETE)
-    public Void delete(Group group, EntityManager em) {
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.remove(group));
+    public Void delete(Group group, DSLContext dsl) {
+        GroupRepository repo = new GroupRepository(dsl);
+        repo.delete(group.name());
         return null;
     }
 }

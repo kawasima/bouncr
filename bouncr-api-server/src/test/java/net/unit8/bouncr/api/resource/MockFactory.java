@@ -1,67 +1,139 @@
 package net.unit8.bouncr.api.resource;
 
-import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
+import org.flywaydb.core.api.configuration.Configuration;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
+import org.h2.jdbcx.JdbcDataSource;
+import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DSL;
 
-import java.util.Arrays;
-import java.util.List;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.UUID;
 
-import static org.mockito.Mockito.*;
-
+/**
+ * Factory for creating test DSLContext backed by H2 in-memory database with migrations.
+ *
+ * <p>Usage: call {@link #sharedDSLContext()} once, then use {@link #beginTransaction()} /
+ * {@link #rollback()} around each test to isolate data changes without re-running migrations.</p>
+ */
 public class MockFactory {
-    public static EntityManager createEntityManagerMock(Object... mocks) {
-        List<Object> mockList = Arrays.asList(mocks);
-        EntityManager em = mock(EntityManager.class);
-        CriteriaBuilder cb = mock(CriteriaBuilder.class);
 
-        CriteriaQuery<Object> query = mockList.stream()
-                .filter(CriteriaQuery.class::isInstance)
-                .map(CriteriaQuery.class::cast)
-                .findAny()
-                .orElse(mock(CriteriaQuery.class));
-        Root<Object> root = mockList.stream()
-                .filter(Root.class::isInstance)
-                .map(Root.class::cast)
-                .findAny()
-                .orElse(mock(Root.class));
-        Path<Object> path = mock(Path.class);
-        Join<Object, Object> join = mock(Join.class);
-        EntityGraph<Object> graph = mockList.stream()
-                .filter(EntityGraph.class::isInstance)
-                .map(EntityGraph.class::cast)
-                .findAny()
-                .orElse(mock(EntityGraph.class));
-        Subgraph<Object> subgraph = mock(Subgraph.class);
+    private static volatile DataSource sharedDataSource;
+    private static volatile DSLContext sharedDSLContext;
+    private static final ThreadLocal<Connection> txConnection = new ThreadLocal<>();
 
-        TypedQuery<Object> typedQuery = mockList.stream()
-                .filter(TypedQuery.class::isInstance)
-                .map(TypedQuery.class::cast)
-                .findAny()
-                .orElse(mock(TypedQuery.class));
+    private static final BaseJavaMigration[] MIGRATIONS = {
+            new db.migration.V1__CreateUsers(),
+            new db.migration.V2__CreateGroups(),
+            new db.migration.V3__CreateApplications(),
+            new db.migration.V4__CreateRoles(),
+            new db.migration.V5__CreatePermissions(),
+            new db.migration.V6__CreateRealms(),
+            new db.migration.V7__CreateMemberships(),
+            new db.migration.V8__CreateRolePermissions(),
+            new db.migration.V9__CreateAssinments(),
+            new db.migration.V10__CreatePasswordCredentials(),
+            new db.migration.V12__CreateUserActions(),
+            new db.migration.V13__CreateOidcProviders(),
+            new db.migration.V14__CreateCertificateCredentials(),
+            new db.migration.V15__CreateOidcUsers(),
+            new db.migration.V16__CreateOidcApplications(),
+            new db.migration.V17__CreateInvitations(),
+            new db.migration.V18__CreateUserLocks(),
+            new db.migration.V19__CreateUserSessions(),
+            new db.migration.V20__CreateCerts(),
+            new db.migration.V21__CreateUserProfiles(),
+            new db.migration.V22__AlterInvitations(),
+            new db.migration.V23__InsertAdminUser(),
+            new db.migration.V24__AddAccountLowerToUser(),
+            new db.migration.V25__AddRedirectUriToOidcProvider(),
+            new db.migration.V26__AddJwksUriAndIssuerToOidcProvider(),
+            new db.migration.V27__AddPkceEnabledToOidcProvider(),
+    };
 
-        EntityTransaction tx = mockList.stream()
-                .filter(EntityTransaction.class::isInstance)
-                .map(EntityTransaction.class::cast)
-                .findAny()
-                .orElse(mock(EntityTransaction.class));
-
-        when(em.getCriteriaBuilder()).thenReturn(cb);
-        when(cb.createQuery(any(Class.class))).thenReturn(query);
-        when(query.from(any(Class.class))).thenReturn(root);
-        when(query.where(any(Predicate.class))).thenReturn(query);
-        when(em.createEntityGraph(any(Class.class))).thenReturn(graph);
-        when(root.join(anyString())).thenReturn(join);
-        when(root.get(anyString())).thenReturn(path);
-        when(join.join(anyString())).thenReturn(join);
-        when(graph.addSubgraph(anyString())).thenReturn(subgraph);
-        when(subgraph.addSubgraph(anyString())).thenReturn(subgraph);
-        when(em.createQuery(any(CriteriaQuery.class))).thenReturn(typedQuery);
-        when(typedQuery.setHint(anyString(), any())).thenReturn(typedQuery);
-        when(typedQuery.setFirstResult(anyInt())).thenReturn(typedQuery);
-        when(typedQuery.setMaxResults(anyInt())).thenReturn(typedQuery);
-        when(em.getTransaction()).thenReturn(tx);
-        return em;
+    /**
+     * Returns a shared DSLContext reused across all tests in a JVM.
+     * Migrations are run once on first call.
+     */
+    public static DSLContext sharedDSLContext() {
+        if (sharedDSLContext == null) {
+            synchronized (MockFactory.class) {
+                if (sharedDSLContext == null) {
+                    sharedDataSource = createDataSource();
+                    sharedDSLContext = DSL.using(sharedDataSource, SQLDialect.H2);
+                }
+            }
+        }
+        return sharedDSLContext;
     }
 
+    /**
+     * Begins a transaction on the shared connection. All changes within
+     * the test will be rolled back by {@link #rollback()}.
+     */
+    public static DSLContext beginTransaction() {
+        try {
+            sharedDSLContext(); // ensure initialization
+            Connection conn = sharedDataSource.getConnection();
+            conn.setAutoCommit(false);
+            txConnection.set(conn);
+            return DSL.using(conn, SQLDialect.H2);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
+    /**
+     * Rolls back the current transaction, undoing all changes made during the test.
+     */
+    public static void rollback() {
+        Connection conn = txConnection.get();
+        if (conn != null) {
+            try {
+                conn.rollback();
+                conn.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } finally {
+                txConnection.remove();
+            }
+        }
+    }
+
+    private static DataSource createDataSource() {
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:test_" + UUID.randomUUID().toString().replace("-", "")
+                + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(true);
+            FlywayContext ctx = new FlywayContext(conn);
+            for (BaseJavaMigration migration : MIGRATIONS) {
+                migration.migrate(ctx);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to run migrations", e);
+        }
+        return ds;
+    }
+
+    private static class FlywayContext implements Context {
+        private final Connection connection;
+
+        FlywayContext(Connection connection) {
+            this.connection = connection;
+        }
+
+        @Override
+        public Connection getConnection() {
+            return connection;
+        }
+
+        @Override
+        public Configuration getConfiguration() {
+            return null;
+        }
+    }
 }

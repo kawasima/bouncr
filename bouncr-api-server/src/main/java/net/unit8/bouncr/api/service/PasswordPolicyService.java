@@ -1,42 +1,36 @@
 package net.unit8.bouncr.api.service;
 
 import kotowari.restful.data.Problem;
-import net.unit8.bouncr.api.boundary.PasswordCredentialCreateRequest;
-import net.unit8.bouncr.api.boundary.PasswordCredentialUpdateRequest;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.component.config.PasswordPolicy;
-import net.unit8.bouncr.entity.PasswordCredential;
-import net.unit8.bouncr.entity.User;
 import net.unit8.bouncr.util.PasswordUtils;
+import org.jooq.DSLContext;
 
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.Root;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
 import static enkan.util.ThreadingUtils.some;
+import static org.jooq.impl.DSL.*;
 
 public class PasswordPolicyService {
-    private EntityManager em;
-    private PasswordPolicy policy;
+    private final DSLContext dsl;
+    private final PasswordPolicy policy;
 
-    public PasswordPolicyService(PasswordPolicy policy, EntityManager em) {
-        this.em = em;
+    public PasswordPolicyService(PasswordPolicy policy, DSLContext dsl) {
+        this.dsl = dsl;
         this.policy = policy;
     }
 
     protected Problem.Violation conformPolicy(String password) {
         int passwordLen = some(password, String::length).orElse(0);
         if (passwordLen > policy.getMaxLength()) {
-            return new Problem.Violation("passwrod", "must be less than " + policy.getMaxLength() + " characters");
+            return new Problem.Violation("password", "must be less than " + policy.getMaxLength() + " characters");
         }
 
         if (passwordLen < policy.getMinLength()) {
-            return new Problem.Violation("passwrod", "must be greater than " + policy.getMinLength() + " characters");
+            return new Problem.Violation("password", "must be greater than " + policy.getMinLength() + " characters");
         }
 
         return Optional.ofNullable(policy.getPattern())
@@ -45,32 +39,32 @@ public class PasswordPolicyService {
                 .orElse(null);
     }
 
-    public Problem.Violation validateCreatePassword(PasswordCredentialCreateRequest createRequest) {
-        return conformPolicy(createRequest.getPassword());
+    public Problem.Violation validateCreatePassword(BouncrJsonDecoders.PasswordCredentialCreate createRequest) {
+        return conformPolicy(createRequest.password());
     }
 
-    public Problem.Violation validateUpdatePassword(PasswordCredentialUpdateRequest updateRequest) {
-        if (Objects.equals(updateRequest.getNewPassword(), updateRequest.getOldPassword())) {
+    public Problem.Violation validateUpdatePassword(BouncrJsonDecoders.PasswordCredentialUpdate updateRequest) {
+        if (Objects.equals(updateRequest.newPassword(), updateRequest.oldPassword())) {
             return new Problem.Violation("new_password", "is the same as the old password");
         }
 
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<PasswordCredential> query = cb.createQuery(PasswordCredential.class);
-        Root<PasswordCredential> passwordCredentialRoot = query.from(PasswordCredential.class);
-        Join<User, PasswordCredential> userJoin = passwordCredentialRoot.join("user");
-        query.where(cb.equal(userJoin.get("account"), updateRequest.getAccount()));
-        PasswordCredential passwordCredential = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-        if (passwordCredential == null) {
+        var rec = dsl.select(
+                        field("pc.password", byte[].class).as("password"),
+                        field("pc.salt", String.class).as("salt"))
+                .from(table("password_credentials").as("pc"))
+                .join(table("users").as("u")).on(field("u.user_id").eq(field("pc.user_id")))
+                .where(field("u.account").eq(updateRequest.account()))
+                .fetchOne();
+
+        if (rec == null) {
             return new Problem.Violation("old_password", "does not match current password");
         }
 
-        byte[] currentPassword = passwordCredential.getPassword();
-        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.getOldPassword(), passwordCredential.getSalt(), 600_000);
+        byte[] currentPassword = rec.get(field("password", byte[].class));
+        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.oldPassword(), rec.get(field("salt", String.class)), 600_000);
         if (!Arrays.equals(currentPassword, oldPassword)) {
             return new Problem.Violation("old_password", "does not match current password");
         }
-        return conformPolicy(updateRequest.getNewPassword());
+        return conformPolicy(updateRequest.newPassword());
     }
 }

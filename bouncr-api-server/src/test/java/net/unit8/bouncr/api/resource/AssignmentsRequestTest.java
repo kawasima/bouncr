@@ -1,49 +1,66 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.component.BeansConverter;
-import enkan.component.jackson.JacksonBeansConverter;
-import enkan.system.EnkanSystem;
-import net.unit8.bouncr.api.boundary.AssignmentsRequest;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.raoh.Ok;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
-import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Tests for the AssignmentsRequest JSON decoding.
+ * The old boundary class AssignmentsRequest has been replaced by raoh-json decoders.
+ */
 class AssignmentsRequestTest {
-    @Test
-    void test() {
-        EnkanSystem system = EnkanSystem.of("converter", new JacksonBeansConverter());
-        system.start();
-        try {
-            BeansConverter converter = system.getComponent("converter");
 
-            AssignmentsRequest assignmentsRequest = converter.createFrom(List.of(
-                    Map.of("group",
-                            Map.of("id", 1L))
-                    )
-                    , AssignmentsRequest.class);
-            System.out.println(assignmentsRequest);
-        } finally {
-            system.stop();
-        }
+    private final JsonMapper mapper = JsonMapper.builder().build();
+
+    @Test
+    void decodeAssignments() {
+        String json = """
+                [
+                  {
+                    "group": {"id": 1, "name": "admin"},
+                    "role":  {"id": 2, "name": "admin_role"},
+                    "realm": {"id": 3, "name": "BOUNCR"}
+                  }
+                ]
+                """;
+        JsonNode node = mapper.readTree(json);
+        var result = BouncrJsonDecoders.ASSIGNMENTS.decode(node);
+        assertThat(result).isInstanceOf(Ok.class);
+
+        @SuppressWarnings("unchecked")
+        List<BouncrJsonDecoders.AssignmentItem> items = ((Ok<List<BouncrJsonDecoders.AssignmentItem>>) result).value();
+        assertThat(items).hasSize(1);
+        assertThat(items.getFirst().group().id()).isEqualTo(1L);
+        assertThat(items.getFirst().group().name()).isEqualTo("admin");
+        assertThat(items.getFirst().role().id()).isEqualTo(2L);
+        assertThat(items.getFirst().realm().id()).isEqualTo(3L);
     }
 
     @Test
-    void testGeneric() {
-        EnkanSystem system = EnkanSystem.of("converter", new JacksonBeansConverter());
-        system.start();
-        try {
-            BeansConverter converter = system.getComponent("converter");
+    void decodeAssignmentsWithNameOnly() {
+        String json = """
+                [
+                  {
+                    "group": {"name": "admin"},
+                    "role":  {"name": "admin_role"},
+                    "realm": {"name": "BOUNCR"}
+                  }
+                ]
+                """;
+        JsonNode node = mapper.readTree(json);
+        var result = BouncrJsonDecoders.ASSIGNMENTS.decode(node);
+        assertThat(result).isInstanceOf(Ok.class);
 
-            List assignmentsRequest = converter.createFrom(List.of(
-                    Map.of("group",
-                            Map.of("id", 1L))
-                    )
-                    , List.class);
-            System.out.println(assignmentsRequest);
-        } finally {
-            system.stop();
-        }
+        @SuppressWarnings("unchecked")
+        List<BouncrJsonDecoders.AssignmentItem> items = ((Ok<List<BouncrJsonDecoders.AssignmentItem>>) result).value();
+        assertThat(items).hasSize(1);
+        assertThat(items.getFirst().group().id()).isNull();
+        assertThat(items.getFirst().group().name()).isEqualTo("admin");
     }
-
 }

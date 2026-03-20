@@ -10,7 +10,7 @@ public class ActionRecordInjector implements ParameterInjector<ActionRecord> {
     }
 
     @Override
-    public boolean isApplicable(Class<?> type, HttpRequest request) {
+    public boolean isApplicable(Class<?> type) {
         return ActionRecord.class.isAssignableFrom(type);
     }
 

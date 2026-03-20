@@ -11,7 +11,7 @@
 
     <name>bouncr-parent</name>
     <url>https://github.com/kawasima/bouncr</url>
-    <description>An parent pom for Bouncr</description>
+    <description>A parent pom for Bouncr</description>
     <scm>
         <url>https://github.com/kawasima/bouncr</url>
         <connection>scm:git://github.com/kawasima/bouncr.git</connection>
@@ -21,7 +21,7 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/kawasima/enkan/issues</url>
+        <url>https://github.com/kawasima/bouncr/issues</url>
     </issueManagement>
 
     <inceptionYear>2017</inceptionYear>
@@ -46,13 +46,11 @@
     </developers>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <enkan.version>0.12.0-SNAPSHOT</enkan.version>
-        <kotowari-restful.version>0.12.0-SNAPSHOT</kotowari-restful.version>
-        <yavi.version>0.14.4</yavi.version>
+        <enkan.version>0.14.0</enkan.version>
+        <kotowari-restful.version>0.14.0</kotowari-restful.version>
+        <raoh.version>0.4.1</raoh.version>
     </properties>
 
     <modules>
@@ -113,7 +111,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
                 <configuration>
-                    <release>21</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
             <plugin>
@@ -171,11 +169,6 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-core</artifactId>
-                <version>2.3.18.Final</version>
-            </dependency>
-            <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-web</artifactId>
                 <version>${enkan.version}</version>
@@ -190,16 +183,7 @@
                 <artifactId>enkan-component-jetty</artifactId>
                 <version>${enkan.version}</version>
             </dependency>
-            <dependency>
-                <groupId>net.unit8.enkan</groupId>
-                <artifactId>kotowari-jpa</artifactId>
-                <version>${enkan.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.unit8.enkan</groupId>
-                <artifactId>enkan-component-eclipselink</artifactId>
-                <version>${enkan.version}</version>
-            </dependency>
+            <!-- JPA/EclipseLink removed: using jOOQ -->
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-component-jackson</artifactId>
@@ -236,9 +220,24 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>net.unit8.raoh</groupId>
+                <artifactId>raoh-json</artifactId>
+                <version>${raoh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.raoh</groupId>
+                <artifactId>raoh-jooq</artifactId>
+                <version>${raoh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.enkan</groupId>
+                <artifactId>enkan-component-jooq</artifactId>
+                <version>${enkan.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-bouncr</artifactId>
-                <version>${enkan.version}</version>
+                <version>0.13.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>net.unit8.enkan</groupId>
@@ -249,13 +248,7 @@
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-component-ldaptive</artifactId>
-                <version>0.1.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>net.unit8.enkan</groupId>
-                        <artifactId>enkan-web</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>0.14.0</version>
             </dependency>
 
             <dependency>
@@ -289,12 +282,6 @@
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
                 <version>1.83</version>
-            </dependency>
-
-            <dependency>
-                <groupId>am.ik.yavi</groupId>
-                <artifactId>yavi</artifactId>
-                <version>${yavi.version}</version>
             </dependency>
 
             <dependency>
@@ -342,7 +329,7 @@
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
-                <version>2.3.232</version>
+                <version>2.4.240</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -365,7 +352,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.16.0</version>
+            <version>5.22.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -1,61 +1,43 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
-import enkan.data.HttpRequest;
-import enkan.exception.UnreachableException;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.util.jpa.EntityTransactionManager;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.RealmCreateRequest;
-import net.unit8.bouncr.api.boundary.RealmSearchParams;
-import net.unit8.bouncr.api.service.UniquenessCheckService;
-import net.unit8.bouncr.entity.Application;
-import net.unit8.bouncr.entity.Realm;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RealmCreate;
+import net.unit8.bouncr.api.repository.ApplicationRepository;
+import net.unit8.bouncr.api.repository.RealmRepository;
+import net.unit8.bouncr.data.Application;
+import net.unit8.bouncr.data.Realm;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import org.jooq.DSLContext;
+import tools.jackson.databind.JsonNode;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.CacheStoreMode;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.*;
-import jakarta.validation.ConstraintViolation;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class RealmsResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<RealmCreate> CREATE_REQ = ContextKey.of(RealmCreate.class);
+    static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "POST")
-    public Problem validateRealmCreateRequest(RealmCreateRequest createRequest, RestContext context) {
-        if (createRequest == null) {
-            return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
+    public Problem validateCreate(JsonNode body, RestContext context) {
+        if (body == null) {
+            return Problem.valueOf(400, "request is empty");
         }
-        Set<ConstraintViolation<RealmCreateRequest>> violations = validator.validate(createRequest);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(createRequest, Realm.class));
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
-    }
-
-    @Decision(value = MALFORMED, method = "GET")
-    public Problem validateRealmSearchParams(Parameters params, RestContext context) {
-        RealmSearchParams applicationSearchParams = converter.createFrom(params, RealmSearchParams.class);
-        Set<ConstraintViolation<RealmSearchParams>> violations = validator.validate(applicationSearchParams);
-        if (violations.isEmpty()) {
-            context.putValue(converter.createFrom(applicationSearchParams, RealmSearchParams.class));
-        }
-        return violations.isEmpty() ? null : Problem.fromViolations(violations);
+        return switch (BouncrJsonDecoders.REALM_CREATE.decode(body)) {
+            case Ok<RealmCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
+            case Err<RealmCreate>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -63,80 +45,40 @@ public class RealmsResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    @Decision(value = ALLOWED, method = "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("realm:read") || p.hasPermission("any_realm:read"))
                 .isPresent();
     }
 
-    @Decision(value = ALLOWED, method= "POST")
-    public boolean isPostAllowed(UserPermissionPrincipal principal, HttpRequest request) {
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("realm:create") || p.hasPermission("any_realm:create"))
                 .isPresent();
     }
 
-    @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(RealmCreateRequest createRequest, EntityManager em) {
-        UniquenessCheckService<Realm> uniquenessCheckService = new UniquenessCheckService<>(em);
-        return !uniquenessCheckService.isUnique(Realm.class, "nameLower",
-                Optional.ofNullable(createRequest.getName())
-                        .map(n -> n.toLowerCase(Locale.US))
-                        .orElseThrow(UnreachableException::new));
-    }
-
     @Decision(PROCESSABLE)
-    public boolean isProcessable(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Application> query = cb.createQuery(Application.class);
-        Root<Application> applicationRoot = query.from(Application.class);
-        query.where(cb.equal(applicationRoot.get("name"), params.get("name")));
-
-        Application application = em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .getResultStream().findAny().orElse(null);
-        if (application != null) {
-            context.putValue(application);
-        }
-        return application != null;
+    public boolean isProcessable(Parameters params, RestContext context, DSLContext dsl) {
+        ApplicationRepository appRepo = new ApplicationRepository(dsl);
+        Optional<Application> application = appRepo.findByName(params.get("name"), false);
+        application.ifPresent(a -> context.put(APPLICATION, a));
+        return application.isPresent();
     }
 
     @Decision(POST)
-    public Realm create(Realm realm, Application application, EntityManager em) {
-        realm.setApplication(application);
-        realm.setWriteProtected(false);
-
-        EntityTransactionManager tx = new EntityTransactionManager(em);
-        tx.required(() -> em.persist(realm));
-        em.detach(realm);
-        return realm;
+    public Realm create(RealmCreate createRequest, Application application, DSLContext dsl) {
+        RealmRepository repo = new RealmRepository(dsl);
+        return repo.insert(application.id(), createRequest.name(), createRequest.url(), createRequest.description());
     }
 
     @Decision(HANDLE_OK)
-    public List<Realm> list(RealmSearchParams params, Application application, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Realm> query = cb.createQuery(Realm.class);
-        Root<Realm> realmRoot = query.from(Realm.class);
-        query.distinct(true);
-
-        Join<Application, Realm> applicationJoin = realmRoot.join("application");
-        List<Predicate> predicates = new ArrayList<>();
-        predicates.add(cb.equal(applicationJoin.get("id"), application.getId()));
-        Optional.ofNullable(params.getQ())
-                .ifPresent(q -> {
-                    String likeExpr = "%" + q.replaceAll("%", "_%") + "%";
-                    predicates.add(cb.like(realmRoot.get("name"), likeExpr, '_'));
-                });
-
-        query.where(predicates.toArray(Predicate[]::new));
-        query.orderBy(cb.asc(realmRoot.get("id")));
-
-
-        return em.createQuery(query)
-                .setHint("jakarta.persistence.cache.storeMode", CacheStoreMode.REFRESH)
-                .setFirstResult(params.getOffset())
-                .setMaxResults(params.getLimit())
-                .getResultList();
+    public List<Realm> list(Parameters params, Application application, DSLContext dsl) {
+        RealmRepository repo = new RealmRepository(dsl);
+        String q = params.get("q");
+        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
+        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        return repo.search(application.name(), q, offset, limit);
     }
 }

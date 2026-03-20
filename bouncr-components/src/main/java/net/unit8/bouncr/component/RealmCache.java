@@ -2,24 +2,35 @@ package net.unit8.bouncr.component;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
-import enkan.component.jpa.EntityManagerProvider;
-import enkan.exception.MisconfigurationException;
-import net.unit8.bouncr.entity.Application;
-import net.unit8.bouncr.entity.Realm;
-
+import enkan.component.jooq.JooqProvider;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
+import org.jooq.DSLContext;
+import org.jooq.Field;
+
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.jooq.impl.DSL.*;
+
 public class RealmCache extends SystemComponent<RealmCache> {
     @Inject
-    private EntityManagerProvider<?> entityManagerProvider;
-    private List<Realm> cache;
-    private List<Application> applications;
+    private JooqProvider jooqProvider;
+
+    private List<CachedRealm> cache;
+
+    public record CachedRealm(Long realmId, String name, String url, Long applicationId,
+                               String virtualPath, String passTo, Pattern pathPattern) {
+    }
+
+    // Unquoted field references — compatible with both H2 (uppercase) and PostgreSQL (lowercase)
+    private static final Field<Long> R_REALM_ID = field("r.realm_id", Long.class);
+    private static final Field<String> R_NAME = field("r.name", String.class);
+    private static final Field<String> R_URL = field("r.url", String.class);
+    private static final Field<Long> R_APP_ID = field("r.application_id", Long.class);
+    private static final Field<Long> A_APP_ID = field("a.application_id", Long.class);
+    private static final Field<String> A_VIRTUAL_PATH = field("a.virtual_path", String.class);
+    private static final Field<String> A_PASS_TO = field("a.pass_to", String.class);
 
     @Override
     protected ComponentLifecycle<RealmCache> lifecycle() {
@@ -31,9 +42,6 @@ public class RealmCache extends SystemComponent<RealmCache> {
 
             @Override
             public void stop(RealmCache realmCache) {
-                if (realmCache.applications != null) {
-                    realmCache.applications.clear();
-                }
                 if (realmCache.cache != null) {
                     realmCache.cache.clear();
                 }
@@ -41,36 +49,33 @@ public class RealmCache extends SystemComponent<RealmCache> {
         };
     }
 
-    public Realm matches(String path) {
+    public CachedRealm matches(String path) {
         return cache.stream()
-                .filter(realm -> realm.getPathPattern().matcher(path).matches())
+                .filter(realm -> realm.pathPattern().matcher(path).matches())
                 .findAny()
                 .orElse(null);
     }
 
-    public Application getApplication(Realm realm) {
-        return applications.stream()
-                .filter(app -> app.equals(realm.getApplication()))
-                .findFirst()
-                .orElseThrow(() -> new MisconfigurationException("bouncr.APPLICATION_NOT_FOUND", realm.getApplication().getId()));
-    }
-
     public synchronized void refresh() {
-        EntityManager em = entityManagerProvider.createEntityManager();
+        DSLContext dsl = jooqProvider.getDSLContext();
 
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<Application> query = builder.createQuery(Application.class);
-        query.from(Application.class);
-        applications = em.createQuery(query).getResultList();
-
-        CriteriaQuery<Realm> realmQuery = builder.createQuery(Realm.class);
-        realmQuery.from(Realm.class);
-        cache = em.createQuery(realmQuery).getResultList()
+        cache = dsl.select(R_REALM_ID, R_NAME, R_URL, A_APP_ID, A_VIRTUAL_PATH, A_PASS_TO)
+                .from(table("realms").as("r"))
+                .join(table("applications").as("a")).on(R_APP_ID.eq(A_APP_ID))
+                .fetch()
                 .stream()
-                .map(realm -> {
-                    Application app = getApplication(realm);
-                    realm.setPathPattern(Pattern.compile("^" + app.getVirtualPath() + "($|/" + realm.getUrl() + ")"));
-                    return realm;
+                .map(rec -> {
+                    String virtualPath = rec.get(A_VIRTUAL_PATH);
+                    String url = rec.get(R_URL);
+                    Pattern pattern = Pattern.compile("^" + virtualPath + "($|/" + url + ")");
+                    return new CachedRealm(
+                            rec.get(R_REALM_ID),
+                            rec.get(R_NAME),
+                            url,
+                            rec.get(A_APP_ID),
+                            virtualPath,
+                            rec.get(A_PASS_TO),
+                            pattern);
                 })
                 .collect(Collectors.toList());
     }
@@ -79,7 +84,6 @@ public class RealmCache extends SystemComponent<RealmCache> {
     public String toString() {
         return "#RealmCache {\n"
                 + "  \"cache\": " + cache + ","
-                + "  \"applications\": " + applications + ","
                 + "  \"dependencies\": " + dependenciesToString()
                 + "\n}";
     }

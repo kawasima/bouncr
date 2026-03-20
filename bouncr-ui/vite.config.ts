@@ -2,9 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import bouncrAuth from './vite-plugin-bouncr-auth'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), bouncrAuth()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -12,11 +13,5 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    proxy: {
-      '/bouncr': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
   },
 })

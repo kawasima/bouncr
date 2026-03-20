@@ -1,23 +1,14 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.component.BeansConverter;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
-import kotowari.restful.component.BeansValidator;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.entity.Assignment;
-import net.unit8.bouncr.entity.Group;
-import net.unit8.bouncr.entity.Realm;
-import net.unit8.bouncr.entity.Role;
-
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.Root;
+import net.unit8.bouncr.api.repository.AssignmentRepository;
+import net.unit8.bouncr.data.Assignment;
+import org.jooq.DSLContext;
 
 import java.util.Optional;
 
@@ -25,18 +16,14 @@ import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET"})
 public class AssignmentResource {
-    @Inject
-    private BeansConverter converter;
-
-    @Inject
-    private BeansValidator validator;
+    static final ContextKey<Assignment> ASSIGNMENT = ContextKey.of(Assignment.class);
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method= "GET")
+    @Decision(value = ALLOWED, method = "GET")
     public boolean isGetAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("assignments:read"))
@@ -44,23 +31,12 @@ public class AssignmentResource {
     }
 
     @Decision(EXISTS)
-    public boolean exists(Parameters params, RestContext context, EntityManager em) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Assignment> query = cb.createQuery(Assignment.class);
-        Root<Assignment> root = query.from(Assignment.class);
-        Join<Assignment, Group> groupJoin = root.join("group");
-        Join<Assignment, Role> roleJoin = root.join("role");
-        Join<Assignment, Realm> realmJoin = root.join("realm");
-        query.where(
-                cb.equal(groupJoin.get("name"), params.get("group")),
-                cb.equal(roleJoin.get("name"), params.get("role")),
-                cb.equal(realmJoin.get("name"), params.get("realm")));
-
-        Assignment assignment = em.createQuery(query).getResultStream().findAny().orElse(null);
-        if (assignment != null) {
-            context.putValue(assignment);
-        }
-        return assignment != null;
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
+        AssignmentRepository repo = new AssignmentRepository(dsl);
+        Optional<Assignment> assignment = repo.findByGroupRoleRealm(
+                params.get("group"), params.get("role"), params.get("realm"));
+        assignment.ifPresent(a -> context.put(ASSIGNMENT, a));
+        return assignment.isPresent();
     }
 
     @Decision(HANDLE_OK)
