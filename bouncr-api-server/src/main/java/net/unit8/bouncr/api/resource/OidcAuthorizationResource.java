@@ -87,7 +87,7 @@ public class OidcAuthorizationResource {
 
         String oidcSessionId = storeProvider.getStore(OIDC_SESSION).write(null, oidcSession);
 
-        String cookieHeader = "OIDC_SESSION_ID=" + oidcSessionId + "; HttpOnly; Path=/";
+        String cookieHeader = "OIDC_SESSION_ID=" + oidcSessionId + "; HttpOnly; Secure; SameSite=Lax; Path=/";
 
         Headers headers = Headers.of(
                 "Location", authorizationUrl.toString(),

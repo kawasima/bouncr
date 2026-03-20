@@ -5,12 +5,21 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"time"
 )
 
 // Sign creates an HS256 JWT from the given claims and secret.
 // Uses base64.RawURLEncoding (no padding) for compatibility with
 // Java's Base64.getUrlEncoder().withoutPadding().
 func Sign(claims map[string]interface{}, secret []byte) (string, error) {
+	now := time.Now().Unix()
+	if _, ok := claims["iat"]; !ok {
+		claims["iat"] = now
+	}
+	if _, ok := claims["exp"]; !ok {
+		claims["exp"] = now + 300 // 5 minutes
+	}
+
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	headerJSON, err := json.Marshal(header)
 	if err != nil {

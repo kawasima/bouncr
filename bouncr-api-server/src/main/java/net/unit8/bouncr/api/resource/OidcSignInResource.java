@@ -102,12 +102,10 @@ public class OidcSignInResource {
 
         String oidcSessionId = some(request.getCookies().get("OIDC_SESSION_ID"), Cookie::getValue).orElse(null);
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
-        if (oidcProvider != null && (oidcProvider.responseType() == ID_TOKEN || oidcProvider.responseType() == TOKEN)) {
-            // Verify State
-            if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.state())) {
-                context.setMessage(Problem.valueOf(401, "State doesn't match", BouncrProblem.MISMATCH_STATE.problemUri()));
-                return false;
-            }
+        // Verify State for all response types (RFC 6749 §10.12)
+        if (oidcSession != null && !Objects.equals(params.get("state"), oidcSession.state())) {
+            context.setMessage(Problem.valueOf(401, "State doesn't match", BouncrProblem.MISMATCH_STATE.problemUri()));
+            return false;
         }
 
         String redirectUriBase = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api";
@@ -129,7 +127,7 @@ public class OidcSignInResource {
                         .add("client_secret", oidcProvider.clientSecret());
             } else {
                 requestBuilder.header("Authorization", "Basic " +
-                        Base64.getUrlEncoder().encodeToString(
+                        Base64.getEncoder().encodeToString(
                                 (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes()));
             }
 
@@ -166,16 +164,38 @@ public class OidcSignInResource {
             return false;
         }
 
-        // Verify iss claim
-        if (oidcProvider.issuer() != null && !oidcProvider.issuer().equals(claim.getIss())) {
+        // Verify iss claim (OpenID Connect Core §3.1.3.3)
+        if (oidcProvider.issuer() == null) {
+            context.setMessage(Problem.valueOf(401, "OIDC provider issuer not configured", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+            return false;
+        }
+        if (!oidcProvider.issuer().equals(claim.getIss())) {
             context.setMessage(Problem.valueOf(401, "ID token issuer doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
 
-        // Verify aud claim
-        if (claim.getAud() != null && !oidcProvider.clientId().equals(claim.getAud())) {
-            context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
-            return false;
+        // Verify aud claim (RFC 7519 §4.1.3 — aud can be string or array)
+        if (claim.getAud() != null) {
+            boolean audValid;
+            Object aud = claim.getAud();
+            if (aud instanceof String audStr) {
+                audValid = oidcProvider.clientId().equals(audStr);
+            } else if (aud instanceof List<?> audList) {
+                audValid = audList.contains(oidcProvider.clientId());
+            } else {
+                audValid = false;
+            }
+            if (!audValid) {
+                context.setMessage(Problem.valueOf(401, "ID token audience doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+                return false;
+            }
+
+            // Verify azp claim (OpenID Connect Core §3.1.3.3 — required when aud is multi-valued)
+            if (aud instanceof List && claim.getAzp() != null
+                    && !oidcProvider.clientId().equals(claim.getAzp())) {
+                context.setMessage(Problem.valueOf(401, "ID token authorized party doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
+                return false;
+            }
         }
 
         // Verify exp claim
