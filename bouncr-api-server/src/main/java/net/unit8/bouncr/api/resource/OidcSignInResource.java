@@ -104,7 +104,7 @@ public class OidcSignInResource {
         OidcSession oidcSession = (OidcSession) storeProvider.getStore(OIDC_SESSION).read(oidcSessionId);
         // OIDC session must exist to validate state and nonce (RFC 6749 §10.12)
         if (oidcSession == null) {
-            context.setMessage(Problem.valueOf(401, "OIDC session not found", BouncrProblem.MISMATCH_STATE.problemUri()));
+            context.setMessage(Problem.valueOf(401, "OIDC session not found", BouncrProblem.OIDC_SESSION_NOT_FOUND.problemUri()));
             return false;
         }
         if (!Objects.equals(params.get("state"), oidcSession.state())) {
@@ -139,15 +139,25 @@ public class OidcSignInResource {
                 bodyBuilder.add("code_verifier", oidcSession.codeVerifier());
             }
 
-            Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute();
-            if (response.code() == 503) throw new FalteringEnvironmentException();
-            if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "";
-                throw new RuntimeException("Token endpoint returned " + response.code() + ": " + errorBody);
-            }
+            try (Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute()) {
+                if (response.code() == 503) throw new FalteringEnvironmentException();
+                if (!response.isSuccessful()) {
+                    String errorBody = response.body() != null ? response.body().string() : null;
+                    if (errorBody != null && !errorBody.isEmpty()) {
+                        try {
+                            return jsonMapper.readValue(errorBody, GENERAL_JSON_REF);
+                        } catch (Exception ignored) {
+                            // Fall through to generic error
+                        }
+                    }
+                    HashMap<String, Object> errorRes = new HashMap<>();
+                    errorRes.put("error", "Token endpoint returned HTTP " + response.code());
+                    return errorRes;
+                }
 
-            try (InputStream in = response.body().byteStream()) {
-                return jsonMapper.readValue(in, GENERAL_JSON_REF);
+                try (InputStream in = response.body().byteStream()) {
+                    return jsonMapper.readValue(in, GENERAL_JSON_REF);
+                }
             }
         });
         String encodedIdToken = (String) res.get("id_token");
