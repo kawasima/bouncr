@@ -71,9 +71,17 @@ public class OAuth2AuthorizeResource {
             return oauthError(OAuth2Error.INVALID_CLIENT, "Unknown client_id");
         }
 
-        if (redirectUri == null || !Objects.equals(redirectUri, app.callbackUrl().toString())) {
+        // Compare as strings — URL.toString() may normalize ports, so this is an exact-match check.
+        // Clients must send the exact same redirect_uri as registered.
+        String registeredCallback = app.callbackUrl().toString();
+        if (redirectUri == null || !Objects.equals(redirectUri, registeredCallback)) {
             return oauthError(OAuth2Error.INVALID_REQUEST,
                     "redirect_uri does not match registered callback");
+        }
+        // Only allow https (or http for localhost in development)
+        if (!redirectUri.startsWith("https://") && !redirectUri.startsWith("http://localhost")) {
+            return oauthError(OAuth2Error.INVALID_REQUEST,
+                    "redirect_uri must use https (http allowed only for localhost)");
         }
 
         // Validate scope — exact token match, not substring
@@ -139,7 +147,9 @@ public class OAuth2AuthorizeResource {
     private ApiResponse redirect(String location) {
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 302)
-                .set(ApiResponse::setHeaders, Headers.of("Location", location))
+                .set(ApiResponse::setHeaders, Headers.of(
+                        "Location", location,
+                        "Cache-Control", "no-store"))
                 .build();
     }
 

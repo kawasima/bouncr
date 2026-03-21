@@ -6,7 +6,6 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
-import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.jooq.DSLContext;
 
@@ -18,10 +17,12 @@ import static kotowari.restful.DecisionPoint.*;
 /**
  * JWKS endpoint — exposes OidcApplication's public key per client_id.
  * GET /oauth2/openid/:client_id/certs
+ *
+ * Only loads the public key from DB — private_key and client_secret are never selected.
  */
 @AllowedMethods("GET")
 public class OAuth2JwksResource {
-    static final ContextKey<OidcApplication> APP = ContextKey.of(OidcApplication.class);
+    private static final ContextKey<byte[]> PUBLIC_KEY = ContextKey.of("publicKey", byte[].class);
 
     @Decision(AUTHORIZED)
     public boolean authorized() {
@@ -33,16 +34,16 @@ public class OAuth2JwksResource {
         String clientId = params.get("client_id");
         if (clientId == null) return false;
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        return repo.findByClientId(clientId).map(app -> {
-            context.put(APP, app);
+        return repo.findPublicKeyByClientId(clientId).map(pk -> {
+            context.put(PUBLIC_KEY, pk);
             return true;
         }).orElse(false);
     }
 
     @Decision(HANDLE_OK)
-    public Map<String, Object> handleOk(OidcApplication oidcApplication) {
-        String kid = RsaJwtSigner.deriveKid(oidcApplication.publicKey());
-        Map<String, String> jwk = RsaJwtSigner.publicKeyToJwk(oidcApplication.publicKey(), kid);
+    public Map<String, Object> handleOk(byte[] publicKey) {
+        String kid = RsaJwtSigner.deriveKid(publicKey);
+        Map<String, String> jwk = RsaJwtSigner.publicKeyToJwk(publicKey, kid);
         return Map.of("keys", List.of(jwk));
     }
 }

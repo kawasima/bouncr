@@ -56,9 +56,10 @@ public class OAuth2TokenResource {
         }
 
         // 1. Authenticate client
+        boolean basicAuthAttempted = hasBasicAuth(request);
         String[] clientCredentials = extractClientCredentials(params, request);
         if (clientCredentials == null) {
-            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
         String clientId = clientCredentials[0];
         String clientSecret = clientCredentials[1];
@@ -68,7 +69,7 @@ public class OAuth2TokenResource {
         if (app == null || !MessageDigest.isEqual(
                 app.clientSecret().getBytes(StandardCharsets.UTF_8),
                 clientSecret.getBytes(StandardCharsets.UTF_8))) {
-            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
 
         // 2. Validate authorization code
@@ -83,6 +84,9 @@ public class OAuth2TokenResource {
         }
         storeProvider.getStore(AUTHORIZATION_CODE).delete(code);
 
+        if (!(stored instanceof AuthorizationCode)) {
+            return tokenError(OAuth2Error.INVALID_GRANT, "Authorization code data is corrupt");
+        }
         AuthorizationCode authCode = (AuthorizationCode) stored;
 
         // 3. Server-side expiry check (defense in depth beyond store TTL)
@@ -160,6 +164,11 @@ public class OAuth2TokenResource {
                 .build();
     }
 
+    private boolean hasBasicAuth(HttpRequest request) {
+        String authHeader = request.getHeaders().get("Authorization");
+        return authHeader != null && authHeader.startsWith("Basic ");
+    }
+
     private String[] extractClientCredentials(Parameters params, HttpRequest request) {
         String authHeader = request.getHeaders().get("Authorization");
         if (authHeader != null && authHeader.startsWith("Basic ")) {
@@ -187,13 +196,16 @@ public class OAuth2TokenResource {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(codeVerifier.getBytes(StandardCharsets.UTF_8));
             String computed = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
-            return computed.equals(codeChallenge);
+            return MessageDigest.isEqual(
+                    computed.getBytes(StandardCharsets.UTF_8),
+                    codeChallenge.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             return false;
         }
     }
 
     private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
+        if (scope == null) return;
         Set<String> scopes = new HashSet<>(Arrays.asList(scope.split("\\s+")));
         UserRepository userRepo = new UserRepository(dsl);
 
@@ -215,16 +227,24 @@ public class OAuth2TokenResource {
     }
 
     private ApiResponse tokenError(OAuth2Error error, String description) {
+        return tokenError(error, description, false);
+    }
+
+    private ApiResponse tokenError(OAuth2Error error, String description, boolean basicAuthAttempted) {
         Map<String, String> body = new LinkedHashMap<>();
         body.put("error", error.getValue());
         if (description != null) {
             body.put("error_description", description);
         }
+        Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
+                ? Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store",
+                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
+                : Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
-                .set(ApiResponse::setHeaders, Headers.of(
-                        "Content-Type", "application/json",
-                        "Cache-Control", "no-store"))
+                .set(ApiResponse::setHeaders, headers)
                 .set(ApiResponse::setBody, body)
                 .build();
     }
