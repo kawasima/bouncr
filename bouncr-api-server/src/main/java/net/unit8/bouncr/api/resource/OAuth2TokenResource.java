@@ -16,6 +16,8 @@ import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OAuth2RefreshToken;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.data.Scope;
+import net.unit8.bouncr.data.UserIdentity;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import net.unit8.bouncr.util.KeyEncryptor;
 import org.jooq.DSLContext;
@@ -118,12 +120,12 @@ public class OAuth2TokenResource {
             return tokenError(OAuth2Error.INVALID_GRANT, "redirect_uri does not match");
         }
 
-        if (authCode.codeChallenge() != null) {
+        if (authCode.pkce() != null) {
             String codeVerifier = params.get("code_verifier");
             if (codeVerifier == null) {
                 return tokenError(OAuth2Error.INVALID_GRANT, "code_verifier is required");
             }
-            if (!verifyPkce(codeVerifier, authCode.codeChallenge())) {
+            if (!authCode.pkce().verify(codeVerifier)) {
                 return tokenError(OAuth2Error.INVALID_GRANT, "PKCE verification failed");
             }
         }
@@ -134,23 +136,24 @@ public class OAuth2TokenResource {
             String issuer = issuer(clientId);
             String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
-            String accessToken = signAccessToken(issuer, authCode.userAccount(), clientId, authCode.scope(), kid, privateKeyBytes, now);
+            String scopeStr = authCode.scope().toString();
+            String accessToken = signAccessToken(issuer, authCode.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
 
             Map<String, Object> idClaims = new LinkedHashMap<>();
             idClaims.put("iss", issuer);
-            idClaims.put("sub", authCode.userAccount());
+            idClaims.put("sub", authCode.user().account());
             idClaims.put("aud", clientId);
             idClaims.put("exp", now + config.getIdTokenExpires());
             idClaims.put("iat", now);
             if (authCode.nonce() != null) {
                 idClaims.put("nonce", authCode.nonce());
             }
-            OidcClaimMapper.addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
+            OidcClaimMapper.addUserClaims(idClaims, authCode.user().userId(), scopeStr, dsl);
             String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
 
             String refreshToken = UUID.randomUUID().toString();
             OAuth2RefreshToken refreshData = new OAuth2RefreshToken(
-                    clientId, authCode.userId(), authCode.userAccount(), authCode.scope(), now);
+                    clientId, authCode.user(), authCode.scope(), now);
             storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(refreshToken, refreshData);
 
             Map<String, Object> response = new LinkedHashMap<>();
@@ -159,7 +162,7 @@ public class OAuth2TokenResource {
             response.put("expires_in", config.getAccessTokenExpires());
             response.put("refresh_token", refreshToken);
             response.put("id_token", idToken);
-            response.put("scope", authCode.scope());
+            response.put("scope", scopeStr);
 
             return tokenResponse(response);
         } finally {
@@ -186,16 +189,13 @@ public class OAuth2TokenResource {
 
         // Scope: use original scope or restrict via scope parameter (RFC 6749 §6)
         String requestedScope = params.get("scope");
-        String scope;
+        Scope scope;
         if (requestedScope != null) {
-            Set<String> originalScopes = new HashSet<>(
-                    Arrays.asList(refreshData.scope().split("\\s+")));
-            Set<String> requested = new HashSet<>(
-                    Arrays.asList(requestedScope.split("\\s+")));
-            if (!originalScopes.containsAll(requested)) {
+            Scope requested = Scope.parse(requestedScope);
+            if (!requested.isSubsetOf(refreshData.scope())) {
                 return tokenError(OAuth2Error.INVALID_SCOPE, "Requested scope exceeds originally granted scope");
             }
-            scope = requestedScope;
+            scope = requested;
         } else {
             scope = refreshData.scope();
         }
@@ -207,12 +207,13 @@ public class OAuth2TokenResource {
         try {
             String issuer = issuer(clientId);
             String kid = RsaJwtSigner.deriveKid(app.publicKey());
+            String scopeStr = scope.toString();
 
-            String accessToken = signAccessToken(issuer, refreshData.userAccount(), clientId, scope, kid, privateKeyBytes, now);
+            String accessToken = signAccessToken(issuer, refreshData.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
 
             String newRefreshToken = UUID.randomUUID().toString();
             OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
-                    clientId, refreshData.userId(), refreshData.userAccount(), scope, now);
+                    clientId, refreshData.user(), scope, now);
             storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(newRefreshToken, newRefreshData);
 
             // Delete old refresh token after new one is safely stored (rotation)
@@ -223,7 +224,7 @@ public class OAuth2TokenResource {
             response.put("token_type", "Bearer");
             response.put("expires_in", config.getAccessTokenExpires());
             response.put("refresh_token", newRefreshToken);
-            response.put("scope", scope);
+            response.put("scope", scopeStr);
 
             return tokenResponse(response);
         } finally {

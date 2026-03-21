@@ -14,6 +14,9 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.data.PkceChallenge;
+import net.unit8.bouncr.data.Scope;
+import net.unit8.bouncr.data.UserIdentity;
 import net.unit8.bouncr.util.RandomUtils;
 import org.jooq.DSLContext;
 
@@ -140,9 +143,12 @@ public class OAuth2AuthorizeResource {
         // Generate authorization code
         long now = config.getClock().instant().getEpochSecond();
         String code = RandomUtils.generateRandomString(32, config.getSecureRandom());
+        UserIdentity user = new UserIdentity(principal.getId(), principal.getName());
+        PkceChallenge pkce = codeChallenge != null
+                ? new PkceChallenge(codeChallenge, "S256") : null;
         AuthorizationCode authCode = new AuthorizationCode(
-                clientId, principal.getId(), principal.getName(),
-                scope, params.get("nonce"), codeChallenge, redirectUri, now);
+                clientId, user, Scope.parse(scope),
+                params.get("nonce"), pkce, redirectUri, now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
         // Redirect to callback — preserve existing query params
