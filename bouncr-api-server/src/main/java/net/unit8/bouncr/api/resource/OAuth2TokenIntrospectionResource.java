@@ -52,10 +52,10 @@ public class OAuth2TokenIntrospectionResource {
             return errorResponse(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
 
-        // 2. Get token to introspect
+        // 2. Get token to introspect (required per RFC 7662 §2.1)
         String token = params.get("token");
         if (token == null || token.isBlank()) {
-            return inactiveResponse();
+            return errorResponse(OAuth2Error.INVALID_REQUEST, "The 'token' parameter is required", basicAuthAttempted);
         }
 
         // 3. Decode unverified payload to extract client_id for key lookup
@@ -66,6 +66,11 @@ public class OAuth2TokenIntrospectionResource {
 
         Object clientIdObj = unverifiedPayload.get("client_id");
         if (!(clientIdObj instanceof String tokenClientId)) {
+            return inactiveResponse();
+        }
+
+        // Only allow introspection of tokens issued to the authenticated client
+        if (!tokenClientId.equals(authResult.app().clientId())) {
             return inactiveResponse();
         }
 

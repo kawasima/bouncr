@@ -180,9 +180,6 @@ public class OAuth2TokenResource {
             return tokenError(OAuth2Error.INVALID_GRANT, "Refresh token is invalid or expired");
         }
 
-        // Delete old refresh token (one-time use / rotation)
-        storeProvider.getStore(ACCESS_TOKEN).delete(refreshToken);
-
         if (!clientId.equals(refreshData.clientId())) {
             return tokenError(OAuth2Error.INVALID_GRANT, "Refresh token was not issued to this client");
         }
@@ -191,7 +188,6 @@ public class OAuth2TokenResource {
         String requestedScope = params.get("scope");
         String scope;
         if (requestedScope != null) {
-            // Requested scope must be a subset of originally granted scope
             Set<String> originalScopes = new HashSet<>(
                     Arrays.asList(refreshData.scope().split("\\s+")));
             Set<String> requested = new HashSet<>(
@@ -203,6 +199,9 @@ public class OAuth2TokenResource {
         } else {
             scope = refreshData.scope();
         }
+
+        // Delete old refresh token only after all validations pass (one-time use / rotation)
+        storeProvider.getStore(ACCESS_TOKEN).delete(refreshToken);
 
         // Issue new tokens
         long now = config.getClock().instant().getEpochSecond();
@@ -234,7 +233,7 @@ public class OAuth2TokenResource {
     // ==================== Client Credentials Grant ====================
 
     private ApiResponse handleClientCredentials(Parameters params, OidcApplication app, String clientId, DSLContext dsl) {
-        // scope validation — use requested scope or default to all client scopes
+        // scope — use requested scope or default to "openid"
         String scope = params.get("scope");
         if (scope == null) {
             scope = "openid";

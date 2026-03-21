@@ -71,7 +71,8 @@ public class OAuth2TokenRevocationResource {
                 .set(ApiResponse::setStatus, 200)
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Content-Type", "application/json",
-                        "Cache-Control", "no-store"))
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache"))
                 .set(ApiResponse::setBody, Map.of())
                 .build();
     }
