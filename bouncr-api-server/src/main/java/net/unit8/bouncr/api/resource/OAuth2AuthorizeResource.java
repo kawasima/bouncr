@@ -185,7 +185,10 @@ public class OAuth2AuthorizeResource {
         }
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
-                .set(ApiResponse::setHeaders, Headers.of("Content-Type", "application/json"))
+                .set(ApiResponse::setHeaders, Headers.of(
+                        "Content-Type", "application/json",
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache"))
                 .set(ApiResponse::setBody, body)
                 .build();
     }

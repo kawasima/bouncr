@@ -102,6 +102,8 @@ public class OAuth2UserInfoResource {
                 .set(ApiResponse::setStatus, status)
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Content-Type", "application/json",
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache",
                         "WWW-Authenticate", "Bearer error=\"" + error + "\", error_description=\"" + description + "\""))
                 .set(ApiResponse::setBody, Map.of("error", error, "error_description", description))
                 .build();

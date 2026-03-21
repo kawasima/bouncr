@@ -5,10 +5,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
@@ -46,7 +50,7 @@ public class RsaJwtSigner {
                     .generatePrivate(new PKCS8EncodedKeySpec(privateKeyBytes));
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initSign(privateKey);
-            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            sig.update(signingInput.getBytes(StandardCharsets.UTF_8));
             String signature = BASE64URL.encodeToString(sig.sign());
 
             return signingInput + "." + signature;
@@ -71,7 +75,7 @@ public class RsaJwtSigner {
                     .generatePublic(new X509EncodedKeySpec(publicKeyBytes));
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initVerify(publicKey);
-            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            sig.update(signingInput.getBytes(StandardCharsets.UTF_8));
             if (!sig.verify(signatureBytes)) return null;
 
             byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
@@ -107,11 +111,11 @@ public class RsaJwtSigner {
      */
     public static String deriveKid(byte[] publicKeyBytes) {
         try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(publicKeyBytes);
             return BASE64URL.encodeToString(hash).substring(0, 16);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to derive kid", e);
+            throw new MisconfigurationException("bouncr.INVALID_PUBLIC_KEY", e.getMessage(), e);
         }
     }
 
@@ -122,7 +126,7 @@ public class RsaJwtSigner {
         try {
             PublicKey publicKey = KeyFactory.getInstance("RSA")
                     .generatePublic(new X509EncodedKeySpec(publicKeyBytes));
-            java.security.interfaces.RSAPublicKey rsaKey = (java.security.interfaces.RSAPublicKey) publicKey;
+            RSAPublicKey rsaKey = (RSAPublicKey) publicKey;
             return Map.of(
                     "kty", "RSA",
                     "use", "sig",
@@ -139,7 +143,7 @@ public class RsaJwtSigner {
     /**
      * Convert BigInteger to unsigned byte array (strip leading zero if present).
      */
-    private static byte[] toUnsignedBytes(java.math.BigInteger value) {
+    private static byte[] toUnsignedBytes(BigInteger value) {
         byte[] bytes = value.toByteArray();
         if (bytes.length > 1 && bytes[0] == 0) {
             byte[] tmp = new byte[bytes.length - 1];

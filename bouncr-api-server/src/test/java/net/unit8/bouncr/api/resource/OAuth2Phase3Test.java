@@ -53,7 +53,7 @@ class OAuth2Phase3Test {
 
     @Test
     void clientCredentials_jwtHasClientIdAsSub() {
-        long now = System.currentTimeMillis() / 1000;
+        long now = 1700000000L;
         String kid = RsaJwtSigner.deriveKid(publicKeyBytes);
 
         Map<String, Object> claims = new LinkedHashMap<>();
@@ -77,7 +77,7 @@ class OAuth2Phase3Test {
 
     @Test
     void introspection_validJwt_returnsActiveClaims() {
-        long now = System.currentTimeMillis() / 1000;
+        long now = 1700000000L;
         Map<String, Object> claims = new LinkedHashMap<>();
         claims.put("iss", "https://bouncr.example.com/oauth2/openid/testclient");
         claims.put("sub", "admin");
@@ -101,13 +101,13 @@ class OAuth2Phase3Test {
 
     @Test
     void introspection_expiredJwt_detectable() {
-        long past = System.currentTimeMillis() / 1000 - 1000;
+        long past = 1700000000L - 1000;
         Map<String, Object> claims = Map.of("sub", "admin", "exp", past, "iat", past - 900, "client_id", "test");
         String jwt = RsaJwtSigner.sign(claims, privateKeyBytes);
 
         Map<String, Object> verified = RsaJwtSigner.verify(jwt, publicKeyBytes);
         assertThat(verified).isNotNull(); // Signature valid
-        long now = System.currentTimeMillis() / 1000;
+        long now = 1700000000L;
         assertThat(((Number) verified.get("exp")).longValue()).isLessThan(now); // But expired
     }
 
