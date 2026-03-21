@@ -126,13 +126,13 @@ public final class BouncrFormDecoders {
 
     private static final Decoder<Map<String, Object>, TokenRequest> REFRESH_GRANT = combine(
             field("refresh_token", string().nonBlank()),
-            optionalField("scope", string())
+            optionalField("scope", string().nonBlank())
     ).map((rt, scope) ->
             (TokenRequest) new TokenRequest.RefreshTokenGrant(
                     rt, scope.map(Scope::parse).orElse(null)));
 
     private static final Decoder<Map<String, Object>, TokenRequest> CLIENT_CREDS_GRANT =
-            optionalField("scope", string())
+            optionalField("scope", string().nonBlank())
                     .map(scope -> (TokenRequest) new TokenRequest.ClientCredentialsGrant(
                             scope.map(Scope::parse).orElse(Scope.parse("openid"))));
 

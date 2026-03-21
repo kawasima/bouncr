@@ -180,7 +180,11 @@ class OAuth2FlowTest extends E2ETestBase {
         assertThat(refreshToken).isNotNull();
         assertThat(idToken).isNotNull();
         assertThat(tokens.get("token_type")).isEqualTo("Bearer");
-        assertThat(tokens.get("scope")).isEqualTo("openid profile email");
+        // Scope order may vary (TreeSet sorts alphabetically)
+        String scopeStr = (String) tokens.get("scope");
+        assertThat(scopeStr).contains("openid");
+        assertThat(scopeStr).contains("profile");
+        assertThat(scopeStr).contains("email");
     }
 
     // ==================== Refresh Token ====================

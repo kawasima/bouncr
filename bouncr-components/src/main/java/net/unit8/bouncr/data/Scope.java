@@ -3,8 +3,9 @@ package net.unit8.bouncr.data;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Represents an OAuth2/OIDC scope as an immutable set of scope tokens.
@@ -29,10 +30,11 @@ import java.util.Set;
 public record Scope(Set<String> values) implements Serializable {
 
     /**
-     * Ensures the stored set is unmodifiable.
+     * Defensive copy into a sorted, unmodifiable set.
+     * TreeSet ensures deterministic iteration order for {@link #toString()}.
      */
     public Scope {
-        values = Collections.unmodifiableSet(values);
+        values = Collections.unmodifiableSet(new TreeSet<>(values));
     }
 
     /**
@@ -48,7 +50,7 @@ public record Scope(Set<String> values) implements Serializable {
         if (scopeString == null || scopeString.isBlank()) {
             return new Scope(Set.of());
         }
-        return new Scope(new HashSet<>(Arrays.asList(scopeString.trim().split("\\s+"))));
+        return new Scope(new LinkedHashSet<>(Arrays.asList(scopeString.trim().split("\\s+"))));
     }
 
     /**
