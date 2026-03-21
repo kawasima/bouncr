@@ -10,7 +10,6 @@ import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.CommunicationException;
 import javax.naming.NamingException;
-import java.io.IOException;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.security.NoSuchAlgorithmException;
@@ -45,7 +44,6 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private RetryPolicy<Object> httpClientRetryPolicy = RetryPolicy.builder()
             .handle(HttpTimeoutException.class)
             .handle(HttpConnectTimeoutException.class)
-            .handle(IOException.class)
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .build();
     private CircuitBreaker<Object> ldapClientCircuitBreaker = CircuitBreaker.builder()

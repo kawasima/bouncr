@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public class WebHook<T> implements Hook<T> {
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
+            .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     private static final JsonMapper mapper = JsonMapper.builder().build();
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
