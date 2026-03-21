@@ -9,7 +9,9 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2Error;
+import net.unit8.bouncr.data.OAuth2RefreshToken;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
 
 /**
@@ -25,8 +28,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_C
  * POST /oauth2/token/revoke (application/x-www-form-urlencoded)
  *
  * <p>Always returns 200 OK regardless of whether the token was valid.
- * Phase 2 implementation revokes authorization codes only.
- * JWT access token revocation (via blacklist) deferred to Phase 3.</p>
+ * Revokes authorization codes and refresh tokens with client ownership check.
+ * JWT access tokens are self-contained and remain valid until expiry.</p>
  */
 @AllowedMethods("POST")
 public class OAuth2TokenRevocationResource {
@@ -61,15 +64,27 @@ public class OAuth2TokenRevocationResource {
         if (token == null || token.isBlank()) {
             return tokenError(OAuth2Error.INVALID_REQUEST, "The 'token' parameter is required", basicAuthAttempted);
         }
-        // Revoke — idempotent, always returns 200 even for unknown/expired tokens (RFC 7009 §2.2)
-        storeProvider.getStore(AUTHORIZATION_CODE).delete(token);
+        // Revoke with ownership check — only delete if token belongs to authenticated client
+        // RFC 7009 §2.1: verify whether the token was issued to the client making the request
+        String authenticatedClientId = authResult.app().clientId();
+
+        var authCodeData = storeProvider.getStore(AUTHORIZATION_CODE).read(token);
+        if (authCodeData instanceof AuthorizationCode ac && authenticatedClientId.equals(ac.clientId())) {
+            storeProvider.getStore(AUTHORIZATION_CODE).delete(token);
+        }
+        var refreshData = storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(token);
+        if (refreshData instanceof OAuth2RefreshToken rt && authenticatedClientId.equals(rt.clientId())) {
+            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(token);
+        }
+        // Unknown tokens or tokens belonging to other clients are silently ignored (200 OK per RFC 7009 §2.2)
 
         // 3. Return 200 OK with empty body
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 200)
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Content-Type", "application/json",
-                        "Cache-Control", "no-store"))
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache"))
                 .set(ApiResponse::setBody, Map.of())
                 .build();
     }
@@ -80,10 +95,10 @@ public class OAuth2TokenRevocationResource {
         if (description != null) body.put("error_description", description);
         Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
                 ? Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
                         "WWW-Authenticate", "Basic realm=\"bouncr\"")
                 : Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store");
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
                 .set(ApiResponse::setHeaders, headers)

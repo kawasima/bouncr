@@ -19,7 +19,7 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
     private KeyValueStore bouncrTokenStore = new MemoryStore();
     private KeyValueStore refreshTokenStore = new MemoryStore();
     private KeyValueStore authorizationCodeStore = new MemoryStore();
-    private KeyValueStore accessTokenStore = new MemoryStore();
+    private KeyValueStore oauth2RefreshTokenStore = new MemoryStore();
     private KeyValueStore oidcSessionStore = new MemoryStore();
 
     @Override
@@ -43,7 +43,7 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
             case BOUNCR_TOKEN -> bouncrTokenStore;
             case REFRESH_TOKEN -> refreshTokenStore;
             case AUTHORIZATION_CODE -> authorizationCodeStore;
-            case ACCESS_TOKEN -> accessTokenStore;
+            case OAUTH2_REFRESH_TOKEN -> oauth2RefreshTokenStore;
             case OIDC_SESSION -> oidcSessionStore;
         };
     }
@@ -51,14 +51,14 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
     public void setBouncrTokenStore(KeyValueStore store) { this.bouncrTokenStore = store; }
     public void setRefreshTokenStore(KeyValueStore store) { this.refreshTokenStore = store; }
     public void setAuthorizationCodeStore(KeyValueStore store) { this.authorizationCodeStore = store; }
-    public void setAccessTokenStore(KeyValueStore store) { this.accessTokenStore = store; }
+    public void setOauth2RefreshTokenStore(KeyValueStore store) { this.oauth2RefreshTokenStore = store; }
     public void setOidcSessionStore(KeyValueStore store) { this.oidcSessionStore = store; }
 
     public enum StoreType {
         BOUNCR_TOKEN,
         REFRESH_TOKEN,
         AUTHORIZATION_CODE,
-        ACCESS_TOKEN,
+        OAUTH2_REFRESH_TOKEN,
         OIDC_SESSION
     }
 }

@@ -55,7 +55,7 @@ public class KeyEncryptor {
             return ByteBuffer.allocate(MAGIC.length + IV_LENGTH + ciphertext.length)
                     .put(MAGIC).put(iv).put(ciphertext).array();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to encrypt", e);
+            throw new MisconfigurationException("bouncr.ENCRYPTION_FAILED", e.getMessage(), e);
         }
     }
 
@@ -80,7 +80,7 @@ public class KeyEncryptor {
             return cipher.doFinal(ciphertext);
         } catch (Exception e) {
             // Magic prefix present but decryption failed — this is a real error (wrong key, corruption)
-            throw new RuntimeException("Failed to decrypt data with encryption magic prefix", e);
+            throw new MisconfigurationException("bouncr.DECRYPTION_FAILED", e.getMessage(), e);
         }
     }
 

@@ -96,8 +96,7 @@ class KeyEncryptorTest {
         // Data with magic prefix but corrupted content
         byte[] corrupted = new byte[]{'E', 'N', 'C', 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         assertThatThrownBy(() -> encryptor.decrypt(corrupted))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Failed to decrypt");
+                .isInstanceOf(enkan.exception.MisconfigurationException.class);
     }
 
     @Test
