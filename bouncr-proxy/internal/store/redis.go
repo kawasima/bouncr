@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/redis/go-redis/v9"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 type RedisStore struct {
@@ -38,7 +38,7 @@ func (s *RedisStore) Read(ctx context.Context, token string) (map[string]interfa
 		return nil, err
 	}
 	var result map[string]interface{}
-	if err := msgpack.Unmarshal(val, &result); err != nil {
+	if err := cbor.Unmarshal(val, &result); err != nil {
 		return nil, err
 	}
 	return result, nil

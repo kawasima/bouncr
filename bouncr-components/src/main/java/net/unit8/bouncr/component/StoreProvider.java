@@ -10,6 +10,7 @@ import net.unit8.bouncr.component.config.KvsSettings;
  */
 public class StoreProvider extends SystemComponent<StoreProvider> {
     private KeyValueStore bouncrTokenStore;
+    private KeyValueStore refreshTokenStore;
     private KeyValueStore authorizationCodeStore;
     private KeyValueStore accessTokenStore;
     private KeyValueStore oidcSessionStore;
@@ -36,6 +37,10 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
                 provider.oidcSessionStore = settings
                         .getOidcSessionStoreFactory()
                         .apply(getAllDependencies());
+
+                provider.refreshTokenStore = settings
+                        .getRefreshTokenStoreFactory()
+                        .apply(getAllDependencies());
             }
 
             @Override
@@ -51,12 +56,14 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
             case AUTHORIZATION_CODE: return authorizationCodeStore;
             case ACCESS_TOKEN: return accessTokenStore;
             case OIDC_SESSION: return oidcSessionStore;
+            case REFRESH_TOKEN: return refreshTokenStore;
             default: throw new IllegalArgumentException(storeType + " is unknown");
         }
     }
 
     public enum StoreType {
         BOUNCR_TOKEN,
+        REFRESH_TOKEN,
         AUTHORIZATION_CODE,
         ACCESS_TOKEN,
         OIDC_SESSION

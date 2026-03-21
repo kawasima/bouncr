@@ -43,7 +43,11 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
         if (useRedis) {
             kvsSettings.setBouncrTokenStoreFactory(deps -> {
                 JedisProvider redis = (JedisProvider) deps.get("redis");
-                return redis.createStore("BOUNCR_TOKEN", java.util.HashMap.class, 1800);
+                return redis.createStore("BOUNCR_TOKEN", java.util.HashMap.class, 900);
+            });
+            kvsSettings.setRefreshTokenStoreFactory(deps -> {
+                JedisProvider redis = (JedisProvider) deps.get("redis");
+                return redis.createStore("BOUNCR_REFRESH", java.util.HashMap.class, 604800);
             });
         }
 

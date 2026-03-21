@@ -17,6 +17,8 @@ public class KvsSettings implements Serializable {
             deps -> new MemoryStore();
     private Function<Map<String, SystemComponent<?>>, KeyValueStore> oidcSessionStoreFactory =
             deps -> new MemoryStore();
+    private Function<Map<String, SystemComponent<?>>, KeyValueStore> refreshTokenStoreFactory =
+            deps -> new MemoryStore();
 
     public Function<Map<String, SystemComponent<?>>, KeyValueStore> getBouncrTokenStoreFactory() {
         return bouncrTokenStoreFactory;
@@ -48,5 +50,13 @@ public class KvsSettings implements Serializable {
 
     public void setOidcSessionStoreFactory(Function<Map<String, SystemComponent<?>>, KeyValueStore> oidcSessionStoreFactory) {
         this.oidcSessionStoreFactory = oidcSessionStoreFactory;
+    }
+
+    public Function<Map<String, SystemComponent<?>>, KeyValueStore> getRefreshTokenStoreFactory() {
+        return refreshTokenStoreFactory;
+    }
+
+    public void setRefreshTokenStoreFactory(Function<Map<String, SystemComponent<?>>, KeyValueStore> refreshTokenStoreFactory) {
+        this.refreshTokenStoreFactory = refreshTokenStoreFactory;
     }
 }
