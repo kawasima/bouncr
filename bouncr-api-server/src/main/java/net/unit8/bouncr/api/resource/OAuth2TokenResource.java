@@ -28,8 +28,6 @@ import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.inject.Inject;
 import java.io.Serializable;
@@ -65,8 +63,6 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_
  */
 @AllowedMethods("POST")
 public class OAuth2TokenResource {
-    private static final Logger LOG = LoggerFactory.getLogger(OAuth2TokenResource.class);
-
     static final ContextKey<TokenRequest> TOKEN_REQ = ContextKey.of("tokenRequest", TokenRequest.class);
     static final ContextKey<OidcApplication> CLIENT_APP = ContextKey.of(OidcApplication.class);
     static final ContextKey<ApiResponse> TOKEN_RESPONSE = ContextKey.of("tokenResponse", ApiResponse.class);

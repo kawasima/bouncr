@@ -20,6 +20,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -180,11 +181,9 @@ class OAuth2FlowTest extends E2ETestBase {
         assertThat(refreshToken).isNotNull();
         assertThat(idToken).isNotNull();
         assertThat(tokens.get("token_type")).isEqualTo("Bearer");
-        // Scope order may vary (TreeSet sorts alphabetically)
-        String scopeStr = (String) tokens.get("scope");
-        assertThat(scopeStr).contains("openid");
-        assertThat(scopeStr).contains("profile");
-        assertThat(scopeStr).contains("email");
+        // Compare as sets — scope token order is not guaranteed
+        assertThat(Set.of(((String) tokens.get("scope")).split(" ")))
+                .containsExactlyInAnyOrder("openid", "profile", "email");
     }
 
     // ==================== Refresh Token ====================

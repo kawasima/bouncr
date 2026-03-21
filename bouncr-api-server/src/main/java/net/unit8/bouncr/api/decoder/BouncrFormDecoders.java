@@ -76,9 +76,14 @@ public final class BouncrFormDecoders {
             optionalField("code_challenge", string()),
             optionalField("code_challenge_method", string())
     ).map((rt, cid, ru, scope, state, nonce, cc, ccm) -> {
-        PkceChallenge pkce = cc.isPresent()
-                ? new PkceChallenge(cc.get(), ccm.orElse("S256"))
-                : null;
+        PkceChallenge pkce = null;
+        if (cc.isPresent()) {
+            try {
+                pkce = new PkceChallenge(cc.get(), ccm.orElse("S256"));
+            } catch (IllegalArgumentException e) {
+                // Invalid PKCE method — pkce stays null, handled by resource
+            }
+        }
         return new AuthorizeRequest(rt, cid, ru, Scope.parse(scope),
                 state.orElse(null), nonce.orElse(null), pkce);
     });
