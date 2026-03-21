@@ -52,6 +52,7 @@ public class MockFactory {
             new db.migration.V25__AddRedirectUriToOidcProvider(),
             new db.migration.V26__AddJwksUriAndIssuerToOidcProvider(),
             new db.migration.V27__AddPkceEnabledToOidcProvider(),
+            new db.migration.V28__AlterOidcApplicationSecretLength(),
     };
 
     /**
