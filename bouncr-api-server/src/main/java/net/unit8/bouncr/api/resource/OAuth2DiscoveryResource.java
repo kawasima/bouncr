@@ -52,6 +52,8 @@ public class OAuth2DiscoveryResource {
                 Map.entry("issuer", issuer),
                 Map.entry("authorization_endpoint", baseUrl + "/oauth2/authorize"),
                 Map.entry("token_endpoint", baseUrl + "/oauth2/token"),
+                Map.entry("userinfo_endpoint", baseUrl + "/oauth2/userinfo"),
+                Map.entry("revocation_endpoint", baseUrl + "/oauth2/token/revoke"),
                 Map.entry("jwks_uri", issuer + "/certs"),
                 Map.entry("response_types_supported", List.of("code")),
                 Map.entry("grant_types_supported", List.of("authorization_code")),

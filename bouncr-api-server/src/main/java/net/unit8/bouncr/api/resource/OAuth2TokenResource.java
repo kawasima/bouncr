@@ -14,6 +14,8 @@ import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.sign.RsaJwtSigner;
+import net.unit8.bouncr.util.KeyEncryptor;
+import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
@@ -66,9 +68,13 @@ public class OAuth2TokenResource {
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         OidcApplication app = repo.findByClientId(clientId).orElse(null);
-        if (app == null || !MessageDigest.isEqual(
-                app.clientSecret().getBytes(StandardCharsets.UTF_8),
-                clientSecret.getBytes(StandardCharsets.UTF_8))) {
+        if (app == null) {
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
+        }
+        // Verify client_secret: PBKDF2 hash with clientId as salt
+        byte[] inputHash = PasswordUtils.pbkdf2(clientSecret, clientId, 10000);
+        byte[] storedHash = Base64.getDecoder().decode(app.clientSecret());
+        if (!MessageDigest.isEqual(inputHash, storedHash)) {
             return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
 
@@ -117,7 +123,9 @@ public class OAuth2TokenResource {
             }
         }
 
-        // 7. Build tokens
+        // 7. Build tokens — decrypt private key if encrypted at rest
+        KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
+        byte[] privateKeyBytes = encryptor.decrypt(app.privateKey());
         String issuer = config.getIssuerBaseUrl() + "/oauth2/openid/" + clientId;
         String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
@@ -131,7 +139,7 @@ public class OAuth2TokenResource {
         accessClaims.put("jti", UUID.randomUUID().toString());
         accessClaims.put("scope", authCode.scope());
         accessClaims.put("client_id", clientId);
-        String accessToken = RsaJwtSigner.sign(accessClaims, app.privateKey(), kid);
+        String accessToken = RsaJwtSigner.sign(accessClaims, privateKeyBytes, kid);
 
         // id_token (OIDC Core §2)
         Map<String, Object> idClaims = new LinkedHashMap<>();
@@ -144,7 +152,7 @@ public class OAuth2TokenResource {
             idClaims.put("nonce", authCode.nonce());
         }
         addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
-        String idToken = RsaJwtSigner.sign(idClaims, app.privateKey(), kid);
+        String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
 
         // 8. Return token response
         Map<String, Object> response = new LinkedHashMap<>();

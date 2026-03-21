@@ -97,4 +97,50 @@ class RsaJwtSignerTest {
         // e should be AQAB (65537 in base64url)
         assertThat(jwk.get("e")).isEqualTo("AQAB");
     }
+
+    @Test
+    void verify_validJwt_returnsPayload() {
+        Map<String, Object> payload = Map.of("sub", "testuser", "iss", "test-issuer");
+        String jwt = RsaJwtSigner.sign(payload, privateKeyBytes);
+
+        Map<String, Object> verified = RsaJwtSigner.verify(jwt, publicKeyBytes);
+        assertThat(verified).isNotNull();
+        assertThat(verified.get("sub")).isEqualTo("testuser");
+        assertThat(verified.get("iss")).isEqualTo("test-issuer");
+    }
+
+    @Test
+    void verify_tamperedJwt_returnsNull() {
+        Map<String, Object> payload = Map.of("sub", "testuser");
+        String jwt = RsaJwtSigner.sign(payload, privateKeyBytes);
+
+        // Tamper with the payload
+        String[] parts = jwt.split("\\.");
+        String tampered = parts[0] + "." + Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"sub\":\"hacker\"}".getBytes()) + "." + parts[2];
+
+        Map<String, Object> verified = RsaJwtSigner.verify(tampered, publicKeyBytes);
+        assertThat(verified).isNull();
+    }
+
+    @Test
+    void verify_wrongKey_returnsNull() throws Exception {
+        Map<String, Object> payload = Map.of("sub", "testuser");
+        String jwt = RsaJwtSigner.sign(payload, privateKeyBytes);
+
+        // Generate a different key pair
+        KeyPairGenerator gen2 = KeyPairGenerator.getInstance("RSA");
+        gen2.initialize(2048);
+        KeyPair otherKp = gen2.generateKeyPair();
+
+        Map<String, Object> verified = RsaJwtSigner.verify(jwt, otherKp.getPublic().getEncoded());
+        assertThat(verified).isNull();
+    }
+
+    @Test
+    void verify_malformedJwt_returnsNull() {
+        assertThat(RsaJwtSigner.verify("not.a.jwt", publicKeyBytes)).isNull();
+        assertThat(RsaJwtSigner.verify("onlyone", publicKeyBytes)).isNull();
+        assertThat(RsaJwtSigner.verify("", publicKeyBytes)).isNull();
+    }
 }

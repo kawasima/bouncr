@@ -38,6 +38,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private boolean secureCookie = true;
     private String issuerBaseUrl = "http://localhost:3000";
     private long idTokenExpires = 3600L;
+    private byte[] keyEncryptionKey;
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
@@ -193,6 +194,14 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setIdTokenExpires(long idTokenExpires) {
         this.idTokenExpires = idTokenExpires;
+    }
+
+    public byte[] getKeyEncryptionKey() {
+        return keyEncryptionKey;
+    }
+
+    public void setKeyEncryptionKey(byte[] keyEncryptionKey) {
+        this.keyEncryptionKey = keyEncryptionKey;
     }
 
     public PasswordPolicy getPasswordPolicy() {
