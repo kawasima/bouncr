@@ -65,7 +65,7 @@ public class RsaJwtSigner {
     }
 
     /**
-     * Derive a kid (Key ID) from an RSA public key (SHA-256 thumbprint, first 8 chars).
+     * Derive a kid (Key ID) from an RSA public key (SHA-256 thumbprint, first 16 base64url chars).
      */
     public static String deriveKid(byte[] publicKeyBytes) {
         try {

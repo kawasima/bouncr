@@ -19,7 +19,6 @@ import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.util.Objects;
-import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -72,7 +71,7 @@ public class OAuth2AuthorizeResource {
         }
 
         // Validate scope — exact token match, not substring
-        Set<String> scopes = scope != null ? Set.of(scope.split("\\s+")) : Set.of();
+        Set<String> scopes = scope != null ? new java.util.HashSet<>(java.util.Arrays.asList(scope.split("\\s+"))) : Set.of();
         if (!scopes.contains("openid")) {
             return redirectError(redirectUri, "invalid_scope", "scope must include openid", state);
         }
@@ -101,11 +100,16 @@ public class OAuth2AuthorizeResource {
                     + (codeChallenge != null ? "&code_challenge=" + CodecUtils.urlEncode(codeChallenge)
                             + "&code_challenge_method=S256" : "");
             // Redirect to sign-in page; after authentication, user returns to this URL
-            String signInUrl = config.getOidcConfiguration().getSignInUrl();
-            if (signInUrl == null) {
-                signInUrl = config.getIssuerBaseUrl() + "/bouncr/api/sign_in";
+            java.net.URI unauthRedirectUrl = config.getOidcConfiguration().getUnauthenticateRedirectUrl();
+            if (unauthRedirectUrl != null) {
+                // Use the configured unauthenticated redirect with return_url interpolation
+                String target = config.getOidcConfiguration().getUriInterpolator()
+                        .interpolate(unauthRedirectUrl, "return_url", currentUrl).toString();
+                return redirect(target);
             }
-            return redirect(signInUrl + "?return_url=" + CodecUtils.urlEncode(currentUrl));
+            // Fallback: redirect to issuer base + sign-in path
+            return redirect(config.getIssuerBaseUrl() + "/sign_in?return_url="
+                    + CodecUtils.urlEncode(currentUrl));
         }
 
         // Generate authorization code

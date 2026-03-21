@@ -192,7 +192,7 @@ public class OAuth2TokenResource {
     }
 
     private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
-        Set<String> scopes = Set.of(scope.split("\\s+"));
+        Set<String> scopes = new java.util.HashSet<>(java.util.Arrays.asList(scope.split("\\s+")));
         UserRepository userRepo = new UserRepository(dsl);
 
         if (scopes.contains("profile") || scopes.contains("email")) {
