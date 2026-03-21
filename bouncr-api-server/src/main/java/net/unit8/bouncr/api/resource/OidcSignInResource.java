@@ -64,6 +64,7 @@ public class OidcSignInResource {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
+            .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
     private static final JwksVerifier JWKS_VERIFIER = new JwksVerifier(HTTP_CLIENT);

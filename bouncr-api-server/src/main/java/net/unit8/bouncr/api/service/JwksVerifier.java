@@ -16,6 +16,7 @@ import java.security.Signature;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
@@ -87,7 +88,7 @@ public class JwksVerifier {
                 return false;
             }
 
-            byte[] signingInput = (parts[0] + "." + parts[1]).getBytes("UTF-8");
+            byte[] signingInput = (parts[0] + "." + parts[1]).getBytes(StandardCharsets.UTF_8);
             byte[] signatureBytes = Base64.getUrlDecoder().decode(parts[2]);
 
             Signature sig = Signature.getInstance(jcaAlgorithm);

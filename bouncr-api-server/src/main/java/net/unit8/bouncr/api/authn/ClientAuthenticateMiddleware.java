@@ -7,9 +7,10 @@ import enkan.data.HttpResponse;
 import enkan.middleware.WebMiddleware;
 
 /**
- * The logging for client authentication.
+ * A pass-through middleware for client authentication.
  *
- * A HTTP header "X-Client-DN" was set by Undertow client authentication.
+ * A HTTP header "X-Client-DN" may be set by Undertow client authentication.
+ * DN-to-principal mapping is currently disabled until account mapping behavior is defined.
  *
  * @author kawasima
  */
