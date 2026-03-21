@@ -29,6 +29,7 @@ public class WebHook<T> implements Hook<T> {
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .handle(HttpTimeoutException.class)
             .handle(HttpConnectTimeoutException.class)
+            .handle(java.io.IOException.class)
             .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 

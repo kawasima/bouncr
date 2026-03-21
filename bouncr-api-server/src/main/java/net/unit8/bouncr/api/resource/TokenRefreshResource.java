@@ -58,7 +58,7 @@ public class TokenRefreshResource {
         // Check if the refresh token (long-lived session marker) still exists
         Serializable refreshData = storeProvider.getStore(REFRESH_TOKEN).read(sessionId);
         if (refreshData == null) {
-            context.setMessage(Problem.valueOf(401, "Session expired", BouncrProblem.MALFORMED.problemUri()));
+            context.setMessage(Problem.valueOf(401, "Session expired", BouncrProblem.SESSION_EXPIRED.problemUri()));
             return false;
         }
 
@@ -69,7 +69,7 @@ public class TokenRefreshResource {
         if (userIdObj instanceof Number n) {
             userId = n.longValue();
         } else {
-            context.setMessage(Problem.valueOf(401, "Invalid refresh data", BouncrProblem.MALFORMED.problemUri()));
+            context.setMessage(Problem.valueOf(401, "Invalid refresh data", BouncrProblem.SESSION_EXPIRED.problemUri()));
             return false;
         }
 
@@ -77,7 +77,7 @@ public class TokenRefreshResource {
         SignInService signInService = new SignInService(dsl, storeProvider, config);
         HashMap<String, Object> profileMap = signInService.refreshAccessToken(userId, sessionId);
         if (profileMap == null) {
-            context.setMessage(Problem.valueOf(401, "User not found", BouncrProblem.MALFORMED.problemUri()));
+            context.setMessage(Problem.valueOf(401, "User not found", BouncrProblem.SESSION_EXPIRED.problemUri()));
             return false;
         }
 

@@ -87,13 +87,13 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 		// Access token cache expired — try refresh via API server
 		profileMap, err = a.refreshFromAPIServer(ctx, token)
 		if err != nil {
-			log.Printf("refresh failed for token %s: %v", token[:8], err)
+			log.Printf("refresh failed for token %s: %v", truncateToken(token), err)
 		}
 		if profileMap == nil {
 			// Both expired — no credential header
 			return result, nil
 		}
-		log.Printf("refreshed access token for session %s", token[:8])
+		log.Printf("refreshed access token for session %s", truncateToken(token))
 	}
 
 	// Extract permissionsByRealm and filter to matched realm
@@ -170,6 +170,14 @@ func (a *Authenticator) refreshFromAPIServer(ctx context.Context, sessionID stri
 	}
 
 	return result.Profile, nil
+}
+
+// truncateToken safely returns the first 8 characters of a token for logging.
+func truncateToken(token string) string {
+	if len(token) <= 8 {
+		return token
+	}
+	return token[:8]
 }
 
 // rewriteRequestPath strips the virtualPath prefix and prepends the backend path.
