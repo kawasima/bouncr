@@ -115,7 +115,7 @@ public class RsaJwtSigner {
             byte[] hash = digest.digest(publicKeyBytes);
             return BASE64URL.encodeToString(hash).substring(0, 16);
         } catch (Exception e) {
-            throw new MisconfigurationException("bouncr.INVALID_PUBLIC_KEY", e.getMessage(), e);
+            throw new MisconfigurationException("bouncr.KID_DERIVATION_FAILED", e.getMessage(), e);
         }
     }
 

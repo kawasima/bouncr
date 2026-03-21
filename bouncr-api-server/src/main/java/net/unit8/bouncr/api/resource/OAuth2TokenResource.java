@@ -200,10 +200,8 @@ public class OAuth2TokenResource {
             scope = refreshData.scope();
         }
 
-        // Delete old refresh token only after all validations pass (one-time use / rotation)
-        storeProvider.getStore(ACCESS_TOKEN).delete(refreshToken);
-
-        // Issue new tokens
+        // Issue new tokens first, then delete old refresh token
+        // (prevents token loss if signing/storage fails)
         long now = config.getClock().instant().getEpochSecond();
         byte[] privateKeyBytes = decryptPrivateKey(app);
         try {
@@ -216,6 +214,9 @@ public class OAuth2TokenResource {
             OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
                     clientId, refreshData.userId(), refreshData.userAccount(), scope, now);
             storeProvider.getStore(ACCESS_TOKEN).write(newRefreshToken, newRefreshData);
+
+            // Delete old refresh token after new one is safely stored (rotation)
+            storeProvider.getStore(ACCESS_TOKEN).delete(refreshToken);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("access_token", accessToken);
@@ -233,10 +234,20 @@ public class OAuth2TokenResource {
     // ==================== Client Credentials Grant ====================
 
     private ApiResponse handleClientCredentials(Parameters params, OidcApplication app, String clientId, DSLContext dsl) {
-        // scope — use requested scope or default to "openid"
+        // scope — validate against client's registered permissions
         String scope = params.get("scope");
         if (scope == null) {
             scope = "openid";
+        }
+        if (app.permissions() != null && !app.permissions().isEmpty()) {
+            Set<String> allowedScopes = new HashSet<>();
+            allowedScopes.add("openid");
+            app.permissions().forEach(p -> allowedScopes.add(p.name()));
+            Set<String> requested = new HashSet<>(Arrays.asList(scope.split("\\s+")));
+            if (!allowedScopes.containsAll(requested)) {
+                return tokenError(OAuth2Error.INVALID_SCOPE,
+                        "Requested scope exceeds client's registered permissions");
+            }
         }
 
         long now = config.getClock().instant().getEpochSecond();

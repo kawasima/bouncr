@@ -24,8 +24,9 @@ import static kotowari.restful.DecisionPoint.*;
  * OAuth2 Token Introspection endpoint (RFC 7662).
  * POST /oauth2/token/introspect (application/x-www-form-urlencoded)
  *
- * Allows resource servers to validate access tokens by verifying the JWT
- * signature and returning the token's claims.
+ * Allows the token-issuing client to validate its own access tokens.
+ * Cross-client introspection is not permitted — only tokens issued to the
+ * authenticated client are returned as active.
  */
 @AllowedMethods("POST")
 public class OAuth2TokenIntrospectionResource {
