@@ -6,7 +6,8 @@ public enum OAuth2Error {
     INVALID_GRANT("invalid_grant", 400),
     UNAUTHORIZED_CLIENT("unauthorized_client", 401),
     UNSUPPORTED_GRANT_TYPE("unsupported_grant_type", 400),
-    INVALID_SCOPE("invalid_scope", 400);
+    INVALID_SCOPE("invalid_scope", 400),
+    UNSUPPORTED_RESPONSE_TYPE("unsupported_response_type", 400);
 
     OAuth2Error(String value, int statusCode) {
         this.value = value;

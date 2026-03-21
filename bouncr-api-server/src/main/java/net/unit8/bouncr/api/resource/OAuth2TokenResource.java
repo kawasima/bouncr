@@ -1,0 +1,236 @@
+package net.unit8.bouncr.api.resource;
+
+import enkan.collection.Headers;
+import enkan.collection.Parameters;
+import enkan.data.HttpRequest;
+import kotowari.restful.Decision;
+import kotowari.restful.data.ApiResponse;
+import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.data.AuthorizationCode;
+import net.unit8.bouncr.data.OAuth2Error;
+import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.sign.RsaJwtSigner;
+import org.jooq.DSLContext;
+
+import jakarta.inject.Inject;
+import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.*;
+
+import static enkan.util.BeanBuilder.builder;
+import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
+
+/**
+ * OAuth2 Token endpoint (Bouncr as OIDC IdP).
+ * POST /oauth2/token (application/x-www-form-urlencoded)
+ */
+@AllowedMethods("POST")
+public class OAuth2TokenResource {
+    @Inject
+    private StoreProvider storeProvider;
+
+    @Inject
+    private BouncrConfiguration config;
+
+    @Decision(AUTHORIZED)
+    public boolean authorized() {
+        // Client authentication is done in doPost (Basic auth or POST body)
+        return true;
+    }
+
+    @Decision(POST)
+    public boolean doPost() {
+        return true;
+    }
+
+    @Decision(HANDLE_CREATED)
+    public ApiResponse handleCreated(Parameters params, HttpRequest request, DSLContext dsl) {
+        String grantType = params.get("grant_type");
+        if (!"authorization_code".equals(grantType)) {
+            return tokenError(OAuth2Error.UNSUPPORTED_GRANT_TYPE, "Only authorization_code is supported");
+        }
+
+        // 1. Authenticate client
+        String[] clientCredentials = extractClientCredentials(params, request);
+        if (clientCredentials == null) {
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
+        }
+        String clientId = clientCredentials[0];
+        String clientSecret = clientCredentials[1];
+
+        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        OidcApplication app = repo.findByClientId(clientId).orElse(null);
+        if (app == null || !app.clientSecret().equals(clientSecret)) {
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
+        }
+
+        // 2. Validate authorization code
+        String code = params.get("code");
+        if (code == null) {
+            return tokenError(OAuth2Error.INVALID_REQUEST, "code is required");
+        }
+
+        Serializable stored = storeProvider.getStore(AUTHORIZATION_CODE).read(code);
+        if (stored == null) {
+            return tokenError(OAuth2Error.INVALID_GRANT, "Authorization code is invalid or expired");
+        }
+        // Delete code immediately (one-time use)
+        storeProvider.getStore(AUTHORIZATION_CODE).delete(code);
+
+        AuthorizationCode authCode = (AuthorizationCode) stored;
+
+        // 3. Validate code belongs to this client
+        if (!clientId.equals(authCode.clientId())) {
+            return tokenError(OAuth2Error.INVALID_GRANT, "Code was not issued to this client");
+        }
+
+        // 4. Validate redirect_uri matches
+        String redirectUri = params.get("redirect_uri");
+        if (redirectUri != null && !redirectUri.equals(authCode.redirectUri())) {
+            return tokenError(OAuth2Error.INVALID_GRANT, "redirect_uri does not match");
+        }
+
+        // 5. PKCE verification
+        if (authCode.codeChallenge() != null) {
+            String codeVerifier = params.get("code_verifier");
+            if (codeVerifier == null) {
+                return tokenError(OAuth2Error.INVALID_GRANT, "code_verifier is required");
+            }
+            if (!verifyPkce(codeVerifier, authCode.codeChallenge())) {
+                return tokenError(OAuth2Error.INVALID_GRANT, "PKCE verification failed");
+            }
+        }
+
+        // 6. Build tokens
+        long now = System.currentTimeMillis() / 1000;
+        String issuer = config.getIssuerBaseUrl() + "/oauth2/openid/" + clientId;
+        String kid = RsaJwtSigner.deriveKid(app.publicKey());
+
+        // access_token (RFC 9068 JWT)
+        Map<String, Object> accessClaims = new LinkedHashMap<>();
+        accessClaims.put("iss", issuer);
+        accessClaims.put("sub", authCode.userAccount());
+        accessClaims.put("aud", clientId);
+        accessClaims.put("exp", now + config.getAccessTokenExpires());
+        accessClaims.put("iat", now);
+        accessClaims.put("jti", UUID.randomUUID().toString());
+        accessClaims.put("scope", authCode.scope());
+        accessClaims.put("client_id", clientId);
+        String accessToken = RsaJwtSigner.sign(accessClaims, app.privateKey(), kid);
+
+        // id_token (OIDC Core §2)
+        Map<String, Object> idClaims = new LinkedHashMap<>();
+        idClaims.put("iss", issuer);
+        idClaims.put("sub", authCode.userAccount());
+        idClaims.put("aud", clientId);
+        idClaims.put("exp", now + config.getIdTokenExpires());
+        idClaims.put("iat", now);
+        if (authCode.nonce() != null) {
+            idClaims.put("nonce", authCode.nonce());
+        }
+
+        // Add profile/email claims based on scope
+        addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
+
+        String idToken = RsaJwtSigner.sign(idClaims, app.privateKey(), kid);
+
+        // 7. Return token response
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", accessToken);
+        response.put("token_type", "Bearer");
+        response.put("expires_in", config.getAccessTokenExpires());
+        response.put("id_token", idToken);
+        response.put("scope", authCode.scope());
+
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 200)
+                .set(ApiResponse::setHeaders, Headers.of(
+                        "Content-Type", "application/json",
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache"))
+                .set(ApiResponse::setBody, response)
+                .build();
+    }
+
+    /**
+     * Extract client_id and client_secret from HTTP Basic auth or POST body.
+     */
+    private String[] extractClientCredentials(Parameters params, HttpRequest request) {
+        // Try HTTP Basic first
+        String authHeader = request.getHeaders().get("Authorization");
+        if (authHeader != null && authHeader.startsWith("Basic ")) {
+            String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)),
+                    StandardCharsets.UTF_8);
+            String[] parts = decoded.split(":", 2);
+            if (parts.length == 2) {
+                return parts;
+            }
+        }
+        // Fall back to POST body (client_secret_post)
+        String clientId = params.get("client_id");
+        String clientSecret = params.get("client_secret");
+        if (clientId != null && clientSecret != null) {
+            return new String[]{clientId, clientSecret};
+        }
+        return null;
+    }
+
+    /**
+     * Verify PKCE S256: SHA256(code_verifier) == code_challenge.
+     */
+    private boolean verifyPkce(String codeVerifier, String codeChallenge) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(codeVerifier.getBytes(StandardCharsets.UTF_8));
+            String computed = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+            return computed.equals(codeChallenge);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Add user profile claims to the ID token based on granted scopes.
+     */
+    private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
+        Set<String> scopes = Set.of(scope.split("\\s+"));
+        UserRepository userRepo = new UserRepository(dsl);
+
+        if (scopes.contains("profile") || scopes.contains("email")) {
+            var profileValues = userRepo.loadProfileValues(userId);
+            for (var pv : profileValues) {
+                String jsonName = pv.userProfileField().jsonName();
+                if (scopes.contains("email") && "email".equals(jsonName)) {
+                    claims.put("email", pv.value());
+                }
+                if (scopes.contains("profile")) {
+                    if ("name".equals(jsonName) || "family_name".equals(jsonName)
+                            || "given_name".equals(jsonName) || "preferred_username".equals(jsonName)) {
+                        claims.put(jsonName, pv.value());
+                    }
+                }
+            }
+        }
+    }
+
+    private ApiResponse tokenError(OAuth2Error error, String description) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", error.getValue());
+        if (description != null) {
+            body.put("error_description", description);
+        }
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, error.getStatusCode())
+                .set(ApiResponse::setHeaders, Headers.of(
+                        "Content-Type", "application/json",
+                        "Cache-Control", "no-store"))
+                .set(ApiResponse::setBody, body)
+                .build();
+    }
+}

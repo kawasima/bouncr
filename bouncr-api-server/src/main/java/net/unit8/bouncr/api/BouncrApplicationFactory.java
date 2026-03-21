@@ -103,6 +103,14 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 ar.all("/token/refresh").to(TokenRefreshResource.class);
             });
 
+            // OAuth2/OIDC Identity Provider endpoints
+            r.scope("/oauth2", oa -> {
+                oa.get("/authorize").to(OAuth2AuthorizeResource.class);
+                oa.post("/token").to(OAuth2TokenResource.class);
+                oa.get("/openid/:client_id/certs").to(OAuth2JwksResource.class);
+                oa.get("/openid/:client_id/.well-known/openid-configuration").to(OAuth2DiscoveryResource.class);
+            });
+
         }).compile();
 
         List<ParameterInjector<?>> parameterInjectors = List.of(
@@ -148,7 +156,7 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
 
         app.use(builder(new ContentNegotiationMiddleware())
                 .set(ContentNegotiationMiddleware::setAllowedTypes,
-                        new HashSet<>(Arrays.asList("application/json", "text/html")))
+                        new HashSet<>(Arrays.asList("application/json", "text/html", "application/x-www-form-urlencoded")))
                 .set(ContentNegotiationMiddleware::setAllowedLanguages,
                         new HashSet<>(Arrays.asList("en", "ja")))
                 .build());
