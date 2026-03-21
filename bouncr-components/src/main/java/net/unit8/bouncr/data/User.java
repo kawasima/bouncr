@@ -5,6 +5,21 @@ import net.unit8.bouncr.json.UserSerializer;
 
 import java.util.List;
 
+/**
+ * User aggregate root in Bouncr.
+ *
+ * @param id persistent identifier
+ * @param account account name used for sign-in
+ * @param writeProtected whether mutation is restricted
+ * @param groups groups the user belongs to
+ * @param userProfileValues profile values assigned to the user
+ * @param userLock current lock state
+ * @param passwordCredential password credential data
+ * @param otpKey one-time-password key
+ * @param oidcUsers external OIDC identities linked to this user
+ * @param permissions effective permission names
+ * @param unverifiedProfiles profile fields pending verification
+ */
 @JsonSerialize(using = UserSerializer.class)
 public record User(
     Long id,

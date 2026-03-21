@@ -3,9 +3,13 @@ package net.unit8.bouncr.data;
 import java.util.*;
 
 /**
- * The entity of groups.
+ * User group used for role assignment.
  *
- * @author kawasima
+ * @param id persistent identifier
+ * @param name group name
+ * @param description optional description
+ * @param writeProtected whether mutation is restricted
+ * @param users users currently in the group
  */
 public record Group(Long id, String name, String description, Boolean writeProtected, List<User> users) {
 }

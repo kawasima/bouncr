@@ -1,5 +1,11 @@
 package net.unit8.bouncr.data;
 
+/**
+ * OAuth2/OIDC error codes and their default HTTP status codes.
+ *
+ * <p>The {@code value} is used for the protocol-level {@code error} response
+ * field; {@code statusCode} is the suggested HTTP status for API responses.
+ */
 public enum OAuth2Error {
     INVALID_REQUEST("invalid_request", 400),
     INVALID_CLIENT("invalid_client", 401),
@@ -21,6 +27,9 @@ public enum OAuth2Error {
         return value;
     }
 
+    /**
+     * Returns the default HTTP status code associated with this error.
+     */
     public int getStatusCode() {
         return statusCode;
     }
