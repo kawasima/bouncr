@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import static enkan.util.ThreadingUtils.some;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 
 public class SignInService {
     private final BouncrConfiguration config;
@@ -85,7 +86,34 @@ public class SignInService {
         LOG.debug("signIn profileMap = {}", profileMap);
         storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
 
+        // Write refresh token marker (long-lived session)
+        HashMap<String, Object> refreshData = new HashMap<>();
+        refreshData.put("userId", user.id());
+        storeProvider.getStore(REFRESH_TOKEN).write(token, refreshData);
+
         return userSession;
+    }
+
+    /**
+     * Rebuild the profileMap from DB for the given userId.
+     * Called by TokenRefreshResource when the access token cache has expired.
+     */
+    public HashMap<String, Object> refreshAccessToken(long userId, String sessionId) {
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.findById(userId).orElse(null);
+        if (user == null) return null;
+
+        HashMap<String, Object> profileMap = new HashMap<>(
+                userRepo.loadProfileValues(userId).stream()
+                        .collect(Collectors.toMap(v -> v.userProfileField().jsonName(), v -> v.value())));
+        profileMap.put("iss", "bouncr");
+        profileMap.put("uid", Long.toString(userId));
+        profileMap.put("sub", user.account());
+        profileMap.put("permissionsByRealm", userRepo.getPermissionsByRealm(userId));
+
+        storeProvider.getStore(BOUNCR_TOKEN).write(sessionId, profileMap);
+        LOG.debug("refreshed profileMap for user {} session {}", user.account(), sessionId);
+        return profileMap;
     }
 
     public enum PasswordCredentialStatus {

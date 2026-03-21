@@ -100,6 +100,7 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 // Sessions can't be listed by a user now.
                 //ar.all("/sessions").to(UserSessionsResource.class);
                 ar.all("/session/:token").to(UserSessionResource.class);
+                ar.all("/token/refresh").to(TokenRefreshResource.class);
             });
 
         }).compile();

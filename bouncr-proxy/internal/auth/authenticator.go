@@ -1,11 +1,15 @@
 package auth
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/jwt"
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/realm"
@@ -18,6 +22,7 @@ type Authenticator struct {
 	jwtSecret         []byte
 	cookieName        string
 	backendHeaderName string
+	apiServerURL      string
 }
 
 func NewAuthenticator(
@@ -26,6 +31,7 @@ func NewAuthenticator(
 	jwtSecret string,
 	cookieName string,
 	backendHeaderName string,
+	apiServerURL string,
 ) *Authenticator {
 	return &Authenticator{
 		store:             store,
@@ -33,6 +39,7 @@ func NewAuthenticator(
 		jwtSecret:         []byte(jwtSecret),
 		cookieName:        cookieName,
 		backendHeaderName: backendHeaderName,
+		apiServerURL:      apiServerURL,
 	}
 }
 
@@ -77,8 +84,16 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 		return nil, fmt.Errorf("redis read: %w", err)
 	}
 	if profileMap == nil {
-		// Invalid/expired token: still route, but no credential header
-		return result, nil
+		// Access token cache expired — try refresh via API server
+		profileMap, err = a.refreshFromAPIServer(ctx, token)
+		if err != nil {
+			log.Printf("refresh failed for token %s: %v", token[:8], err)
+		}
+		if profileMap == nil {
+			// Both expired — no credential header
+			return result, nil
+		}
+		log.Printf("refreshed access token for session %s", token[:8])
 	}
 
 	// Extract permissionsByRealm and filter to matched realm
@@ -116,6 +131,45 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 	result.HeaderName = a.backendHeaderName
 	result.HeaderValue = jwtToken
 	return result, nil
+}
+
+// refreshFromAPIServer calls the API server's /token/refresh endpoint to
+// rebuild the access token cache from DB. Returns the fresh profileMap or nil.
+func (a *Authenticator) refreshFromAPIServer(ctx context.Context, sessionID string) (map[string]interface{}, error) {
+	if a.apiServerURL == "" {
+		return nil, fmt.Errorf("API_SERVER_URL not configured")
+	}
+
+	body, _ := json.Marshal(map[string]string{"session_id": sessionID})
+	url := strings.TrimRight(a.apiServerURL, "/") + "/bouncr/api/token/refresh"
+
+	reqCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("refresh returned %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Profile map[string]interface{} `json:"profile"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return result.Profile, nil
 }
 
 // rewriteRequestPath strips the virtualPath prefix and prepends the backend path.
