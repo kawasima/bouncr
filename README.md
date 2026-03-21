@@ -7,6 +7,12 @@
 
 An authentication gateway and OIDC Identity Provider for backend applications, powered by Envoy ext_proc.
 
+## Why Bouncr
+
+- **Stateless backend applications by design** — authentication state is handled at the proxy/gateway layer, and backend apps receive request-scoped identity via `x-bouncr-credential`
+- **Easier testing and operations** — apps can be tested without session stores/sticky sessions, and auth behavior can be reproduced by header-based credentials in integration tests
+- **Pragmatic self-hosted auth core** — combines OIDC/OAuth2 identity endpoints with a clear Group → Role → Permission → Realm model for service-to-service and backend authorization
+
 ![bouncer](http://2.bp.blogspot.com/-kVVeXhsM8yU/VIhOpmLlnDI/AAAAAAAApfY/O5N9L72Byo4/s450/job_sp.png)
 
 ## Features
