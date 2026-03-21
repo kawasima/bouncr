@@ -63,6 +63,7 @@ func runServer() {
 		cfg.JWTSecret,
 		cfg.TokenCookieName,
 		cfg.BackendHeaderName,
+		cfg.APIServerURL,
 	)
 
 	// Start admin HTTP server (for /_refresh, /_clusters, /_healthcheck)

@@ -16,6 +16,7 @@ import java.util.Objects;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 
 /**
  * A User Session Resource.
@@ -59,7 +60,9 @@ public class UserSessionResource {
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return null;
         }
-        storeProvider.getStore(BOUNCR_TOKEN).delete(params.get("token"));
+        String token = params.get("token");
+        storeProvider.getStore(BOUNCR_TOKEN).delete(token);
+        storeProvider.getStore(REFRESH_TOKEN).delete(token);
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
         return null;

@@ -1,7 +1,9 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.collection.Headers;
 import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
@@ -28,6 +30,8 @@ import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.util.Arrays;
+
+import static enkan.util.BeanBuilder.builder;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.service.SignInService.PasswordCredentialStatus.EXPIRED;
@@ -127,7 +131,14 @@ public class PasswordSignInResource {
     }
 
     @Decision(HANDLE_CREATED)
-    public UserSession handleCreated(UserSession userSession) {
-        return userSession;
+    public ApiResponse handleCreated(UserSession userSession) {
+        String cookie = config.getTokenName() + "=" + userSession.token()
+                + "; HttpOnly; Secure; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
+                + "; Path=/";
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 201)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookie))
+                .set(ApiResponse::setBody, userSession)
+                .build();
     }
 }

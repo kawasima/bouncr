@@ -16,6 +16,7 @@ type Config struct {
 	TokenCookieName      string
 	BackendHeaderName    string
 	RealmRefreshInterval time.Duration
+	APIServerURL         string
 }
 
 func Load() *Config {
@@ -30,6 +31,7 @@ func Load() *Config {
 		TokenCookieName:      envOrDefault("TOKEN_COOKIE_NAME", "BOUNCR_TOKEN"),
 		BackendHeaderName:    envOrDefault("BACKEND_HEADER_NAME", "x-bouncr-credential"),
 		RealmRefreshInterval: parseDuration(envOrDefault("REALM_REFRESH_INTERVAL", "30s")),
+		APIServerURL:         envOrDefault("API_SERVER_URL", "http://localhost:3005"),
 	}
 }
 
