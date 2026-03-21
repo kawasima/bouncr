@@ -92,7 +92,7 @@ public class OidcApplicationsResoruce {
         String plaintextSecret = RandomUtils.generateRandomString(32, config.getSecureRandom());
 
         // Hash client_secret with PBKDF2 (salt = clientId)
-        byte[] secretHash = PasswordUtils.pbkdf2(plaintextSecret, clientId, 10000);
+        byte[] secretHash = PasswordUtils.pbkdf2(plaintextSecret, clientId, config.getPbkdf2Iterations());
         String hashedSecret = Base64.getEncoder().encodeToString(secretHash);
 
         KeyPair keyPair = KeyUtils.generate(2048, config.getSecureRandom());
