@@ -13,7 +13,10 @@ import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.jooq.DSLContext;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import jakarta.inject.Inject;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -29,6 +32,8 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods("POST")
 public class OAuth2TokenIntrospectionResource {
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     @Inject
     private BouncrConfiguration config;
 
@@ -66,10 +71,9 @@ public class OAuth2TokenIntrospectionResource {
 
         Map<String, Object> unverifiedPayload;
         try {
-            byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
             @SuppressWarnings("unchecked")
-            Map<String, Object> p = tools.jackson.databind.json.JsonMapper.builder().build()
-                    .readValue(payloadBytes, Map.class);
+            Map<String, Object> p = JSON.readValue(payloadBytes, Map.class);
             unverifiedPayload = p;
         } catch (Exception e) {
             return inactiveResponse();
@@ -138,10 +142,10 @@ public class OAuth2TokenIntrospectionResource {
         if (description != null) body.put("error_description", description);
         Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
                 ? Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
                         "WWW-Authenticate", "Basic realm=\"bouncr\"")
                 : Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store");
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
                 .set(ApiResponse::setHeaders, headers)

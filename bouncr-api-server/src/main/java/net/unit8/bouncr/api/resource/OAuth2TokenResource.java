@@ -8,6 +8,8 @@ import kotowari.restful.data.ApiResponse;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.api.service.OidcClaimMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
@@ -24,9 +26,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static enkan.util.BeanBuilder.builder;
@@ -42,6 +46,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_C
  */
 @AllowedMethods("POST")
 public class OAuth2TokenResource {
+    private static final Logger LOG = LoggerFactory.getLogger(OAuth2TokenResource.class);
+
     @Inject
     private StoreProvider storeProvider;
 
@@ -124,41 +130,41 @@ public class OAuth2TokenResource {
 
         // Build tokens
         byte[] privateKeyBytes = decryptPrivateKey(app);
-        String issuer = issuer(clientId);
-        String kid = RsaJwtSigner.deriveKid(app.publicKey());
+        try {
+            String issuer = issuer(clientId);
+            String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
-        String accessToken = signAccessToken(issuer, authCode.userAccount(), clientId, authCode.scope(), kid, privateKeyBytes, now);
+            String accessToken = signAccessToken(issuer, authCode.userAccount(), clientId, authCode.scope(), kid, privateKeyBytes, now);
 
-        // id_token
-        Map<String, Object> idClaims = new LinkedHashMap<>();
-        idClaims.put("iss", issuer);
-        idClaims.put("sub", authCode.userAccount());
-        idClaims.put("aud", clientId);
-        idClaims.put("exp", now + config.getIdTokenExpires());
-        idClaims.put("iat", now);
-        if (authCode.nonce() != null) {
-            idClaims.put("nonce", authCode.nonce());
+            Map<String, Object> idClaims = new LinkedHashMap<>();
+            idClaims.put("iss", issuer);
+            idClaims.put("sub", authCode.userAccount());
+            idClaims.put("aud", clientId);
+            idClaims.put("exp", now + config.getIdTokenExpires());
+            idClaims.put("iat", now);
+            if (authCode.nonce() != null) {
+                idClaims.put("nonce", authCode.nonce());
+            }
+            OidcClaimMapper.addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
+            String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
+
+            String refreshToken = UUID.randomUUID().toString();
+            OAuth2RefreshToken refreshData = new OAuth2RefreshToken(
+                    clientId, authCode.userId(), authCode.userAccount(), authCode.scope(), now);
+            storeProvider.getStore(ACCESS_TOKEN).write(refreshToken, refreshData);
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("access_token", accessToken);
+            response.put("token_type", "Bearer");
+            response.put("expires_in", config.getAccessTokenExpires());
+            response.put("refresh_token", refreshToken);
+            response.put("id_token", idToken);
+            response.put("scope", authCode.scope());
+
+            return tokenResponse(response);
+        } finally {
+            Arrays.fill(privateKeyBytes, (byte) 0);
         }
-        OidcClaimMapper.addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
-        String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
-
-        // refresh_token (opaque UUID stored in Redis)
-        String refreshToken = UUID.randomUUID().toString();
-        OAuth2RefreshToken refreshData = new OAuth2RefreshToken(
-                clientId, authCode.userId(), authCode.userAccount(), authCode.scope(), now);
-        storeProvider.getStore(ACCESS_TOKEN).write(refreshToken, refreshData);
-
-        Arrays.fill(privateKeyBytes, (byte) 0);
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("access_token", accessToken);
-        response.put("token_type", "Bearer");
-        response.put("expires_in", config.getAccessTokenExpires());
-        response.put("refresh_token", refreshToken);
-        response.put("id_token", idToken);
-        response.put("scope", authCode.scope());
-
-        return tokenResponse(response);
     }
 
     // ==================== Refresh Token Grant ====================
@@ -181,34 +187,48 @@ public class OAuth2TokenResource {
             return tokenError(OAuth2Error.INVALID_GRANT, "Refresh token was not issued to this client");
         }
 
-        // Scope: use original scope or restrict via scope parameter
+        // Scope: use original scope or restrict via scope parameter (RFC 6749 §6)
         String requestedScope = params.get("scope");
-        String scope = requestedScope != null ? requestedScope : refreshData.scope();
+        String scope;
+        if (requestedScope != null) {
+            // Requested scope must be a subset of originally granted scope
+            Set<String> originalScopes = new HashSet<>(
+                    Arrays.asList(refreshData.scope().split("\\s+")));
+            Set<String> requested = new HashSet<>(
+                    Arrays.asList(requestedScope.split("\\s+")));
+            if (!originalScopes.containsAll(requested)) {
+                return tokenError(OAuth2Error.INVALID_SCOPE, "Requested scope exceeds originally granted scope");
+            }
+            scope = requestedScope;
+        } else {
+            scope = refreshData.scope();
+        }
 
         // Issue new tokens
         long now = config.getClock().instant().getEpochSecond();
         byte[] privateKeyBytes = decryptPrivateKey(app);
-        String issuer = issuer(clientId);
-        String kid = RsaJwtSigner.deriveKid(app.publicKey());
+        try {
+            String issuer = issuer(clientId);
+            String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
-        String accessToken = signAccessToken(issuer, refreshData.userAccount(), clientId, scope, kid, privateKeyBytes, now);
+            String accessToken = signAccessToken(issuer, refreshData.userAccount(), clientId, scope, kid, privateKeyBytes, now);
 
-        // New refresh token (rotation)
-        String newRefreshToken = UUID.randomUUID().toString();
-        OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
-                clientId, refreshData.userId(), refreshData.userAccount(), scope, now);
-        storeProvider.getStore(ACCESS_TOKEN).write(newRefreshToken, newRefreshData);
+            String newRefreshToken = UUID.randomUUID().toString();
+            OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
+                    clientId, refreshData.userId(), refreshData.userAccount(), scope, now);
+            storeProvider.getStore(ACCESS_TOKEN).write(newRefreshToken, newRefreshData);
 
-        Arrays.fill(privateKeyBytes, (byte) 0);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("access_token", accessToken);
+            response.put("token_type", "Bearer");
+            response.put("expires_in", config.getAccessTokenExpires());
+            response.put("refresh_token", newRefreshToken);
+            response.put("scope", scope);
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("access_token", accessToken);
-        response.put("token_type", "Bearer");
-        response.put("expires_in", config.getAccessTokenExpires());
-        response.put("refresh_token", newRefreshToken);
-        response.put("scope", scope);
-
-        return tokenResponse(response);
+            return tokenResponse(response);
+        } finally {
+            Arrays.fill(privateKeyBytes, (byte) 0);
+        }
     }
 
     // ==================== Client Credentials Grant ====================
@@ -222,22 +242,23 @@ public class OAuth2TokenResource {
 
         long now = config.getClock().instant().getEpochSecond();
         byte[] privateKeyBytes = decryptPrivateKey(app);
-        String issuer = issuer(clientId);
-        String kid = RsaJwtSigner.deriveKid(app.publicKey());
+        try {
+            String issuer = issuer(clientId);
+            String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
-        // For client_credentials, sub = client_id (no user)
-        String accessToken = signAccessToken(issuer, clientId, clientId, scope, kid, privateKeyBytes, now);
+            String accessToken = signAccessToken(issuer, clientId, clientId, scope, kid, privateKeyBytes, now);
 
-        Arrays.fill(privateKeyBytes, (byte) 0);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("access_token", accessToken);
+            response.put("token_type", "Bearer");
+            response.put("expires_in", config.getAccessTokenExpires());
+            response.put("scope", scope);
+            // No refresh_token, no id_token for client_credentials
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("access_token", accessToken);
-        response.put("token_type", "Bearer");
-        response.put("expires_in", config.getAccessTokenExpires());
-        response.put("scope", scope);
-        // No refresh_token, no id_token for client_credentials
-
-        return tokenResponse(response);
+            return tokenResponse(response);
+        } finally {
+            Arrays.fill(privateKeyBytes, (byte) 0);
+        }
     }
 
     // ==================== Shared helpers ====================
@@ -274,6 +295,7 @@ public class OAuth2TokenResource {
                     computed.getBytes(StandardCharsets.UTF_8),
                     codeChallenge.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
+            LOG.warn("PKCE verification error", e);
             return false;
         }
     }
@@ -301,10 +323,10 @@ public class OAuth2TokenResource {
         }
         Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
                 ? Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
                         "WWW-Authenticate", "Basic realm=\"bouncr\"")
                 : Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store");
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
                 .set(ApiResponse::setHeaders, headers)

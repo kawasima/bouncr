@@ -82,10 +82,10 @@ public class OAuth2TokenRevocationResource {
         if (description != null) body.put("error_description", description);
         Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
                 ? Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
                         "WWW-Authenticate", "Basic realm=\"bouncr\"")
                 : Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store");
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
                 .set(ApiResponse::setHeaders, headers)

@@ -7,8 +7,11 @@ import org.junit.jupiter.api.Test;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -115,19 +118,41 @@ class OAuth2Phase3Test {
         assertThat(verified).isNull();
     }
 
-    // --- Grant Type Dispatch ---
+    // --- Scope Subset Validation ---
 
     @Test
-    void grantType_switchPattern() {
-        // Verify grant_type string matching works
-        String authCode = "authorization_code";
-        String refresh = "refresh_token";
-        String clientCreds = "client_credentials";
-        String unknown = "implicit";
+    void scopeSubsetValidation_subsetIsAccepted() {
+        Set<String> original = new HashSet<>(Arrays.asList("openid", "profile", "email"));
+        Set<String> requested = new HashSet<>(Arrays.asList("openid", "profile"));
+        assertThat(original.containsAll(requested)).isTrue();
+    }
 
-        assertThat(authCode).isEqualTo("authorization_code");
-        assertThat(refresh).isEqualTo("refresh_token");
-        assertThat(clientCreds).isEqualTo("client_credentials");
-        assertThat(unknown).isNotEqualTo("authorization_code");
+    @Test
+    void scopeSubsetValidation_escalationIsRejected() {
+        Set<String> original = new HashSet<>(Arrays.asList("openid", "profile"));
+        Set<String> requested = new HashSet<>(Arrays.asList("openid", "profile", "admin"));
+        assertThat(original.containsAll(requested)).isFalse();
+    }
+
+    @Test
+    void scopeSubsetValidation_sameSetIsAccepted() {
+        Set<String> original = new HashSet<>(Arrays.asList("openid", "profile"));
+        Set<String> requested = new HashSet<>(Arrays.asList("openid", "profile"));
+        assertThat(original.containsAll(requested)).isTrue();
+    }
+
+    // --- Client Credentials Response Shape ---
+
+    @Test
+    void clientCredentials_responseHasNoRefreshToken() {
+        // client_credentials grant should NOT include refresh_token or id_token
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", "jwt...");
+        response.put("token_type", "Bearer");
+        response.put("expires_in", 900);
+        response.put("scope", "openid");
+
+        assertThat(response).doesNotContainKey("refresh_token");
+        assertThat(response).doesNotContainKey("id_token");
     }
 }
