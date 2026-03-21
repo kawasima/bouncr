@@ -8,7 +8,6 @@ import enkan.component.jooq.JooqProvider;
 import enkan.component.flyway.FlywayMigration;
 import enkan.component.hikaricp.HikariCPComponent;
 import enkan.component.jackson.JacksonBeansConverter;
-import enkan.component.jedis.JedisProvider;
 import enkan.component.jetty.JettyComponent;
 import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
@@ -17,6 +16,7 @@ import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.sign.JsonWebToken;
@@ -29,13 +29,13 @@ import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
 
 /**
- * Production system factory. Requires REDIS_URL and JDBC_URL environment variables.
- * Redis-backed stores with TTLs sourced from BouncrConfiguration.
+ * Development system factory. Uses MemoryStore (no Redis) and H2 in-memory DB by default.
+ * Used by ReplMain (mvn exec:java -Pdev).
  */
-public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
+public class BouncrDevEnkanSystemFactory implements EnkanSystemFactory {
     @Override
     public EnkanSystem create() {
-        String jdbcUrl = Env.getString("JDBC_URL", "jdbc:postgresql://localhost:5432/bouncr");
+        String jdbcUrl = Env.getString("JDBC_URL", "jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
         SQLDialect sqlDialect = jdbcUrl.startsWith("jdbc:postgresql") ? SQLDialect.POSTGRES : SQLDialect.H2;
 
         BouncrConfiguration config = builder(new BouncrConfiguration())
@@ -48,6 +48,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
         config.getHookRepo().register(HookPoint.BEFORE_SIGN_UP, grantBouncrUserRole);
 
+        // StoreProvider defaults to MemoryStore for all stores — no Redis needed
         return EnkanSystem.of(
                 "hmac", new HmacEncoder(),
                 "config", config,
@@ -55,8 +56,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "jooq", builder(new JooqProvider())
                         .set(JooqProvider::setDialect, sqlDialect)
                         .build(),
-                "redis", new JedisProvider(),
-                "storeprovider", new RedisStoreProvider(),
+                "storeprovider", new StoreProvider(),
                 "flake", new Flake(),
                 "jwt", new JsonWebToken(),
                 "realmCache", new RealmCache(),
@@ -77,7 +77,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 component("http").using("app"),
                 component("app").using("config", "storeprovider", "realmCache", "jooq", "jwt",
                         "converter", "metrics"),
-                component("storeprovider").using("config", "redis"),
+                component("storeprovider").using("config"),
                 component("realmCache").using("jooq", "flyway"),
                 component("jooq").using("datasource"),
                 component("flyway").using("datasource"),

@@ -5,7 +5,10 @@ import enkan.component.SystemComponent;
 import enkan.exception.UnreachableException;
 import dev.failsafe.CircuitBreaker;
 import dev.failsafe.RetryPolicy;
-import net.unit8.bouncr.component.config.*;
+import net.unit8.bouncr.component.config.CertConfiguration;
+import net.unit8.bouncr.component.config.OidcConfiguration;
+import net.unit8.bouncr.component.config.PasswordPolicy;
+import net.unit8.bouncr.component.config.VerificationPolicy;
 import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.CommunicationException;
@@ -35,7 +38,6 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
-    private KvsSettings keyValueStoreSettings = new KvsSettings();
     private SecureRandom secureRandom;
     private MessageResource messageResource = new MessageResource(new HashSet<>(Arrays.asList(
             Locale.ENGLISH,
@@ -236,14 +238,6 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setMessageResource(MessageResource messageResource) {
         this.messageResource = messageResource;
-    }
-
-    public KvsSettings getKeyValueStoreSettings() {
-        return keyValueStoreSettings;
-    }
-
-    public void setKeyValueStoreSettings(KvsSettings keyValueStoreSettings) {
-        this.keyValueStoreSettings = keyValueStoreSettings;
     }
 
     public HookRepository getHookRepo() {
