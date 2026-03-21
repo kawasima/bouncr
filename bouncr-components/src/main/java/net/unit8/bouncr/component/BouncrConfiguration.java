@@ -39,6 +39,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private String issuerBaseUrl = "http://localhost:3000";
     private long idTokenExpires = 3600L;
     private byte[] keyEncryptionKey;
+    private int pbkdf2Iterations = 10000;
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
@@ -202,6 +203,14 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setKeyEncryptionKey(byte[] keyEncryptionKey) {
         this.keyEncryptionKey = keyEncryptionKey;
+    }
+
+    public int getPbkdf2Iterations() {
+        return pbkdf2Iterations;
+    }
+
+    public void setPbkdf2Iterations(int pbkdf2Iterations) {
+        this.pbkdf2Iterations = pbkdf2Iterations;
     }
 
     public PasswordPolicy getPasswordPolicy() {

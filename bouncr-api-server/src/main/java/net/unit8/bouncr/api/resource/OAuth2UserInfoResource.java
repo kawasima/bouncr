@@ -6,35 +6,36 @@ import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
-import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.service.OidcClaimMapper;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.jooq.DSLContext;
+import tools.jackson.databind.json.JsonMapper;
 
 import jakarta.inject.Inject;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 
 /**
  * OIDC UserInfo endpoint (OpenID Connect Core §5.3).
- * GET /oauth2/userinfo
+ * GET/POST /oauth2/userinfo
  *
  * Returns user claims based on the granted scopes in the Bearer access_token.
  */
 @AllowedMethods({"GET", "POST"})
 public class OAuth2UserInfoResource {
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     @Inject
     private BouncrConfiguration config;
 
     @Decision(AUTHORIZED)
     public boolean authorized() {
-        return true; // Bearer token validation is done in HANDLE_OK
+        return true;
     }
 
     @Decision(HANDLE_OK)
@@ -46,29 +47,25 @@ public class OAuth2UserInfoResource {
         }
         String accessToken = authHeader.substring(7);
 
-        // Decode JWT header to find kid, then extract iss to determine client_id
         String[] parts = accessToken.split("\\.", 3);
         if (parts.length != 3) {
             return errorResponse(401, "invalid_token", "Malformed token");
         }
 
-        // Decode payload without verification first to get iss (which contains client_id)
+        // Decode payload without verification to extract client_id
         Map<String, Object> unverifiedPayload;
         try {
-            byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
             @SuppressWarnings("unchecked")
-            Map<String, Object> p = tools.jackson.databind.json.JsonMapper.builder().build()
-                    .readValue(payloadBytes, Map.class);
+            Map<String, Object> p = JSON.readValue(payloadBytes, Map.class);
             unverifiedPayload = p;
         } catch (Exception e) {
             return errorResponse(401, "invalid_token", "Cannot decode token");
         }
 
-        // Extract client_id from iss: .../oauth2/openid/<client_id>
-        String iss = (String) unverifiedPayload.get("iss");
         String clientId = (String) unverifiedPayload.get("client_id");
-        if (iss == null || clientId == null) {
-            return errorResponse(401, "invalid_token", "Token missing required claims");
+        if (clientId == null) {
+            return errorResponse(401, "invalid_token", "Token missing client_id claim");
         }
 
         // Load public key and verify signature
@@ -90,35 +87,13 @@ public class OAuth2UserInfoResource {
             return errorResponse(401, "invalid_token", "Token expired");
         }
 
-        // Build UserInfo response based on granted scopes
-        String scope = (String) claims.get("scope");
-        Set<String> scopes = scope != null
-                ? new HashSet<>(Arrays.asList(scope.split("\\s+")))
-                : Set.of();
+        // Build UserInfo response
         String sub = (String) claims.get("sub");
+        String scope = (String) claims.get("scope");
 
         Map<String, Object> userInfo = new LinkedHashMap<>();
         userInfo.put("sub", sub);
-
-        // Load user profile if profile/email scopes are granted
-        if (scopes.contains("profile") || scopes.contains("email")) {
-            UserRepository userRepo = new UserRepository(dsl);
-            userRepo.findByAccount(sub).ifPresent(user -> {
-                var profileValues = userRepo.loadProfileValues(user.id());
-                for (var pv : profileValues) {
-                    String jsonName = pv.userProfileField().jsonName();
-                    if (scopes.contains("email") && "email".equals(jsonName)) {
-                        userInfo.put("email", pv.value());
-                    }
-                    if (scopes.contains("profile")) {
-                        if ("name".equals(jsonName) || "family_name".equals(jsonName)
-                                || "given_name".equals(jsonName) || "preferred_username".equals(jsonName)) {
-                            userInfo.put(jsonName, pv.value());
-                        }
-                    }
-                }
-            });
-        }
+        OidcClaimMapper.addUserClaimsByAccount(userInfo, sub, scope, dsl);
 
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 200)

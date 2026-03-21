@@ -1,5 +1,7 @@
 package net.unit8.bouncr.sign;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.security.KeyFactory;
@@ -15,6 +17,7 @@ import java.util.Map;
  * RS256 (RSASSA-PKCS1-v1_5 + SHA-256) JWT signer for OIDC IdP token issuance.
  */
 public class RsaJwtSigner {
+    private static final Logger LOG = LoggerFactory.getLogger(RsaJwtSigner.class);
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Base64.Encoder BASE64URL = Base64.getUrlEncoder().withoutPadding();
 
@@ -75,6 +78,7 @@ public class RsaJwtSigner {
             Map<String, Object> payload = JSON.readValue(payloadBytes, Map.class);
             return payload;
         } catch (Exception e) {
+            LOG.debug("JWT verification failed", e);
             return null;
         }
     }

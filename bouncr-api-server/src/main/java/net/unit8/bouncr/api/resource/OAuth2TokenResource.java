@@ -6,8 +6,8 @@ import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.resource.AllowedMethods;
-import net.unit8.bouncr.api.repository.OidcApplicationRepository;
-import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
+import net.unit8.bouncr.api.service.OidcClaimMapper;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
@@ -15,14 +15,17 @@ import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import net.unit8.bouncr.util.KeyEncryptor;
-import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -58,25 +61,14 @@ public class OAuth2TokenResource {
         }
 
         // 1. Authenticate client
-        boolean basicAuthAttempted = hasBasicAuth(request);
-        String[] clientCredentials = extractClientCredentials(params, request);
-        if (clientCredentials == null) {
+        OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
+        OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
+        boolean basicAuthAttempted = authenticator.hasBasicAuth(request);
+        if (authResult == null) {
             return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
-        String clientId = clientCredentials[0];
-        String clientSecret = clientCredentials[1];
-
-        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        OidcApplication app = repo.findByClientId(clientId).orElse(null);
-        if (app == null) {
-            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
-        }
-        // Verify client_secret: PBKDF2 hash with clientId as salt
-        byte[] inputHash = PasswordUtils.pbkdf2(clientSecret, clientId, 10000);
-        byte[] storedHash = Base64.getDecoder().decode(app.clientSecret());
-        if (!MessageDigest.isEqual(inputHash, storedHash)) {
-            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
-        }
+        OidcApplication app = authResult.app();
+        String clientId = app.clientId();
 
         // 2. Validate authorization code
         String code = params.get("code");
@@ -151,7 +143,7 @@ public class OAuth2TokenResource {
         if (authCode.nonce() != null) {
             idClaims.put("nonce", authCode.nonce());
         }
-        addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
+        OidcClaimMapper.addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
         String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
 
         // 8. Return token response
@@ -172,33 +164,6 @@ public class OAuth2TokenResource {
                 .build();
     }
 
-    private boolean hasBasicAuth(HttpRequest request) {
-        String authHeader = request.getHeaders().get("Authorization");
-        return authHeader != null && authHeader.startsWith("Basic ");
-    }
-
-    private String[] extractClientCredentials(Parameters params, HttpRequest request) {
-        String authHeader = request.getHeaders().get("Authorization");
-        if (authHeader != null && authHeader.startsWith("Basic ")) {
-            try {
-                String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)),
-                        StandardCharsets.UTF_8);
-                String[] parts = decoded.split(":", 2);
-                if (parts.length == 2) {
-                    return parts;
-                }
-            } catch (IllegalArgumentException e) {
-                // Invalid Base64 — fall through to POST body
-            }
-        }
-        String clientId = params.get("client_id");
-        String clientSecret = params.get("client_secret");
-        if (clientId != null && clientSecret != null) {
-            return new String[]{clientId, clientSecret};
-        }
-        return null;
-    }
-
     private boolean verifyPkce(String codeVerifier, String codeChallenge) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
@@ -209,28 +174,6 @@ public class OAuth2TokenResource {
                     codeChallenge.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             return false;
-        }
-    }
-
-    private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
-        if (scope == null) return;
-        Set<String> scopes = new HashSet<>(Arrays.asList(scope.split("\\s+")));
-        UserRepository userRepo = new UserRepository(dsl);
-
-        if (scopes.contains("profile") || scopes.contains("email")) {
-            var profileValues = userRepo.loadProfileValues(userId);
-            for (var pv : profileValues) {
-                String jsonName = pv.userProfileField().jsonName();
-                if (scopes.contains("email") && "email".equals(jsonName)) {
-                    claims.put("email", pv.value());
-                }
-                if (scopes.contains("profile")) {
-                    if ("name".equals(jsonName) || "family_name".equals(jsonName)
-                            || "given_name".equals(jsonName) || "preferred_username".equals(jsonName)) {
-                        claims.put(jsonName, pv.value());
-                    }
-                }
-            }
         }
     }
 
