@@ -38,11 +38,7 @@ public class RedisStoreProvider extends StoreProvider {
 
             @Override
             public void stop(StoreProvider provider) {
-                provider.setBouncrTokenStore(null);
-                provider.setRefreshTokenStore(null);
-                provider.setAuthorizationCodeStore(null);
-                provider.setAccessTokenStore(null);
-                provider.setOidcSessionStore(null);
+                // Do not null out stores — let GC handle cleanup.
             }
         };
     }
