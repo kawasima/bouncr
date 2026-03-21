@@ -1,5 +1,7 @@
 package net.unit8.bouncr.util;
 
+import enkan.exception.MisconfigurationException;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
@@ -27,6 +29,10 @@ public class KeyEncryptor {
      * Create an encryptor with the given 32-byte AES key, or null for no-op (dev mode).
      */
     public KeyEncryptor(byte[] keyBytes, SecureRandom random) {
+        if (keyBytes != null && keyBytes.length != 32) {
+            throw new MisconfigurationException("bouncr.KEY_ENCRYPTION_KEY_LENGTH",
+                    "Key encryption key must be 32 bytes (AES-256), got " + keyBytes.length);
+        }
         this.secretKey = keyBytes != null ? new SecretKeySpec(keyBytes, "AES") : null;
         this.random = random;
     }
@@ -52,6 +58,10 @@ public class KeyEncryptor {
     public byte[] decrypt(byte[] data) {
         if (secretKey == null) return data;
         try {
+            if (data.length < IV_LENGTH + 16) {
+                // Too short to be encrypted data (IV + GCM tag minimum) — treat as plaintext
+                return data;
+            }
             ByteBuffer buf = ByteBuffer.wrap(data);
             byte[] iv = new byte[IV_LENGTH];
             buf.get(iv);
@@ -62,7 +72,8 @@ public class KeyEncryptor {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             return cipher.doFinal(ciphertext);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt", e);
+            // Decryption failed — data may be legacy plaintext (stored before encryption was enabled)
+            return data;
         }
     }
 
