@@ -15,7 +15,8 @@ public enum BouncrProblem {
     MISMATCH_NONCE,
     MISSING_SUBJECT,
     INVALID_ID_TOKEN_SIGNATURE,
-    INVALID_ID_TOKEN_CLAIMS;
+    INVALID_ID_TOKEN_CLAIMS,
+    SESSION_EXPIRED;
 
     public URI problemUri() {
         return URI.create("/bouncr/problem/" + this.name());

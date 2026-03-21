@@ -112,6 +112,12 @@ public class SignInService {
         profileMap.put("permissionsByRealm", userRepo.getPermissionsByRealm(userId));
 
         storeProvider.getStore(BOUNCR_TOKEN).write(sessionId, profileMap);
+
+        // Re-write refresh token marker to extend TTL (sliding window)
+        HashMap<String, Object> refreshData = new HashMap<>();
+        refreshData.put("userId", userId);
+        storeProvider.getStore(REFRESH_TOKEN).write(sessionId, refreshData);
+
         LOG.debug("refreshed profileMap for user {} session {}", user.account(), sessionId);
         return profileMap;
     }
