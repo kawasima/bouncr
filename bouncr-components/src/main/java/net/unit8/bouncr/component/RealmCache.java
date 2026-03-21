@@ -4,13 +4,18 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.component.jooq.JooqProvider;
 import jakarta.inject.Inject;
+import net.unit8.raoh.Decoder;
+import net.unit8.raoh.jooq.JooqRecordDecoders;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record;
 
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static net.unit8.raoh.Decoders.combine;
+import static net.unit8.raoh.ObjectDecoders.long_;
+import static net.unit8.raoh.ObjectDecoders.string;
 import static org.jooq.impl.DSL.*;
 
 public class RealmCache extends SystemComponent<RealmCache> {
@@ -20,7 +25,7 @@ public class RealmCache extends SystemComponent<RealmCache> {
     private List<CachedRealm> cache;
 
     public record CachedRealm(Long realmId, String name, String url, Long applicationId,
-                               String virtualPath, String passTo, Pattern pathPattern) {
+                               String virtualPath, String passTo) {
     }
 
     // Unquoted field references — compatible with both H2 (uppercase) and PostgreSQL (lowercase)
@@ -31,6 +36,15 @@ public class RealmCache extends SystemComponent<RealmCache> {
     private static final Field<Long> A_APP_ID = field("a.application_id", Long.class);
     private static final Field<String> A_VIRTUAL_PATH = field("a.virtual_path", String.class);
     private static final Field<String> A_PASS_TO = field("a.pass_to", String.class);
+
+    private static final Decoder<Record, CachedRealm> CACHED_REALM_DECODER = combine(
+            JooqRecordDecoders.field("realm_id", long_()),
+            JooqRecordDecoders.field("name", string()),
+            JooqRecordDecoders.field("url", string()),
+            JooqRecordDecoders.field("application_id", long_()),
+            JooqRecordDecoders.field("virtual_path", string()),
+            JooqRecordDecoders.field("pass_to", string())
+    ).map(CachedRealm::new);
 
     @Override
     protected ComponentLifecycle<RealmCache> lifecycle() {
@@ -51,32 +65,33 @@ public class RealmCache extends SystemComponent<RealmCache> {
 
     public CachedRealm matches(String path) {
         return cache.stream()
-                .filter(realm -> realm.pathPattern().matcher(path).matches())
+                .filter(realm -> matchesPath(path, realm.virtualPath(), realm.url()))
                 .findAny()
                 .orElse(null);
+    }
+
+    private boolean matchesPath(String path, String virtualPath, String url) {
+        if (path == null || virtualPath == null || url == null) return false;
+        if (path.equals(virtualPath)) return true;
+        String joined = virtualPath.endsWith("/") ? virtualPath + url : virtualPath + "/" + url;
+        return path.equals(joined);
     }
 
     public synchronized void refresh() {
         DSLContext dsl = jooqProvider.getDSLContext();
 
-        cache = dsl.select(R_REALM_ID, R_NAME, R_URL, A_APP_ID, A_VIRTUAL_PATH, A_PASS_TO)
+        cache = dsl.select(
+                        R_REALM_ID.as("realm_id"),
+                        R_NAME.as("name"),
+                        R_URL.as("url"),
+                        A_APP_ID.as("application_id"),
+                        A_VIRTUAL_PATH.as("virtual_path"),
+                        A_PASS_TO.as("pass_to"))
                 .from(table("realms").as("r"))
                 .join(table("applications").as("a")).on(R_APP_ID.eq(A_APP_ID))
                 .fetch()
                 .stream()
-                .map(rec -> {
-                    String virtualPath = rec.get(A_VIRTUAL_PATH);
-                    String url = rec.get(R_URL);
-                    Pattern pattern = Pattern.compile("^" + virtualPath + "($|/" + url + ")");
-                    return new CachedRealm(
-                            rec.get(R_REALM_ID),
-                            rec.get(R_NAME),
-                            url,
-                            rec.get(A_APP_ID),
-                            virtualPath,
-                            rec.get(A_PASS_TO),
-                            pattern);
-                })
+                .map(rec -> CACHED_REALM_DECODER.decode(rec).getOrThrow())
                 .collect(Collectors.toList());
     }
 
