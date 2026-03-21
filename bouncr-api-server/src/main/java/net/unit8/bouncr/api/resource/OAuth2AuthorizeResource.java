@@ -73,15 +73,26 @@ public class OAuth2AuthorizeResource {
 
         // Compare as strings — URL.toString() may normalize ports, so this is an exact-match check.
         // Clients must send the exact same redirect_uri as registered.
+        if (app.callbackUrl() == null) {
+            return oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URL");
+        }
         String registeredCallback = app.callbackUrl().toString();
         if (redirectUri == null || !Objects.equals(redirectUri, registeredCallback)) {
             return oauthError(OAuth2Error.INVALID_REQUEST,
                     "redirect_uri does not match registered callback");
         }
-        // Only allow https (or http for localhost in development)
-        if (!redirectUri.startsWith("https://") && !redirectUri.startsWith("http://localhost")) {
-            return oauthError(OAuth2Error.INVALID_REQUEST,
-                    "redirect_uri must use https (http allowed only for localhost)");
+        // Only allow https (or http for localhost/127.0.0.1 in development)
+        try {
+            URI parsed = URI.create(redirectUri);
+            String host = parsed.getHost();
+            boolean isLocalDev = "http".equals(parsed.getScheme())
+                    && ("localhost".equals(host) || "127.0.0.1".equals(host));
+            if (!"https".equals(parsed.getScheme()) && !isLocalDev) {
+                return oauthError(OAuth2Error.INVALID_REQUEST,
+                        "redirect_uri must use https (http allowed only for localhost)");
+            }
+        } catch (IllegalArgumentException e) {
+            return oauthError(OAuth2Error.INVALID_REQUEST, "redirect_uri is not a valid URI");
         }
 
         // Validate scope — exact token match, not substring
@@ -108,7 +119,7 @@ public class OAuth2AuthorizeResource {
                     + "response_type=" + CodecUtils.urlEncode(responseType)
                     + "&client_id=" + CodecUtils.urlEncode(clientId)
                     + "&redirect_uri=" + CodecUtils.urlEncode(redirectUri)
-                    + "&scope=" + CodecUtils.urlEncode(scope)
+                    + "&scope=" + CodecUtils.urlEncode(scope != null ? scope : "")
                     + (state != null ? "&state=" + CodecUtils.urlEncode(state) : "")
                     + (params.get("nonce") != null ? "&nonce=" + CodecUtils.urlEncode(params.get("nonce")) : "")
                     + (codeChallenge != null ? "&code_challenge=" + CodecUtils.urlEncode(codeChallenge)

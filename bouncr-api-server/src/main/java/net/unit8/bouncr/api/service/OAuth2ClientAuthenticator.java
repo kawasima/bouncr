@@ -4,6 +4,8 @@ import enkan.collection.Parameters;
 import enkan.data.HttpRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
@@ -17,6 +19,7 @@ import java.util.Base64;
  * Supports HTTP Basic (client_secret_basic) and POST body (client_secret_post).
  */
 public class OAuth2ClientAuthenticator {
+    private static final Logger LOG = LoggerFactory.getLogger(OAuth2ClientAuthenticator.class);
 
     private final BouncrConfiguration config;
 
@@ -54,9 +57,10 @@ public class OAuth2ClientAuthenticator {
             storedHash = Base64.getDecoder().decode(app.clientSecret());
         } catch (IllegalArgumentException e) {
             // Legacy plaintext secret (not Base64-encoded PBKDF2 hash) — compare directly
+            LOG.warn("Client {} using legacy plaintext secret — migrate to PBKDF2 hash", clientId);
             if (!MessageDigest.isEqual(
-                    clientSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                    app.clientSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+                    clientSecret.getBytes(StandardCharsets.UTF_8),
+                    app.clientSecret().getBytes(StandardCharsets.UTF_8))) {
                 return null;
             }
             return new AuthResult(app, basicAuthAttempted);

@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -145,6 +146,9 @@ public class OAuth2TokenResource {
         }
         OidcClaimMapper.addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
         String idToken = RsaJwtSigner.sign(idClaims, privateKeyBytes, kid);
+
+        // Zero out decrypted private key material
+        Arrays.fill(privateKeyBytes, (byte) 0);
 
         // 8. Return token response
         Map<String, Object> response = new LinkedHashMap<>();

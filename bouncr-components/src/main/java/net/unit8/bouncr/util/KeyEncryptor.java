@@ -1,6 +1,8 @@
 package net.unit8.bouncr.util;
 
 import enkan.exception.MisconfigurationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -18,6 +20,7 @@ import java.security.SecureRandom;
  * return the input unchanged.</p>
  */
 public class KeyEncryptor {
+    private static final Logger LOG = LoggerFactory.getLogger(KeyEncryptor.class);
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int IV_LENGTH = 12;
     private static final int TAG_LENGTH_BITS = 128;
@@ -73,6 +76,7 @@ public class KeyEncryptor {
             return cipher.doFinal(ciphertext);
         } catch (Exception e) {
             // Decryption failed — data may be legacy plaintext (stored before encryption was enabled)
+            LOG.warn("Decryption failed (legacy plaintext data?): {}", e.getMessage());
             return data;
         }
     }

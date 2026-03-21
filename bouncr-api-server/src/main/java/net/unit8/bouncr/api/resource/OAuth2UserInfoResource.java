@@ -91,8 +91,11 @@ public class OAuth2UserInfoResource {
         }
 
         // Build UserInfo response
-        String sub = (String) claims.get("sub");
-        String scope = (String) claims.get("scope");
+        Object subObj = claims.get("sub");
+        if (!(subObj instanceof String sub)) {
+            return errorResponse(401, "invalid_token", "Token missing sub claim");
+        }
+        String scope = claims.get("scope") instanceof String s ? s : null;
 
         Map<String, Object> userInfo = new LinkedHashMap<>();
         userInfo.put("sub", sub);
