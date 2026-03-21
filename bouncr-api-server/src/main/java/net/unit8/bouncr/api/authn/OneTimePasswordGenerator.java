@@ -1,10 +1,9 @@
 package net.unit8.bouncr.api.authn;
 
-import org.bouncycastle.crypto.digests.SHA1Digest;
-import org.bouncycastle.crypto.macs.HMac;
-import org.bouncycastle.crypto.params.KeyParameter;
-
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -42,11 +41,7 @@ public class OneTimePasswordGenerator {
     }
 
     public int generateHotp(byte[] key, long counter) {
-        HMac hmac = new HMac(new SHA1Digest());
-        byte[] hash = new byte[hmac.getMacSize()];
-        hmac.init(new KeyParameter(key));
-        hmac.update(ByteBuffer.allocate(8).putLong(counter).array(), 0, 8);
-        hmac.doFinal(hash, 0);
+        byte[] hash = hmacSha1(key, ByteBuffer.allocate(8).putLong(counter).array());
         return dynamicTruncate(hash) % 1_000_000;
     }
 
@@ -63,5 +58,15 @@ public class OneTimePasswordGenerator {
         return IntStream.rangeClosed(0, num)
                 .mapToObj(i -> generateTotp(key, i))
                 .collect(Collectors.toSet());
+    }
+
+    private byte[] hmacSha1(byte[] key, byte[] message) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA1");
+            mac.init(new SecretKeySpec(key, "HmacSHA1"));
+            return mac.doFinal(message);
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Unable to compute HMAC-SHA1", e);
+        }
     }
 }

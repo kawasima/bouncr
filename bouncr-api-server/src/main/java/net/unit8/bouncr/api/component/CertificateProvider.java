@@ -18,7 +18,6 @@ import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -76,10 +75,8 @@ public class CertificateProvider extends SystemComponent<CertificateProvider> {
 
     public X509Certificate signCertificate(X509v3CertificateBuilder certificateBuilder) throws OperatorCreationException, CertificateException {
         ContentSigner signer = new JcaContentSignerBuilder(config.getCertConfiguration().getSignAlgorithm())
-                .setProvider(BouncyCastleProvider.PROVIDER_NAME)
                 .build(ca.getPrivateKey());
         return new JcaX509CertificateConverter()
-                .setProvider(BouncyCastleProvider.PROVIDER_NAME)
                 .getCertificate(certificateBuilder.build(signer));
     }
 

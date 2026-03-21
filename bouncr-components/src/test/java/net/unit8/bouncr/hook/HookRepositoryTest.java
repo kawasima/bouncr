@@ -3,21 +3,31 @@ package net.unit8.bouncr.hook;
 import net.unit8.bouncr.component.config.HookPoint;
 import org.junit.jupiter.api.Test;
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class HookRepositoryTest {
+    private static class RecordingHook implements Hook<String> {
+        private final List<String> messages = new ArrayList<>();
+
+        @Override
+        public void run(String message) {
+            messages.add(message);
+        }
+    }
+
     @Test
     void multipleHooksAtOnePoint() {
-        final Hook<String> hook1 = mock(Hook.class);
-        final Hook<String> hook2 = mock(Hook.class);
+        final RecordingHook hook1 = new RecordingHook();
+        final RecordingHook hook2 = new RecordingHook();
         final HookRepository repo = new HookRepository();
         repo.register(HookPoint.AFTER_SIGN_IN, hook1);
         repo.register(HookPoint.AFTER_SIGN_IN, hook2);
 
         repo.runHook(HookPoint.AFTER_SIGN_IN, "message");
-        verify(hook1).run(eq("message"));
-        verify(hook2).run(eq("message"));
+        assertThat(hook1.messages).containsExactly("message");
+        assertThat(hook2.messages).containsExactly("message");
     }
 }

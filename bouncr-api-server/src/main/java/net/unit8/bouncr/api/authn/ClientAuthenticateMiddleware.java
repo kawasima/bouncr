@@ -7,10 +7,10 @@ import enkan.data.HttpResponse;
 import enkan.data.PrincipalAvailable;
 import enkan.middleware.WebMiddleware;
 import enkan.util.MixinUtils;
-import org.bouncycastle.asn1.x500.RDN;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x500.style.IETFUtils;
+
+import javax.naming.InvalidNameException;
+import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
 
 /**
  * The logging for client authentication.
@@ -30,10 +30,23 @@ public class ClientAuthenticateMiddleware implements WebMiddleware {
         request = MixinUtils.mixin(request, PrincipalAvailable.class);
         String clientDN = request.getHeaders().get("X-Client-DN");
         if (!isAuthenticated(request) && clientDN != null) {
-            RDN cn = new X500Name(clientDN).getRDNs(BCStyle.CN)[0];
-            String account = IETFUtils.valueToString(cn.getFirst().getValue());
+            String account = extractCommonName(clientDN);
 
         }
         return chain.next(request);
+    }
+
+    static String extractCommonName(String dn) {
+        try {
+            LdapName ldapName = new LdapName(dn);
+            for (Rdn rdn : ldapName.getRdns()) {
+                if ("CN".equalsIgnoreCase(rdn.getType())) {
+                    return String.valueOf(rdn.getValue());
+                }
+            }
+            return null;
+        } catch (InvalidNameException e) {
+            return null;
+        }
     }
 }

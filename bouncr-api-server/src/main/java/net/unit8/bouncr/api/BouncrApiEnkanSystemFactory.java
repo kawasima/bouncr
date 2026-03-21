@@ -22,10 +22,8 @@ import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.KvsSettings;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.sign.JsonWebToken;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jooq.SQLDialect;
 
-import java.security.Security;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -33,12 +31,6 @@ import static enkan.component.ComponentRelationship.component;
 import static enkan.util.BeanBuilder.builder;
 
 public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
-    static {
-        if (Security.getProvider("BC") == null) {
-            Security.addProvider(new BouncyCastleProvider());
-        }
-    }
-
     @Override
     public EnkanSystem create() {
         boolean useRedis = Env.get("REDIS_URL") != null;

@@ -30,18 +30,18 @@ import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.util.UriInterpolator;
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
@@ -62,12 +62,11 @@ public class OidcSignInResource {
     private static final TypeReference<HashMap<String, Object>> GENERAL_JSON_REF = new TypeReference<>() {
     };
 
-    private static final OkHttpClient OKHTTP = new OkHttpClient().newBuilder()
-            .connectTimeout(3, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
             .build();
 
-    private static final JwksVerifier JWKS_VERIFIER = new JwksVerifier(OKHTTP);
+    private static final JwksVerifier JWKS_VERIFIER = new JwksVerifier(HTTP_CLIENT);
 
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<Invitation> INVITATION = ContextKey.of(Invitation.class);
@@ -118,46 +117,57 @@ public class OidcSignInResource {
                 : redirectUriBase + "/sign_in/oidc/" + (oidcProvider != null ? oidcProvider.name() : params.get("name"));
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
-            FormBody.Builder bodyBuilder = new FormBody.Builder()
-                    .add("grant_type", "authorization_code")
-                    .add("code", params.get("code"))
-                    .add("redirect_uri", redirectUri);
+            Map<String, String> form = new LinkedHashMap<>();
+            form.put("grant_type", "authorization_code");
+            form.put("code", params.get("code"));
+            form.put("redirect_uri", redirectUri);
 
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(oidcProvider.tokenEndpoint());
+            java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
+                    .uri(oidcProvider.tokenEndpoint())
+                    .timeout(Duration.ofSeconds(10))
+                    .header("content-type", "application/x-www-form-urlencoded");
 
             if (oidcProvider.tokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
-                bodyBuilder.add("client_id", oidcProvider.clientId())
-                        .add("client_secret", oidcProvider.clientSecret());
+                form.put("client_id", oidcProvider.clientId());
+                form.put("client_secret", oidcProvider.clientSecret());
             } else {
                 requestBuilder.header("Authorization", "Basic " +
                         Base64.getEncoder().encodeToString(
-                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes(StandardCharsets.UTF_8)));
             }
 
             if (oidcProvider.pkceEnabled() && oidcSession.codeVerifier() != null) {
-                bodyBuilder.add("code_verifier", oidcSession.codeVerifier());
+                form.put("code_verifier", oidcSession.codeVerifier());
             }
 
-            try (Response response = OKHTTP.newCall(requestBuilder.post(bodyBuilder.build()).build()).execute()) {
-                if (response.code() == 503) throw new FalteringEnvironmentException();
-                if (!response.isSuccessful()) {
-                    String errorBody = response.body() != null ? response.body().string() : null;
-                    if (errorBody != null && !errorBody.isEmpty()) {
+            java.net.http.HttpRequest requestToTokenEndpoint = requestBuilder
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(toFormBody(form)))
+                    .build();
+            HttpResponse<InputStream> response =
+                    HTTP_CLIENT.send(requestToTokenEndpoint, HttpResponse.BodyHandlers.ofInputStream());
+            if (response.statusCode() == 503) throw new FalteringEnvironmentException();
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                try (InputStream errorStream = response.body()) {
+                    if (errorStream != null) {
                         try {
-                            return jsonMapper.readValue(errorBody, GENERAL_JSON_REF);
+                            return jsonMapper.readValue(errorStream, GENERAL_JSON_REF);
                         } catch (Exception ignored) {
                             // Fall through to generic error
                         }
                     }
+                }
+                HashMap<String, Object> errorRes = new HashMap<>();
+                errorRes.put("error", "Token endpoint returned HTTP " + response.statusCode());
+                return errorRes;
+            }
+
+            try (InputStream in = response.body()) {
+                if (in == null) {
                     HashMap<String, Object> errorRes = new HashMap<>();
-                    errorRes.put("error", "Token endpoint returned HTTP " + response.code());
+                    errorRes.put("error", "Token endpoint returned empty body");
                     return errorRes;
                 }
-
-                try (InputStream in = response.body().byteStream()) {
-                    return jsonMapper.readValue(in, GENERAL_JSON_REF);
-                }
+                return jsonMapper.readValue(in, GENERAL_JSON_REF);
             }
         });
         String encodedIdToken = (String) res.get("id_token");
@@ -391,5 +401,18 @@ public class OidcSignInResource {
                         .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie))
                         .set(ApiResponse::setBody, userSession)
                         .build());
+    }
+
+    private static String toFormBody(Map<String, String> form) {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, String> entry : form.entrySet()) {
+            if (builder.length() > 0) {
+                builder.append('&');
+            }
+            builder.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
+            builder.append('=');
+            builder.append(URLEncoder.encode(Objects.toString(entry.getValue(), ""), StandardCharsets.UTF_8));
+        }
+        return builder.toString();
     }
 }

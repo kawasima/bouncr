@@ -2,18 +2,16 @@ package net.unit8.bouncr.api.service;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import net.unit8.bouncr.data.OidcProvider;
 
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.Security;
 import java.security.Signature;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
@@ -31,12 +29,6 @@ public class JwksVerifier {
     private static final long CACHE_TTL_MS = TimeUnit.HOURS.toMillis(1);
     private static final TypeReference<HashMap<String, Object>> JSON_REF = new TypeReference<>() {};
 
-    static {
-        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            Security.addProvider(new BouncyCastleProvider());
-        }
-    }
-
     private static final class CachedJwks {
         final List<Map<String, Object>> keys;
         final long fetchedAt;
@@ -52,10 +44,10 @@ public class JwksVerifier {
     }
 
     private final ConcurrentHashMap<Long, CachedJwks> cache = new ConcurrentHashMap<>();
-    private final OkHttpClient httpClient;
+    private final HttpClient httpClient;
     private final JsonMapper objectMapper = JsonMapper.builder().build();
 
-    public JwksVerifier(OkHttpClient httpClient) {
+    public JwksVerifier(HttpClient httpClient) {
         this.httpClient = httpClient;
     }
 
@@ -95,7 +87,7 @@ public class JwksVerifier {
             byte[] signingInput = (parts[0] + "." + parts[1]).getBytes("UTF-8");
             byte[] signatureBytes = Base64.getUrlDecoder().decode(parts[2]);
 
-            Signature sig = Signature.getInstance(jcaAlgorithm, BouncyCastleProvider.PROVIDER_NAME);
+            Signature sig = Signature.getInstance(jcaAlgorithm);
             sig.initVerify(publicKey);
             sig.update(signingInput);
             return sig.verify(signatureBytes);
@@ -111,14 +103,20 @@ public class JwksVerifier {
             return cached.keys;
         }
 
-        try (Response response = httpClient.newCall(
-                new Request.Builder().url(provider.jwksUri()).build()).execute()) {
-            try (InputStream in = response.body().byteStream()) {
-                Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
-                List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
-                cache.put(provider.id(), new CachedJwks(keys));
-                return keys;
-            }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(provider.jwksUri().toURI())
+                .GET()
+                .build();
+        HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException("Failed to fetch JWKS: " + response.statusCode());
+        }
+
+        try (InputStream in = response.body()) {
+            Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
+            List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
+            cache.put(provider.id(), new CachedJwks(keys));
+            return keys;
         }
     }
 
@@ -148,7 +146,7 @@ public class JwksVerifier {
         byte[] eBytes = Base64.getUrlDecoder().decode((String) key.get("e"));
         BigInteger modulus = new BigInteger(1, nBytes);
         BigInteger exponent = new BigInteger(1, eBytes);
-        KeyFactory kf = KeyFactory.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(new RSAPublicKeySpec(modulus, exponent));
     }
 
