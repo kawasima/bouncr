@@ -292,6 +292,8 @@ public abstract class E2ETestBase {
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))
                                 .build())
                 .set(BouncrConfiguration::setIssuerBaseUrl, "http://localhost:13005")
+                .set(BouncrConfiguration::setWebAuthnOrigin, "http://localhost:13005")
+                .set(BouncrConfiguration::setWebAuthnRpId, "localhost")
                 .build();
         GrantBouncrUserRole grantBouncrUserRole = new GrantBouncrUserRole();
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);

@@ -170,6 +170,12 @@
             <artifactId>bcpkix-jdk18on</artifactId>
         </dependency>
 
+        <!-- WebAuthn -->
+        <dependency>
+            <groupId>com.webauthn4j</groupId>
+            <artifactId>webauthn4j-core</artifactId>
+        </dependency>
+
         <!-- Misc -->
         <dependency>
             <groupId>is.tagomor.woothee</groupId>

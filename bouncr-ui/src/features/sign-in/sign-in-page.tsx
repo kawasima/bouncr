@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useAuth } from '@/auth/auth-context';
 import { ApiError, PROBLEM_TYPES } from '@/api/client';
 import * as api from '@/api/endpoints';
+import { isWebAuthnSupported, getAssertion } from '@/lib/webauthn';
 import type { Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
@@ -30,6 +31,26 @@ export function SignInPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignInForm>({
     resolver: zodResolver(signInSchema),
   });
+
+  async function onPasskeySignIn() {
+    setProblem(null);
+    try {
+      const options = await api.getWebAuthnSignInOptions();
+      const authJSON = await getAssertion(options);
+      const session = await api.signInWithWebAuthn(authJSON);
+      login(session.account ?? session.token, session.token);
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
+      navigate(from, { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setProblem(err.problem);
+      } else if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        // User cancelled
+      } else {
+        setProblem({ status: 0, detail: 'Passkey sign-in failed.' });
+      }
+    }
+  }
 
   async function onSubmit(data: SignInForm) {
     setProblem(null);
@@ -101,6 +122,21 @@ export function SignInPage() {
               {isSubmitting ? 'Entering...' : 'Enter'}
             </Button>
           </form>
+
+          {isWebAuthnSupported() && (
+            <>
+              <div className="mansion-divider my-6" />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full uppercase tracking-[0.15em] text-xs border-gold-muted text-gold hover:bg-gold/10"
+                disabled={isSubmitting}
+                onClick={onPasskeySignIn}
+              >
+                Sign in with Passkey
+              </Button>
+            </>
+          )}
 
           <div className="mansion-ornament mt-8">
             <span>✦</span>

@@ -232,4 +232,21 @@ public final class BouncrJsonDecoders {
             field("description", string().nonBlank()),
             optionalField("permissions", list(string()))
     ).map((name, hu, cu, desc, perms) -> new OidcApplicationUpdate(name, hu, cu, desc, perms.orElse(List.of())))::decode;
+
+    // ===== WebAuthn =====
+    public record WebAuthnRegister(String registrationResponseJSON, String credentialName) {}
+    public static final JsonDecoder<WebAuthnRegister> WEBAUTHN_REGISTER = combine(
+            field("registration_response_json", string().nonBlank()),
+            optionalField("credential_name", string().maxLength(100))
+    ).map((json, name) -> new WebAuthnRegister(json, name.orElse(null)))::decode;
+
+    public record WebAuthnAuthenticate(String authenticationResponseJSON) {}
+    public static final JsonDecoder<WebAuthnAuthenticate> WEBAUTHN_AUTHENTICATE =
+            field("authentication_response_json", string().nonBlank())
+                    .map(WebAuthnAuthenticate::new)::decode;
+
+    public record WebAuthnSignInOptions(String account) {}
+    public static final JsonDecoder<WebAuthnSignInOptions> WEBAUTHN_SIGN_IN_OPTIONS =
+            optionalField("account", string().maxLength(100))
+                    .map(acc -> new WebAuthnSignInOptions(acc.orElse(null)))::decode;
 }

@@ -17,6 +17,9 @@ export const PROBLEM_TYPES = {
   PASSWORD_MUST_BE_CHANGED: '/bouncr/problem/PASSWORD_MUST_BE_CHANGED',
   ONE_TIME_PASSWORD_IS_NEEDED: '/bouncr/problem/ONE_TIME_PASSWORD_IS_NEEDED',
   ACCOUNT_IS_LOCKED: '/bouncr/problem/ACCOUNT_IS_LOCKED',
+  WEBAUTHN_CHALLENGE_EXPIRED: '/bouncr/problem/WEBAUTHN_CHALLENGE_EXPIRED',
+  WEBAUTHN_VERIFICATION_FAILED: '/bouncr/problem/WEBAUTHN_VERIFICATION_FAILED',
+  WEBAUTHN_CREDENTIAL_NOT_FOUND: '/bouncr/problem/WEBAUTHN_CREDENTIAL_NOT_FOUND',
 } as const;
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>;

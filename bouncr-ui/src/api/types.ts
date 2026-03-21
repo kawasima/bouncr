@@ -134,6 +134,13 @@ export interface OtpKey {
   key?: string | null;
 }
 
+export interface WebAuthnCredentialInfo {
+  id: number;
+  credential_name: string;
+  transports: string;
+  discoverable: boolean;
+}
+
 export interface InitialPassword {
   password: string;
 }

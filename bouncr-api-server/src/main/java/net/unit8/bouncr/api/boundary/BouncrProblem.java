@@ -16,7 +16,10 @@ public enum BouncrProblem {
     MISSING_SUBJECT,
     INVALID_ID_TOKEN_SIGNATURE,
     INVALID_ID_TOKEN_CLAIMS,
-    SESSION_EXPIRED;
+    SESSION_EXPIRED,
+    WEBAUTHN_CHALLENGE_EXPIRED,
+    WEBAUTHN_VERIFICATION_FAILED,
+    WEBAUTHN_CREDENTIAL_NOT_FOUND;
 
     public URI problemUri() {
         return URI.create("/bouncr/problem/" + this.name());

@@ -7,6 +7,7 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2RefreshToken;
 import net.unit8.bouncr.data.OidcSession;
+import net.unit8.bouncr.data.WebAuthnChallenge;
 
 import java.util.HashMap;
 
@@ -36,6 +37,8 @@ public class RedisStoreProvider extends StoreProvider {
                         "BOUNCR_OAUTH2_REFRESH_TOKEN", OAuth2RefreshToken.class, config.getOauth2RefreshTokenExpires()));
                 provider.setOidcSessionStore(redis.createStore(
                         "BOUNCR_OIDC_SESSION", OidcSession.class, config.getOidcSessionExpires()));
+                provider.setWebAuthnChallengeStore(redis.createStore(
+                        "BOUNCR_WEBAUTHN_CHALLENGE", WebAuthnChallenge.class, config.getWebAuthnChallengeExpires()));
             }
 
             @Override
