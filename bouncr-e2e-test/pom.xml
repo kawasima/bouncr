@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>net.unit8.bouncr</groupId>
+        <artifactId>bouncr-parent</artifactId>
+        <version>0.3.0-SNAPSHOT</version>
+        <relativePath>..</relativePath>
+    </parent>
+    <packaging>jar</packaging>
+    <artifactId>bouncr-e2e-test</artifactId>
+    <description>E2E integration tests for Bouncr OIDC IdP using Playwright</description>
+
+    <dependencies>
+        <!-- Bouncr API server (for in-process EnkanSystem startup) -->
+        <dependency>
+            <groupId>net.unit8.bouncr</groupId>
+            <artifactId>bouncr-api-server</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- H2 for in-memory database -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Playwright for HTTP + browser testing -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.52.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- SLF4J for logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>e2e-test-secret-key-32-bytes-ok</JWT_SECRET>
+                        <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

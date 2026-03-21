@@ -11,6 +11,8 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
@@ -35,6 +37,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"GET", "POST"})
 public class OidcApplicationsResoruce {
     static final ContextKey<OidcApplicationCreate> CREATE_REQ = ContextKey.of(OidcApplicationCreate.class);
+    @SuppressWarnings("rawtypes")
+    static final ContextKey<HashMap> RESPONSE = ContextKey.of("response", HashMap.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -87,7 +91,7 @@ public class OidcApplicationsResoruce {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(OidcApplicationCreate createRequest, DSLContext dsl) {
+    public boolean create(OidcApplicationCreate createRequest, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
 
         String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
@@ -122,7 +126,7 @@ public class OidcApplicationsResoruce {
 
         // Return plaintext client_secret once (never stored or retrievable again)
         OidcApplication saved = repo.findByName(createRequest.name()).orElse(app);
-        Map<String, Object> response = new HashMap<>();
+        HashMap<String, Object> response = new HashMap<>();
         response.put("id", saved.id());
         response.put("name", saved.name());
         response.put("client_id", saved.clientId());
@@ -130,6 +134,13 @@ public class OidcApplicationsResoruce {
         response.put("home_url", saved.homeUrl());
         response.put("callback_url", saved.callbackUrl());
         response.put("description", saved.description());
+        context.put(RESPONSE, response);
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Decision(HANDLE_CREATED)
+    public Map<String, Object> handleCreated(HashMap response) {
         return response;
     }
 }
