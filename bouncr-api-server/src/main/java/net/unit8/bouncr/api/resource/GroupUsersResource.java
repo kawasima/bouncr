@@ -27,7 +27,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"GET", "POST", "DELETE"})
 public class GroupUsersResource {
     @SuppressWarnings("unchecked")
-    static final ContextKey<List<String>> USER_ACCOUNTS = (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of(List.class);
+    static final ContextKey<List<String>> USER_ACCOUNTS =
+            (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of("userAccounts", List.class);
     static final ContextKey<Group> GROUP = ContextKey.of(Group.class);
 
     @Decision(value = MALFORMED, method = {"POST", "DELETE"})

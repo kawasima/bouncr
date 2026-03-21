@@ -146,16 +146,25 @@ public class UserRepository {
     }
 
     public void delete(Long userId) {
+        dsl.deleteFrom(table("user_profile_values"))
+                .where(field("user_id").eq(userId))
+                .execute();
         dsl.deleteFrom(table("users"))
                 .where(field("user_id").eq(userId))
                 .execute();
     }
 
     public void addToGroup(Long userId, Long groupId) {
-        dsl.insertInto(table("memberships"), field("user_id"), field("group_id"))
-                .values(userId, groupId)
-                .onConflictDoNothing()
-                .execute();
+        int exists = dsl.selectCount()
+                .from(table("memberships"))
+                .where(field("user_id").eq(userId)
+                        .and(field("group_id").eq(groupId)))
+                .fetchOne(0, int.class);
+        if (exists == 0) {
+            dsl.insertInto(table("memberships"), field("user_id"), field("group_id"))
+                    .values(userId, groupId)
+                    .execute();
+        }
     }
 
     public void removeFromGroup(Long userId, Long groupId) {
@@ -329,15 +338,19 @@ public class UserRepository {
     }
 
     public void upsertProfileVerification(Long userId, Long fieldId, String code, java.time.LocalDateTime expiresAt) {
-        dsl.insertInto(table("user_profile_verifications"),
-                        field("user_profile_field_id"), field("user_id"),
-                        field("code"), field("expires_at"))
-                .values(fieldId, userId, code, expiresAt)
-                .onConflict(field("user_profile_field_id"), field("user_id"))
-                .doUpdate()
+        int updated = dsl.update(table("user_profile_verifications"))
                 .set(field("code"), (Object) code)
                 .set(field("expires_at"), (Object) expiresAt)
+                .where(field("user_profile_field_id").eq(fieldId)
+                        .and(field("user_id").eq(userId)))
                 .execute();
+        if (updated == 0) {
+            dsl.insertInto(table("user_profile_verifications"),
+                            field("user_profile_field_id"), field("user_id"),
+                            field("code"), field("expires_at"))
+                    .values(fieldId, userId, code, expiresAt)
+                    .execute();
+        }
     }
 
     public void deleteProfileVerifications(Long userId) {

@@ -28,7 +28,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"GET", "POST", "DELETE"})
 public class RolePermissionsResource {
     @SuppressWarnings("unchecked")
-    static final ContextKey<List<String>> PERMISSION_NAMES = (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of(List.class);
+    static final ContextKey<List<String>> PERMISSION_NAMES =
+            (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of("permissionNames", List.class);
     static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
     @Decision(value = MALFORMED, method = {"POST", "DELETE"})

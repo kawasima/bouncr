@@ -14,6 +14,10 @@
     <artifactId>bouncr-e2e-test</artifactId>
     <description>E2E integration tests for Bouncr OIDC IdP using Playwright</description>
 
+    <properties>
+        <e2e.tags>e2e-smoke</e2e.tags>
+    </properties>
+
     <dependencies>
         <!-- Bouncr API server (for in-process EnkanSystem startup) -->
         <dependency>
@@ -52,6 +56,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <groups>${e2e.tags}</groups>
                     <environmentVariables>
                         <JWT_SECRET>e2e-test-secret-key-32-bytes-ok</JWT_SECRET>
                         <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
@@ -60,4 +65,19 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>e2e-full</id>
+            <activation>
+                <property>
+                    <name>e2e.full</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <e2e.tags>e2e-smoke | e2e-full</e2e.tags>
+            </properties>
+        </profile>
+    </profiles>
 </project>
