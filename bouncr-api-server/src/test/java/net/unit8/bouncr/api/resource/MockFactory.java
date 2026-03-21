@@ -1,8 +1,8 @@
 package net.unit8.bouncr.api.resource;
 
 import org.flywaydb.core.api.configuration.Configuration;
-import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
+import org.flywaydb.core.api.migration.JavaMigration;
 import org.h2.jdbcx.JdbcDataSource;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
@@ -25,34 +25,8 @@ public class MockFactory {
     private static volatile DSLContext sharedDSLContext;
     private static final ThreadLocal<Connection> txConnection = new ThreadLocal<>();
 
-    private static final BaseJavaMigration[] MIGRATIONS = {
-            new db.migration.V1__CreateUsers(),
-            new db.migration.V2__CreateGroups(),
-            new db.migration.V3__CreateApplications(),
-            new db.migration.V4__CreateRoles(),
-            new db.migration.V5__CreatePermissions(),
-            new db.migration.V6__CreateRealms(),
-            new db.migration.V7__CreateMemberships(),
-            new db.migration.V8__CreateRolePermissions(),
-            new db.migration.V9__CreateAssinments(),
-            new db.migration.V10__CreatePasswordCredentials(),
-            new db.migration.V12__CreateUserActions(),
-            new db.migration.V13__CreateOidcProviders(),
-            new db.migration.V14__CreateCertificateCredentials(),
-            new db.migration.V15__CreateOidcUsers(),
-            new db.migration.V16__CreateOidcApplications(),
-            new db.migration.V17__CreateInvitations(),
-            new db.migration.V18__CreateUserLocks(),
-            new db.migration.V19__CreateUserSessions(),
-            new db.migration.V20__CreateCerts(),
-            new db.migration.V21__CreateUserProfiles(),
-            new db.migration.V22__AlterInvitations(),
-            new db.migration.V23__InsertAdminUser(),
-            new db.migration.V24__AddAccountLowerToUser(),
-            new db.migration.V25__AddRedirectUriToOidcProvider(),
-            new db.migration.V26__AddJwksUriAndIssuerToOidcProvider(),
-            new db.migration.V27__AddPkceEnabledToOidcProvider(),
-            new db.migration.V28__AlterOidcApplicationSecretLength(),
+    private static final JavaMigration[] MIGRATIONS = {
+            new db.migration.B28__BouncrV0_3_0(),
     };
 
     /**
@@ -111,7 +85,7 @@ public class MockFactory {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(true);
             FlywayContext ctx = new FlywayContext(conn);
-            for (BaseJavaMigration migration : MIGRATIONS) {
+            for (JavaMigration migration : MIGRATIONS) {
                 migration.migrate(ctx);
             }
         } catch (Exception e) {
