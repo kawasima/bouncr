@@ -5,16 +5,24 @@ import enkan.collection.Parameters;
 import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.Problem;
+import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.decoder.BouncrFormDecoders;
+import net.unit8.bouncr.api.decoder.BouncrFormDecoders.IntrospectionRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.bouncr.data.OAuth2Error;
+import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.sign.RsaJwtSigner;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
@@ -22,20 +30,66 @@ import static kotowari.restful.DecisionPoint.*;
 
 /**
  * OAuth2 Token Introspection endpoint (RFC 7662).
- * POST /oauth2/token/introspect (application/x-www-form-urlencoded)
+ * {@code POST /oauth2/token/introspect} ({@code application/x-www-form-urlencoded})
  *
- * Allows the token-issuing client to validate its own access tokens.
- * Cross-client introspection is not permitted — only tokens issued to the
- * authenticated client are returned as active.
+ * <p>Allows the token-issuing client to validate its own access tokens.
+ * Cross-client introspection is not permitted.
  */
 @AllowedMethods("POST")
 public class OAuth2TokenIntrospectionResource {
+    static final ContextKey<IntrospectionRequest> INTROSPECT_REQ =
+            ContextKey.of("introspectReq", IntrospectionRequest.class);
+    static final ContextKey<OidcApplication> CLIENT_APP = ContextKey.of(OidcApplication.class);
+    static final ContextKey<Boolean> BASIC_AUTH_ATTEMPTED = ContextKey.of("basicAuthAttempted", Boolean.class);
+
     @Inject
     private BouncrConfiguration config;
 
+    @Decision(value = MALFORMED, method = "POST")
+    public Problem isMalformed(Parameters params, RestContext context) {
+        return switch (BouncrFormDecoders.INTROSPECTION_REQUEST.decode(params)) {
+            case Ok<IntrospectionRequest> ok -> {
+                context.put(INTROSPECT_REQ, ok.value());
+                yield null;
+            }
+            case Err<IntrospectionRequest> err -> {
+                List<Problem.Violation> violations = err.issues().asList().stream()
+                        .map(issue -> new Problem.Violation(
+                                issue.path().toString(), issue.code(), issue.message()))
+                        .toList();
+                yield Problem.fromViolationList(violations);
+            }
+        };
+    }
+
     @Decision(AUTHORIZED)
-    public boolean authorized() {
+    public boolean isAuthorized(Parameters params, HttpRequest request,
+                                RestContext context, DSLContext dsl) {
+        OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
+        context.put(BASIC_AUTH_ATTEMPTED, authenticator.hasBasicAuth(request));
+        OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
+        if (authResult == null) return false;
+        context.put(CLIENT_APP, authResult.app());
         return true;
+    }
+
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized(Boolean basicAuthAttempted) {
+        boolean basic = basicAuthAttempted != null && basicAuthAttempted;
+        Headers headers = basic
+                ? Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
+                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
+                : Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", "invalid_client");
+        body.put("error_description", "Client authentication failed");
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 401)
+                .set(ApiResponse::setHeaders, headers)
+                .set(ApiResponse::setBody, body)
+                .build();
     }
 
     @Decision(POST)
@@ -44,57 +98,30 @@ public class OAuth2TokenIntrospectionResource {
     }
 
     @Decision(HANDLE_CREATED)
-    public ApiResponse handleCreated(Parameters params, HttpRequest request, DSLContext dsl) {
-        // 1. Authenticate client (required per RFC 7662 §2.1)
-        OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
-        boolean basicAuthAttempted = authenticator.hasBasicAuth(request);
-        OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
-        if (authResult == null) {
-            return errorResponse(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
-        }
+    public ApiResponse handleCreated(IntrospectionRequest introspectionRequest,
+                                     OidcApplication oidcApplication, DSLContext dsl) {
+        String token = introspectionRequest.token();
 
-        // 2. Get token to introspect (required per RFC 7662 §2.1)
-        String token = params.get("token");
-        if (token == null || token.isBlank()) {
-            return errorResponse(OAuth2Error.INVALID_REQUEST, "The 'token' parameter is required", basicAuthAttempted);
-        }
-
-        // 3. Decode unverified payload to extract client_id for key lookup
         Map<String, Object> unverifiedPayload = RsaJwtSigner.extractUnverifiedClaims(token);
-        if (unverifiedPayload == null) {
-            return inactiveResponse();
-        }
+        if (unverifiedPayload == null) return inactiveResponse();
 
         Object clientIdObj = unverifiedPayload.get("client_id");
-        if (!(clientIdObj instanceof String tokenClientId)) {
-            return inactiveResponse();
-        }
+        if (!(clientIdObj instanceof String tokenClientId)) return inactiveResponse();
+        if (!tokenClientId.equals(oidcApplication.clientId())) return inactiveResponse();
 
-        // Only allow introspection of tokens issued to the authenticated client
-        if (!tokenClientId.equals(authResult.app().clientId())) {
-            return inactiveResponse();
-        }
-
-        // 4. Load public key and verify signature
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         byte[] publicKey = repo.findPublicKeyByClientId(tokenClientId).orElse(null);
-        if (publicKey == null) {
-            return inactiveResponse();
-        }
+        if (publicKey == null) return inactiveResponse();
 
         Map<String, Object> claims = RsaJwtSigner.verify(token, publicKey);
-        if (claims == null) {
-            return inactiveResponse();
-        }
+        if (claims == null) return inactiveResponse();
 
-        // 5. Check expiry
         long now = config.getClock().instant().getEpochSecond();
         Object expObj = claims.get("exp");
         if (!(expObj instanceof Number) || ((Number) expObj).longValue() < now) {
             return inactiveResponse();
         }
 
-        // 6. Build active response (RFC 7662 §2.2)
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("active", true);
         if (claims.get("sub") != null) response.put("sub", claims.get("sub"));
@@ -106,40 +133,20 @@ public class OAuth2TokenIntrospectionResource {
         if (claims.get("jti") != null) response.put("jti", claims.get("jti"));
         response.put("token_type", "Bearer");
 
-        return builder(new ApiResponse())
-                .set(ApiResponse::setStatus, 200)
-                .set(ApiResponse::setHeaders, Headers.of(
-                        "Content-Type", "application/json",
-                        "Cache-Control", "no-store",
-                        "Pragma", "no-cache"))
-                .set(ApiResponse::setBody, response)
-                .build();
+        return jsonResponse(200, response);
     }
 
     private ApiResponse inactiveResponse() {
+        return jsonResponse(200, Map.of("active", false));
+    }
+
+    private ApiResponse jsonResponse(int status, Map<String, ?> body) {
         return builder(new ApiResponse())
-                .set(ApiResponse::setStatus, 200)
+                .set(ApiResponse::setStatus, status)
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Content-Type", "application/json",
                         "Cache-Control", "no-store",
                         "Pragma", "no-cache"))
-                .set(ApiResponse::setBody, Map.of("active", false))
-                .build();
-    }
-
-    private ApiResponse errorResponse(OAuth2Error error, String description, boolean basicAuthAttempted) {
-        Map<String, String> body = new LinkedHashMap<>();
-        body.put("error", error.getValue());
-        if (description != null) body.put("error_description", description);
-        Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
-                ? Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store", "Pragma", "no-cache",
-                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
-                : Headers.of("Content-Type", "application/json",
-                        "Cache-Control", "no-store", "Pragma", "no-cache");
-        return builder(new ApiResponse())
-                .set(ApiResponse::setStatus, error.getStatusCode())
-                .set(ApiResponse::setHeaders, headers)
                 .set(ApiResponse::setBody, body)
                 .build();
     }

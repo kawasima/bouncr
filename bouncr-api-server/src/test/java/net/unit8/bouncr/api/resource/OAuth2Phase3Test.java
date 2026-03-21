@@ -1,6 +1,8 @@
 package net.unit8.bouncr.api.resource;
 
 import net.unit8.bouncr.data.OAuth2RefreshToken;
+import net.unit8.bouncr.data.Scope;
+import net.unit8.bouncr.data.UserIdentity;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,17 +37,20 @@ class OAuth2Phase3Test {
 
     @Test
     void refreshToken_recordRoundTrip() {
-        OAuth2RefreshToken rt = new OAuth2RefreshToken("client1", 42L, "admin", "openid profile", 1700000000L);
+        UserIdentity user = new UserIdentity(42L, "admin");
+        Scope scope = Scope.parse("openid profile");
+        OAuth2RefreshToken rt = new OAuth2RefreshToken("client1", user, scope, 1700000000L);
         assertThat(rt.clientId()).isEqualTo("client1");
-        assertThat(rt.userId()).isEqualTo(42L);
-        assertThat(rt.userAccount()).isEqualTo("admin");
-        assertThat(rt.scope()).isEqualTo("openid profile");
+        assertThat(rt.user().userId()).isEqualTo(42L);
+        assertThat(rt.user().account()).isEqualTo("admin");
+        assertThat(rt.scope().contains("openid")).isTrue();
+        assertThat(rt.scope().contains("profile")).isTrue();
         assertThat(rt.createdAt()).isEqualTo(1700000000L);
     }
 
     @Test
     void refreshToken_isSerializable() {
-        OAuth2RefreshToken rt = new OAuth2RefreshToken("c", 1L, "u", "s", 0L);
+        OAuth2RefreshToken rt = new OAuth2RefreshToken("c", new UserIdentity(1L, "u"), Scope.parse("s"), 0L);
         assertThat(rt).isInstanceOf(java.io.Serializable.class);
     }
 

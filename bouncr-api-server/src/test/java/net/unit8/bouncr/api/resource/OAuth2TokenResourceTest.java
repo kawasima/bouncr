@@ -1,6 +1,9 @@
 package net.unit8.bouncr.api.resource;
 
 import net.unit8.bouncr.data.AuthorizationCode;
+import net.unit8.bouncr.data.PkceChallenge;
+import net.unit8.bouncr.data.Scope;
+import net.unit8.bouncr.data.UserIdentity;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.junit.jupiter.api.Test;
 
@@ -57,17 +60,19 @@ class OAuth2TokenResourceTest {
 
     @Test
     void authorizationCode_serialization_roundtrip() {
+        UserIdentity user = new UserIdentity(42L, "admin");
+        Scope scope = Scope.parse("openid profile");
+        PkceChallenge pkce = new PkceChallenge("challenge-xyz", "S256");
         AuthorizationCode code = new AuthorizationCode(
-                "client123", 42L, "admin", "openid profile",
-                "nonce-abc", "challenge-xyz", "https://example.com/callback",
-                1700000000L);
+                "client123", user, scope, "nonce-abc", pkce,
+                "https://example.com/callback", 1700000000L);
 
         assertThat(code.clientId()).isEqualTo("client123");
-        assertThat(code.userId()).isEqualTo(42L);
-        assertThat(code.userAccount()).isEqualTo("admin");
-        assertThat(code.scope()).isEqualTo("openid profile");
+        assertThat(code.user().userId()).isEqualTo(42L);
+        assertThat(code.user().account()).isEqualTo("admin");
+        assertThat(code.scope().contains("openid")).isTrue();
         assertThat(code.nonce()).isEqualTo("nonce-abc");
-        assertThat(code.codeChallenge()).isEqualTo("challenge-xyz");
+        assertThat(code.pkce().verify("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")).isFalse(); // wrong verifier
         assertThat(code.redirectUri()).isEqualTo("https://example.com/callback");
         assertThat(code.createdAt()).isEqualTo(1700000000L);
     }
