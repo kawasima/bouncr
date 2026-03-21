@@ -20,7 +20,7 @@ import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.ACCESS_TOKEN;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
 
 /**
@@ -72,9 +72,9 @@ public class OAuth2TokenRevocationResource {
         if (authCodeData instanceof AuthorizationCode ac && authenticatedClientId.equals(ac.clientId())) {
             storeProvider.getStore(AUTHORIZATION_CODE).delete(token);
         }
-        var refreshData = storeProvider.getStore(ACCESS_TOKEN).read(token);
+        var refreshData = storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(token);
         if (refreshData instanceof OAuth2RefreshToken rt && authenticatedClientId.equals(rt.clientId())) {
-            storeProvider.getStore(ACCESS_TOKEN).delete(token);
+            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(token);
         }
         // Unknown tokens or tokens belonging to other clients are silently ignored (200 OK per RFC 7009 §2.2)
 

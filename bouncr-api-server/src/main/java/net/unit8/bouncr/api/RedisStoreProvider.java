@@ -32,8 +32,8 @@ public class RedisStoreProvider extends StoreProvider {
                         "BOUNCR_REFRESH", HashMap.class, config.getRefreshTokenExpires()));
                 provider.setAuthorizationCodeStore(redis.createStore(
                         "BOUNCR_AUTHORIZATION_CODE", AuthorizationCode.class, config.getAuthorizationCodeExpires()));
-                provider.setAccessTokenStore(redis.createStore(
-                        "BOUNCR_ACCESS_TOKEN", OAuth2RefreshToken.class, config.getOauth2RefreshTokenExpires()));
+                provider.setOauth2RefreshTokenStore(redis.createStore(
+                        "BOUNCR_OAUTH2_REFRESH_TOKEN", OAuth2RefreshToken.class, config.getOauth2RefreshTokenExpires()));
                 provider.setOidcSessionStore(redis.createStore(
                         "BOUNCR_OIDC_SESSION", OidcSession.class, config.getOidcSessionExpires()));
             }

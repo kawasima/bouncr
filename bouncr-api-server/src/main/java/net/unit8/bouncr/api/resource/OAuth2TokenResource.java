@@ -35,7 +35,7 @@ import java.util.UUID;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
-import static net.unit8.bouncr.component.StoreProvider.StoreType.ACCESS_TOKEN;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
 
 /**
@@ -151,7 +151,7 @@ public class OAuth2TokenResource {
             String refreshToken = UUID.randomUUID().toString();
             OAuth2RefreshToken refreshData = new OAuth2RefreshToken(
                     clientId, authCode.userId(), authCode.userAccount(), authCode.scope(), now);
-            storeProvider.getStore(ACCESS_TOKEN).write(refreshToken, refreshData);
+            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(refreshToken, refreshData);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("access_token", accessToken);
@@ -175,7 +175,7 @@ public class OAuth2TokenResource {
             return tokenError(OAuth2Error.INVALID_REQUEST, "refresh_token is required");
         }
 
-        Serializable stored = storeProvider.getStore(ACCESS_TOKEN).read(refreshToken);
+        Serializable stored = storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(refreshToken);
         if (!(stored instanceof OAuth2RefreshToken refreshData)) {
             return tokenError(OAuth2Error.INVALID_GRANT, "Refresh token is invalid or expired");
         }
@@ -213,10 +213,10 @@ public class OAuth2TokenResource {
             String newRefreshToken = UUID.randomUUID().toString();
             OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
                     clientId, refreshData.userId(), refreshData.userAccount(), scope, now);
-            storeProvider.getStore(ACCESS_TOKEN).write(newRefreshToken, newRefreshData);
+            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(newRefreshToken, newRefreshData);
 
             // Delete old refresh token after new one is safely stored (rotation)
-            storeProvider.getStore(ACCESS_TOKEN).delete(refreshToken);
+            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(refreshToken);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("access_token", accessToken);
