@@ -4,11 +4,13 @@ import tools.jackson.databind.json.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 
-import java.net.SocketTimeoutException;
+import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -25,12 +27,17 @@ public class WebHook<T> implements Hook<T> {
 
     private RetryPolicy<HttpResponse<String>> idempotent = RetryPolicy.<HttpResponse<String>>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
-            .handle(SocketTimeoutException.class)
+            .handle(HttpTimeoutException.class)
+            .handle(HttpConnectTimeoutException.class)
+            .handle(IOException.class)
             .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
     private RetryPolicy<HttpResponse<String>> notIdempotent = RetryPolicy.<HttpResponse<String>>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
+            .handle(HttpTimeoutException.class)
+            .handle(HttpConnectTimeoutException.class)
+            .handle(IOException.class)
             .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
@@ -63,7 +70,7 @@ public class WebHook<T> implements Hook<T> {
                             .timeout(Duration.ofSeconds(10))
                             .header("content-type", "application/json");
                     if (headers != null) {
-                        headers.forEach(requestBuilder::addHeader);
+                        headers.forEach(requestBuilder::header);
                     }
                     HttpRequest request;
                     if (method.equalsIgnoreCase("get")) {
@@ -74,7 +81,12 @@ public class WebHook<T> implements Hook<T> {
                                 .method(method, HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
                                 .build();
                     }
-                    return client.send(request, HttpResponse.BodyHandlers.ofString());
+                    try {
+                        return client.send(request, HttpResponse.BodyHandlers.ofString());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Interrupted while sending webhook", e);
+                    }
                 });
     }
 }

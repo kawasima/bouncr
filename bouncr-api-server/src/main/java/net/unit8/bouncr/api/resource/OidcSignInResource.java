@@ -143,8 +143,13 @@ public class OidcSignInResource {
             java.net.http.HttpRequest requestToTokenEndpoint = requestBuilder
                     .POST(java.net.http.HttpRequest.BodyPublishers.ofString(toFormBody(form)))
                     .build();
-            HttpResponse<InputStream> response =
-                    HTTP_CLIENT.send(requestToTokenEndpoint, HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<InputStream> response;
+            try {
+                response = HTTP_CLIENT.send(requestToTokenEndpoint, HttpResponse.BodyHandlers.ofInputStream());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while calling OIDC token endpoint", e);
+            }
             if (response.statusCode() == 503) throw new FalteringEnvironmentException();
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 try (InputStream errorStream = response.body()) {

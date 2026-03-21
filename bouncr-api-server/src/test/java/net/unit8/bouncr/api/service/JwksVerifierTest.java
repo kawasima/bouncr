@@ -12,6 +12,8 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
@@ -63,13 +65,60 @@ class JwksVerifierTest {
         }
     }
 
+    @Test
+    void verifyWithPs256Jwks() throws Exception {
+        KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        String kid = "test-kid-ps";
+
+        String jwks = """
+                {"keys":[{"kty":"RSA","kid":"%s","n":"%s","e":"%s"}]}
+                """.formatted(
+                kid,
+                base64Url(publicKey.getModulus().toByteArray()),
+                base64Url(publicKey.getPublicExponent().toByteArray()));
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/jwks", exchange -> {
+            byte[] body = jwks.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("content-type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        server.start();
+
+        try {
+            OidcProvider provider = new OidcProvider(
+                    2L, "p", "p", "cid", "sec", "openid",
+                    ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+                    null,
+                    new java.net.URL("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                    "issuer", false
+            );
+            JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
+
+            String token = createJwt("PS256", kid, keyPair, "{\"sub\":\"u2\"}");
+            assertThat(verifier.verify(token, provider)).isTrue();
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static String createJwt(String alg, String kid, KeyPair keyPair, String payloadJson) throws Exception {
         String headerJson = "{\"alg\":\"" + alg + "\",\"kid\":\"" + kid + "\",\"typ\":\"JWT\"}";
         String header = base64Url(headerJson.getBytes(StandardCharsets.UTF_8));
         String payload = base64Url(payloadJson.getBytes(StandardCharsets.UTF_8));
         String signingInput = header + "." + payload;
 
-        Signature signature = Signature.getInstance("SHA256withRSA");
+        Signature signature;
+        if ("PS256".equals(alg)) {
+            signature = Signature.getInstance("RSASSA-PSS");
+            signature.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, 32, 1));
+        } else {
+            signature = Signature.getInstance("SHA256withRSA");
+        }
         signature.initSign(keyPair.getPrivate());
         signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
         String sign = base64Url(signature.sign());
