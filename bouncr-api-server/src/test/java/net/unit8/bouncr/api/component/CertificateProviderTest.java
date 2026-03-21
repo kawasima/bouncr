@@ -11,7 +11,6 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.junit.jupiter.api.Test;
 
 import javax.security.auth.x500.X500PrivateCredential;
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -45,7 +44,7 @@ class CertificateProviderTest {
         CertConfiguration certConfig = new CertConfiguration();
         config.setCertConfiguration(certConfig);
         config.setSecureRandom(new SecureRandom());
-        setField(provider, "config", config);
+        provider.setConfigForTest(config);
 
         X500Name leafName = new X500Name("CN=Leaf");
         X509v3CertificateBuilder leafBuilder = new JcaX509v3CertificateBuilder(
@@ -54,11 +53,5 @@ class CertificateProviderTest {
 
         assertThat(leafCert.getSubjectX500Principal().getName()).contains("CN=Leaf");
         leafCert.verify(caKeyPair.getPublic());
-    }
-
-    private static void setField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }
