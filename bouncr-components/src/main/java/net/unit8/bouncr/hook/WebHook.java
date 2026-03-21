@@ -35,9 +35,6 @@ public class WebHook<T> implements Hook<T> {
 
     private RetryPolicy<HttpResponse<String>> notIdempotent = RetryPolicy.<HttpResponse<String>>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
-            .handle(HttpTimeoutException.class)
-            .handle(HttpConnectTimeoutException.class)
-            .handle(IOException.class)
             .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
@@ -59,6 +56,16 @@ public class WebHook<T> implements Hook<T> {
     @Override
     public void run(T object) {
         RetryPolicy<HttpResponse<String>> retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
+        final String payload;
+        if (!method.equalsIgnoreCase("get")) {
+            try {
+                payload = mapper.writeValueAsString(object);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to serialize webhook payload", e);
+            }
+        } else {
+            payload = null;
+        }
         Failsafe.with(retryPolicy)
                 .with(executor)
                 .onSuccess(response -> {
@@ -76,7 +83,6 @@ public class WebHook<T> implements Hook<T> {
                     if (method.equalsIgnoreCase("get")) {
                         request = requestBuilder.GET().build();
                     } else {
-                        String payload = mapper.writeValueAsString(object);
                         request = requestBuilder
                                 .method(method, HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
                                 .build();
