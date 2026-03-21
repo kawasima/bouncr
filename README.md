@@ -84,6 +84,23 @@ cd bouncr-ui
 npm run build
 ```
 
+## Migration Upgrade Note
+
+From this change onward, historical Java migrations `V1` through `V28` are consolidated into a single baseline migration `B28__BouncrV0_3_0`.
+
+For an existing database that already has `V1..V28` rows in `flyway_schema_history`, run a one-time Flyway repair before starting the upgraded application, so removed local migration classes are marked as deleted in history.
+
+```bash
+# Example (adjust URL/user/password for your environment)
+flyway \
+  -url=jdbc:postgresql://<host>:5432/<db> \
+  -user=<user> \
+  -password=<password> \
+  repair
+```
+
+Fresh databases are created from `B28__BouncrV0_3_0`.
+
 ## License
 
 Copyright © 2017-2025 kawasima
