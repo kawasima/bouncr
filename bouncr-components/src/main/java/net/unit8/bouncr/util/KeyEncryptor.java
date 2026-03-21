@@ -24,6 +24,8 @@ public class KeyEncryptor {
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int IV_LENGTH = 12;
     private static final int TAG_LENGTH_BITS = 128;
+    // Magic prefix to distinguish encrypted data from legacy plaintext
+    private static final byte[] MAGIC = {'E', 'N', 'C', 1};
 
     private final SecretKey secretKey;
     private final SecureRandom random;
@@ -33,8 +35,7 @@ public class KeyEncryptor {
      */
     public KeyEncryptor(byte[] keyBytes, SecureRandom random) {
         if (keyBytes != null && keyBytes.length != 32) {
-            throw new MisconfigurationException("bouncr.KEY_ENCRYPTION_KEY_LENGTH",
-                    "Key encryption key must be 32 bytes (AES-256), got " + keyBytes.length);
+            throw new MisconfigurationException("bouncr.INVALID_KEY_ENCRYPTION_KEY", keyBytes.length);
         }
         this.secretKey = keyBytes != null ? new SecretKeySpec(keyBytes, "AES") : null;
         this.random = random;
@@ -50,9 +51,9 @@ public class KeyEncryptor {
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             byte[] ciphertext = cipher.doFinal(plaintext);
 
-            // Prepend IV to ciphertext
-            return ByteBuffer.allocate(IV_LENGTH + ciphertext.length)
-                    .put(iv).put(ciphertext).array();
+            // Format: [MAGIC][IV][ciphertext + GCM tag]
+            return ByteBuffer.allocate(MAGIC.length + IV_LENGTH + ciphertext.length)
+                    .put(MAGIC).put(iv).put(ciphertext).array();
         } catch (Exception e) {
             throw new RuntimeException("Failed to encrypt", e);
         }
@@ -60,12 +61,15 @@ public class KeyEncryptor {
 
     public byte[] decrypt(byte[] data) {
         if (secretKey == null) return data;
+
+        // Check magic prefix — if absent, data is legacy plaintext
+        if (!hasMagicPrefix(data)) {
+            LOG.warn("Data lacks encryption magic prefix — treating as legacy plaintext");
+            return data;
+        }
+
         try {
-            if (data.length < IV_LENGTH + 16) {
-                // Too short to be encrypted data (IV + GCM tag minimum) — treat as plaintext
-                return data;
-            }
-            ByteBuffer buf = ByteBuffer.wrap(data);
+            ByteBuffer buf = ByteBuffer.wrap(data, MAGIC.length, data.length - MAGIC.length);
             byte[] iv = new byte[IV_LENGTH];
             buf.get(iv);
             byte[] ciphertext = new byte[buf.remaining()];
@@ -75,10 +79,17 @@ public class KeyEncryptor {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             return cipher.doFinal(ciphertext);
         } catch (Exception e) {
-            // Decryption failed — data may be legacy plaintext (stored before encryption was enabled)
-            LOG.warn("Decryption failed (legacy plaintext data?): {}", e.getMessage());
-            return data;
+            // Magic prefix present but decryption failed — this is a real error (wrong key, corruption)
+            throw new RuntimeException("Failed to decrypt data with encryption magic prefix", e);
         }
+    }
+
+    private boolean hasMagicPrefix(byte[] data) {
+        if (data.length < MAGIC.length) return false;
+        for (int i = 0; i < MAGIC.length; i++) {
+            if (data[i] != MAGIC[i]) return false;
+        }
+        return true;
     }
 
     /**

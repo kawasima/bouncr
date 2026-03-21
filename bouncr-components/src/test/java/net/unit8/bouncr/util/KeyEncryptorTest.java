@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.security.SecureRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class KeyEncryptorTest {
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -58,5 +59,51 @@ class KeyEncryptorTest {
         RANDOM.nextBytes(key);
         KeyEncryptor encryptor = new KeyEncryptor(key, RANDOM);
         assertThat(encryptor.isEnabled()).isTrue();
+    }
+
+    @Test
+    void encryptedData_hasMagicPrefix() {
+        byte[] key = new byte[32];
+        RANDOM.nextBytes(key);
+        KeyEncryptor encryptor = new KeyEncryptor(key, RANDOM);
+
+        byte[] encrypted = encryptor.encrypt("test".getBytes());
+        // Magic prefix: ENC\x01
+        assertThat(encrypted[0]).isEqualTo((byte) 'E');
+        assertThat(encrypted[1]).isEqualTo((byte) 'N');
+        assertThat(encrypted[2]).isEqualTo((byte) 'C');
+        assertThat(encrypted[3]).isEqualTo((byte) 1);
+    }
+
+    @Test
+    void decrypt_legacyPlaintextWithoutMagic_returnedAsIs() {
+        byte[] key = new byte[32];
+        RANDOM.nextBytes(key);
+        KeyEncryptor encryptor = new KeyEncryptor(key, RANDOM);
+
+        // Data without magic prefix is treated as legacy plaintext
+        byte[] legacyData = "plaintext-private-key-bytes".getBytes();
+        byte[] result = encryptor.decrypt(legacyData);
+        assertThat(result).isEqualTo(legacyData);
+    }
+
+    @Test
+    void decrypt_corruptedEncryptedData_throwsException() {
+        byte[] key = new byte[32];
+        RANDOM.nextBytes(key);
+        KeyEncryptor encryptor = new KeyEncryptor(key, RANDOM);
+
+        // Data with magic prefix but corrupted content
+        byte[] corrupted = new byte[]{'E', 'N', 'C', 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        assertThatThrownBy(() -> encryptor.decrypt(corrupted))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to decrypt");
+    }
+
+    @Test
+    void invalidKeyLength_throwsMisconfigurationException() {
+        byte[] shortKey = new byte[16]; // AES-128, not AES-256
+        assertThatThrownBy(() -> new KeyEncryptor(shortKey, RANDOM))
+                .isInstanceOf(enkan.exception.MisconfigurationException.class);
     }
 }

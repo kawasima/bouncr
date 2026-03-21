@@ -56,11 +56,13 @@ public class OAuth2TokenRevocationResource {
             return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
 
-        // 2. Revoke the token (always return 200 per RFC 7009 §2.2)
+        // 2. Validate token parameter (required per RFC 7009 §2.1)
         String token = params.get("token");
-        if (token != null) {
-            storeProvider.getStore(AUTHORIZATION_CODE).delete(token);
+        if (token == null || token.isBlank()) {
+            return tokenError(OAuth2Error.INVALID_REQUEST, "The 'token' parameter is required", basicAuthAttempted);
         }
+        // Revoke — idempotent, always returns 200 even for unknown/expired tokens (RFC 7009 §2.2)
+        storeProvider.getStore(AUTHORIZATION_CODE).delete(token);
 
         // 3. Return 200 OK with empty body
         return builder(new ApiResponse())
