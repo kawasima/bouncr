@@ -123,11 +123,11 @@ public class JwksVerifier {
             Thread.currentThread().interrupt();
             throw e;
         }
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("Failed to fetch JWKS: " + response.statusCode());
-        }
-
         try (InputStream in = response.body()) {
+            int statusCode = response.statusCode();
+            if (statusCode < 200 || statusCode >= 300) {
+                throw new IllegalStateException("Failed to fetch JWKS: " + statusCode);
+            }
             Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
             List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
             cache.put(provider.id(), new CachedJwks(keys));

@@ -101,4 +101,8 @@ public class CertificateProvider extends SystemComponent<CertificateProvider> {
     public void setCA(X500PrivateCredential ca) {
         this.ca = ca;
     }
+
+    void setConfigForTest(BouncrConfiguration config) {
+        this.config = config;
+    }
 }
