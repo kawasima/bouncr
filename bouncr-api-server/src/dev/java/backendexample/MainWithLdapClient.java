@@ -2,7 +2,7 @@ package backendexample;
 
 import enkan.component.ldaptive.LdapClient;
 import enkan.system.EnkanSystem;
-import net.unit8.bouncr.api.BouncrApiEnkanSystemFactory;
+import net.unit8.bouncr.api.BouncrDevEnkanSystemFactory;
 import org.ldaptive.ssl.KeyStoreCredentialConfig;
 import org.ldaptive.ssl.SslConfig;
 
@@ -16,7 +16,7 @@ public class MainWithLdapClient {
         keyStoreConfig.setTrustStorePassword("password");
 
 
-        EnkanSystem system = new BouncrApiEnkanSystemFactory().create();
+        EnkanSystem system = new BouncrDevEnkanSystemFactory().create();
         system.setComponent("src/dev/resources/ldap", builder(new LdapClient())
                 .set(LdapClient::setPort, 10636)
                 .set(LdapClient::setScheme, "ldaps")
