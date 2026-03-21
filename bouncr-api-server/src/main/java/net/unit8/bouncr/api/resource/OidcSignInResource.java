@@ -124,7 +124,7 @@ public class OidcSignInResource {
             form.put("redirect_uri", redirectUri);
 
             java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
-                    .uri(oidcProvider.tokenEndpoint())
+                    .uri(java.net.URI.create(oidcProvider.tokenEndpoint()))
                     .timeout(Duration.ofSeconds(10))
                     .header("content-type", "application/x-www-form-urlencoded");
 

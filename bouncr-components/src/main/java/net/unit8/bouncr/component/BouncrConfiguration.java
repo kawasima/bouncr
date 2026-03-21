@@ -26,6 +26,8 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private boolean passwordEnabled = true;
     private boolean signUpEnabled = true;
     private long tokenExpires = 1800L;
+    private long accessTokenExpires = 900L;
+    private long refreshTokenExpires = 604800L;
     private long authorizationCodeExpires = 60L;
     private long oidcSessionExpires = 180L;
     private String tokenName = "BOUNCR_TOKEN";
@@ -106,6 +108,22 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setTokenExpires(long tokenExpires) {
         this.tokenExpires = tokenExpires;
+    }
+
+    public long getAccessTokenExpires() {
+        return accessTokenExpires;
+    }
+
+    public void setAccessTokenExpires(long accessTokenExpires) {
+        this.accessTokenExpires = accessTokenExpires;
+    }
+
+    public long getRefreshTokenExpires() {
+        return refreshTokenExpires;
+    }
+
+    public void setRefreshTokenExpires(long refreshTokenExpires) {
+        this.refreshTokenExpires = refreshTokenExpires;
     }
 
     public long getAuthorizationCodeExpires() {

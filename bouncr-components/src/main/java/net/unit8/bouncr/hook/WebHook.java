@@ -4,7 +4,6 @@ import tools.jackson.databind.json.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpClient;
@@ -30,7 +29,6 @@ public class WebHook<T> implements Hook<T> {
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .handle(HttpTimeoutException.class)
             .handle(HttpConnectTimeoutException.class)
-            .handle(IOException.class)
             .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
@@ -59,11 +57,7 @@ public class WebHook<T> implements Hook<T> {
         RetryPolicy<HttpResponse<String>> retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
         final String payload;
         if (!method.equalsIgnoreCase("get")) {
-            try {
-                payload = mapper.writeValueAsString(object);
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to serialize webhook payload", e);
-            }
+            payload = mapper.writeValueAsString(object);
         } else {
             payload = null;
         }
