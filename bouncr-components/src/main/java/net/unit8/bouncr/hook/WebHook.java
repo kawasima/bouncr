@@ -3,29 +3,35 @@ package net.unit8.bouncr.hook;
 import tools.jackson.databind.json.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
-import okhttp3.*;
 
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class WebHook<T> implements Hook<T> {
-    private static final OkHttpClient client = new OkHttpClient();
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .build();
     private static final JsonMapper mapper = JsonMapper.builder().build();
-    private static final MediaType JSON = MediaType.parse("application/json");
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
 
-    private RetryPolicy<Response> idempotent = RetryPolicy.<Response>builder()
+    private RetryPolicy<HttpResponse<String>> idempotent = RetryPolicy.<HttpResponse<String>>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .handle(SocketTimeoutException.class)
-            .handleResultIf(res -> res.code() >= 500)
+            .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
-    private RetryPolicy<Response> notIdempotent = RetryPolicy.<Response>builder()
+    private RetryPolicy<HttpResponse<String>> notIdempotent = RetryPolicy.<HttpResponse<String>>builder()
             .withBackoff(3, 10, ChronoUnit.SECONDS)
-            .handleResultIf(res -> res.code() >= 500)
+            .handleResultIf(res -> res.statusCode() >= 500)
             .build();
 
     private final String method;
@@ -45,23 +51,30 @@ public class WebHook<T> implements Hook<T> {
 
     @Override
     public void run(T object) {
-        RetryPolicy<Response> retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
+        RetryPolicy<HttpResponse<String>> retryPolicy = method.equalsIgnoreCase("get") ? idempotent : notIdempotent;
         Failsafe.with(retryPolicy)
                 .with(executor)
                 .onSuccess(response -> {
 
                 })
                 .get(() -> {
-                    RequestBody body = RequestBody.create(mapper.writeValueAsString(object), JSON);
-                    Request.Builder requestBuilder;
-                    requestBuilder = new Request.Builder()
-                            .url(url)
-                            .header("content-type", "application/json")
-                            .method(method, body);
+                    HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .timeout(Duration.ofSeconds(10))
+                            .header("content-type", "application/json");
                     if (headers != null) {
                         headers.forEach(requestBuilder::addHeader);
                     }
-                    return client.newCall(requestBuilder.build()).execute();
+                    HttpRequest request;
+                    if (method.equalsIgnoreCase("get")) {
+                        request = requestBuilder.GET().build();
+                    } else {
+                        String payload = mapper.writeValueAsString(object);
+                        request = requestBuilder
+                                .method(method, HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                                .build();
+                    }
+                    return client.send(request, HttpResponse.BodyHandlers.ofString());
                 });
     }
 }

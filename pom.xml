@@ -51,6 +51,17 @@
         <enkan.version>0.14.0</enkan.version>
         <kotowari-restful.version>0.14.0</kotowari-restful.version>
         <raoh.version>0.4.1</raoh.version>
+        <enkan-bouncr.version>0.13.0</enkan-bouncr.version>
+        <jackson-jakarta-rs-json-provider.version>3.1.0</jackson-jakarta-rs-json-provider.version>
+        <bouncycastle.version>1.83</bouncycastle.version>
+        <failsafe.version>3.3.2</failsafe.version>
+        <woothee-java.version>1.11.0</woothee-java.version>
+        <jooq.version>3.20.1</jooq.version>
+        <parameter-parser.version>0.1.0</parameter-parser.version>
+        <h2.version>2.4.240</h2.version>
+        <slf4j.version>2.1.0-alpha1</slf4j.version>
+        <junit-jupiter.version>5.12.0</junit-jupiter.version>
+        <assertj.version>3.27.3</assertj.version>
     </properties>
 
     <modules>
@@ -109,7 +120,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.0</version>
+                <version>3.15.0</version>
                 <configuration>
                     <release>25</release>
                 </configuration>
@@ -237,7 +248,7 @@
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-bouncr</artifactId>
-                <version>0.13.0</version>
+                <version>${enkan-bouncr.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>net.unit8.enkan</groupId>
@@ -248,18 +259,18 @@
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
                 <artifactId>enkan-component-ldaptive</artifactId>
-                <version>0.14.0</version>
+                <version>${enkan.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
-                <version>2.1.0-alpha1</version>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>tools.jackson.jakarta.rs</groupId>
                 <artifactId>jackson-jakarta-rs-json-provider</artifactId>
-                <version>3.0.0-rc4</version>
+                <version>${jackson-jakarta-rs-json-provider.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.unit8.enkan</groupId>
@@ -275,61 +286,37 @@
 
             <dependency>
                 <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.83</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.83</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.squareup.okhttp3</groupId>
-                <artifactId>okhttp</artifactId>
-                <version>5.0.0-alpha.14</version>
+                <version>${bouncycastle.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>dev.failsafe</groupId>
                 <artifactId>failsafe</artifactId>
-                <version>3.3.2</version>
+                <version>${failsafe.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>is.tagomor.woothee</groupId>
                 <artifactId>woothee-java</artifactId>
-                <version>1.11.0</version>
+                <version>${woothee-java.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq</artifactId>
-                <version>3.20.1</version>
+                <version>${jooq.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.unit8.apistandard</groupId>
                 <artifactId>parameter-parser</artifactId>
-                <version>0.1.0</version>
+                <version>${parameter-parser.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.quicktheories</groupId>
-                <artifactId>quicktheories</artifactId>
-                <version>0.26</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jsr107.ri</groupId>
-                <artifactId>cache-ri-impl</artifactId>
-                <version>1.1.1</version>
-                <scope>test</scope>
-            </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
-                <version>2.4.240</version>
+                <version>${h2.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -339,31 +326,15 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.12.0</version>
+            <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.27.3</version>
+            <version>${assertj.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>5.22.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>1.17.2</version>
-        </dependency>
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy-agent</artifactId>
-            <version>1.17.2</version>
         </dependency>
 
     </dependencies>
