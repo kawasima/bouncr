@@ -1,5 +1,6 @@
 package net.unit8.bouncr.sign;
 
+import enkan.exception.MisconfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
@@ -50,7 +51,7 @@ public class RsaJwtSigner {
 
             return signingInput + "." + signature;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to sign JWT", e);
+            throw new MisconfigurationException("bouncr.JWT_SIGNING_FAILED", e.getMessage(), e);
         }
     }
 
@@ -113,7 +114,7 @@ public class RsaJwtSigner {
                     "e", BASE64URL.encodeToString(toUnsignedBytes(rsaKey.getPublicExponent()))
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to convert public key to JWK", e);
+            throw new MisconfigurationException("bouncr.INVALID_PUBLIC_KEY", e.getMessage(), e);
         }
     }
 
