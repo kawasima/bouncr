@@ -18,7 +18,13 @@ import net.unit8.bouncr.util.RandomUtils;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -71,7 +77,7 @@ public class OAuth2AuthorizeResource {
         }
 
         // Validate scope — exact token match, not substring
-        Set<String> scopes = scope != null ? new java.util.HashSet<>(java.util.Arrays.asList(scope.split("\\s+"))) : Set.of();
+        Set<String> scopes = scope != null ? new HashSet<>(Arrays.asList(scope.split("\\s+"))) : Set.of();
         if (!scopes.contains("openid")) {
             return redirectError(redirectUri, "invalid_scope", "scope must include openid", state);
         }
@@ -100,7 +106,7 @@ public class OAuth2AuthorizeResource {
                     + (codeChallenge != null ? "&code_challenge=" + CodecUtils.urlEncode(codeChallenge)
                             + "&code_challenge_method=S256" : "");
             // Redirect to sign-in page; after authentication, user returns to this URL
-            java.net.URI unauthRedirectUrl = config.getOidcConfiguration().getUnauthenticateRedirectUrl();
+            URI unauthRedirectUrl = config.getOidcConfiguration().getUnauthenticateRedirectUrl();
             if (unauthRedirectUrl != null) {
                 // Use the configured unauthenticated redirect with return_url interpolation
                 String target = config.getOidcConfiguration().getUriInterpolator()
@@ -151,7 +157,7 @@ public class OAuth2AuthorizeResource {
     }
 
     private ApiResponse oauthError(OAuth2Error error, String description) {
-        java.util.Map<String, String> body = new java.util.LinkedHashMap<>();
+        Map<String, String> body = new LinkedHashMap<>();
         body.put("error", error.getValue());
         if (description != null) {
             body.put("error_description", description);

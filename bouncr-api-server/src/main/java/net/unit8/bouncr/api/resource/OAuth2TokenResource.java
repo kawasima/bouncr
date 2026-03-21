@@ -65,7 +65,9 @@ public class OAuth2TokenResource {
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         OidcApplication app = repo.findByClientId(clientId).orElse(null);
-        if (app == null || !app.clientSecret().equals(clientSecret)) {
+        if (app == null || !MessageDigest.isEqual(
+                app.clientSecret().getBytes(StandardCharsets.UTF_8),
+                clientSecret.getBytes(StandardCharsets.UTF_8))) {
             return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
         }
 
@@ -192,7 +194,7 @@ public class OAuth2TokenResource {
     }
 
     private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
-        Set<String> scopes = new java.util.HashSet<>(java.util.Arrays.asList(scope.split("\\s+")));
+        Set<String> scopes = new HashSet<>(Arrays.asList(scope.split("\\s+")));
         UserRepository userRepo = new UserRepository(dsl);
 
         if (scopes.contains("profile") || scopes.contains("email")) {

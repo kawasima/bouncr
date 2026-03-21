@@ -22,31 +22,18 @@ public class RsaJwtSigner {
      * Sign a JWT with RS256 using the given private key bytes (PKCS#8 encoded).
      */
     public static String sign(Map<String, Object> payload, byte[] privateKeyBytes) {
-        try {
-            Map<String, Object> header = Map.of("alg", "RS256", "typ", "JWT");
-            String headerB64 = BASE64URL.encodeToString(JSON.writeValueAsBytes(header));
-            String payloadB64 = BASE64URL.encodeToString(JSON.writeValueAsBytes(payload));
-            String signingInput = headerB64 + "." + payloadB64;
-
-            PrivateKey privateKey = KeyFactory.getInstance("RSA")
-                    .generatePrivate(new PKCS8EncodedKeySpec(privateKeyBytes));
-            Signature sig = Signature.getInstance("SHA256withRSA");
-            sig.initSign(privateKey);
-            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            String signature = BASE64URL.encodeToString(sig.sign());
-
-            return signingInput + "." + signature;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to sign JWT", e);
-        }
+        return doSign(Map.of("alg", "RS256", "typ", "JWT"), payload, privateKeyBytes);
     }
 
     /**
      * Sign a JWT with RS256 using the given private key bytes, including a kid in the header.
      */
     public static String sign(Map<String, Object> payload, byte[] privateKeyBytes, String kid) {
+        return doSign(Map.of("alg", "RS256", "typ", "JWT", "kid", kid), payload, privateKeyBytes);
+    }
+
+    private static String doSign(Map<String, Object> header, Map<String, Object> payload, byte[] privateKeyBytes) {
         try {
-            Map<String, Object> header = Map.of("alg", "RS256", "typ", "JWT", "kid", kid);
             String headerB64 = BASE64URL.encodeToString(JSON.writeValueAsBytes(header));
             String payloadB64 = BASE64URL.encodeToString(JSON.writeValueAsBytes(payload));
             String signingInput = headerB64 + "." + payloadB64;
