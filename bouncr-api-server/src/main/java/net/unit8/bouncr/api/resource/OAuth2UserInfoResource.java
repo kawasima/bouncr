@@ -10,10 +10,8 @@ import net.unit8.bouncr.api.service.OidcClaimMapper;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.jooq.DSLContext;
-import tools.jackson.databind.json.JsonMapper;
 
 import jakarta.inject.Inject;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,8 +26,6 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods({"GET", "POST"})
 public class OAuth2UserInfoResource {
-    private static final JsonMapper JSON = JsonMapper.builder().build();
-
     @Inject
     private BouncrConfiguration config;
 
@@ -47,20 +43,10 @@ public class OAuth2UserInfoResource {
         }
         String accessToken = authHeader.substring(7);
 
-        String[] parts = accessToken.split("\\.", 3);
-        if (parts.length != 3) {
+        // Decode payload without verification to extract client_id for key lookup
+        Map<String, Object> unverifiedPayload = RsaJwtSigner.extractUnverifiedClaims(accessToken);
+        if (unverifiedPayload == null) {
             return errorResponse(401, "invalid_token", "Malformed token");
-        }
-
-        // Decode payload without verification to extract client_id
-        Map<String, Object> unverifiedPayload;
-        try {
-            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> p = JSON.readValue(payloadBytes, Map.class);
-            unverifiedPayload = p;
-        } catch (Exception e) {
-            return errorResponse(401, "invalid_token", "Cannot decode token");
         }
 
         Object clientIdObj = unverifiedPayload.get("client_id");

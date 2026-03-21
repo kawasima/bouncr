@@ -13,10 +13,7 @@ import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.sign.RsaJwtSigner;
 import org.jooq.DSLContext;
 
-import tools.jackson.databind.json.JsonMapper;
-
 import jakarta.inject.Inject;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -32,8 +29,6 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods("POST")
 public class OAuth2TokenIntrospectionResource {
-    private static final JsonMapper JSON = JsonMapper.builder().build();
-
     @Inject
     private BouncrConfiguration config;
 
@@ -64,18 +59,8 @@ public class OAuth2TokenIntrospectionResource {
         }
 
         // 3. Decode unverified payload to extract client_id for key lookup
-        String[] parts = token.split("\\.", 3);
-        if (parts.length != 3) {
-            return inactiveResponse();
-        }
-
-        Map<String, Object> unverifiedPayload;
-        try {
-            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> p = JSON.readValue(payloadBytes, Map.class);
-            unverifiedPayload = p;
-        } catch (Exception e) {
+        Map<String, Object> unverifiedPayload = RsaJwtSigner.extractUnverifiedClaims(token);
+        if (unverifiedPayload == null) {
             return inactiveResponse();
         }
 

@@ -85,6 +85,24 @@ public class RsaJwtSigner {
     }
 
     /**
+     * Decode the JWT payload without signature verification.
+     * Used to extract claims (e.g., client_id) before key lookup.
+     * Returns null if the JWT is malformed.
+     */
+    public static Map<String, Object> extractUnverifiedClaims(String jwt) {
+        try {
+            String[] parts = jwt.split("\\.", 3);
+            if (parts.length != 3) return null;
+            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = JSON.readValue(payloadBytes, Map.class);
+            return payload;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Derive a kid (Key ID) from an RSA public key (SHA-256 thumbprint, first 16 base64url chars).
      */
     public static String deriveKid(byte[] publicKeyBytes) {
