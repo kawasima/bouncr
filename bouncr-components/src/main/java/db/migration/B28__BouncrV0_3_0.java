@@ -18,6 +18,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Locale;
 
 import static org.jooq.impl.DSL.constraint;
 import static org.jooq.impl.DSL.field;
@@ -629,7 +630,7 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
         stmt.setString(1, permission);
         stmt.setString(2, permission);
         stmt.setBoolean(3, true);
-        stmt.setString(4, permission.toLowerCase());
+        stmt.setString(4, permission.toLowerCase(Locale.US));
         stmt.executeUpdate();
         return fetchGeneratedKey(stmt);
     }
