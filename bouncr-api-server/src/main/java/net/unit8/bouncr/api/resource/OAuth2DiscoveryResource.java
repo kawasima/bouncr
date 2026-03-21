@@ -2,6 +2,8 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -20,6 +22,8 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods("GET")
 public class OAuth2DiscoveryResource {
+    static final ContextKey<OidcApplication> APP = ContextKey.of(OidcApplication.class);
+
     @Inject
     private BouncrConfiguration config;
 
@@ -28,17 +32,21 @@ public class OAuth2DiscoveryResource {
         return true;
     }
 
-    @Decision(HANDLE_OK)
-    public Map<String, Object> handleOk(Parameters params, DSLContext dsl) {
+    @Decision(EXISTS)
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
         String clientId = params.get("client_id");
+        if (clientId == null) return false;
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        OidcApplication app = repo.findByClientId(clientId).orElse(null);
-        if (app == null) {
-            return Map.of("error", "invalid_client");
-        }
+        return repo.findByClientId(clientId).map(app -> {
+            context.put(APP, app);
+            return true;
+        }).orElse(false);
+    }
 
+    @Decision(HANDLE_OK)
+    public Map<String, Object> handleOk(OidcApplication oidcApplication) {
         String baseUrl = config.getIssuerBaseUrl();
-        String issuer = baseUrl + "/oauth2/openid/" + clientId;
+        String issuer = baseUrl + "/oauth2/openid/" + oidcApplication.clientId();
 
         return Map.ofEntries(
                 Map.entry("issuer", issuer),

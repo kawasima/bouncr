@@ -71,7 +71,7 @@ class RsaJwtSignerTest {
 
         Signature sig = Signature.getInstance("SHA256withRSA");
         sig.initVerify(pubKey);
-        sig.update(signingInput.getBytes());
+        sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         assertThat(sig.verify(signatureBytes)).isTrue();
     }
 
@@ -80,7 +80,7 @@ class RsaJwtSignerTest {
         String kid1 = RsaJwtSigner.deriveKid(publicKeyBytes);
         String kid2 = RsaJwtSigner.deriveKid(publicKeyBytes);
         assertThat(kid1).isEqualTo(kid2);
-        assertThat(kid1).hasSize(8);
+        assertThat(kid1).hasSize(16);
     }
 
     @Test

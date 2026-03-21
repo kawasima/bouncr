@@ -40,7 +40,6 @@ public class OAuth2TokenResource {
 
     @Decision(AUTHORIZED)
     public boolean authorized() {
-        // Client authentication is done in doPost (Basic auth or POST body)
         return true;
     }
 
@@ -80,23 +79,28 @@ public class OAuth2TokenResource {
         if (stored == null) {
             return tokenError(OAuth2Error.INVALID_GRANT, "Authorization code is invalid or expired");
         }
-        // Delete code immediately (one-time use)
         storeProvider.getStore(AUTHORIZATION_CODE).delete(code);
 
         AuthorizationCode authCode = (AuthorizationCode) stored;
 
-        // 3. Validate code belongs to this client
+        // 3. Server-side expiry check (defense in depth beyond store TTL)
+        long now = config.getClock().instant().getEpochSecond();
+        if (now - authCode.createdAt() > config.getAuthorizationCodeExpires()) {
+            return tokenError(OAuth2Error.INVALID_GRANT, "Authorization code has expired");
+        }
+
+        // 4. Validate code belongs to this client
         if (!clientId.equals(authCode.clientId())) {
             return tokenError(OAuth2Error.INVALID_GRANT, "Code was not issued to this client");
         }
 
-        // 4. Validate redirect_uri matches
+        // 5. Validate redirect_uri (required per RFC 6749 §4.1.3)
         String redirectUri = params.get("redirect_uri");
-        if (redirectUri != null && !redirectUri.equals(authCode.redirectUri())) {
+        if (!Objects.equals(redirectUri, authCode.redirectUri())) {
             return tokenError(OAuth2Error.INVALID_GRANT, "redirect_uri does not match");
         }
 
-        // 5. PKCE verification
+        // 6. PKCE verification
         if (authCode.codeChallenge() != null) {
             String codeVerifier = params.get("code_verifier");
             if (codeVerifier == null) {
@@ -107,8 +111,7 @@ public class OAuth2TokenResource {
             }
         }
 
-        // 6. Build tokens
-        long now = System.currentTimeMillis() / 1000;
+        // 7. Build tokens
         String issuer = config.getIssuerBaseUrl() + "/oauth2/openid/" + clientId;
         String kid = RsaJwtSigner.deriveKid(app.publicKey());
 
@@ -134,13 +137,10 @@ public class OAuth2TokenResource {
         if (authCode.nonce() != null) {
             idClaims.put("nonce", authCode.nonce());
         }
-
-        // Add profile/email claims based on scope
         addUserClaims(idClaims, authCode.userId(), authCode.scope(), dsl);
-
         String idToken = RsaJwtSigner.sign(idClaims, app.privateKey(), kid);
 
-        // 7. Return token response
+        // 8. Return token response
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("access_token", accessToken);
         response.put("token_type", "Bearer");
@@ -158,21 +158,20 @@ public class OAuth2TokenResource {
                 .build();
     }
 
-    /**
-     * Extract client_id and client_secret from HTTP Basic auth or POST body.
-     */
     private String[] extractClientCredentials(Parameters params, HttpRequest request) {
-        // Try HTTP Basic first
         String authHeader = request.getHeaders().get("Authorization");
         if (authHeader != null && authHeader.startsWith("Basic ")) {
-            String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)),
-                    StandardCharsets.UTF_8);
-            String[] parts = decoded.split(":", 2);
-            if (parts.length == 2) {
-                return parts;
+            try {
+                String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)),
+                        StandardCharsets.UTF_8);
+                String[] parts = decoded.split(":", 2);
+                if (parts.length == 2) {
+                    return parts;
+                }
+            } catch (IllegalArgumentException e) {
+                // Invalid Base64 — fall through to POST body
             }
         }
-        // Fall back to POST body (client_secret_post)
         String clientId = params.get("client_id");
         String clientSecret = params.get("client_secret");
         if (clientId != null && clientSecret != null) {
@@ -181,9 +180,6 @@ public class OAuth2TokenResource {
         return null;
     }
 
-    /**
-     * Verify PKCE S256: SHA256(code_verifier) == code_challenge.
-     */
     private boolean verifyPkce(String codeVerifier, String codeChallenge) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
@@ -195,9 +191,6 @@ public class OAuth2TokenResource {
         }
     }
 
-    /**
-     * Add user profile claims to the ID token based on granted scopes.
-     */
     private void addUserClaims(Map<String, Object> claims, long userId, String scope, DSLContext dsl) {
         Set<String> scopes = Set.of(scope.split("\\s+"));
         UserRepository userRepo = new UserRepository(dsl);

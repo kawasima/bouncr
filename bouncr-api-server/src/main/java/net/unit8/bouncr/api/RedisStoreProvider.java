@@ -4,6 +4,7 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.jedis.JedisProvider;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OidcSession;
 
 import java.util.HashMap;
@@ -29,7 +30,7 @@ public class RedisStoreProvider extends StoreProvider {
                 provider.setRefreshTokenStore(redis.createStore(
                         "BOUNCR_REFRESH", HashMap.class, config.getRefreshTokenExpires()));
                 provider.setAuthorizationCodeStore(redis.createStore(
-                        "BOUNCR_AUTHORIZATION_CODE", HashMap.class, config.getAuthorizationCodeExpires()));
+                        "BOUNCR_AUTHORIZATION_CODE", AuthorizationCode.class, config.getAuthorizationCodeExpires()));
                 provider.setAccessTokenStore(redis.createStore(
                         "BOUNCR_ACCESS_TOKEN", HashMap.class, config.getAccessTokenExpires()));
                 provider.setOidcSessionStore(redis.createStore(

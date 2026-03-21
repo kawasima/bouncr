@@ -32,7 +32,7 @@ public class RsaJwtSigner {
                     .generatePrivate(new PKCS8EncodedKeySpec(privateKeyBytes));
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initSign(privateKey);
-            sig.update(signingInput.getBytes());
+            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String signature = BASE64URL.encodeToString(sig.sign());
 
             return signingInput + "." + signature;
@@ -55,7 +55,7 @@ public class RsaJwtSigner {
                     .generatePrivate(new PKCS8EncodedKeySpec(privateKeyBytes));
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initSign(privateKey);
-            sig.update(signingInput.getBytes());
+            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String signature = BASE64URL.encodeToString(sig.sign());
 
             return signingInput + "." + signature;
@@ -71,7 +71,7 @@ public class RsaJwtSigner {
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(publicKeyBytes);
-            return BASE64URL.encodeToString(hash).substring(0, 8);
+            return BASE64URL.encodeToString(hash).substring(0, 16);
         } catch (Exception e) {
             throw new RuntimeException("Failed to derive kid", e);
         }

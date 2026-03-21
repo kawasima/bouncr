@@ -2,6 +2,8 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.data.OidcApplication;
@@ -19,23 +21,28 @@ import static kotowari.restful.DecisionPoint.*;
  */
 @AllowedMethods("GET")
 public class OAuth2JwksResource {
+    static final ContextKey<OidcApplication> APP = ContextKey.of(OidcApplication.class);
 
     @Decision(AUTHORIZED)
     public boolean authorized() {
         return true;
     }
 
-    @Decision(HANDLE_OK)
-    public Map<String, Object> handleOk(Parameters params, DSLContext dsl) {
+    @Decision(EXISTS)
+    public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
         String clientId = params.get("client_id");
+        if (clientId == null) return false;
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        OidcApplication app = repo.findByClientId(clientId).orElse(null);
-        if (app == null) {
-            return Map.of("error", "invalid_client");
-        }
+        return repo.findByClientId(clientId).map(app -> {
+            context.put(APP, app);
+            return true;
+        }).orElse(false);
+    }
 
-        String kid = RsaJwtSigner.deriveKid(app.publicKey());
-        Map<String, String> jwk = RsaJwtSigner.publicKeyToJwk(app.publicKey(), kid);
+    @Decision(HANDLE_OK)
+    public Map<String, Object> handleOk(OidcApplication oidcApplication) {
+        String kid = RsaJwtSigner.deriveKid(oidcApplication.publicKey());
+        Map<String, String> jwk = RsaJwtSigner.publicKeyToJwk(oidcApplication.publicKey(), kid);
         return Map.of("keys", List.of(jwk));
     }
 }
