@@ -10,7 +10,9 @@ import net.unit8.bouncr.hook.HookRepository;
 
 import javax.naming.CommunicationException;
 import javax.naming.NamingException;
-import java.net.SocketTimeoutException;
+import java.io.IOException;
+import java.net.http.HttpConnectTimeoutException;
+import java.net.http.HttpTimeoutException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -41,7 +43,9 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private OidcConfiguration oidcConfiguration = new OidcConfiguration();
 
     private RetryPolicy<Object> httpClientRetryPolicy = RetryPolicy.builder()
-            .handle(SocketTimeoutException.class)
+            .handle(HttpTimeoutException.class)
+            .handle(HttpConnectTimeoutException.class)
+            .handle(IOException.class)
             .withBackoff(3, 10, ChronoUnit.SECONDS)
             .build();
     private CircuitBreaker<Object> ldapClientCircuitBreaker = CircuitBreaker.builder()
