@@ -70,6 +70,7 @@ public class OAuth2TokenResource {
     static final ContextKey<TokenRequest> TOKEN_REQ = ContextKey.of("tokenRequest", TokenRequest.class);
     static final ContextKey<OidcApplication> CLIENT_APP = ContextKey.of(OidcApplication.class);
     static final ContextKey<ApiResponse> TOKEN_RESPONSE = ContextKey.of("tokenResponse", ApiResponse.class);
+    static final ContextKey<Boolean> BASIC_AUTH_ATTEMPTED = ContextKey.of("basicAuthAttempted", Boolean.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -107,12 +108,37 @@ public class OAuth2TokenResource {
     public boolean isAuthorized(Parameters params, HttpRequest request,
                                 RestContext context, DSLContext dsl) {
         OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
+        context.put(BASIC_AUTH_ATTEMPTED, authenticator.hasBasicAuth(request));
         OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
         if (authResult == null) {
             return false;
         }
         context.put(CLIENT_APP, authResult.app());
         return true;
+    }
+
+    /**
+     * Returns an OAuth2 {@code invalid_client} error response when client
+     * authentication fails. Includes {@code WWW-Authenticate} header when
+     * HTTP Basic auth was attempted (RFC 6749 §5.2).
+     */
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized(Boolean basicAuthAttempted) {
+        boolean basic = basicAuthAttempted != null && basicAuthAttempted;
+        Headers headers = basic
+                ? Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
+                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
+                : Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", OAuth2Error.INVALID_CLIENT.getValue());
+        body.put("error_description", "Client authentication failed");
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 401)
+                .set(ApiResponse::setHeaders, headers)
+                .set(ApiResponse::setBody, body)
+                .build();
     }
 
     /**

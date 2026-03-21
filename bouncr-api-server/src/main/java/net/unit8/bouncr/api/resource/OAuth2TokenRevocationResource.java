@@ -22,6 +22,7 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +44,7 @@ public class OAuth2TokenRevocationResource {
     static final ContextKey<RevocationRequest> REVOKE_REQ =
             ContextKey.of("revokeReq", RevocationRequest.class);
     static final ContextKey<OidcApplication> CLIENT_APP = ContextKey.of(OidcApplication.class);
+    static final ContextKey<Boolean> BASIC_AUTH_ATTEMPTED = ContextKey.of("basicAuthAttempted", Boolean.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -71,10 +73,30 @@ public class OAuth2TokenRevocationResource {
     public boolean isAuthorized(Parameters params, HttpRequest request,
                                 RestContext context, DSLContext dsl) {
         OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
+        context.put(BASIC_AUTH_ATTEMPTED, authenticator.hasBasicAuth(request));
         OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
         if (authResult == null) return false;
         context.put(CLIENT_APP, authResult.app());
         return true;
+    }
+
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized(Boolean basicAuthAttempted) {
+        boolean basic = basicAuthAttempted != null && basicAuthAttempted;
+        Headers headers = basic
+                ? Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache",
+                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
+                : Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store", "Pragma", "no-cache");
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", "invalid_client");
+        body.put("error_description", "Client authentication failed");
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 401)
+                .set(ApiResponse::setHeaders, headers)
+                .set(ApiResponse::setBody, body)
+                .build();
     }
 
     @Decision(POST)
