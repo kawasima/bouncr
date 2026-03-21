@@ -52,6 +52,34 @@ public class RsaJwtSigner {
     }
 
     /**
+     * Verify a RS256 JWT signature using the given X.509 encoded public key bytes.
+     * Returns the decoded payload as a Map, or null if verification fails.
+     */
+    public static Map<String, Object> verify(String jwt, byte[] publicKeyBytes) {
+        try {
+            String[] parts = jwt.split("\\.", 3);
+            if (parts.length != 3) return null;
+
+            String signingInput = parts[0] + "." + parts[1];
+            byte[] signatureBytes = Base64.getUrlDecoder().decode(parts[2]);
+
+            PublicKey publicKey = KeyFactory.getInstance("RSA")
+                    .generatePublic(new X509EncodedKeySpec(publicKeyBytes));
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(publicKey);
+            sig.update(signingInput.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (!sig.verify(signatureBytes)) return null;
+
+            byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = JSON.readValue(payloadBytes, Map.class);
+            return payload;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Derive a kid (Key ID) from an RSA public key (SHA-256 thumbprint, first 16 base64url chars).
      */
     public static String deriveKid(byte[] publicKeyBytes) {

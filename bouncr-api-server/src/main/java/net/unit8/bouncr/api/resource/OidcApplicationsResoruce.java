@@ -12,7 +12,9 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
+import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -21,7 +23,10 @@ import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.security.KeyPair;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -80,20 +85,28 @@ public class OidcApplicationsResoruce {
     }
 
     @Decision(POST)
-    public OidcApplication create(OidcApplicationCreate createRequest, DSLContext dsl) {
+    public Map<String, Object> create(OidcApplicationCreate createRequest, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
 
         String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        String clientSecret = RandomUtils.generateRandomString(32, config.getSecureRandom());
+        String plaintextSecret = RandomUtils.generateRandomString(32, config.getSecureRandom());
+
+        // Hash client_secret with PBKDF2 (salt = clientId)
+        byte[] secretHash = PasswordUtils.pbkdf2(plaintextSecret, clientId, 10000);
+        String hashedSecret = Base64.getEncoder().encodeToString(secretHash);
 
         KeyPair keyPair = KeyUtils.generate(2048, config.getSecureRandom());
         byte[] publicKey = keyPair.getPublic().getEncoded();
-        byte[] privateKey = keyPair.getPrivate().getEncoded();
+        byte[] privateKeyRaw = keyPair.getPrivate().getEncoded();
+
+        // Encrypt private key at rest (no-op if keyEncryptionKey not configured)
+        KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
+        byte[] privateKey = encryptor.encrypt(privateKeyRaw);
 
         OidcApplication app = repo.insert(
                 createRequest.name(),
                 clientId,
-                clientSecret,
+                hashedSecret,
                 privateKey,
                 publicKey,
                 createRequest.homeUrl(),
@@ -105,6 +118,16 @@ public class OidcApplicationsResoruce {
             repo.setPermissions(app.id(), createRequest.permissions());
         }
 
-        return repo.findByName(createRequest.name()).orElse(app);
+        // Return plaintext client_secret once (never stored or retrievable again)
+        OidcApplication saved = repo.findByName(createRequest.name()).orElse(app);
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", saved.id());
+        response.put("name", saved.name());
+        response.put("client_id", saved.clientId());
+        response.put("client_secret", plaintextSecret);  // plaintext, shown only once
+        response.put("home_url", saved.homeUrl());
+        response.put("callback_url", saved.callbackUrl());
+        response.put("description", saved.description());
+        return response;
     }
 }

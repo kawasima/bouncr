@@ -107,6 +107,8 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
             r.scope("/oauth2", oa -> {
                 oa.get("/authorize").to(OAuth2AuthorizeResource.class);
                 oa.post("/token").to(OAuth2TokenResource.class);
+                oa.all("/userinfo").to(OAuth2UserInfoResource.class);
+                oa.post("/token/revoke").to(OAuth2TokenRevocationResource.class);
                 oa.get("/openid/:client_id/certs").to(OAuth2JwksResource.class);
                 oa.get("/openid/:client_id/.well-known/openid-configuration").to(OAuth2DiscoveryResource.class);
             });
