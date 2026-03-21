@@ -63,9 +63,9 @@ public class OAuth2UserInfoResource {
             return errorResponse(401, "invalid_token", "Cannot decode token");
         }
 
-        String clientId = (String) unverifiedPayload.get("client_id");
-        if (clientId == null) {
-            return errorResponse(401, "invalid_token", "Token missing client_id claim");
+        Object clientIdObj = unverifiedPayload.get("client_id");
+        if (!(clientIdObj instanceof String clientId)) {
+            return errorResponse(401, "invalid_token", "Token missing or invalid client_id claim");
         }
 
         // Load public key and verify signature
@@ -80,10 +80,13 @@ public class OAuth2UserInfoResource {
             return errorResponse(401, "invalid_token", "Signature verification failed");
         }
 
-        // Check expiry
+        // Check expiry (required claim)
         long now = config.getClock().instant().getEpochSecond();
         Object expObj = claims.get("exp");
-        if (expObj instanceof Number exp && exp.longValue() < now) {
+        if (!(expObj instanceof Number)) {
+            return errorResponse(401, "invalid_token", "Token missing exp claim");
+        }
+        if (((Number) expObj).longValue() < now) {
             return errorResponse(401, "invalid_token", "Token expired");
         }
 

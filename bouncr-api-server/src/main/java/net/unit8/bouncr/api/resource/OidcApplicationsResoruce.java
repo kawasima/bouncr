@@ -76,12 +76,14 @@ public class OidcApplicationsResoruce {
     }
 
     @Decision(HANDLE_OK)
-    public List<OidcApplication> list(Parameters params, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         String q = params.get("q");
         int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
         int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
-        return repo.search(q, offset, limit);
+        return repo.search(q, offset, limit).stream()
+                .map(OidcApplicationResource::sanitize)
+                .toList();
     }
 
     @Decision(POST)

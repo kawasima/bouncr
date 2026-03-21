@@ -50,9 +50,10 @@ public class OAuth2TokenRevocationResource {
     public ApiResponse handleCreated(Parameters params, HttpRequest request, DSLContext dsl) {
         // 1. Authenticate client (required per RFC 7009 §2.1)
         OAuth2ClientAuthenticator authenticator = new OAuth2ClientAuthenticator(config);
+        boolean basicAuthAttempted = authenticator.hasBasicAuth(request);
         OAuth2ClientAuthenticator.AuthResult authResult = authenticator.authenticate(params, request, dsl);
         if (authResult == null) {
-            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed");
+            return tokenError(OAuth2Error.INVALID_CLIENT, "Client authentication failed", basicAuthAttempted);
         }
 
         // 2. Revoke the token (always return 200 per RFC 7009 §2.2)
@@ -71,15 +72,19 @@ public class OAuth2TokenRevocationResource {
                 .build();
     }
 
-    private ApiResponse tokenError(OAuth2Error error, String description) {
+    private ApiResponse tokenError(OAuth2Error error, String description, boolean basicAuthAttempted) {
         Map<String, String> body = new LinkedHashMap<>();
         body.put("error", error.getValue());
         if (description != null) body.put("error_description", description);
+        Headers headers = basicAuthAttempted && error == OAuth2Error.INVALID_CLIENT
+                ? Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store",
+                        "WWW-Authenticate", "Basic realm=\"bouncr\"")
+                : Headers.of("Content-Type", "application/json",
+                        "Cache-Control", "no-store");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, error.getStatusCode())
-                .set(ApiResponse::setHeaders, Headers.of(
-                        "Content-Type", "application/json",
-                        "Cache-Control", "no-store"))
+                .set(ApiResponse::setHeaders, headers)
                 .set(ApiResponse::setBody, body)
                 .build();
     }

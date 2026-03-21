@@ -49,7 +49,18 @@ public class OAuth2ClientAuthenticator {
         }
 
         byte[] inputHash = PasswordUtils.pbkdf2(clientSecret, clientId, config.getPbkdf2Iterations());
-        byte[] storedHash = Base64.getDecoder().decode(app.clientSecret());
+        byte[] storedHash;
+        try {
+            storedHash = Base64.getDecoder().decode(app.clientSecret());
+        } catch (IllegalArgumentException e) {
+            // Legacy plaintext secret (not Base64-encoded PBKDF2 hash) — compare directly
+            if (!MessageDigest.isEqual(
+                    clientSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    app.clientSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+                return null;
+            }
+            return new AuthResult(app, basicAuthAttempted);
+        }
         if (!MessageDigest.isEqual(inputHash, storedHash)) {
             return null;
         }

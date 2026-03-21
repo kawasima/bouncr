@@ -16,6 +16,8 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -82,12 +84,12 @@ public class OidcApplicationResource {
     }
 
     @Decision(HANDLE_OK)
-    public OidcApplication find(OidcApplication oidcApplication) {
-        return oidcApplication;
+    public Map<String, Object> find(OidcApplication oidcApplication) {
+        return sanitize(oidcApplication);
     }
 
     @Decision(PUT)
-    public OidcApplication update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
+    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.update(
                 oidcApplication.name(),
@@ -104,7 +106,7 @@ public class OidcApplicationResource {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
             repo.setPermissions(appId, updateRequest.permissions());
         }
-        return repo.findByName(updateRequest.name()).orElseThrow();
+        return sanitize(repo.findByName(updateRequest.name()).orElseThrow());
     }
 
     @Decision(DELETE)
@@ -112,5 +114,22 @@ public class OidcApplicationResource {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.delete(oidcApplication.name());
         return null;
+    }
+
+    /**
+     * Strip sensitive fields (client_secret hash, private_key) from API responses.
+     */
+    static Map<String, Object> sanitize(OidcApplication app) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", app.id());
+        result.put("name", app.name());
+        result.put("client_id", app.clientId());
+        result.put("home_url", app.homeUrl());
+        result.put("callback_url", app.callbackUrl());
+        result.put("description", app.description());
+        if (app.permissions() != null) {
+            result.put("permissions", app.permissions());
+        }
+        return result;
     }
 }
