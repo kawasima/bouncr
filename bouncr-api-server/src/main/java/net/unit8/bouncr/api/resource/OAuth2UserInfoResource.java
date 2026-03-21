@@ -105,7 +105,8 @@ public class OAuth2UserInfoResource {
                 .set(ApiResponse::setStatus, 200)
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Content-Type", "application/json",
-                        "Cache-Control", "no-store"))
+                        "Cache-Control", "no-store",
+                        "Pragma", "no-cache"))
                 .set(ApiResponse::setBody, userInfo)
                 .build();
     }
