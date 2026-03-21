@@ -133,7 +133,8 @@ public class PasswordSignInResource {
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(UserSession userSession) {
         String cookie = config.getTokenName() + "=" + userSession.token()
-                + "; HttpOnly; Secure; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
+                + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
+                + "; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
                 + "; Path=/";
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)

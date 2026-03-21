@@ -140,7 +140,10 @@ func (a *Authenticator) refreshFromAPIServer(ctx context.Context, sessionID stri
 		return nil, fmt.Errorf("API_SERVER_URL not configured")
 	}
 
-	body, _ := json.Marshal(map[string]string{"session_id": sessionID})
+	body, err := json.Marshal(map[string]string{"session_id": sessionID})
+	if err != nil {
+		return nil, fmt.Errorf("marshal refresh request: %w", err)
+	}
 	url := strings.TrimRight(a.apiServerURL, "/") + "/bouncr/api/token/refresh"
 
 	reqCtx, cancel := context.WithTimeout(ctx, 3*time.Second)

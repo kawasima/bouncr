@@ -32,11 +32,8 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
 
             @Override
             public void stop(StoreProvider provider) {
-                provider.bouncrTokenStore = null;
-                provider.refreshTokenStore = null;
-                provider.authorizationCodeStore = null;
-                provider.accessTokenStore = null;
-                provider.oidcSessionStore = null;
+                // Do not null out stores — let GC handle cleanup.
+                // This allows safe restart in the same JVM (test harnesses, hot-reload).
             }
         };
     }

@@ -35,6 +35,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private long oidcSessionExpires = 180L;
     private String tokenName = "BOUNCR_TOKEN";
     private String backendHeaderName = "X-Bouncr-Credential";
+    private boolean secureCookie = true;
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
     private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
@@ -166,6 +167,14 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setBackendHeaderName(String backendHeaderName) {
         this.backendHeaderName = backendHeaderName;
+    }
+
+    public boolean isSecureCookie() {
+        return secureCookie;
+    }
+
+    public void setSecureCookie(boolean secureCookie) {
+        this.secureCookie = secureCookie;
     }
 
     public PasswordPolicy getPasswordPolicy() {
