@@ -13,7 +13,10 @@ import java.net.http.HttpResponse;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -88,9 +91,13 @@ public class JwksVerifier {
             byte[] signatureBytes = Base64.getUrlDecoder().decode(parts[2]);
 
             Signature sig = Signature.getInstance(jcaAlgorithm);
+            configureSignatureParameters(sig, alg);
             sig.initVerify(publicKey);
             sig.update(signingInput);
             return sig.verify(signatureBytes);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Exception e) {
             return false;
         }
@@ -105,9 +112,16 @@ public class JwksVerifier {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(provider.jwksUri().toURI())
+                .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();
-        HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        HttpResponse<InputStream> response;
+        try {
+            response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("Failed to fetch JWKS: " + response.statusCode());
         }
@@ -156,10 +170,21 @@ public class JwksVerifier {
             case "RS256": return "SHA256withRSA";
             case "RS384": return "SHA384withRSA";
             case "RS512": return "SHA512withRSA";
-            case "PS256": return "SHA256withRSAandMGF1";
-            case "PS384": return "SHA384withRSAandMGF1";
-            case "PS512": return "SHA512withRSAandMGF1";
+            case "PS256":
+            case "PS384":
+            case "PS512":
+                return "RSASSA-PSS";
             default: return null;
+        }
+    }
+
+    private void configureSignatureParameters(Signature sig, String jwtAlg) throws Exception {
+        if ("PS256".equals(jwtAlg)) {
+            sig.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, 32, 1));
+        } else if ("PS384".equals(jwtAlg)) {
+            sig.setParameter(new PSSParameterSpec("SHA-384", "MGF1", MGF1ParameterSpec.SHA384, 48, 1));
+        } else if ("PS512".equals(jwtAlg)) {
+            sig.setParameter(new PSSParameterSpec("SHA-512", "MGF1", MGF1ParameterSpec.SHA512, 64, 1));
         }
     }
 }
