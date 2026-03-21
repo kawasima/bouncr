@@ -44,6 +44,18 @@ public class OidcApplicationRepository {
                 app.homeUrl(), app.callbackUrl(), app.description(), permissions));
     }
 
+    /**
+     * Find public key only by client_id (for JWKS endpoint — no secrets loaded).
+     */
+    public Optional<byte[]> findPublicKeyByClientId(String clientId) {
+        var rec = dsl.select(field("public_key", byte[].class))
+                .from(table("oidc_applications"))
+                .where(field("client_id").eq(clientId))
+                .fetchOne();
+        if (rec == null) return Optional.empty();
+        return Optional.ofNullable(rec.get(field("public_key", byte[].class)));
+    }
+
     public Optional<OidcApplication> findByClientId(String clientId) {
         var rec = dsl.select(
                         field("oidc_application_id", Long.class),
