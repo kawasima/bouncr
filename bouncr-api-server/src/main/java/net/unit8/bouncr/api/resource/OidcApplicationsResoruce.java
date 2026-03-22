@@ -9,6 +9,8 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
+import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
+import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
@@ -37,7 +39,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 public class OidcApplicationsResoruce {
     static final ContextKey<OidcApplicationCreate> CREATE_REQ = ContextKey.of(OidcApplicationCreate.class);
     @SuppressWarnings("rawtypes")
-    static final ContextKey<HashMap> RESPONSE = ContextKey.of("response", HashMap.class);
+    static final ContextKey<OidcApplicationCreatedResponse> RESPONSE = ContextKey.of(OidcApplicationCreatedResponse.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -88,13 +90,13 @@ public class OidcApplicationsResoruce {
     }
 
     @Decision(HANDLE_OK)
-    public List<Map<String, Object>> list(Parameters params, DSLContext dsl) {
+    public List<OidcApplicationResponse> list(Parameters params, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         String q = params.get("q");
         int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
         int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
         return repo.search(q, offset, limit).stream()
-                .map(OidcApplicationResource::sanitize)
+                .map(OidcApplicationResponse::of)
                 .toList();
     }
 
@@ -136,23 +138,12 @@ public class OidcApplicationsResoruce {
 
         // Return plaintext client_secret once (never stored or retrievable again)
         OidcApplication saved = repo.findByName(createRequest.name()).orElse(app);
-        HashMap<String, Object> response = new HashMap<>();
-        response.put("id", saved.id());
-        response.put("name", saved.name());
-        response.put("client_id", saved.clientId());
-        response.put("client_secret", plaintextSecret);  // plaintext, shown only once
-        response.put("home_url", saved.homeUrl());
-        response.put("callback_url", saved.callbackUrl());
-        response.put("description", saved.description());
-        response.put("backchannel_logout_uri", saved.backchannelLogoutUri());
-        response.put("frontchannel_logout_uri", saved.frontchannelLogoutUri());
-        context.put(RESPONSE, response);
+        context.put(RESPONSE, OidcApplicationCreatedResponse.of(saved, plaintextSecret));
         return true;
     }
 
-    @SuppressWarnings("unchecked")
     @Decision(HANDLE_CREATED)
-    public Map<String, Object> handleCreated(HashMap response) {
+    public OidcApplicationCreatedResponse handleCreated(OidcApplicationCreatedResponse response) {
         return response;
     }
 }

@@ -4,6 +4,7 @@ import enkan.collection.Parameters;
 import enkan.data.DefaultHttpRequest;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
+import net.unit8.bouncr.api.boundary.SignOutResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -68,17 +69,12 @@ class UserSessionResourceTest {
 
         RestContext context = restContext();
         resource.delete(Parameters.of("token", "session-token"), "admin", context, dsl);
-        Map<String, Object> response = resource.handleOk(context);
+        SignOutResponse response = resource.handleOk(context);
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> backchannel = (Map<String, Object>) response.get("backchannel_logout");
-        @SuppressWarnings("unchecked")
-        var frontchannel = (java.util.List<String>) response.get("frontchannel_logout_urls");
-
-        assertThat(frontchannel).contains("https://logout.example/frontchannel");
-        assertThat(backchannel.get("attempted")).isEqualTo(1);
-        assertThat(backchannel.get("succeeded")).isEqualTo(0);
-        assertThat(backchannel.get("failed")).isEqualTo(1);
+        assertThat(response.frontchannel_logout_urls()).contains("https://logout.example/frontchannel");
+        assertThat(response.backchannel_logout().attempted()).isEqualTo(1);
+        assertThat(response.backchannel_logout().succeeded()).isEqualTo(0);
+        assertThat(response.backchannel_logout().failed()).isEqualTo(1);
         assertThat(storeProvider.getStore(BOUNCR_TOKEN).read("session-token")).isNull();
         assertThat(storeProvider.getStore(REFRESH_TOKEN).read("session-token")).isNull();
     }

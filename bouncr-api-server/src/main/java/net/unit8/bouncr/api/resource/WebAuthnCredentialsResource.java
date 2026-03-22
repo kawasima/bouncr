@@ -8,13 +8,13 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.data.User;
 import org.jooq.DSLContext;
 
 import java.util.List;
-import java.util.Map;
 
 import static kotowari.restful.DecisionPoint.*;
 
@@ -47,16 +47,12 @@ public class WebAuthnCredentialsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Map<String, Object>> list(UserPermissionPrincipal principal, DSLContext dsl) {
+    public List<WebAuthnCredentialResponse> list(UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         return credRepo.findByUserId(user.id()).stream()
-                .map(c -> Map.<String, Object>of(
-                        "id", c.id(),
-                        "credential_name", c.credentialName() != null ? c.credentialName() : "",
-                        "transports", c.transports() != null ? c.transports() : "",
-                        "discoverable", c.discoverable()))
+                .map(WebAuthnCredentialResponse::of)
                 .toList();
     }
 

@@ -7,6 +7,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.SignOutResponse;
 import net.unit8.bouncr.api.service.OidcLogoutService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -14,7 +15,6 @@ import net.unit8.bouncr.component.config.HookPoint;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,8 +33,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 @AllowedMethods("DELETE")
 public class UserSessionResource {
     static final ContextKey<String> SUBJECT = ContextKey.of("subject", String.class);
-    @SuppressWarnings("unchecked")
-    static final ContextKey<Map<String, Object>> LOGOUT_RESULT = (ContextKey<Map<String, Object>>) (ContextKey<?>) ContextKey.of("logoutResult", Map.class);
+    static final ContextKey<SignOutResponse> LOGOUT_RESULT = ContextKey.of(SignOutResponse.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -83,14 +82,12 @@ public class UserSessionResource {
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
 
-        Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("attempted", logoutResult.backchannelLogout().attempted());
-        summary.put("succeeded", logoutResult.backchannelLogout().succeeded());
-        summary.put("failed", logoutResult.backchannelLogout().failed());
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()));
-        response.put("backchannel_logout", summary);
+        SignOutResponse response = new SignOutResponse(
+                List.copyOf(logoutResult.frontchannelLogoutUrls()),
+                new SignOutResponse.BackchannelLogoutSummary(
+                        logoutResult.backchannelLogout().attempted(),
+                        logoutResult.backchannelLogout().succeeded(),
+                        logoutResult.backchannelLogout().failed()));
         context.put(LOGOUT_RESULT, response);
         return null;
     }
@@ -101,8 +98,9 @@ public class UserSessionResource {
     }
 
     @Decision(HANDLE_OK)
-    public Map<String, Object> handleOk(RestContext context) {
-        return context.get(LOGOUT_RESULT).orElse(Map.of());
+    public SignOutResponse handleOk(RestContext context) {
+        return context.get(LOGOUT_RESULT).orElse(new SignOutResponse(
+                List.of(), new SignOutResponse.BackchannelLogoutSummary(0, 0, 0)));
     }
 
     @SuppressWarnings("unchecked")

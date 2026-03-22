@@ -7,6 +7,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnSignInOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -22,10 +23,9 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,8 +39,8 @@ public class WebAuthnSignInOptionsResource {
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
     static final ContextKey<WebAuthnSignInOptions> REQ = ContextKey.of(WebAuthnSignInOptions.class);
 
-    record OptionsResult(Map<String, Object> options, String sessionId) {}
-    static final ContextKey<OptionsResult> RESULT = ContextKey.of(OptionsResult.class);
+    record PostResult(WebAuthnAuthenticationOptions options, String sessionId) {}
+    static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -68,7 +68,7 @@ public class WebAuthnSignInOptionsResource {
         byte[] challenge = webAuthnService.generateChallenge();
         Base64.Encoder b64url = Base64.getUrlEncoder().withoutPadding();
 
-        List<Map<String, Object>> allowCredentials = List.of();
+        List<WebAuthnAuthenticationOptions.AllowCredential> allowCredentials = List.of();
         Long userId = null;
 
         if (request.account() != null) {
@@ -78,20 +78,14 @@ public class WebAuthnSignInOptionsResource {
                 userId = userOpt.get().id();
                 WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
                 allowCredentials = credRepo.findByUserId(userId).stream()
-                        .map(c -> {
-                            Map<String, Object> desc = new LinkedHashMap<>();
-                            desc.put("type", "public-key");
-                            desc.put("id", b64url.encodeToString(c.credentialId()));
-                            if (c.transports() != null && !c.transports().isEmpty()) {
-                                desc.put("transports", List.of(c.transports().split(",")));
-                            }
-                            return desc;
-                        })
+                        .map(c -> new WebAuthnAuthenticationOptions.AllowCredential(
+                                "public-key",
+                                b64url.encodeToString(c.credentialId()),
+                                c.transports() != null && !c.transports().isEmpty()
+                                        ? List.of(c.transports().split(","))
+                                        : null))
                         .toList();
             } else {
-                // Bind challenge to a sentinel userId so the cross-check in
-                // WebAuthnSignInResource always rejects, without revealing
-                // whether the account exists (user enumeration prevention).
                 userId = -1L;
             }
         }
@@ -100,18 +94,18 @@ public class WebAuthnSignInOptionsResource {
         storeProvider.getStore(WEBAUTHN_CHALLENGE).write(sessionId,
                 new WebAuthnChallenge(challenge, userId, config.getWebAuthnRpId(), WebAuthnChallenge.TYPE_AUTHENTICATION));
 
-        Map<String, Object> options = new LinkedHashMap<>();
-        options.put("challenge", b64url.encodeToString(challenge));
-        options.put("rpId", config.getWebAuthnRpId());
-        options.put("allowCredentials", allowCredentials);
-        options.put("userVerification", "preferred");
+        WebAuthnAuthenticationOptions options = new WebAuthnAuthenticationOptions(
+                b64url.encodeToString(challenge),
+                config.getWebAuthnRpId(),
+                allowCredentials,
+                "preferred");
 
-        context.put(RESULT, new OptionsResult(options, sessionId));
+        context.put(RESULT, new PostResult(options, sessionId));
         return true;
     }
 
     @Decision(HANDLE_CREATED)
-    public ApiResponse handleCreated(OptionsResult result) {
+    public ApiResponse handleCreated(PostResult result) {
         String cookieStr = COOKIE_NAME + "=" + result.sessionId()
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
                 + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
