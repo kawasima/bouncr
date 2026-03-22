@@ -37,13 +37,12 @@ function toQueryString(params: QueryParams): string {
 
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit & { token?: string | null; params?: QueryParams } = {},
+  options: RequestInit & { params?: QueryParams } = {},
 ): Promise<T> {
-  const { token, params, ...fetchOptions } = options;
+  const { params, ...fetchOptions } = options;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(fetchOptions.headers as Record<string, string> | undefined),
   };
 
@@ -51,6 +50,7 @@ export async function apiRequest<T>(
 
   const response = await fetch(url, {
     ...fetchOptions,
+    credentials: 'same-origin',
     headers,
   });
 

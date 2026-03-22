@@ -85,18 +85,16 @@ async function runFrontchannelLogout(urls: string[]): Promise<void> {
 }
 
 export function Navbar() {
-  const { isAuthenticated, account, token, logout } = useAuth();
+  const { isAuthenticated, account, logout } = useAuth();
   const navigate = useNavigate();
 
   async function handleSignOut() {
     let frontchannelUrls: string[] = [];
-    if (token) {
-      try {
-        const response = await api.signOut(token, token);
-        frontchannelUrls = response?.frontchannel_logout_urls ?? [];
-      } catch {
-        // ignore server error, still logout locally
-      }
+    try {
+      const response = await api.signOut();
+      frontchannelUrls = response?.frontchannel_logout_urls ?? [];
+    } catch {
+      // ignore server error, still logout locally
     }
     if (frontchannelUrls.length > 0) {
       await runFrontchannelLogout(frontchannelUrls);

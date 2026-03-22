@@ -8,20 +8,18 @@ interface GuestState {
 interface LoggedInState {
   status: 'logged_in';
   account: string;
-  token: string;
 }
 
 type AuthState = GuestState | LoggedInState;
 
 type AuthAction =
-  | { type: 'LOGIN'; account: string; token: string }
+  | { type: 'LOGIN'; account: string }
   | { type: 'LOGOUT' };
 
 interface AuthContextValue {
   state: AuthState;
-  login: (account: string, token: string) => void;
+  login: (account: string) => void;
   logout: () => void;
-  token: string | null;
   account: string | null;
   isAuthenticated: boolean;
 }
@@ -31,7 +29,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function authReducer(_state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'LOGIN':
-      return { status: 'logged_in', account: action.account, token: action.token };
+      return { status: 'logged_in', account: action.account };
     case 'LOGOUT':
       return { status: 'guest' };
   }
@@ -41,9 +39,9 @@ function loadInitialState(): AuthState {
   try {
     const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as { account: string; token: string };
-      if (parsed.account && parsed.token) {
-        return { status: 'logged_in', account: parsed.account, token: parsed.token };
+      const parsed = JSON.parse(stored) as { account: string };
+      if (parsed.account) {
+        return { status: 'logged_in', account: parsed.account };
       }
     }
   } catch {
@@ -57,20 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (state.status === 'logged_in') {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ account: state.account, token: state.token }));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ account: state.account }));
     } else {
       sessionStorage.removeItem(STORAGE_KEY);
     }
   }, [state]);
 
-  // Cross-tab sync
+  // Cross-tab sync: propagate login/logout across tabs via sessionStorage events
   useEffect(() => {
     function handleStorage(e: StorageEvent) {
       if (e.key !== STORAGE_KEY) return;
       if (e.newValue) {
         try {
-          const parsed = JSON.parse(e.newValue) as { account: string; token: string };
-          dispatch({ type: 'LOGIN', account: parsed.account, token: parsed.token });
+          const parsed = JSON.parse(e.newValue) as { account: string };
+          if (parsed.account) {
+            dispatch({ type: 'LOGIN', account: parsed.account });
+          }
         } catch {
           // ignore
         }
@@ -82,8 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const login = useCallback((account: string, token: string) => {
-    dispatch({ type: 'LOGIN', account, token });
+  const login = useCallback((account: string) => {
+    dispatch({ type: 'LOGIN', account });
   }, []);
 
   const logout = useCallback(() => {
@@ -94,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     state,
     login,
     logout,
-    token: state.status === 'logged_in' ? state.token : null,
     account: state.status === 'logged_in' ? state.account : null,
     isAuthenticated: state.status === 'logged_in',
   };

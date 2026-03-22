@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import * as api from '@/api/endpoints';
 import type { UserAction, Problem } from '@/api/types';
@@ -28,7 +27,6 @@ const columns: ColumnDef<UserAction>[] = [
 ];
 
 export function AuditPage() {
-  const { token } = useAuth();
   const [actions, setActions] = useState<UserAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -39,7 +37,6 @@ export function AuditPage() {
 
   const loadActions = useCallback(
     async (actor: string, newOffset: number, append: boolean) => {
-      if (!token) return;
       if (append) setLoadingMore(true);
       else setLoading(true);
       setProblem(null);
@@ -49,7 +46,7 @@ export function AuditPage() {
           offset: newOffset,
           actor: actor || '*',
         };
-        const result = await api.getActions(params, token);
+        const result = await api.getActions(params);
         if (append) {
           setActions((prev) => [...prev, ...result]);
         } else {
@@ -64,7 +61,7 @@ export function AuditPage() {
         setLoadingMore(false);
       }
     },
-    [token],
+    [],
   );
 
   useEffect(() => {

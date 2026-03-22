@@ -8,8 +8,8 @@ import type { Permission } from '@/api/types';
 const config: AdminCrudConfig<Permission> = {
   fetchList: api.getPermissions,
   fetchOne: api.getPermission,
-  create: (data, token) => api.createPermission(data as { name: string; description: string }, token),
-  update: (name, data, token) => api.updatePermission(name, data as { name: string; description: string }, token),
+  create: (data) => api.createPermission(data as { name: string; description: string }),
+  update: (name, data) => api.updatePermission(name, data as { name: string; description: string }),
   getIdentifier: (p) => p.name,
 };
 

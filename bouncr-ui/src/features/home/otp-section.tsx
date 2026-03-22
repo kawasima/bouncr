@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '@/auth/auth-context';
 import * as api from '@/api/endpoints';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/api/client';
@@ -13,16 +12,14 @@ interface OtpSectionProps {
 }
 
 export function OtpSection({ otpKey, account, onRefresh }: OtpSectionProps) {
-  const { token } = useAuth();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleGenerate() {
-    if (!token) return;
     setLoading(true);
     setProblem(null);
     try {
-      await api.createOtpKey(token);
+      await api.createOtpKey();
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
@@ -32,11 +29,10 @@ export function OtpSection({ otpKey, account, onRefresh }: OtpSectionProps) {
   }
 
   async function handleDelete() {
-    if (!token) return;
     setLoading(true);
     setProblem(null);
     try {
-      await api.deleteOtpKey(token);
+      await api.deleteOtpKey();
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import { NameDescriptionForm } from '@/features/admin/name-description-form';
@@ -15,8 +14,8 @@ import { X } from 'lucide-react';
 const config: AdminCrudConfig<Group> = {
   fetchList: api.getGroups,
   fetchOne: api.getGroup,
-  create: (data, token) => api.createGroup(data as { name: string; description: string }, token),
-  update: (name, data, token) => api.updateGroup(name, data as { name: string; description: string }, token),
+  create: (data) => api.createGroup(data as { name: string; description: string }),
+  update: (name, data) => api.updateGroup(name, data as { name: string; description: string }),
   getIdentifier: (g) => g.name,
 };
 
@@ -26,7 +25,6 @@ const columns: ColumnDef<Group>[] = [
 ];
 
 function GroupUsersSection({ groupName }: { groupName: string }) {
-  const { token } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -35,25 +33,24 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
   const [searching, setSearching] = useState(false);
 
   const loadUsers = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     try {
-      const data = await api.getGroupUsers(groupName, token);
+      const data = await api.getGroupUsers(groupName);
       setUsers(data);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     } finally {
       setLoading(false);
     }
-  }, [token, groupName]);
+  }, [groupName]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const handleSearch = async () => {
-    if (!token || !searchQuery.trim()) return;
+    if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      const results = await api.getUsers({ q: searchQuery, limit: 20 }, token);
+      const results = await api.getUsers({ q: searchQuery, limit: 20 });
       const memberAccounts = new Set(users.map((u) => u.account));
       setSearchResults(results.filter((u) => !memberAccounts.has(u.account)));
     } catch { /* ignore */ } finally {
@@ -62,10 +59,9 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
   };
 
   const handleAdd = async (account: string) => {
-    if (!token) return;
     setProblem(null);
     try {
-      await api.addGroupUsers(groupName, [account], token);
+      await api.addGroupUsers(groupName, [account]);
       setSearchResults((prev) => prev.filter((u) => u.account !== account));
       loadUsers();
     } catch (err) {
@@ -74,10 +70,9 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
   };
 
   const handleRemove = async (account: string) => {
-    if (!token) return;
     setProblem(null);
     try {
-      await api.removeGroupUsers(groupName, [account], token);
+      await api.removeGroupUsers(groupName, [account]);
       loadUsers();
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);

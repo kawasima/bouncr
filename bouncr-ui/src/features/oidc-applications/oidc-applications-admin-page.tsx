@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
 import type { ColumnDef } from '@/components/data-table';
@@ -14,8 +13,8 @@ import { ProblemAlert } from '@/components/problem-alert';
 const config: AdminCrudConfig<OidcApplication> = {
   fetchList: api.getOidcApplications,
   fetchOne: api.getOidcApplication,
-  create: (data, token) => api.createOidcApplication(data as unknown as OidcApplicationCreateRequest, token),
-  update: (name, data, token) => api.updateOidcApplication(name, data as unknown as OidcApplicationCreateRequest, token),
+  create: (data) => api.createOidcApplication(data as unknown as OidcApplicationCreateRequest),
+  update: (name, data) => api.updateOidcApplication(name, data as unknown as OidcApplicationCreateRequest),
   getIdentifier: (a) => a.name,
 };
 
@@ -46,16 +45,14 @@ function OidcAppEditForm({
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
 }) {
-  const { token } = useAuth();
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(
     new Set(target?.permissions?.map((p) => p.name) ?? []),
   );
 
   useEffect(() => {
-    if (!token) return;
-    api.getPermissions({ limit: 1000 }, token).then(setAllPermissions).catch(() => {});
-  }, [token]);
+    api.getPermissions({ limit: 1000 }).then(setAllPermissions).catch(() => {});
+  }, []);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcAppFormData>({
     resolver: zodResolver(oidcAppSchema),

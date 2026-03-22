@@ -186,9 +186,9 @@ public class WebAuthnSignInResource {
     public ApiResponse handleCreated(User user, UserSession userSession) {
         String tokenCookie = config.getTokenName() + "=" + userSession.token()
                 + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
+                + "; SameSite=Strict; Max-Age=" + config.getRefreshTokenExpires()
                 + "; Path=/";
-        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
+        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
                 + (config.isSecureCookie() ? "; Secure" : "");
 
         return builder(new ApiResponse())

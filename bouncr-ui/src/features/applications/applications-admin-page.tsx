@@ -13,8 +13,8 @@ import { ProblemAlert } from '@/components/problem-alert';
 const config: AdminCrudConfig<Application> = {
   fetchList: api.getApplications,
   fetchOne: api.getApplication,
-  create: (data, token) => api.createApplication(data as unknown as Application, token),
-  update: (name, data, token) => api.updateApplication(name, data, token),
+  create: (data) => api.createApplication(data as unknown as Application),
+  update: (name, data) => api.updateApplication(name, data),
   getIdentifier: (a) => a.name,
 };
 
