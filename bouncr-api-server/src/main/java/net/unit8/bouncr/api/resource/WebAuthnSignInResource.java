@@ -13,6 +13,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
@@ -35,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
 import static enkan.util.ThreadingUtils.some;
@@ -196,9 +196,8 @@ public class WebAuthnSignInResource {
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Set-Cookie", tokenCookie,
                         "Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, Map.of(
-                        "token", userSession.token(),
-                        "account", user.account()))
+                .set(ApiResponse::setBody, new WebAuthnSignInResponse(
+                        userSession.token(), user.account()))
                 .build();
     }
 }

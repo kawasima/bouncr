@@ -9,6 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
+import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
@@ -17,8 +18,6 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -98,12 +97,12 @@ public class OidcApplicationResource {
     }
 
     @Decision(HANDLE_OK)
-    public Map<String, Object> find(OidcApplication oidcApplication) {
-        return sanitize(oidcApplication);
+    public OidcApplicationResponse find(OidcApplication oidcApplication) {
+        return OidcApplicationResponse.of(oidcApplication);
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, RestContext context, DSLContext dsl) {
+    public OidcApplicationResponse update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         boolean hasBackchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_BACKCHANNEL_LOGOUT_URI));
         boolean hasFrontchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_FRONTCHANNEL_LOGOUT_URI));
@@ -126,7 +125,7 @@ public class OidcApplicationResource {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
             repo.setPermissions(appId, updateRequest.permissions());
         }
-        return sanitize(repo.findByName(updateRequest.name()).orElseThrow());
+        return OidcApplicationResponse.of(repo.findByName(updateRequest.name()).orElseThrow());
     }
 
     @Decision(DELETE)
@@ -134,24 +133,5 @@ public class OidcApplicationResource {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.delete(oidcApplication.name());
         return null;
-    }
-
-    /**
-     * Strip sensitive fields (client_secret hash, private_key) from API responses.
-     */
-    static Map<String, Object> sanitize(OidcApplication app) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", app.id());
-        result.put("name", app.name());
-        result.put("client_id", app.clientId());
-        result.put("home_url", app.homeUrl());
-        result.put("callback_url", app.callbackUrl());
-        result.put("description", app.description());
-        result.put("backchannel_logout_uri", app.backchannelLogoutUri());
-        result.put("frontchannel_logout_uri", app.frontchannelLogoutUri());
-        if (app.permissions() != null) {
-            result.put("permissions", app.permissions());
-        }
-        return result;
     }
 }

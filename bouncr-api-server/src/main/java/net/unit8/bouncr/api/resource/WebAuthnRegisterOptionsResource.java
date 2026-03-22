@@ -7,6 +7,7 @@ import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.WebAuthnRegistrationOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;
@@ -19,7 +20,6 @@ import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,8 +38,8 @@ public class WebAuthnRegisterOptionsResource {
 
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
 
-    record OptionsResult(Map<String, Object> options, String sessionId) {}
-    static final ContextKey<OptionsResult> RESULT = ContextKey.of(OptionsResult.class);
+    record PostResult(WebAuthnRegistrationOptions options, String sessionId) {}
+    static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
@@ -69,33 +69,30 @@ public class WebAuthnRegisterOptionsResource {
 
         Base64.Encoder b64url = Base64.getUrlEncoder().withoutPadding();
 
-        Map<String, Object> options = new LinkedHashMap<>();
-        options.put("challenge", b64url.encodeToString(challenge));
-        options.put("rp", Map.of("id", config.getWebAuthnRpId(), "name", config.getWebAuthnRpName()));
-        options.put("user", Map.of(
-                "id", b64url.encodeToString(WebAuthnService.userIdToHandle(user.id())),
-                "name", user.account(),
-                "displayName", user.account()));
-        options.put("pubKeyCredParams", List.of(
-                Map.of("type", "public-key", "alg", -7),   // ES256
-                Map.of("type", "public-key", "alg", -257)  // RS256
-        ));
-        options.put("excludeCredentials", existing.stream()
-                .map(c -> Map.of(
-                        "type", "public-key",
-                        "id", b64url.encodeToString(c.credentialId())))
-                .toList());
-        options.put("authenticatorSelection", Map.of(
-                "residentKey", "preferred",
-                "userVerification", "preferred"));
-        options.put("attestation", "none");
+        WebAuthnRegistrationOptions options = new WebAuthnRegistrationOptions(
+                b64url.encodeToString(challenge),
+                new WebAuthnRegistrationOptions.RelyingParty(config.getWebAuthnRpId(), config.getWebAuthnRpName()),
+                new WebAuthnRegistrationOptions.UserEntity(
+                        b64url.encodeToString(WebAuthnService.userIdToHandle(user.id())),
+                        user.account(),
+                        user.account()),
+                List.of(
+                        new WebAuthnRegistrationOptions.PubKeyCredParam("public-key", -7),   // ES256
+                        new WebAuthnRegistrationOptions.PubKeyCredParam("public-key", -257)  // RS256
+                ),
+                existing.stream()
+                        .map(c -> new WebAuthnRegistrationOptions.CredentialDescriptor(
+                                "public-key", b64url.encodeToString(c.credentialId())))
+                        .toList(),
+                Map.of("residentKey", "preferred", "userVerification", "preferred"),
+                "none");
 
-        context.put(RESULT, new OptionsResult(options, sessionId));
+        context.put(RESULT, new PostResult(options, sessionId));
         return true;
     }
 
     @Decision(HANDLE_CREATED)
-    public ApiResponse handleCreated(OptionsResult result) {
+    public ApiResponse handleCreated(PostResult result) {
         String cookieStr = COOKIE_NAME + "=" + result.sessionId()
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
                 + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");

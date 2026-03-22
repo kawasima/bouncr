@@ -15,6 +15,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnRegister;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -33,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -155,11 +155,7 @@ public class WebAuthnRegisterResource {
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, Map.of(
-                        "id", credential.id(),
-                        "credential_name", credential.credentialName() != null ? credential.credentialName() : "",
-                        "transports", credential.transports() != null ? credential.transports() : "",
-                        "discoverable", credential.discoverable()))
+                .set(ApiResponse::setBody, WebAuthnCredentialResponse.of(credential))
                 .build();
     }
 }
