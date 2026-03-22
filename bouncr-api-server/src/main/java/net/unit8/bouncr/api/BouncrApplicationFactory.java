@@ -220,9 +220,13 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
     }
 
     private Set<String> corsOrigins() {
-        final String corsOrigins = Env.getString("cors.origins", "*");
+        final String corsOrigins = Env.getString("cors.origins", null);
+        if (corsOrigins == null || corsOrigins.isBlank()) {
+            throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
+        }
         return Stream.of(corsOrigins.split(","))
                 .map(String::strip)
+                .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
     }
 

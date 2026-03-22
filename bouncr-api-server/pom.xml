@@ -244,6 +244,7 @@
                             <environmentVariables>
                                 <JWT_SECRET>abcdefghijklmnopqrstuvwxyzabcdef</JWT_SECRET>
                                 <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                                <cors.origins>*</cors.origins>
                             </environmentVariables>
                         </configuration>
                     </plugin>
