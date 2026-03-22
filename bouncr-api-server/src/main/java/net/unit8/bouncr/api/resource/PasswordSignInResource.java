@@ -79,9 +79,14 @@ public class PasswordSignInResource {
 
         User user = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
 
+        // Always perform the hash first to equalize timing regardless of account state,
+        // preventing both "account not found" and "account locked" timing-based enumeration.
+        String salt = user != null && user.passwordCredential() != null
+                ? user.passwordCredential().salt()
+                : config.getDummySalt();
+        byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, 600_000);
+
         if (user == null) {
-            // Always perform the hash to equalize timing and prevent account enumeration.
-            PasswordUtils.pbkdf2(signInRequest.password(), config.getDummySalt(), 600_000);
             return false;
         }
 
@@ -94,10 +99,7 @@ public class PasswordSignInResource {
         if (user.passwordCredential() != null &&
                 Arrays.equals(
                         user.passwordCredential().password(),
-                        PasswordUtils.pbkdf2(
-                                signInRequest.password(),
-                                user.passwordCredential().salt(),
-                                600_000))) {
+                        computedHash)) {
             context.put(USER, user);
             actionRecord.setActionType(USER_SIGNIN);
             SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);

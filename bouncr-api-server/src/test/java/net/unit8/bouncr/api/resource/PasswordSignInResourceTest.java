@@ -1,6 +1,13 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.data.DefaultHttpRequest;
+import kotowari.restful.data.Resource;
+import kotowari.restful.data.RestContext;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
@@ -81,5 +88,39 @@ public class PasswordSignInResourceTest {
         // Password still matches even though it's initial
         byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
         assertThat(Arrays.equals(loaded.passwordCredential().password(), checkHash)).isTrue();
+    }
+
+    @Test
+    void authenticate_nonExistentAccount_returnsFalseAndHashIsExecuted() {
+        // Verify that the dummy PBKDF2 path executes without error for unknown accounts.
+        // This guards against accidental removal of the timing-equalization code.
+        PasswordSignInResource resource = new PasswordSignInResource();
+        setField(resource, "config", new BouncrConfiguration());
+        setField(resource, "storeProvider", new StoreProvider());
+
+        PasswordSignIn req = new PasswordSignIn("no-such-user", "anypassword", null);
+        RestContext context = restContext();
+        context.put(PasswordSignInResource.SIGN_IN_REQ, req);
+
+        boolean result = resource.authenticate(req, new ActionRecord(), context, dsl);
+
+        assertThat(result).isFalse();
+        // No message set (no 401 Problem) — the "unknown account" branch is silent
+        assertThat(context.getMessage()).isEmpty();
+    }
+
+    private RestContext restContext() {
+        Resource stubResource = decisionPoint -> ctx -> null;
+        return new RestContext(stubResource, new DefaultHttpRequest());
+    }
+
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

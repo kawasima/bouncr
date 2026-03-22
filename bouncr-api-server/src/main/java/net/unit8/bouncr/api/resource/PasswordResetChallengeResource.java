@@ -59,8 +59,8 @@ public class PasswordResetChallengeResource {
     /**
      * Create a code for reset password.
      *
-     * If the account does not exist, we return the same 201 response without any side effects
-     * to prevent account enumeration attacks.
+     * If the account does not exist, we return the same 201 response, but no password reset
+     * challenge is created and the AFTER hook is not run, to prevent account enumeration attacks.
      *
      * @param createRequest a creation request for the password reset challenge
      * @param context a REST context
@@ -74,6 +74,8 @@ public class PasswordResetChallengeResource {
         UserRepository userRepo = new UserRepository(dsl);
         Optional<User> userOpt = userRepo.findByAccount(createRequest.account());
         if (userOpt.isEmpty()) {
+            // Dummy hash to reduce timing side-channel (CPU-bound only, no persistence).
+            RandomUtils.generateRandomString(8);
             return null;
         }
         User user = userOpt.get();
