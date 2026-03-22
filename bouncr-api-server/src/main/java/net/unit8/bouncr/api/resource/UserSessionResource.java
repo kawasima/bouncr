@@ -112,16 +112,29 @@ public class UserSessionResource {
     public ApiResponse handleOk(RestContext context) {
         SignOutResponse body = context.get(LOGOUT_RESULT).orElse(new SignOutResponse(
                 List.of(), new SignOutResponse.BackchannelLogoutSummary(0, 0, 0)));
-        // Always clear the session cookie so browser clients are signed out automatically.
-        // If the caller has no such cookie, the directive is silently ignored by the browser.
-        String clearCookie = config.getTokenName() + "=; HttpOnly"
-                + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Strict; Max-Age=0; Path=/";
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 200)
-                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie))
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
                 .set(ApiResponse::setBody, body)
                 .build();
+    }
+
+    @Decision(HANDLE_NOT_FOUND)
+    public ApiResponse handleNotFound() {
+        // Session not found (e.g. stale cookie after server restart). Still clear the cookie
+        // so the browser is no longer stuck in an authenticated-but-invalid state.
+        Problem body = Problem.valueOf(404, "Session not found");
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 404)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
+                .set(ApiResponse::setBody, body)
+                .build();
+    }
+
+    private String buildClearCookie() {
+        return config.getTokenName() + "=; HttpOnly"
+                + (config.isSecureCookie() ? "; Secure" : "")
+                + "; SameSite=Strict; Max-Age=0; Path=/";
     }
 
     /**

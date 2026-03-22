@@ -37,7 +37,7 @@ function authReducer(_state: AuthState, action: AuthAction): AuthState {
 
 function loadInitialState(): AuthState {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as { account: string };
       if (parsed.account) {
@@ -55,13 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (state.status === 'logged_in') {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ account: state.account }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ account: state.account }));
     } else {
-      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, [state]);
 
-  // Cross-tab sync: propagate login/logout across tabs via sessionStorage events
+  // Cross-tab sync: propagate login/logout across tabs via localStorage storage events
   useEffect(() => {
     function handleStorage(e: StorageEvent) {
       if (e.key !== STORAGE_KEY) return;
