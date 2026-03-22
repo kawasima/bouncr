@@ -45,6 +45,25 @@ func TestMatch_VirtualPathPlusURL(t *testing.T) {
 	}
 }
 
+func TestMatch_RealmURLWithSlash(t *testing.T) {
+	// realm.URL may contain "/" (e.g. "api/users"), matching Java RealmCache semantics.
+	// path == virtualPath + "/" + realm.URL must hold as a whole, not via LastIndex split.
+	r := &Realm{ID: 5, URL: "api/users", Application: app(5, "/bouncr")}
+	c := buildCache([]*Realm{r})
+
+	got := c.Match("/bouncr/api/users")
+	if got == nil {
+		t.Fatal("expected a match for realm.URL with slash, got nil")
+	}
+	if got.ID != 5 {
+		t.Errorf("got realm ID %d, want 5", got.ID)
+	}
+	// A path that is only a prefix of virtualPath+"/"+url must not match
+	if got := c.Match("/bouncr/api"); got != nil {
+		t.Errorf("expected nil for partial match, got realm ID %d", got.ID)
+	}
+}
+
 func TestMatch_NoMatch(t *testing.T) {
 	r := &Realm{ID: 3, URL: "api", Application: app(3, "/bouncr")}
 	c := buildCache([]*Realm{r})
@@ -82,14 +101,14 @@ func TestMatch_RootPath(t *testing.T) {
 	r := &Realm{ID: 5, URL: "api", Application: app(6, "/bouncr")}
 	c := buildCache([]*Realm{r})
 
-	// "/" has no "/" after index 0, so idx > 0 is false — must not match
 	if got := c.Match("/"); got != nil {
 		t.Errorf("expected nil for root path, got realm ID %d", got.ID)
 	}
 }
 
-// BenchmarkMatch measures Match() throughput at various realm cardinalities.
-func BenchmarkMatch(b *testing.B) {
+// BenchmarkMatch_DistinctVirtualPaths measures Match() when each realm has its
+// own virtualPath (best-case O(1) map lookup for Case 1, O(k) iteration for Case 2).
+func BenchmarkMatch_DistinctVirtualPaths(b *testing.B) {
 	for _, n := range []int{10, 100, 1000} {
 		b.Run(fmt.Sprintf("realms=%d", n), func(b *testing.B) {
 			realms := make([]*Realm, n)
@@ -101,8 +120,33 @@ func BenchmarkMatch(b *testing.B) {
 				}
 			}
 			c := buildCache(realms)
-			// Always hit the last realm (worst case for linear scan)
 			target := fmt.Sprintf("/app%d/realm%d", n-1, n-1)
+
+			b.ResetTimer()
+			for range b.N {
+				_ = c.Match(target)
+			}
+		})
+	}
+}
+
+// BenchmarkMatch_SharedVirtualPath measures Match() worst case: many realms
+// share the same virtualPath and the target realm is last in the slice.
+func BenchmarkMatch_SharedVirtualPath(b *testing.B) {
+	for _, n := range []int{10, 100, 1000} {
+		b.Run(fmt.Sprintf("realms=%d", n), func(b *testing.B) {
+			a := app(1, "/app")
+			realms := make([]*Realm, n)
+			for i := range realms {
+				realms[i] = &Realm{
+					ID:          int64(i),
+					URL:         fmt.Sprintf("realm%d", i),
+					Application: a,
+				}
+			}
+			c := buildCache(realms)
+			// Last realm in the slice — worst case for per-virtualPath scan
+			target := fmt.Sprintf("/app/realm%d", n-1)
 
 			b.ResetTimer()
 			for range b.N {

@@ -81,8 +81,8 @@ func (s *Server) handleRequestHeaders(
 	log.Printf("ext_proc: path=%q", path)
 
 	if path == "" {
-		log.Printf("ext_proc: no path found, continuing without auth")
-		return continueResponse(nil)
+		log.Printf("ext_proc: no :path header, rejecting")
+		return immediateResponse(typev3.StatusCode_BadRequest)
 	}
 
 	// Strip query string before realm matching; the realm table stores only path segments.

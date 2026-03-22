@@ -125,14 +125,18 @@ func (c *Cache) Match(path string) *Realm {
 	}
 
 	// Case 2: path == virtualPath + "/" + realm.URL
-	if idx := strings.LastIndex(path, "/"); idx > 0 {
-		prefix := path[:idx]
-		suffix := path[idx+1:]
-		if realms, ok := c.realmsByPath[prefix]; ok {
-			for _, r := range realms {
-				if r.URL == suffix {
-					return r
-				}
+	// Iterate over virtualPaths rather than splitting path, because realm.URL
+	// may itself contain "/" (e.g. "api/users"), making LastIndex-based
+	// splitting incorrect.
+	for vp, realms := range c.realmsByPath {
+		prefix := vp + "/"
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+		realmURL := path[len(prefix):]
+		for _, r := range realms {
+			if r.URL == realmURL {
+				return r
 			}
 		}
 	}
