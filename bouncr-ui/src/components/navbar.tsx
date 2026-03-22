@@ -70,12 +70,16 @@ async function runFrontchannelLogout(urls: string[]): Promise<void> {
 
   const workerCount = Math.min(FRONTCHANNEL_CONCURRENCY, safeUrls.length);
   const workers = Array.from({ length: workerCount }, () => runWorker());
-  await Promise.race([
-    Promise.all(workers),
-    new Promise<void>((resolve) => {
-      window.setTimeout(resolve, FRONTCHANNEL_OVERALL_TIMEOUT_MS);
-    }),
-  ]);
+  let timeoutId: number | undefined;
+  const timeoutPromise = new Promise<void>((resolve) => {
+    timeoutId = window.setTimeout(resolve, FRONTCHANNEL_OVERALL_TIMEOUT_MS);
+  });
+  const workersPromise = Promise.all(workers).finally(() => {
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+    }
+  });
+  await Promise.race([workersPromise, timeoutPromise]);
 }
 
 export function Navbar() {

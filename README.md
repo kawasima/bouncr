@@ -49,7 +49,7 @@ Bouncr acts as a full OIDC Identity Provider ([comparable to Kanidm](https://kan
 
 **Logout propagation (Issue #80):**
 - Back-channel logout on sign-out: Bouncr sends OIDC Logout Token (`iss`, `aud`, `iat`, `jti`, `events`, `sub`) to each registered RP `backchannel_logout_uri` (best-effort)
-- Front-channel logout on sign-out: API returns `frontchannel_logout_urls` for UI-side hidden iframe dispatch
+- Front-channel logout on sign-out: API returns `frontchannel_logout_urls` for UI-side hidden iframe dispatch (bounded parallel fan-out with overall timeout in UI)
 
 ### Administration
 

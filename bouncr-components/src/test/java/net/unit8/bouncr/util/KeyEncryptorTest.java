@@ -31,8 +31,12 @@ class KeyEncryptorTest {
         KeyEncryptor encryptor = new KeyEncryptor(null, RANDOM);
         byte[] data = "plaintext data".getBytes();
 
-        assertThat(encryptor.encrypt(data)).isEqualTo(data);
-        assertThat(encryptor.decrypt(data)).isEqualTo(data);
+        byte[] encrypted = encryptor.encrypt(data);
+        byte[] decrypted = encryptor.decrypt(data);
+        assertThat(encrypted).isEqualTo(data);
+        assertThat(decrypted).isEqualTo(data);
+        assertThat(encrypted).isNotSameAs(data);
+        assertThat(decrypted).isNotSameAs(data);
         assertThat(encryptor.isEnabled()).isFalse();
     }
 
@@ -85,6 +89,7 @@ class KeyEncryptorTest {
         byte[] legacyData = "plaintext-private-key-bytes".getBytes();
         byte[] result = encryptor.decrypt(legacyData);
         assertThat(result).isEqualTo(legacyData);
+        assertThat(result).isNotSameAs(legacyData);
     }
 
     @Test

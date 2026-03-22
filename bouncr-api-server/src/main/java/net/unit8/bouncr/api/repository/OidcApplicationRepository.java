@@ -188,8 +188,12 @@ public class OidcApplicationRepository {
         if (description != null) {
             updateSet = updateSet.set(field("description"), (Object) description);
         }
-        updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri);
-        updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri);
+        if (backchannelLogoutUri != null) {
+            updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri);
+        }
+        if (frontchannelLogoutUri != null) {
+            updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri);
+        }
         updateSet.where(field("name").eq(currentName))
                 .execute();
     }

@@ -10,6 +10,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 /**
  * AES-256-GCM encryption/decryption for sensitive data at rest (e.g., OIDC private keys).
@@ -42,7 +43,7 @@ public class KeyEncryptor {
     }
 
     public byte[] encrypt(byte[] plaintext) {
-        if (secretKey == null) return plaintext;
+        if (secretKey == null) return Arrays.copyOf(plaintext, plaintext.length);
         try {
             byte[] iv = new byte[IV_LENGTH];
             random.nextBytes(iv);
@@ -60,12 +61,12 @@ public class KeyEncryptor {
     }
 
     public byte[] decrypt(byte[] data) {
-        if (secretKey == null) return data;
+        if (secretKey == null) return Arrays.copyOf(data, data.length);
 
         // Check magic prefix — if absent, data is legacy plaintext
         if (!hasMagicPrefix(data)) {
             LOG.warn("Data lacks encryption magic prefix — treating as legacy plaintext");
-            return data;
+            return Arrays.copyOf(data, data.length);
         }
 
         try {

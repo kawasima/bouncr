@@ -88,4 +88,42 @@ class OidcApplicationRepositoryTest {
         assertThat(updated.frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-b.example/frontchannel-logout-new");
     }
+
+    @Test
+    void update_doesNotClearLogoutUrisWhenOmitted() {
+        repo.insert(
+                "oidc-app-c",
+                "client-c",
+                "secret-c",
+                new byte[]{1},
+                new byte[]{2},
+                "https://client-c.example",
+                "https://client-c.example/callback",
+                "desc-c",
+                "https://client-c.example/backchannel-logout",
+                "https://client-c.example/frontchannel-logout"
+        );
+
+        repo.update(
+                "oidc-app-c",
+                "oidc-app-c",
+                null,
+                null,
+                null,
+                null,
+                "https://client-c.example/home-new",
+                "https://client-c.example/callback-new",
+                "desc-c-new",
+                null,
+                null
+        );
+
+        OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
+        assertThat(updated.homeUrl().toString()).isEqualTo("https://client-c.example/home-new");
+        assertThat(updated.callbackUrl().toString()).isEqualTo("https://client-c.example/callback-new");
+        assertThat(updated.backchannelLogoutUri().toString())
+                .isEqualTo("https://client-c.example/backchannel-logout");
+        assertThat(updated.frontchannelLogoutUri().toString())
+                .isEqualTo("https://client-c.example/frontchannel-logout");
+    }
 }
