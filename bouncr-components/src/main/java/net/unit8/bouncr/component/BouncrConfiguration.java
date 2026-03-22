@@ -10,6 +10,7 @@ import net.unit8.bouncr.component.config.OidcConfiguration;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.component.config.VerificationPolicy;
 import net.unit8.bouncr.hook.HookRepository;
+import net.unit8.bouncr.util.RandomUtils;
 
 import javax.naming.CommunicationException;
 import javax.naming.NamingException;
@@ -49,6 +50,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private VerificationPolicy verificationPolicy = new VerificationPolicy();
     private CertConfiguration certConfiguration;
     private SecureRandom secureRandom;
+    private String dummySalt = RandomUtils.generateRandomString(16);
     private MessageResource messageResource = new MessageResource(new HashSet<>(Arrays.asList(
             Locale.ENGLISH,
             Locale.JAPANESE))
@@ -90,6 +92,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
                         }
                     }
                 }
+                component.dummySalt = RandomUtils.generateRandomString(16, component.secureRandom);
             }
 
             @Override
@@ -276,6 +279,10 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public SecureRandom getSecureRandom() {
         return secureRandom;
+    }
+
+    public String getDummySalt() {
+        return dummySalt;
     }
 
     public void setSecureRandom(SecureRandom secureRandom) {
