@@ -122,6 +122,34 @@ func TestMatch_NestedVirtualPaths_LongestWins(t *testing.T) {
 	}
 }
 
+func TestMatch_RootVirtualPath(t *testing.T) {
+	// virtualPath="/" + url="api" → should match "/api" (not "//api")
+	r := &Realm{ID: 6, URL: "api", Application: app(9, "/")}
+	c := buildCache([]*Realm{r})
+
+	got := c.Match("/api")
+	if got == nil {
+		t.Fatal("expected a match for virtualPath='/' + url='api', got nil")
+	}
+	if got.ID != 6 {
+		t.Errorf("got realm ID %d, want 6", got.ID)
+	}
+}
+
+func TestMatch_TrailingSlashVirtualPath(t *testing.T) {
+	// virtualPath="/bouncr/" + url="api" → should match "/bouncr/api"
+	r := &Realm{ID: 7, URL: "api", Application: app(10, "/bouncr/")}
+	c := buildCache([]*Realm{r})
+
+	got := c.Match("/bouncr/api")
+	if got == nil {
+		t.Fatal("expected a match for virtualPath='/bouncr/' + url='api', got nil")
+	}
+	if got.ID != 7 {
+		t.Errorf("got realm ID %d, want 7", got.ID)
+	}
+}
+
 func TestMatch_RootPath(t *testing.T) {
 	r := &Realm{ID: 5, URL: "api", Application: app(6, "/bouncr")}
 	c := buildCache([]*Realm{r})

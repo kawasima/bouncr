@@ -148,7 +148,12 @@ func (c *Cache) Match(path string) *Realm {
 	// wins. realm.URL may itself contain "/" (e.g. "api/users"), so we compare
 	// the full remainder rather than splitting on the last "/".
 	for _, vp := range c.sortedVirtualPaths {
-		prefix := vp + "/"
+		var prefix string
+		if strings.HasSuffix(vp, "/") {
+			prefix = vp
+		} else {
+			prefix = vp + "/"
+		}
 		if !strings.HasPrefix(path, prefix) {
 			continue
 		}
