@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	extprocpb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
@@ -132,9 +133,14 @@ func (s *Server) handleRequestHeaders(
 	}
 
 	// Always strip client-supplied trusted headers to prevent header injection attacks.
-	// A client could forge x-bouncr-credential or x-bouncr-cluster and reach the backend
-	// if ext_proc does not add those headers (e.g. unauthenticated but realm-matched request).
-	trustedHeaders := []string{"x-bouncr-credential", "x-bouncr-cluster"}
+	// A client could forge these headers and reach the backend if ext_proc does not
+	// set them for the request (e.g. unauthenticated but realm-matched request).
+	// The credential header name is configurable via BACKEND_HEADER_NAME, so we derive
+	// it from the Authenticator rather than hard-coding it.
+	trustedHeaders := []string{
+		strings.ToLower(s.authenticator.CredentialHeaderName()),
+		"x-bouncr-cluster",
+	}
 	return continueResponse(headers, trustedHeaders)
 }
 
