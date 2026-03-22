@@ -65,7 +65,7 @@ func (s *Server) handleRequestHeaders(
 ) *extprocpb.ProcessingResponse {
 	hdrs := req.RequestHeaders.GetHeaders()
 	if hdrs == nil {
-		return continueResponse(nil)
+		return continueResponse(nil, nil)
 	}
 
 	// Build a map of headers for the authenticator
@@ -131,7 +131,11 @@ func (s *Server) handleRequestHeaders(
 		})
 	}
 
-	return continueResponse(headers)
+	// Always strip client-supplied trusted headers to prevent header injection attacks.
+	// A client could forge x-bouncr-credential or x-bouncr-cluster and reach the backend
+	// if ext_proc does not add those headers (e.g. unauthenticated but realm-matched request).
+	trustedHeaders := []string{"x-bouncr-credential", "x-bouncr-cluster"}
+	return continueResponse(headers, trustedHeaders)
 }
 
 func immediateResponse(code typev3.StatusCode) *extprocpb.ProcessingResponse {
@@ -144,12 +148,13 @@ func immediateResponse(code typev3.StatusCode) *extprocpb.ProcessingResponse {
 	}
 }
 
-func continueResponse(headers []*corev3.HeaderValueOption) *extprocpb.ProcessingResponse {
+func continueResponse(headers []*corev3.HeaderValueOption, removeHeaders []string) *extprocpb.ProcessingResponse {
 	headersResp := &extprocpb.HeadersResponse{}
-	if len(headers) > 0 {
+	if len(headers) > 0 || len(removeHeaders) > 0 {
 		headersResp.Response = &extprocpb.CommonResponse{
 			HeaderMutation: &extprocpb.HeaderMutation{
-				SetHeaders: headers,
+				SetHeaders:    headers,
+				RemoveHeaders: removeHeaders,
 			},
 		}
 	}
