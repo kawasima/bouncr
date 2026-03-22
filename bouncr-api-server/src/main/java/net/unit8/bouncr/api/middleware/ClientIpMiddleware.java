@@ -24,7 +24,8 @@ public class ClientIpMiddleware implements WebMiddleware {
         String xff = request.getHeaders().get("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
             // Leftmost entry is the original client IP
-            String clientIp = xff.split(",")[0].trim();
+            int comma = xff.indexOf(',');
+            String clientIp = (comma >= 0 ? xff.substring(0, comma) : xff).trim();
             request.setRemoteAddr(clientIp);
         }
         return castToHttpResponse(chain.next(request));

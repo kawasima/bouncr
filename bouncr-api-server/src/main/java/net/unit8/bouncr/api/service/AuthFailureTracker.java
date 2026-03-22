@@ -42,11 +42,11 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
     /** Check if the given IP or account+IP pair is currently blocked. */
     public boolean isBlocked(String ip, String account) {
         if (isIpBlocked(ip)) {
-            LOG.info("Rate limit: rejected request from blocked IP {}", ip);
+            LOG.debug("Rate limit: rejected request from blocked IP {}", ip);
             return true;
         }
         if (account != null && isAccountIpBlocked(ip, account)) {
-            LOG.info("Rate limit: rejected request from blocked account={} IP={}", account, ip);
+            LOG.debug("Rate limit: rejected request from blocked account={} IP={}", account, ip);
             return true;
         }
         return false;
