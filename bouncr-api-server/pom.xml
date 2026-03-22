@@ -249,6 +249,7 @@
                                 <!-- Explicitly set development mode so wildcard CORS is permitted
                                      even if enkan.env is set in the developer's shell. -->
                                 <enkan.env>development</enkan.env>
+                                <INTERNAL_SIGNING_KEY>CHANGE-ME</INTERNAL_SIGNING_KEY>
                             </environmentVariables>
                         </configuration>
                     </plugin>

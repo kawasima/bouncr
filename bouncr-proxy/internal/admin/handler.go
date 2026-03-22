@@ -5,25 +5,43 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/kawasima/bouncr/bouncr-proxy/internal/auth"
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/realm"
 )
 
 // Handler provides HTTP endpoints for operational management.
 type Handler struct {
-	realmCache *realm.Cache
+	realmCache         *realm.Cache
+	internalSigningKey []byte
 }
 
-func NewHandler(realmCache *realm.Cache) *Handler {
-	return &Handler{realmCache: realmCache}
+func NewHandler(realmCache *realm.Cache, internalSigningKey string) *Handler {
+	return &Handler{
+		realmCache:         realmCache,
+		internalSigningKey: []byte(internalSigningKey),
+	}
 }
 
 // ServeMux returns an http.ServeMux with registered admin endpoints.
 func (h *Handler) ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /_refresh", h.handleRefresh)
-	mux.HandleFunc("GET /_clusters", h.handleClusters)
+	mux.HandleFunc("POST /_refresh", h.requireSignature(h.handleRefresh))
+	mux.HandleFunc("GET /_clusters", h.requireSignature(h.handleClusters))
 	mux.HandleFunc("GET /_healthcheck", h.handleHealthCheck)
 	return mux
+}
+
+// requireSignature wraps a handler to verify the X-Bouncr-Signature header.
+// The signature payload is the request path (e.g. "/_refresh").
+func (h *Handler) requireSignature(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sig := r.Header.Get(auth.SignatureHeader)
+		if !auth.VerifySignature(h.internalSigningKey, sig, r.URL.Path) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
 }
 
 // handleRefresh triggers an immediate realm cache refresh.

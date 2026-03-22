@@ -25,6 +25,7 @@ services:
       JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
       TOKEN_COOKIE_NAME: BOUNCR_TOKEN
       BACKEND_HEADER_NAME: X-Bouncr-Credential
+      INTERNAL_SIGNING_KEY: CHANGE-ME
     ports:
       - "50051:50051"
       - "8081:8081"

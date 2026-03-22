@@ -140,6 +140,7 @@ func (s *Server) handleRequestHeaders(
 	trustedHeaders := []string{
 		strings.ToLower(s.authenticator.CredentialHeaderName()),
 		"x-bouncr-cluster",
+		"x-bouncr-signature",
 	}
 	return continueResponse(headers, trustedHeaders)
 }

@@ -17,6 +17,7 @@ type Config struct {
 	BackendHeaderName    string
 	RealmRefreshInterval time.Duration
 	APIServerURL         string
+	InternalSigningKey   string
 }
 
 func Load() *Config {
@@ -32,6 +33,7 @@ func Load() *Config {
 		BackendHeaderName:    envOrDefault("BACKEND_HEADER_NAME", "x-bouncr-credential"),
 		RealmRefreshInterval: parseDuration(envOrDefault("REALM_REFRESH_INTERVAL", "30s")),
 		APIServerURL:         envOrDefault("API_SERVER_URL", "http://localhost:3005"),
+		InternalSigningKey:   envOrDefault("INTERNAL_SIGNING_KEY", ""),
 	}
 }
 
