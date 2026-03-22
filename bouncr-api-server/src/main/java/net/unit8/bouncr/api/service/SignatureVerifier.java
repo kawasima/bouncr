@@ -5,6 +5,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.util.HexFormat;
 
 /**
  * Verifies HMAC-SHA256 request signatures in the format used by
@@ -52,10 +53,12 @@ public class SignatureVerifier {
 
         String signed = timestamp + "." + payload;
         byte[] expected = hmacSha256(signed);
-        byte[] provided = hexDecode(signature);
-        if (provided == null) return false;
-
-        return MessageDigest.isEqual(expected, provided);
+        try {
+            byte[] provided = HexFormat.of().parseHex(signature);
+            return MessageDigest.isEqual(expected, provided);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private byte[] hmacSha256(String data) {
@@ -66,17 +69,5 @@ public class SignatureVerifier {
         } catch (GeneralSecurityException e) {
             throw new RuntimeException("HmacSHA256 unavailable", e);
         }
-    }
-
-    private static byte[] hexDecode(String hex) {
-        if (hex.length() % 2 != 0) return null;
-        byte[] bytes = new byte[hex.length() / 2];
-        for (int i = 0; i < bytes.length; i++) {
-            int hi = Character.digit(hex.charAt(i * 2), 16);
-            int lo = Character.digit(hex.charAt(i * 2 + 1), 16);
-            if (hi == -1 || lo == -1) return null;
-            bytes[i] = (byte) ((hi << 4) | lo);
-        }
-        return bytes;
     }
 }

@@ -152,6 +152,10 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 .set(CorsMiddleware::setOrigins, corsOrigins())
                 .build());
 
+        if (Env.getString("internal.signing.key", null) == null) {
+            throw new MisconfigurationException("bouncr.INTERNAL_SIGNING_KEY_REQUIRED");
+        }
+
         try {
             String jwtSecret = Optional.ofNullable(Env.getString("JWT_SECRET", null))
                     .orElseThrow(() -> new MisconfigurationException("bouncr.JWT_SECRET_REQUIRED"));

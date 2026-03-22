@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -49,7 +48,8 @@ func VerifySignature(key []byte, header string, payload string) bool {
 		return false
 	}
 	now := time.Now().Unix()
-	if math.Abs(float64(now-t)) > toleranceSeconds {
+	diff := now - t
+	if diff < -toleranceSeconds || diff > toleranceSeconds {
 		return false
 	}
 
