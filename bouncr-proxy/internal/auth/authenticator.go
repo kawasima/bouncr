@@ -56,15 +56,23 @@ type AuthResult struct {
 // It also resolves routing information (cluster + path rewrite) from the matched realm.
 // Returns nil if no realm matches the path.
 func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]string, path string) (*AuthResult, error) {
+	// Strip query string for realm matching; preserve the original path (with query)
+	// so the rewritten :path forwarded to the backend retains query parameters.
+	matchPath := path
+	if i := strings.IndexByte(path, '?'); i >= 0 {
+		matchPath = path[:i]
+	}
+
 	// Find matching realm first (needed for both auth and routing)
-	matchedRealm := a.realmCache.Match(path)
+	matchedRealm := a.realmCache.Match(matchPath)
 	if matchedRealm == nil {
 		return nil, nil
 	}
 
 	app := matchedRealm.Application
 
-	// Calculate rewritten path: strip virtualPath, prepend backend path
+	// Calculate rewritten path: strip virtualPath, prepend backend path.
+	// Use original path so query parameters are preserved in the rewrite.
 	rewritePath := rewriteRequestPath(path, app.VirtualPath, app.BackendPath())
 
 	result := &AuthResult{

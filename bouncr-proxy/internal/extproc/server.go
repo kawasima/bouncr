@@ -7,6 +7,7 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	extprocpb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -79,19 +80,19 @@ func (s *Server) handleRequestHeaders(
 	log.Printf("ext_proc: path=%q", path)
 
 	if path == "" {
-		log.Printf("ext_proc: no path found, continuing without auth")
-		return continueResponse(nil)
+		log.Printf("ext_proc: no :path header, rejecting")
+		return immediateResponse(typev3.StatusCode_BadRequest)
 	}
 
 	result, err := s.authenticator.Authenticate(ctx, headerMap, path)
 	if err != nil {
 		log.Printf("ext_proc: authentication error: %v", err)
-		return continueResponse(nil)
+		return immediateResponse(typev3.StatusCode_ServiceUnavailable)
 	}
 
 	if result == nil {
-		log.Printf("ext_proc: no realm match for path, continuing")
-		return continueResponse(nil)
+		log.Printf("ext_proc: no realm match for path %q, rejecting", path)
+		return immediateResponse(typev3.StatusCode_NotFound)
 	}
 
 	// Build header mutations
@@ -131,6 +132,16 @@ func (s *Server) handleRequestHeaders(
 	}
 
 	return continueResponse(headers)
+}
+
+func immediateResponse(code typev3.StatusCode) *extprocpb.ProcessingResponse {
+	return &extprocpb.ProcessingResponse{
+		Response: &extprocpb.ProcessingResponse_ImmediateResponse{
+			ImmediateResponse: &extprocpb.ImmediateResponse{
+				Status: &typev3.HttpStatus{Code: code},
+			},
+		},
+	}
 }
 
 func continueResponse(headers []*corev3.HeaderValueOption) *extprocpb.ProcessingResponse {

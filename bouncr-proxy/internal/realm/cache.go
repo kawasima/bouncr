@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"regexp"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,8 +15,12 @@ import (
 type Cache struct {
 	pool         *pgxpool.Pool
 	mu           sync.RWMutex
-	realms       []*Realm
-	applications []*Application
+	realmsByPath map[string][]*Realm // keyed by Application.VirtualPath
+	// sortedVirtualPaths holds virtualPaths sorted by descending length so that
+	// the longest (most specific) virtualPath is matched first when multiple
+	// virtualPaths can be a prefix of the same request path (e.g. /a and /a/b).
+	sortedVirtualPaths []string
+	applications       []*Application
 }
 
 func NewCache(dsn string) (*Cache, error) {
@@ -58,7 +63,7 @@ func (c *Cache) Refresh() error {
 	}
 	defer rows.Close()
 
-	var realms []*Realm
+	realmsByPath := make(map[string][]*Realm)
 	appMap := make(map[int64]*Application)
 	for rows.Next() {
 		var appID int64
@@ -81,25 +86,25 @@ func (c *Cache) Refresh() error {
 			appMap[appID] = app
 		}
 
-		// Pattern: ^<virtualPath>($|/<realmURL>)
-		// Matches RealmCache.java line 73
-		pattern := fmt.Sprintf("^%s($|/%s)", regexp.QuoteMeta(virtualPath), realmURL)
-		compiled, err := regexp.Compile(pattern)
-		if err != nil {
-			log.Printf("invalid realm pattern %q: %v", pattern, err)
-			continue
-		}
-
-		realms = append(realms, &Realm{
+		realmsByPath[virtualPath] = append(realmsByPath[virtualPath], &Realm{
 			ID:          realmID,
 			URL:         realmURL,
 			Application: app,
-			PathPattern: compiled,
 		})
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterating realm rows: %w", err)
 	}
+
+	// Build a slice of virtualPaths sorted by descending length so that the
+	// most specific (longest) prefix wins when paths nest (e.g. /a/b before /a).
+	sortedVPs := make([]string, 0, len(realmsByPath))
+	for vp := range realmsByPath {
+		sortedVPs = append(sortedVPs, vp)
+	}
+	sort.Slice(sortedVPs, func(i, j int) bool {
+		return len(sortedVPs[i]) > len(sortedVPs[j])
+	})
 
 	// Collect unique applications
 	apps := make([]*Application, 0, len(appMap))
@@ -108,23 +113,58 @@ func (c *Cache) Refresh() error {
 	}
 
 	c.mu.Lock()
-	c.realms = realms
+	c.realmsByPath = realmsByPath
+	c.sortedVirtualPaths = sortedVPs
 	c.applications = apps
 	c.mu.Unlock()
 
-	log.Printf("realm cache refreshed: %d realm(s), %d application(s)", len(realms), len(apps))
+	realmCount := 0
+	for _, rs := range realmsByPath {
+		realmCount += len(rs)
+	}
+	log.Printf("realm cache refreshed: %d realm(s), %d application(s)", realmCount, len(apps))
 	return nil
 }
 
-// Match finds the first realm whose pattern matches the given path.
+// Match finds the realm whose path matches the given request path.
+// Matching semantics (equivalent to Java RealmCache.matchesPath):
+//
+//	path == virtualPath                   → exact application match
+//	path == virtualPath + "/" + realm.URL → realm sub-path match
+//
+// When multiple virtualPaths are prefixes of path, the longest (most specific)
+// virtualPath wins, making the result deterministic.
 func (c *Cache) Match(path string) *Realm {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	for _, r := range c.realms {
-		if r.Matches(path) {
-			return r
+
+	// Case 1: path == virtualPath (exact application match)
+	if realms, ok := c.realmsByPath[path]; ok && len(realms) > 0 {
+		return realms[0]
+	}
+
+	// Case 2: path == virtualPath + "/" + realm.URL
+	// Iterate in descending virtualPath length order so the most specific prefix
+	// wins. realm.URL may itself contain "/" (e.g. "api/users"), so we compare
+	// the full remainder rather than splitting on the last "/".
+	for _, vp := range c.sortedVirtualPaths {
+		var prefix string
+		if strings.HasSuffix(vp, "/") {
+			prefix = vp
+		} else {
+			prefix = vp + "/"
+		}
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+		realmURL := path[len(prefix):]
+		for _, r := range c.realmsByPath[vp] {
+			if r.URL == realmURL {
+				return r
+			}
 		}
 	}
+
 	return nil
 }
 
