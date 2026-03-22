@@ -938,8 +938,12 @@ paths:
       tags:
         - User session
       responses:
-        204:
+        200:
           description: Deleting a user session is successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignOutResult'
 components:
   schemas:
     PasswordSignInRequest:
@@ -1208,6 +1212,10 @@ components:
           type: string
         description:
           type: string
+        backchannel_logout_uri:
+          type: string
+        frontchannel_logout_uri:
+          type: string
         permissions:
           type: array
           items:
@@ -1219,6 +1227,29 @@ components:
         - callback_url
         - description
         - permissions
+    SignOutResult:
+      type: object
+      properties:
+        frontchannel_logout_urls:
+          type: array
+          items:
+            type: string
+        backchannel_logout:
+          type: object
+          properties:
+            attempted:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+          required:
+            - attempted
+            - succeeded
+            - failed
+      required:
+        - frontchannel_logout_urls
+        - backchannel_logout
     OidcProviders:
       type: array
       items:
@@ -1417,6 +1448,10 @@ components:
           type: string
         description:
           type: string
+        backchannel_logout_uri:
+          type: string
+        frontchannel_logout_uri:
+          type: string
         permissions:
           type: array
           items:
@@ -1437,6 +1472,10 @@ components:
         callback_url:
           type: string
         description:
+          type: string
+        backchannel_logout_uri:
+          type: string
+        frontchannel_logout_uri:
           type: string
         permissions:
           type: array
@@ -1663,5 +1702,4 @@ components:
       schema:
         type: string
         x-json-spec: BouncrCredential
-
 

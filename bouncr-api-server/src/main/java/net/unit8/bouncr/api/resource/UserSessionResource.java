@@ -3,14 +3,19 @@ package net.unit8.bouncr.api.resource;
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.service.OidcLogoutService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
+import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,6 +32,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
  */
 @AllowedMethods("DELETE")
 public class UserSessionResource {
+    static final ContextKey<String> SUBJECT = ContextKey.of("subject", String.class);
+
     @Inject
     private StoreProvider storeProvider;
 
@@ -51,20 +58,47 @@ public class UserSessionResource {
             return false;
         }
 
-        return Objects.equals(profiles.get("sub"), principal.getName());
+        if (Objects.equals(profiles.get("sub"), principal.getName())) {
+            context.put(SUBJECT, principal.getName());
+            return true;
+        }
+        return false;
     }
 
     @Decision(DELETE)
-    public Void delete(Parameters params, RestContext context) {
+    public Map<String, Object> delete(Parameters params, String subject, RestContext context, DSLContext dsl) {
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_OUT, context);
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
-            return null;
+            return Map.of();
         }
+
         String token = params.get("token");
+        String resolvedSubject = subject;
+        if (resolvedSubject == null && token != null) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> profiles = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(token);
+            if (profiles != null && profiles.get("sub") != null) {
+                resolvedSubject = String.valueOf(profiles.get("sub"));
+            }
+        }
+        if (resolvedSubject == null) {
+            resolvedSubject = "unknown";
+        }
+
+        OidcLogoutService.LogoutResult logoutResult = new OidcLogoutService(config).propagateSignOut(resolvedSubject, dsl);
         storeProvider.getStore(BOUNCR_TOKEN).delete(token);
         storeProvider.getStore(REFRESH_TOKEN).delete(token);
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
-        return null;
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("attempted", logoutResult.backchannelLogout().attempted());
+        summary.put("succeeded", logoutResult.backchannelLogout().succeeded());
+        summary.put("failed", logoutResult.backchannelLogout().failed());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()));
+        response.put("backchannel_logout", summary);
+        return response;
     }
 }

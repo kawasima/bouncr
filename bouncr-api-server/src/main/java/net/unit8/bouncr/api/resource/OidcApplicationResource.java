@@ -100,7 +100,9 @@ public class OidcApplicationResource {
                 null, // publicKey not updated
                 updateRequest.homeUrl(),
                 updateRequest.callbackUrl(),
-                updateRequest.description()
+                updateRequest.description(),
+                updateRequest.backchannelLogoutUri(),
+                updateRequest.frontchannelLogoutUri()
         );
         if (updateRequest.permissions() != null) {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
@@ -127,6 +129,8 @@ public class OidcApplicationResource {
         result.put("home_url", app.homeUrl());
         result.put("callback_url", app.callbackUrl());
         result.put("description", app.description());
+        result.put("backchannel_logout_uri", app.backchannelLogoutUri());
+        result.put("frontchannel_logout_uri", app.frontchannelLogoutUri());
         if (app.permissions() != null) {
             result.put("permissions", app.permissions());
         }

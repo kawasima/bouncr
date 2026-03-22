@@ -117,7 +117,9 @@ public class OidcApplicationsResoruce {
                 publicKey,
                 createRequest.homeUrl(),
                 createRequest.callbackUrl(),
-                createRequest.description()
+                createRequest.description(),
+                createRequest.backchannelLogoutUri(),
+                createRequest.frontchannelLogoutUri()
         );
 
         if (createRequest.permissions() != null && !createRequest.permissions().isEmpty()) {
@@ -134,6 +136,8 @@ public class OidcApplicationsResoruce {
         response.put("home_url", saved.homeUrl());
         response.put("callback_url", saved.callbackUrl());
         response.put("description", saved.description());
+        response.put("backchannel_logout_uri", saved.backchannelLogoutUri());
+        response.put("frontchannel_logout_uri", saved.frontchannelLogoutUri());
         context.put(RESPONSE, response);
         return true;
     }

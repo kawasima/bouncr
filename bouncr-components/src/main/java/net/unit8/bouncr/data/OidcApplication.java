@@ -16,6 +16,8 @@ import java.util.List;
  * @param homeUrl home page URL
  * @param callbackUrl redirect/callback URL
  * @param description optional description
+ * @param backchannelLogoutUri OIDC back-channel logout endpoint
+ * @param frontchannelLogoutUri OIDC front-channel logout endpoint
  * @param permissions permissions granted to this client
  */
 public record OidcApplication(
@@ -29,5 +31,7 @@ public record OidcApplication(
     URL homeUrl,
     URL callbackUrl,
     String description,
+    URL backchannelLogoutUri,
+    URL frontchannelLogoutUri,
     List<Permission> permissions
 ) {}

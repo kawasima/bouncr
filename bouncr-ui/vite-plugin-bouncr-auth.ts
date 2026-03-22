@@ -164,7 +164,7 @@ export default function bouncrAuth(): Plugin {
           proxyRes.on('error', () => resolve())
         },
       )
-      proxyReq.on('error', (err) => {
+      proxyReq.on('error', () => {
         if (!res.headersSent) {
           res.writeHead(502, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ status: 502, detail: 'Cannot reach api-server' }))

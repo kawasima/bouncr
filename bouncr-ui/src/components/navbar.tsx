@@ -8,13 +8,48 @@ export function Navbar() {
   const { isAuthenticated, account, token, logout } = useAuth();
   const navigate = useNavigate();
 
+  function runFrontchannelLogout(urls: string[]) {
+    const timeoutMs = 1500;
+    const loadOne = (url: string) => new Promise<void>((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.setAttribute('aria-hidden', 'true');
+
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        iframe.remove();
+        resolve();
+      };
+
+      const timer = window.setTimeout(done, timeoutMs);
+      iframe.onload = done;
+      iframe.onerror = done;
+      iframe.src = url;
+      document.body.appendChild(iframe);
+    });
+
+    return urls.reduce((p, url) => p.then(() => loadOne(url)), Promise.resolve());
+  }
+
   async function handleSignOut() {
+    let frontchannelUrls: string[] = [];
     if (token) {
       try {
-        await api.signOut(token, token);
+        const response = await api.signOut(token, token);
+        frontchannelUrls = response?.frontchannel_logout_urls ?? [];
       } catch {
         // ignore server error, still logout locally
       }
+    }
+    if (frontchannelUrls.length > 0) {
+      await runFrontchannelLogout(frontchannelUrls);
     }
     logout();
     navigate(ROUTES.SIGN_IN);
