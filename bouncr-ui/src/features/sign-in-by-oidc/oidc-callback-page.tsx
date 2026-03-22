@@ -11,17 +11,16 @@ export function OidcCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = searchParams.get('token');
     const account = searchParams.get('account');
     const code = searchParams.get('code');
 
-    if (token && account) {
-      login(account, token);
+    if (account) {
+      login(account);
       navigate(ROUTES.HOME, { replace: true });
     } else if (code) {
       navigate(`${ROUTES.SIGN_UP}?code=${encodeURIComponent(code)}`, { replace: true });
     } else {
-      setError('Invalid OIDC callback. Missing token or code.');
+      setError('Invalid OIDC callback. Missing account or code.');
     }
   }, [searchParams, login, navigate]);
 

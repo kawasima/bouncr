@@ -56,203 +56,186 @@ export function signUp(data: SignUpRequest) {
   });
 }
 
-export function signOut(sessionToken: string, token: string) {
-  return apiRequest<SignOutResponse>(`/session/${sessionToken}`, {
+export function signOut() {
+  return apiRequest<SignOutResponse>('/session/me', {
     method: 'DELETE',
-    token,
   });
 }
 
 // === Users ===
 
-export function getUsers(params: UserSearchParams, token: string) {
-  return apiRequest<User[]>('/users', { token, params: { ...params } });
+export function getUsers(params: UserSearchParams) {
+  return apiRequest<User[]>('/users', { params: { ...params } });
 }
 
-export function getUser(account: string, token: string, embed?: string) {
+export function getUser(account: string, embed?: string) {
   return apiRequest<User>(`/user/${encodeURIComponent(account)}`, {
-    token,
     params: embed ? { embed } : undefined,
   });
 }
 
-export function createUser(data: Record<string, unknown>, token: string) {
+export function createUser(data: Record<string, unknown>) {
   return apiRequest<User>('/users', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateUser(account: string, data: Record<string, unknown>, token: string) {
+export function updateUser(account: string, data: Record<string, unknown>) {
   return apiRequest<User>(`/user/${encodeURIComponent(account)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function deleteUser(account: string, token: string) {
+export function deleteUser(account: string) {
   return apiRequest<void>(`/user/${encodeURIComponent(account)}`, {
     method: 'DELETE',
-    token,
   });
 }
 
 // === Groups ===
 
-export function getGroups(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<Group[]>('/groups', { token, params: { ...params } });
+export function getGroups(params: PaginationParams & { q?: string }) {
+  return apiRequest<Group[]>('/groups', { params: { ...params } });
 }
 
-export function getGroup(name: string, token: string) {
-  return apiRequest<Group>(`/group/${encodeURIComponent(name)}`, { token });
+export function getGroup(name: string) {
+  return apiRequest<Group>(`/group/${encodeURIComponent(name)}`, {});
 }
 
-export function createGroup(data: NameDescriptionRequest, token: string) {
+export function createGroup(data: NameDescriptionRequest) {
   return apiRequest<Group>('/groups', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateGroup(name: string, data: NameDescriptionRequest, token: string) {
+export function updateGroup(name: string, data: NameDescriptionRequest) {
   return apiRequest<Group>(`/group/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
 // === Roles ===
 
-export function getRoles(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<Role[]>('/roles', { token, params: { ...params } });
+export function getRoles(params: PaginationParams & { q?: string }) {
+  return apiRequest<Role[]>('/roles', { params: { ...params } });
 }
 
-export function getRole(name: string, token: string) {
-  return apiRequest<Role>(`/role/${encodeURIComponent(name)}`, { token });
+export function getRole(name: string) {
+  return apiRequest<Role>(`/role/${encodeURIComponent(name)}`, {});
 }
 
-export function createRole(data: NameDescriptionRequest, token: string) {
+export function createRole(data: NameDescriptionRequest) {
   return apiRequest<Role>('/roles', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateRole(name: string, data: NameDescriptionRequest, token: string) {
+export function updateRole(name: string, data: NameDescriptionRequest) {
   return apiRequest<Role>(`/role/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateRolePermissions(roleName: string, permissions: Permission[], token: string) {
+export function updateRolePermissions(roleName: string, permissions: Permission[]) {
   return apiRequest<void>(`/role/${encodeURIComponent(roleName)}/permissions`, {
     method: 'PUT',
     body: JSON.stringify(permissions),
-    token,
   });
 }
 
 // === Permissions ===
 
-export function getPermissions(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<Permission[]>('/permissions', { token, params: { ...params } });
+export function getPermissions(params: PaginationParams & { q?: string }) {
+  return apiRequest<Permission[]>('/permissions', { params: { ...params } });
 }
 
-export function getPermission(name: string, token: string) {
-  return apiRequest<Permission>(`/permission/${encodeURIComponent(name)}`, { token });
+export function getPermission(name: string) {
+  return apiRequest<Permission>(`/permission/${encodeURIComponent(name)}`, {});
 }
 
-export function createPermission(data: NameDescriptionRequest, token: string) {
+export function createPermission(data: NameDescriptionRequest) {
   return apiRequest<Permission>('/permissions', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updatePermission(name: string, data: NameDescriptionRequest, token: string) {
+export function updatePermission(name: string, data: NameDescriptionRequest) {
   return apiRequest<Permission>(`/permission/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
 // === Applications ===
 
-export function getApplications(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<Application[]>('/applications', { token, params: { ...params } });
+export function getApplications(params: PaginationParams & { q?: string }) {
+  return apiRequest<Application[]>('/applications', { params: { ...params } });
 }
 
-export function getApplication(name: string, token: string) {
-  return apiRequest<Application>(`/application/${encodeURIComponent(name)}`, { token });
+export function getApplication(name: string) {
+  return apiRequest<Application>(`/application/${encodeURIComponent(name)}`, {});
 }
 
-export function createApplication(data: ApplicationCreateRequest, token: string) {
+export function createApplication(data: ApplicationCreateRequest) {
   return apiRequest<Application>('/applications', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateApplication(name: string, data: ApplicationUpdateRequest, token: string) {
+export function updateApplication(name: string, data: ApplicationUpdateRequest) {
   return apiRequest<Application>(`/application/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
 // === OTP ===
 
-export function getOtpKey(token: string) {
-  return apiRequest<OtpKey>('/otp_key', { token });
+export function getOtpKey() {
+  return apiRequest<OtpKey>('/otp_key', {});
 }
 
-export function createOtpKey(token: string) {
-  return apiRequest<OtpKey>('/otp_key', { method: 'PUT', token });
+export function createOtpKey() {
+  return apiRequest<OtpKey>('/otp_key', { method: 'PUT' });
 }
 
-export function deleteOtpKey(token: string) {
-  return apiRequest<void>('/otp_key', { method: 'DELETE', token });
+export function deleteOtpKey() {
+  return apiRequest<void>('/otp_key', { method: 'DELETE' });
 }
 
 // === WebAuthn ===
 
-export function getWebAuthnRegisterOptions(token: string) {
+export function getWebAuthnRegisterOptions() {
   return apiRequest<RegistrationOptions>('/my/webauthn/register/options', {
     method: 'POST',
-    token,
   });
 }
 
-export function registerWebAuthn(registrationResponseJSON: string, credentialName: string | null, token: string) {
+export function registerWebAuthn(registrationResponseJSON: string, credentialName: string | null) {
   return apiRequest<WebAuthnCredentialInfo>('/my/webauthn/register', {
     method: 'POST',
     body: JSON.stringify({
       registration_response_json: registrationResponseJSON,
       credential_name: credentialName,
     }),
-    token,
   });
 }
 
-export function getWebAuthnCredentials(token: string) {
-  return apiRequest<WebAuthnCredentialInfo[]>('/my/webauthn/credentials', { token });
+export function getWebAuthnCredentials() {
+  return apiRequest<WebAuthnCredentialInfo[]>('/my/webauthn/credentials', {});
 }
 
-export function deleteWebAuthnCredential(id: number, token: string) {
+export function deleteWebAuthnCredential(id: number) {
   return apiRequest<void>('/my/webauthn/credentials', {
     method: 'DELETE',
-    token,
     params: { id },
   });
 }
@@ -273,17 +256,16 @@ export function signInWithWebAuthn(authenticationResponseJSON: string) {
 
 // === Actions (Audit) ===
 
-export function getActions(params: ActionSearchParams, token: string) {
-  return apiRequest<UserAction[]>('/actions', { token, params: { ...params } });
+export function getActions(params: ActionSearchParams) {
+  return apiRequest<UserAction[]>('/actions', { params: { ...params } });
 }
 
 // === Password ===
 
-export function updatePassword(data: PasswordCredentialRequest, token?: string) {
+export function updatePassword(data: PasswordCredentialRequest) {
   return apiRequest<void>('/password_credential', {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
@@ -303,172 +285,157 @@ export function resetPassword(data: PasswordResetRequest) {
 
 // === Password Credential ===
 
-export function createPasswordCredential(data: PasswordCredentialCreateRequest, token: string) {
+export function createPasswordCredential(data: PasswordCredentialCreateRequest) {
   return apiRequest<void>('/password_credential', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
 // === Realms ===
 
-export function getRealms(appName: string, token: string) {
-  return apiRequest<Realm[]>(`/application/${encodeURIComponent(appName)}/realms`, { token });
+export function getRealms(appName: string) {
+  return apiRequest<Realm[]>(`/application/${encodeURIComponent(appName)}/realms`, {});
 }
 
-export function getRealm(appName: string, realmName: string, token: string) {
-  return apiRequest<Realm>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}`, { token });
+export function getRealm(appName: string, realmName: string) {
+  return apiRequest<Realm>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}`, {});
 }
 
-export function createRealm(appName: string, data: RealmCreateRequest, token: string) {
+export function createRealm(appName: string, data: RealmCreateRequest) {
   return apiRequest<Realm>(`/application/${encodeURIComponent(appName)}/realms`, {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateRealm(appName: string, realmName: string, data: RealmUpdateRequest, token: string) {
+export function updateRealm(appName: string, realmName: string, data: RealmUpdateRequest) {
   return apiRequest<Realm>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function deleteRealm(appName: string, realmName: string, token: string) {
+export function deleteRealm(appName: string, realmName: string) {
   return apiRequest<void>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}`, {
     method: 'DELETE',
-    token,
   });
 }
 
 // === OIDC Providers ===
 
-export function getOidcProviders(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<OidcProvider[]>('/oidc_providers', { token, params: { ...params } });
+export function getOidcProviders(params: PaginationParams & { q?: string }) {
+  return apiRequest<OidcProvider[]>('/oidc_providers', { params: { ...params } });
 }
 
-export function getOidcProvider(name: string, token: string) {
-  return apiRequest<OidcProvider>(`/oidc_provider/${encodeURIComponent(name)}`, { token });
+export function getOidcProvider(name: string) {
+  return apiRequest<OidcProvider>(`/oidc_provider/${encodeURIComponent(name)}`, {});
 }
 
-export function createOidcProvider(data: OidcProviderCreateRequest, token: string) {
+export function createOidcProvider(data: OidcProviderCreateRequest) {
   return apiRequest<OidcProvider>('/oidc_providers', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateOidcProvider(name: string, data: OidcProviderUpdateRequest, token: string) {
+export function updateOidcProvider(name: string, data: OidcProviderUpdateRequest) {
   return apiRequest<OidcProvider>(`/oidc_provider/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function deleteOidcProvider(name: string, token: string) {
+export function deleteOidcProvider(name: string) {
   return apiRequest<void>(`/oidc_provider/${encodeURIComponent(name)}`, {
     method: 'DELETE',
-    token,
   });
 }
 
 // === OIDC Applications ===
 
-export function getOidcApplications(params: PaginationParams & { q?: string }, token: string) {
-  return apiRequest<OidcApplication[]>('/oidc_applications', { token, params: { ...params } });
+export function getOidcApplications(params: PaginationParams & { q?: string }) {
+  return apiRequest<OidcApplication[]>('/oidc_applications', { params: { ...params } });
 }
 
-export function getOidcApplication(name: string, token: string) {
-  return apiRequest<OidcApplication>(`/oidc_application/${encodeURIComponent(name)}`, { token });
+export function getOidcApplication(name: string) {
+  return apiRequest<OidcApplication>(`/oidc_application/${encodeURIComponent(name)}`, {});
 }
 
-export function createOidcApplication(data: OidcApplicationCreateRequest, token: string) {
+export function createOidcApplication(data: OidcApplicationCreateRequest) {
   return apiRequest<OidcApplication>('/oidc_applications', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function updateOidcApplication(name: string, data: OidcApplicationUpdateRequest, token: string) {
+export function updateOidcApplication(name: string, data: OidcApplicationUpdateRequest) {
   return apiRequest<OidcApplication>(`/oidc_application/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    token,
   });
 }
 
-export function deleteOidcApplication(name: string, token: string) {
+export function deleteOidcApplication(name: string) {
   return apiRequest<void>(`/oidc_application/${encodeURIComponent(name)}`, {
     method: 'DELETE',
-    token,
   });
 }
 
 // === Invitations ===
 
-export function getInvitations(params: PaginationParams, token: string) {
-  return apiRequest<Invitation[]>('/invitations', { token, params: { ...params } });
+export function getInvitations(params: PaginationParams) {
+  return apiRequest<Invitation[]>('/invitations', { params: { ...params } });
 }
 
-export function getInvitation(code: string, token: string) {
-  return apiRequest<Invitation>(`/invitation/${encodeURIComponent(code)}`, { token });
+export function getInvitation(code: string) {
+  return apiRequest<Invitation>(`/invitation/${encodeURIComponent(code)}`, {});
 }
 
-export function createInvitation(data: InvitationCreateRequest, token: string) {
+export function createInvitation(data: InvitationCreateRequest) {
   return apiRequest<Invitation>('/invitations', {
     method: 'POST',
     body: JSON.stringify(data),
-    token,
   });
 }
 
 // === Group Users ===
 
-export function getGroupUsers(groupName: string, token: string) {
-  return apiRequest<User[]>(`/group/${encodeURIComponent(groupName)}/users`, { token });
+export function getGroupUsers(groupName: string) {
+  return apiRequest<User[]>(`/group/${encodeURIComponent(groupName)}/users`, {});
 }
 
-export function addGroupUsers(groupName: string, accounts: string[], token: string) {
+export function addGroupUsers(groupName: string, accounts: string[]) {
   return apiRequest<User[]>(`/group/${encodeURIComponent(groupName)}/users`, {
     method: 'POST',
     body: JSON.stringify(accounts),
-    token,
   });
 }
 
-export function removeGroupUsers(groupName: string, accounts: string[], token: string) {
+export function removeGroupUsers(groupName: string, accounts: string[]) {
   return apiRequest<void>(`/group/${encodeURIComponent(groupName)}/users`, {
     method: 'DELETE',
     body: JSON.stringify(accounts),
-    token,
   });
 }
 
 // === Assignments ===
 
-export function getAssignment(params: { groupId: number; roleId: number; realmId: number }, token: string) {
-  return apiRequest<Assignment>('/assignment', { token, params: { ...params } });
+export function getAssignment(params: { groupId: number; roleId: number; realmId: number }) {
+  return apiRequest<Assignment>('/assignment', { params: { ...params } });
 }
 
-export function createAssignments(assignments: AssignmentRequest[], token: string) {
+export function createAssignments(assignments: AssignmentRequest[]) {
   return apiRequest<void>('/assignments', {
     method: 'POST',
     body: JSON.stringify(assignments),
-    token,
   });
 }
 
-export function deleteAssignments(assignments: AssignmentRequest[], token: string) {
+export function deleteAssignments(assignments: AssignmentRequest[]) {
   return apiRequest<void>('/assignments', {
     method: 'DELETE',
     body: JSON.stringify(assignments),
-    token,
   });
 }
 

@@ -1,21 +1,19 @@
 import { useState, useCallback } from 'react';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import type { Problem, PaginationParams } from '@/api/types';
 import { PAGE_SIZE } from '@/lib/constants';
 
 export interface AdminCrudConfig<T> {
-  fetchList: (params: PaginationParams & { q?: string }, token: string) => Promise<T[]>;
-  fetchOne: (name: string, token: string) => Promise<T>;
-  create: (data: Record<string, unknown>, token: string) => Promise<T>;
-  update: (name: string, data: Record<string, unknown>, token: string) => Promise<T>;
+  fetchList: (params: PaginationParams & { q?: string }) => Promise<T[]>;
+  fetchOne: (name: string) => Promise<T>;
+  create: (data: Record<string, unknown>) => Promise<T>;
+  update: (name: string, data: Record<string, unknown>) => Promise<T>;
   getIdentifier: (item: T) => string;
 }
 
 type Mode = 'list' | 'edit';
 
 export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
-  const { token } = useAuth();
   const [items, setItems] = useState<T[]>([]);
   const [mode, setMode] = useState<Mode>('list');
   const [editTarget, setEditTarget] = useState<T | null>(null);
@@ -28,7 +26,6 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
 
   const loadList = useCallback(
     async (keyword: string, newOffset: number, append: boolean) => {
-      if (!token) return;
       if (append) setLoadingMore(true);
       else setLoading(true);
       setProblem(null);
@@ -38,7 +35,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
           offset: newOffset,
         };
         if (keyword) params.q = keyword;
-        const result = await config.fetchList(params, token);
+        const result = await config.fetchList(params);
         if (append) {
           setItems((prev) => [...prev, ...result]);
         } else {
@@ -53,7 +50,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
         setLoadingMore(false);
       }
     },
-    [token, config],
+    [config],
   );
 
   const handleSearch = useCallback(
@@ -71,9 +68,9 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
 
   const enterEdit = useCallback(
     async (item: T | null) => {
-      if (item && token) {
+      if (item) {
         try {
-          const detail = await config.fetchOne(config.getIdentifier(item), token);
+          const detail = await config.fetchOne(config.getIdentifier(item));
           setEditTarget(detail);
         } catch (err) {
           if (err instanceof ApiError) setProblem(err.problem);
@@ -85,7 +82,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
       setMode('edit');
       setProblem(null);
     },
-    [token, config],
+    [config],
   );
 
   const exitEdit = useCallback(() => {
@@ -96,13 +93,12 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
 
   const save = useCallback(
     async (data: Record<string, unknown>) => {
-      if (!token) return false;
       setProblem(null);
       try {
         if (editTarget) {
-          await config.update(config.getIdentifier(editTarget), data, token);
+          await config.update(config.getIdentifier(editTarget), data);
         } else {
-          await config.create(data, token);
+          await config.create(data);
         }
         exitEdit();
         loadList(search, 0, false);
@@ -112,7 +108,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
         return false;
       }
     },
-    [token, editTarget, config, exitEdit, loadList, search],
+    [editTarget, config, exitEdit, loadList, search],
   );
 
   return {

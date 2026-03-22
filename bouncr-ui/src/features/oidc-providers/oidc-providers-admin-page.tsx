@@ -12,8 +12,8 @@ import { ProblemAlert } from '@/components/problem-alert';
 const config: AdminCrudConfig<OidcProvider> = {
   fetchList: api.getOidcProviders,
   fetchOne: api.getOidcProvider,
-  create: (data, token) => api.createOidcProvider(data as unknown as OidcProvider & { clientSecret: string }, token),
-  update: (name, data, token) => api.updateOidcProvider(name, data as unknown as OidcProvider & { clientSecret: string }, token),
+  create: (data) => api.createOidcProvider(data as unknown as OidcProvider & { clientSecret: string }),
+  update: (name, data) => api.updateOidcProvider(name, data as unknown as OidcProvider & { clientSecret: string }),
   getIdentifier: (p) => p.name,
 };
 

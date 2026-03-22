@@ -36,6 +36,7 @@ export default function bouncrAuth(): Plugin {
   const tokenStore = new Map<string, { account: string; userId: string }>()
   let jwtSecret: string
   let apiTarget: URL
+  let tokenCookieName: string
 
   return {
     name: 'bouncr-auth',
@@ -46,6 +47,7 @@ export default function bouncrAuth(): Plugin {
       apiTarget = new URL(
         process.env.VITE_API_SERVER || 'http://localhost:3005',
       )
+      tokenCookieName = process.env.VITE_TOKEN_NAME || 'BOUNCR_TOKEN'
 
       server.middlewares.use('/bouncr', async (req, res) => {
         try {
@@ -65,7 +67,7 @@ export default function bouncrAuth(): Plugin {
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ) {
-    const token = extractBearerToken(req)
+    const token = extractToken(req, tokenCookieName)
     const path = '/bouncr' + (req.url || '')
 
     const outHeaders: Record<string, string | string[] | undefined> = {
@@ -96,6 +98,8 @@ export default function bouncrAuth(): Plugin {
 
     delete outHeaders['host']
 
+    // Capture sign-in/sign-up responses to populate tokenStore,
+    // and forward the Set-Cookie header so the browser receives the HttpOnly cookie.
     const isSignIn =
       req.method === 'POST' &&
       (path === '/bouncr/api/sign_in' || path === '/bouncr/api/sign_up')
@@ -215,8 +219,20 @@ export default function bouncrAuth(): Plugin {
   }
 }
 
-function extractBearerToken(req: http.IncomingMessage): string | null {
+/**
+ * Extracts the session token from the request.
+ * Checks the Authorization: Bearer header first, then the session cookie.
+ */
+function extractToken(req: http.IncomingMessage, cookieName: string): string | null {
   const auth = req.headers['authorization']
-  if (!auth || !auth.startsWith('Bearer ')) return null
-  return auth.slice(7)
+  if (auth?.startsWith('Bearer ')) return auth.slice(7)
+
+  const cookieHeader = req.headers['cookie']
+  if (cookieHeader) {
+    for (const part of cookieHeader.split(';')) {
+      const [name, ...rest] = part.trim().split('=')
+      if (name === cookieName) return rest.join('=')
+    }
+  }
+  return null
 }

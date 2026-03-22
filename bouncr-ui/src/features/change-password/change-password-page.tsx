@@ -25,7 +25,7 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export function ChangePasswordPage() {
-  const { account, token } = useAuth();
+  const { account } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -42,7 +42,6 @@ export function ChangePasswordPage() {
     try {
       await api.updatePassword(
         { account: overrideAccount, old_password: data.old_password, new_password: data.new_password },
-        token ?? undefined,
       );
       navigate(ROUTES.HOME, { replace: true });
     } catch (err) {

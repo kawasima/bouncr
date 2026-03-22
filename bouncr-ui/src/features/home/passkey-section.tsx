@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/auth/auth-context';
 import * as api from '@/api/endpoints';
 import { ApiError } from '@/api/client';
 import type { Problem, WebAuthnCredentialInfo } from '@/api/types';
@@ -8,28 +7,25 @@ import { Button } from '@/components/ui/button';
 import { isWebAuthnSupported, createCredential } from '@/lib/webauthn';
 
 export function PasskeySection({ onRefresh }: { onRefresh: () => void }) {
-  const { token } = useAuth();
   const [credentials, setCredentials] = useState<WebAuthnCredentialInfo[]>([]);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    api.getWebAuthnCredentials(token).then(setCredentials).catch((err) => {
+    api.getWebAuthnCredentials().then(setCredentials).catch((err) => {
       if (err instanceof ApiError) setProblem(err.problem);
     });
-  }, [token]);
+  }, []);
 
   async function handleRegister() {
-    if (!token) return;
     setLoading(true);
     setProblem(null);
     try {
-      const options = await api.getWebAuthnRegisterOptions(token);
+      const options = await api.getWebAuthnRegisterOptions();
       const registrationResponseJSON = await createCredential(options);
       const name = prompt('Name this passkey (optional):') || null;
-      await api.registerWebAuthn(registrationResponseJSON, name, token);
-      const updated = await api.getWebAuthnCredentials(token);
+      await api.registerWebAuthn(registrationResponseJSON, name);
+      const updated = await api.getWebAuthnCredentials();
       setCredentials(updated);
       onRefresh();
     } catch (err) {
@@ -46,11 +42,10 @@ export function PasskeySection({ onRefresh }: { onRefresh: () => void }) {
   }
 
   async function handleDelete(id: number) {
-    if (!token) return;
     setLoading(true);
     setProblem(null);
     try {
-      await api.deleteWebAuthnCredential(id, token);
+      await api.deleteWebAuthnCredential(id);
       setCredentials((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);

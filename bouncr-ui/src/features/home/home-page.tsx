@@ -13,7 +13,7 @@ import { PasskeySection } from './passkey-section';
 import { ROUTES } from '@/routes/route-paths';
 
 export function HomePage() {
-  const { token, account } = useAuth();
+  const { account } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [otpKey, setOtpKey] = useState<OtpKey | null>(null);
   const [actions, setActions] = useState<UserAction[]>([]);
@@ -21,12 +21,12 @@ export function HomePage() {
   const [problem, setProblem] = useState<Problem | null>(null);
 
   async function loadData() {
-    if (!token || !account) return;
+    if (!account) return;
     try {
       const [userData, otpData, actionsData] = await Promise.all([
-        api.getUser(account, token, '(permissions,groups,oidc_providers)'),
-        api.getOtpKey(token).catch(() => ({ key: null }) as OtpKey),
-        api.getActions({ actor: account, limit: 10 }, token).catch(() => [] as UserAction[]),
+        api.getUser(account, '(permissions,groups,oidc_providers)'),
+        api.getOtpKey().catch(() => ({ key: null }) as OtpKey),
+        api.getActions({ actor: account, limit: 10 }).catch(() => [] as UserAction[]),
       ]);
       setUser(userData);
       setOtpKey(otpData);
@@ -40,7 +40,7 @@ export function HomePage() {
 
   useEffect(() => {
     loadData();
-  }, [token, account]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [account]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <LoadingSpinner />;
 

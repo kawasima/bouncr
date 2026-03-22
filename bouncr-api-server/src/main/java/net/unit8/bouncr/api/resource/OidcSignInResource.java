@@ -391,20 +391,24 @@ public class OidcSignInResource {
         context.put(SESSION, userSession);
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
 
+        String tokenCookie = config.getTokenName() + "=" + userSession.token()
+                + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
+                + "; SameSite=Strict; Max-Age=" + config.getRefreshTokenExpires()
+                + "; Path=/";
+
         UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
         return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())
-                .map(uri -> uriInterpolator.interpolate(uri, "token", userSession.token()))
                 .map(uri -> uriInterpolator.interpolate(uri, "account", user.account()))
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
                                 "Location", uri.toString(),
-                                "Set-Cookie", clearCookie
-                        ))
+                                "Set-Cookie", clearCookie,
+                                "Set-Cookie", tokenCookie))
                         .build())
                 .orElse(builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 200)
-                        .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie))
+                        .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie, "Set-Cookie", tokenCookie))
                         .set(ApiResponse::setBody, userSession)
                         .build());
     }

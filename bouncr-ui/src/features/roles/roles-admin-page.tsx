@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
@@ -15,8 +14,8 @@ import { ProblemAlert } from '@/components/problem-alert';
 const config: AdminCrudConfig<Role> = {
   fetchList: api.getRoles,
   fetchOne: api.getRole,
-  create: (data, token) => api.createRole(data as { name: string; description: string }, token),
-  update: (name, data, token) => api.updateRole(name, data as { name: string; description: string }, token),
+  create: (data) => api.createRole(data as { name: string; description: string }),
+  update: (name, data) => api.updateRole(name, data as { name: string; description: string }),
   getIdentifier: (r) => r.name,
 };
 
@@ -41,7 +40,6 @@ function RoleEditForm({
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
 }) {
-  const { token } = useAuth();
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Set<number>>(
     new Set(target?.permissions?.map((p) => p.id) ?? []),
@@ -50,9 +48,8 @@ function RoleEditForm({
   const [savingPerms, setSavingPerms] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    api.getPermissions({ limit: 1000 }, token).then(setAllPermissions).catch(() => {});
-  }, [token]);
+    api.getPermissions({ limit: 1000 }).then(setAllPermissions).catch(() => {});
+  }, []);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RoleFormData>({
     resolver: zodResolver(roleSchema),
@@ -60,12 +57,12 @@ function RoleEditForm({
   });
 
   const handleSavePermissions = async () => {
-    if (!token || !target) return;
+    if (!target) return;
     setSavingPerms(true);
     setPermProblem(null);
     try {
       const perms = allPermissions.filter((p) => selectedPerms.has(p.id));
-      await api.updateRolePermissions(target.name, perms, token);
+      await api.updateRolePermissions(target.name, perms);
     } catch (err) {
       if (err instanceof ApiError) setPermProblem(err.problem);
     } finally {

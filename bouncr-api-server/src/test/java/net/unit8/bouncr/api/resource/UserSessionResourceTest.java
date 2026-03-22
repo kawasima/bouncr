@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.collection.Parameters;
 import enkan.data.DefaultHttpRequest;
+import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.boundary.SignOutResponse;
@@ -18,6 +18,7 @@ import java.security.KeyPairGenerator;
 import java.util.HashMap;
 import java.util.Map;
 
+import static net.unit8.bouncr.api.resource.UserSessionResource.RESOLVED_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,8 +69,10 @@ class UserSessionResourceTest {
         setField(resource, "config", new BouncrConfiguration());
 
         RestContext context = restContext();
-        resource.delete(Parameters.of("token", "session-token"), "admin", context, dsl);
-        SignOutResponse response = resource.handleOk(context);
+        context.put(RESOLVED_TOKEN, "session-token");
+        resource.delete("admin", context, dsl);
+        ApiResponse apiResponse = resource.handleOk(context);
+        SignOutResponse response = (SignOutResponse) apiResponse.getBody();
 
         assertThat(response.frontchannel_logout_urls()).contains("https://logout.example/frontchannel");
         assertThat(response.backchannel_logout().attempted()).isEqualTo(1);
@@ -77,6 +80,9 @@ class UserSessionResourceTest {
         assertThat(response.backchannel_logout().failed()).isEqualTo(1);
         assertThat(storeProvider.getStore(BOUNCR_TOKEN).read("session-token")).isNull();
         assertThat(storeProvider.getStore(REFRESH_TOKEN).read("session-token")).isNull();
+        // Cookie clearing header must be present
+        assertThat(apiResponse.getHeaders().getList("Set-Cookie"))
+                .anySatisfy(v -> assertThat(v.toString()).contains("Max-Age=0"));
     }
 
     private RestContext restContext() {

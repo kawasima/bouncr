@@ -20,7 +20,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export function ChangeProfilePage() {
-  const { account, token } = useAuth();
+  const { account } = useAuth();
   const navigate = useNavigate();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,21 +30,21 @@ export function ChangeProfilePage() {
   });
 
   useEffect(() => {
-    if (!account || !token) return;
-    api.getUser(account, token).then((user) => {
+    if (!account) return;
+    api.getUser(account).then((user) => {
       reset({ name: String(user.name ?? ''), email: String(user.email ?? '') });
       setLoading(false);
     }).catch((err) => {
       if (err instanceof ApiError) setProblem(err.problem);
       setLoading(false);
     });
-  }, [account, token, reset]);
+  }, [account, reset]);
 
   async function onSubmit(data: FormData) {
-    if (!account || !token) return;
+    if (!account) return;
     setProblem(null);
     try {
-      await api.updateUser(account, data, token);
+      await api.updateUser(account, data);
       navigate(ROUTES.HOME, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);

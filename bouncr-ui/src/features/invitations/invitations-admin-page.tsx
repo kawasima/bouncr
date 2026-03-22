@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import type { Group, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
@@ -16,19 +15,17 @@ const invitationSchema = z.object({
 type InvitationFormData = z.infer<typeof invitationSchema>;
 
 export function InvitationsAdminPage() {
-  const { token } = useAuth();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<Set<number>>(new Set());
   const [createdCode, setCreatedCode] = useState<string | null>(null);
 
   const loadGroups = useCallback(async () => {
-    if (!token) return;
     try {
-      const groups = await api.getGroups({ limit: 1000 }, token);
+      const groups = await api.getGroups({ limit: 1000 });
       setAllGroups(groups);
     } catch { /* ignore */ }
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
 
@@ -38,11 +35,10 @@ export function InvitationsAdminPage() {
   });
 
   const onSubmit = async (data: InvitationFormData) => {
-    if (!token) return;
     setProblem(null);
     try {
       const groupIds = Array.from(selectedGroups).map((id) => ({ id }));
-      const result = await api.createInvitation({ email: data.email, groups: groupIds }, token);
+      const result = await api.createInvitation({ email: data.email, groups: groupIds });
       setCreatedCode(result.code);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);

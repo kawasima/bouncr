@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import type { Application, Realm, Group, Role, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ const realmSchema = z.object({
 type RealmFormData = z.infer<typeof realmSchema>;
 
 function AssignmentSection({ realm }: { realm: Realm }) {
-  const { token } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
@@ -31,18 +29,17 @@ function AssignmentSection({ realm }: { realm: Realm }) {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     Promise.all([
-      api.getGroups({ limit: 1000 }, token),
-      api.getRoles({ limit: 1000 }, token),
+      api.getGroups({ limit: 1000 }),
+      api.getRoles({ limit: 1000 }),
     ]).then(([g, r]) => {
       setGroups(g);
       setRoles(r);
     }).catch(() => {});
-  }, [token]);
+  }, []);
 
   const handleAdd = async () => {
-    if (!token || !selectedGroup || selectedRoles.size === 0) return;
+    if (!selectedGroup || selectedRoles.size === 0) return;
     setSubmitting(true);
     setProblem(null);
     setSuccess(null);
@@ -57,7 +54,7 @@ function AssignmentSection({ realm }: { realm: Realm }) {
           realm: { id: realm.id, name: realm.name },
         };
       });
-      await api.createAssignments(assignments, token);
+      await api.createAssignments(assignments);
       setSuccess(`Assigned ${group.name} with ${assignments.length} role(s)`);
       setSelectedGroup('');
       setSelectedRoles(new Set());
@@ -185,7 +182,6 @@ function RealmEditForm({
 export function RealmsAdminPage() {
   const [searchParams] = useSearchParams();
   const appName = searchParams.get('app') ?? '';
-  const { token } = useAuth();
   const [app, setApp] = useState<Application | null>(null);
   const [realms, setRealms] = useState<Realm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,12 +190,12 @@ export function RealmsAdminPage() {
   const [editTarget, setEditTarget] = useState<Realm | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!token || !appName) return;
+    if (!appName) return;
     setLoading(true);
     try {
       const [appData, realmData] = await Promise.all([
-        api.getApplication(appName, token),
-        api.getRealms(appName, token),
+        api.getApplication(appName),
+        api.getRealms(appName),
       ]);
       setApp(appData);
       setRealms(realmData);
@@ -208,18 +204,18 @@ export function RealmsAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, appName]);
+  }, [appName]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleSave = async (data: RealmFormData) => {
-    if (!token || !appName) return false;
+    if (!appName) return false;
     setProblem(null);
     try {
       if (editTarget) {
-        await api.updateRealm(appName, editTarget.name, { name: data.name, description: data.description }, token);
+        await api.updateRealm(appName, editTarget.name, { name: data.name, description: data.description });
       } else {
-        await api.createRealm(appName, data, token);
+        await api.createRealm(appName, data);
       }
       setMode('list');
       setEditTarget(null);

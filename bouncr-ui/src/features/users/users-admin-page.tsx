@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { useAuth } from '@/auth/auth-context';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
@@ -24,7 +23,7 @@ function useGravatar(email: string | undefined, size: number = 160) {
 
 const config: AdminCrudConfig<User> = {
   fetchList: api.getUsers,
-  fetchOne: (account, token) => api.getUser(account, token, 'groups'),
+  fetchOne: (account) => api.getUser(account, 'groups'),
   create: api.createUser,
   update: api.updateUser,
   getIdentifier: (u) => u.account,
@@ -45,18 +44,17 @@ const userSchema = z.object({
 type UserFormData = z.infer<typeof userSchema>;
 
 function PasswordCredentialSection({ account, onCreated }: { account: string; onCreated: () => void }) {
-  const { token } = useAuth();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<Problem | null>(null);
 
   const handleCreate = async () => {
-    if (!token || !password) return;
+    if (!password) return;
     setSubmitting(true);
     setError(null);
     try {
-      await api.createPasswordCredential({ account, password, initial: true }, token);
+      await api.createPasswordCredential({ account, password, initial: true });
       onCreated();
     } catch (err) {
       if (err instanceof ApiError) setError(err.problem);
@@ -130,7 +128,6 @@ function UserEditForm({
   problem: Problem | null;
   onDeleted?: () => void;
 }) {
-  const { token } = useAuth();
   const isCreate = !target;
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState('');
@@ -149,9 +146,9 @@ function UserEditForm({
 
   const handleFormSubmit = async (d: UserFormData) => {
     const ok = await onSubmit(d);
-    if (ok && isCreate && enablePassword && password && token) {
+    if (ok && isCreate && enablePassword && password) {
       try {
-        await api.createPasswordCredential({ account: d.account, password, initial: true }, token);
+        await api.createPasswordCredential({ account: d.account, password, initial: true });
         setCredCreated(true);
       } catch (err) {
         if (err instanceof ApiError) setCredProblem(err.problem);
@@ -161,10 +158,10 @@ function UserEditForm({
   };
 
   const handleDelete = async () => {
-    if (!token || !target) return;
+    if (!target) return;
     setDeleting(true);
     try {
-      await api.deleteUser(target.account, token);
+      await api.deleteUser(target.account);
       onDeleted?.();
     } catch (err) {
       if (err instanceof ApiError) setCredProblem(err.problem);

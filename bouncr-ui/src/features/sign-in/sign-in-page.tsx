@@ -41,7 +41,7 @@ export function SignInPage() {
       const options = await api.getWebAuthnSignInOptions(enteredAccount);
       const authJSON = await getAssertion(options);
       const session = await api.signInWithWebAuthn(authJSON);
-      login(session.account, session.token);
+      login(session.account);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
       navigate(from, { replace: true });
     } catch (err) {
@@ -60,12 +60,12 @@ export function SignInPage() {
   async function onSubmit(data: SignInForm) {
     setProblem(null);
     try {
-      const session = await api.signIn({
+      await api.signIn({
         account: data.account,
         password: data.password,
         one_time_password: data.one_time_password || undefined,
       });
-      login(data.account, session.token);
+      login(data.account);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
       navigate(from, { replace: true });
     } catch (err) {
