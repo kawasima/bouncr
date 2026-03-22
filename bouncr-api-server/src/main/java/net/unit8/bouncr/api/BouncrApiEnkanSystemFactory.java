@@ -14,6 +14,7 @@ import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
@@ -45,6 +46,18 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         builder(new PasswordPolicy())
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))
                                 .build())
+                .set(BouncrConfiguration::setFailureIpMax,
+                        Env.getInt("failure.ip.max", 10))
+                .set(BouncrConfiguration::setFailureIpWindowSeconds,
+                        Env.getInt("failure.ip.window.seconds", 600))
+                .set(BouncrConfiguration::setFailureIpBlockSeconds,
+                        Env.getInt("failure.ip.block.seconds", 900))
+                .set(BouncrConfiguration::setFailureAccountIpMax,
+                        Env.getInt("failure.account.ip.max", 5))
+                .set(BouncrConfiguration::setFailureAccountIpWindowSeconds,
+                        Env.getInt("failure.account.ip.window.seconds", 300))
+                .set(BouncrConfiguration::setFailureAccountIpBlockSeconds,
+                        Env.getInt("failure.account.ip.block.seconds", 600))
                 .build();
         GrantBouncrUserRole grantBouncrUserRole = new GrantBouncrUserRole();
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
@@ -66,6 +79,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                         .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
                         .build(),
                 "metrics", new MetricsComponent(),
+                "authFailureTracker", new AuthFailureTracker(),
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", jdbcUrl,
                         "username", Env.get("JDBC_USER"),
@@ -78,7 +92,8 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
         ).relationships(
                 component("http").using("app"),
                 component("app").using("config", "storeprovider", "realmCache", "jooq", "jwt",
-                        "converter", "metrics"),
+                        "converter", "metrics", "authFailureTracker"),
+                component("authFailureTracker").using("config"),
                 component("storeprovider").using("config", "redis"),
                 component("realmCache").using("jooq", "flyway"),
                 component("jooq").using("datasource"),

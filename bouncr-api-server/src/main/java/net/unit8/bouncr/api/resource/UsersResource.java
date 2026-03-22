@@ -21,11 +21,13 @@ import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "POST"})
 public class UsersResource {
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^\\w+$");
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<String> ACCOUNT = ContextKey.of("account", String.class);
     static final ContextKey<Map> USER_PROFILES = ContextKey.of("userProfiles", Map.class);
@@ -43,6 +45,11 @@ public class UsersResource {
             return Problem.valueOf(400, "account is required", BouncrProblem.MALFORMED.problemUri());
         }
         String account = accountNode.asText();
+        // Validate format without a decoder — this resource reads JSON nodes directly.
+        // The length guard is explicit here because there is no decoder-level maxLength(100).
+        if (account.length() > 100 || !ACCOUNT_PATTERN.matcher(account).matches()) {
+            return Problem.valueOf(400, "account format is invalid", BouncrProblem.MALFORMED.problemUri());
+        }
         context.put(ACCOUNT, account);
 
         // Extract user profile fields dynamically

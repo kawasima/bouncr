@@ -5,6 +5,7 @@ import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -14,6 +15,8 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import kotowari.restful.data.Problem;
 
 import java.util.Arrays;
 
@@ -103,20 +106,60 @@ public class PasswordSignInResourceTest {
             }
         };
 
+        AuthFailureTracker tracker = new AuthFailureTracker();
+        tracker.initForTest(spyConfig);
+
         PasswordSignInResource resource = new PasswordSignInResource();
         setField(resource, "config", spyConfig);
         setField(resource, "storeProvider", new StoreProvider());
+        setField(resource, "authFailureTracker", tracker);
 
         PasswordSignIn req = new PasswordSignIn("no-such-user", "anypassword", null);
+        DefaultHttpRequest httpReq = new DefaultHttpRequest();
+        httpReq.setRemoteAddr("127.0.0.1");
         RestContext context = restContext();
         context.put(PasswordSignInResource.SIGN_IN_REQ, req);
 
-        boolean result = resource.authenticate(req, new ActionRecord(), context, dsl);
+        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
 
         assertThat(result).isFalse();
         assertThat(dummySaltCalled[0]).as("getDummySalt() must be called for unknown accounts").isTrue();
         // No 401 Problem set — the "unknown account" branch is silent
         assertThat(context.getMessage()).isEmpty();
+    }
+
+    @Test
+    void authenticate_blockedIp_returns429() {
+        BouncrConfiguration config = new BouncrConfiguration();
+        config.setFailureIpMax(2);
+        config.setFailureIpWindowSeconds(600);
+        config.setFailureIpBlockSeconds(900);
+        config.setFailureAccountIpMax(5);
+        config.setFailureAccountIpWindowSeconds(300);
+        config.setFailureAccountIpBlockSeconds(600);
+
+        AuthFailureTracker tracker = new AuthFailureTracker();
+        tracker.initForTest(config);
+        // exhaust IP threshold
+        tracker.recordFailure("10.0.0.1", null);
+        tracker.recordFailure("10.0.0.1", null);
+
+        PasswordSignInResource resource = new PasswordSignInResource();
+        setField(resource, "config", config);
+        setField(resource, "storeProvider", new StoreProvider());
+        setField(resource, "authFailureTracker", tracker);
+
+        PasswordSignIn req = new PasswordSignIn("alice", "anypassword", null);
+        DefaultHttpRequest httpReq = new DefaultHttpRequest();
+        httpReq.setRemoteAddr("10.0.0.1");
+        RestContext context = restContext();
+
+        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
+
+        assertThat(result).isFalse();
+        assertThat(context.getMessage())
+                .isPresent()
+                .hasValueSatisfying(msg -> assertThat(((Problem) msg).getStatus()).isEqualTo(429));
     }
 
     private RestContext restContext() {
@@ -126,9 +169,18 @@ public class PasswordSignInResourceTest {
 
     private void setField(Object target, String fieldName, Object value) {
         try {
-            var field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
+            Class<?> clazz = target.getClass();
+            while (clazz != null) {
+                try {
+                    var field = clazz.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    field.set(target, value);
+                    return;
+                } catch (NoSuchFieldException e) {
+                    clazz = clazz.getSuperclass();
+                }
+            }
+            throw new NoSuchFieldException(fieldName);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
