@@ -76,10 +76,19 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
         }
     }
 
+    /**
+     * Returns an existing counter for {@code key}, or creates and registers a new one.
+     *
+     * <p>When the map has reached {@code MAX_ENTRIES} and {@code key} is not yet present,
+     * a <em>throwaway</em> counter is returned instead of inserting into the map.
+     * Failures recorded against a throwaway counter are not persisted — the IP (or account+IP)
+     * will not be blocked from that point on, even if it keeps failing.
+     * This is an intentional tradeoff: bounding memory usage takes priority over tracking
+     * every IP once the table is saturated.
+     */
     private SlidingWindowCounter getOrCreate(Map<String, SlidingWindowCounter> map, String key,
                                              int max, int windowSeconds, int blockSeconds) {
         if (map.size() >= MAX_ENTRIES && !map.containsKey(key)) {
-            // Map is full and this is a new key: return a throwaway counter to avoid unbounded growth.
             return new SlidingWindowCounter(max, windowSeconds, blockSeconds);
         }
         return map.computeIfAbsent(key, k -> new SlidingWindowCounter(max, windowSeconds, blockSeconds));

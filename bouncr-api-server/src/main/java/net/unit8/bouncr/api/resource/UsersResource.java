@@ -43,6 +43,8 @@ public class UsersResource {
             return Problem.valueOf(400, "account is required", BouncrProblem.MALFORMED.problemUri());
         }
         String account = accountNode.asText();
+        // Validate format without a decoder — this resource reads JSON nodes directly.
+        // The length guard is explicit here because there is no decoder-level maxLength(100).
         if (account.length() > 100 || !account.matches("^\\w+$")) {
             return Problem.valueOf(400, "account format is invalid", BouncrProblem.MALFORMED.problemUri());
         }
