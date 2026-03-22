@@ -74,7 +74,7 @@ public final class LogoutUriPolicy {
             try {
                 InetAddress addr = InetAddress.getByName(host);
                 return isSafeAddress(addr);
-            } catch (Exception e) {
+            } catch (UnknownHostException e) {
                 return false;
             }
         }

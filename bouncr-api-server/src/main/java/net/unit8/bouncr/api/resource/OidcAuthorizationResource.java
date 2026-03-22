@@ -20,7 +20,9 @@ import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -76,11 +78,11 @@ public class OidcAuthorizationResource {
             oidcSession = new OidcSession(oidcSession.nonce(), oidcSession.state(),
                     oidcSession.responseType(), codeVerifier);
             try {
-                byte[] digest = MessageDigest.getInstance("SHA-256").digest(codeVerifier.getBytes("UTF-8"));
+                byte[] digest = MessageDigest.getInstance("SHA-256").digest(codeVerifier.getBytes(StandardCharsets.UTF_8));
                 String codeChallenge = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
                 authorizationUrl.append("&code_challenge=").append(codeChallenge)
                         .append("&code_challenge_method=S256");
-            } catch (Exception e) {
+            } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("Failed to generate PKCE code challenge", e);
             }
         }

@@ -366,7 +366,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
         if (webAuthnRpId != null) return webAuthnRpId;
         try {
             return java.net.URI.create(issuerBaseUrl).getHost();
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return null;
         }
     }

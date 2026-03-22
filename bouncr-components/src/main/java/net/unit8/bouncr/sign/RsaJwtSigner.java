@@ -7,8 +7,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -54,7 +56,7 @@ public class RsaJwtSigner {
             String signature = BASE64URL.encodeToString(sig.sign());
 
             return signingInput + "." + signature;
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             throw new MisconfigurationException("bouncr.JWT_SIGNING_FAILED", e.getMessage(), e);
         }
     }
@@ -82,7 +84,7 @@ public class RsaJwtSigner {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = JSON.readValue(payloadBytes, Map.class);
             return payload;
-        } catch (Exception e) {
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
             LOG.debug("JWT verification failed", e);
             return null;
         }
@@ -101,7 +103,7 @@ public class RsaJwtSigner {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = JSON.readValue(payloadBytes, Map.class);
             return payload;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return null;
         }
     }
@@ -114,7 +116,7 @@ public class RsaJwtSigner {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(publicKeyBytes);
             return BASE64URL.encodeToString(hash).substring(0, 16);
-        } catch (Exception e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new MisconfigurationException("bouncr.KID_DERIVATION_FAILED", e.getMessage(), e);
         }
     }
@@ -135,7 +137,7 @@ public class RsaJwtSigner {
                     "n", BASE64URL.encodeToString(toUnsignedBytes(rsaKey.getModulus())),
                     "e", BASE64URL.encodeToString(toUnsignedBytes(rsaKey.getPublicExponent()))
             );
-        } catch (Exception e) {
+        } catch (GeneralSecurityException | ClassCastException e) {
             throw new MisconfigurationException("bouncr.INVALID_PUBLIC_KEY", e.getMessage(), e);
         }
     }

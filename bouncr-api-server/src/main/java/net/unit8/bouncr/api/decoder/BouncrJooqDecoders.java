@@ -6,7 +6,9 @@ import net.unit8.raoh.Result;
 import net.unit8.raoh.jooq.JooqRecordDecoders;
 import org.jooq.Record;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 
 import static net.unit8.raoh.Decoders.combine;
 import static net.unit8.raoh.ObjectDecoders.*;
@@ -237,22 +239,18 @@ public final class BouncrJooqDecoders {
             optionalField("pkce_enabled", bool())
     ).map((id, name, nameLower, clientId, clientSecret, scope, responseType,
            tokenEndpoint, authorizationEndpoint, authMethod, redirectUri, jwksUri, issuer, pkceEnabled) -> {
-        try {
-            return new OidcProvider(
-                    id, name, nameLower.orElse(null),
-                    clientId.orElse(null), clientSecret.orElse(null),
-                    scope.orElse(null),
-                    responseType.map(ResponseType::of).orElse(null),
-                    tokenEndpoint.orElse(null),
-                    authorizationEndpoint.orElse(null),
-                    authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
-                    redirectUri.map(URI::create).orElse(null),
-                    jwksUri.map(u -> { try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); } }).orElse(null),
-                    issuer.orElse(null),
-                    pkceEnabled.orElse(false));
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to map OidcProvider record", e);
-        }
+        return new OidcProvider(
+                id, name, nameLower.orElse(null),
+                clientId.orElse(null), clientSecret.orElse(null),
+                scope.orElse(null),
+                responseType.map(ResponseType::of).orElse(null),
+                tokenEndpoint.orElse(null),
+                authorizationEndpoint.orElse(null),
+                authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
+                redirectUri.map(URI::create).orElse(null),
+                jwksUri.map(BouncrJooqDecoders::toUrl).orElse(null),
+                issuer.orElse(null),
+                pkceEnabled.orElse(false));
     });
 
     // --- OidcApplication ---
@@ -272,27 +270,23 @@ public final class BouncrJooqDecoders {
             optionalField("frontchannel_logout_uri", string())
     ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey,
             homeUrl, callbackUrl, desc, backchannelLogoutUri, frontchannelLogoutUri) -> {
-        try {
-            return new OidcApplication(
-                    id, name, nameLower.orElse(null),
-                    clientId.orElse(null), clientSecret.orElse(null),
-                    privateKey.orElse(null), publicKey.orElse(null),
-                    homeUrl.map(u -> {
-                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
-                    }).orElse(null),
-                    callbackUrl.map(u -> {
-                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
-                    }).orElse(null),
-                    desc.orElse(null),
-                    backchannelLogoutUri.map(u -> {
-                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
-                    }).orElse(null),
-                    frontchannelLogoutUri.map(u -> {
-                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
-                    }).orElse(null),
-                    null);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to map OidcApplication record", e);
-        }
+        return new OidcApplication(
+                id, name, nameLower.orElse(null),
+                clientId.orElse(null), clientSecret.orElse(null),
+                privateKey.orElse(null), publicKey.orElse(null),
+                homeUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
+                callbackUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
+                desc.orElse(null),
+                backchannelLogoutUri.map(BouncrJooqDecoders::toUrl).orElse(null),
+                frontchannelLogoutUri.map(BouncrJooqDecoders::toUrl).orElse(null),
+                null);
     });
+
+    private static URL toUrl(String raw) {
+        try {
+            return URI.create(raw).toURL();
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid URL: " + raw, e);
+        }
+    }
 }

@@ -3,6 +3,7 @@ package net.unit8.bouncr.data;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
 /**
@@ -55,7 +56,7 @@ public record PkceChallenge(String challenge, String method) implements Serializ
             return MessageDigest.isEqual(
                     computed.getBytes(StandardCharsets.UTF_8),
                     challenge.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
+        } catch (NoSuchAlgorithmException e) {
             return false;
         }
     }

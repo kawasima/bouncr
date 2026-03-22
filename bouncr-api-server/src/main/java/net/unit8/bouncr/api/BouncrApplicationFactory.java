@@ -40,6 +40,7 @@ import net.unit8.bouncr.util.DigestUtils;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.time.Duration;
 import java.util.*;
@@ -172,17 +173,13 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
             throw new MisconfigurationException("bouncr.INTERNAL_SIGNING_KEY_REQUIRED");
         }
 
-        try {
-            String jwtSecret = Optional.ofNullable(Env.getString("JWT_SECRET", null))
-                    .orElseThrow(() -> new MisconfigurationException("bouncr.JWT_SECRET_REQUIRED"));
-            BouncrBackend bouncrBackend = builder(new BouncrBackend())
-                    .set(BouncrBackend::setKey, jwtSecret)
-                    .build();
-            app.use(new AuthenticationMiddleware<>(Collections
-                    .singletonList(injector.inject(bouncrBackend))));
-        } catch (Exception ioe) {
-            throw new RuntimeException(ioe);
-        }
+        String jwtSecret = Optional.ofNullable(Env.getString("JWT_SECRET", null))
+                .orElseThrow(() -> new MisconfigurationException("bouncr.JWT_SECRET_REQUIRED"));
+        BouncrBackend bouncrBackend = builder(new BouncrBackend())
+                .set(BouncrBackend::setKey, jwtSecret)
+                .build();
+        app.use(new AuthenticationMiddleware<>(Collections
+                .singletonList(injector.inject(bouncrBackend))));
 
         app.use(builder(new ContentNegotiationMiddleware())
                 .set(ContentNegotiationMiddleware::setAllowedTypes,
@@ -234,7 +231,7 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
             generator.initialize(2048);
             KeyPair pair = generator.generateKeyPair();
             return pair.getPrivate();
-        } catch(Exception e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }

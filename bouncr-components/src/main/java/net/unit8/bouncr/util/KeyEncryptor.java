@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -55,7 +56,7 @@ public class KeyEncryptor {
             // Format: [MAGIC][IV][ciphertext + GCM tag]
             return ByteBuffer.allocate(MAGIC.length + IV_LENGTH + ciphertext.length)
                     .put(MAGIC).put(iv).put(ciphertext).array();
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             throw new MisconfigurationException("bouncr.ENCRYPTION_FAILED", e.getMessage(), e);
         }
     }
@@ -79,7 +80,7 @@ public class KeyEncryptor {
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             return cipher.doFinal(ciphertext);
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             // Magic prefix present but decryption failed — this is a real error (wrong key, corruption)
             throw new MisconfigurationException("bouncr.DECRYPTION_FAILED", e.getMessage(), e);
         }

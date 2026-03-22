@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -113,7 +115,10 @@ public class OidcLogoutService {
         } catch (TimeoutException e) {
             LOG.warn("Back-channel logout delivery timed out after {} ms",
                     OVERALL_BACKCHANNEL_TIMEOUT.toMillis());
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.warn("Back-channel logout delivery interrupted: {}", e.getMessage(), e);
+        } catch (ExecutionException e) {
             LOG.warn("Back-channel logout delivery interrupted: {}", unwrapException(e).getMessage(), e);
         }
 
@@ -176,7 +181,7 @@ public class OidcLogoutService {
                         }
                         return false;
                     });
-        } catch (Exception e) {
+        } catch (URISyntaxException e) {
             LOG.warn("Back-channel logout request preparation failed for app {}: {}", app.name(), e.getMessage());
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Back-channel logout request preparation failed for app {}", app.name(), e);

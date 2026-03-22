@@ -6,10 +6,13 @@ import tools.jackson.databind.json.JsonMapper;
 import net.unit8.bouncr.data.OidcProvider;
 
 import java.io.InputStream;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -47,6 +50,8 @@ public class JwksVerifier {
         }
     }
 
+    private record JwksFetchResult(List<Map<String, Object>> keys, boolean fromCache) {}
+
     private final ConcurrentHashMap<Long, CachedJwks> cache = new ConcurrentHashMap<>();
     private final HttpClient httpClient;
     private final JsonMapper objectMapper = JsonMapper.builder().build();
@@ -77,8 +82,7 @@ public class JwksVerifier {
             String alg = (String) header.get("alg");
             String kid = (String) header.get("kid");
 
-            List<Map<String, Object>> keys = getJwks(provider);
-            PublicKey publicKey = findPublicKey(keys, kid, alg);
+            PublicKey publicKey = resolvePublicKey(provider, kid);
             if (publicKey == null) {
                 return false;
             }
@@ -99,16 +103,29 @@ public class JwksVerifier {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
-        } catch (Exception e) {
+        } catch (IOException | URISyntaxException | GeneralSecurityException | IllegalArgumentException | IllegalStateException e) {
             return false;
         }
     }
 
+    private PublicKey resolvePublicKey(OidcProvider provider, String kid)
+            throws IOException, URISyntaxException, InterruptedException, GeneralSecurityException {
+        JwksFetchResult jwks = getJwks(provider, false);
+        PublicKey publicKey = findPublicKey(jwks.keys(), kid);
+        // If kid is not found in cached JWKS, force one refresh to detect remote key rotation immediately.
+        if (publicKey == null && kid != null && jwks.fromCache()) {
+            JwksFetchResult refreshed = getJwks(provider, true);
+            publicKey = findPublicKey(refreshed.keys(), kid);
+        }
+        return publicKey;
+    }
+
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> getJwks(OidcProvider provider) throws Exception {
+    private JwksFetchResult getJwks(OidcProvider provider, boolean forceRefresh)
+            throws IOException, URISyntaxException, InterruptedException {
         CachedJwks cached = cache.get(provider.id());
-        if (cached != null && !cached.isExpired()) {
-            return cached.keys;
+        if (!forceRefresh && cached != null && !cached.isExpired()) {
+            return new JwksFetchResult(cached.keys, true);
         }
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -131,11 +148,11 @@ public class JwksVerifier {
             Map<String, Object> jwks = objectMapper.readValue(in, JSON_REF);
             List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
             cache.put(provider.id(), new CachedJwks(keys));
-            return keys;
+            return new JwksFetchResult(keys, false);
         }
     }
 
-    private PublicKey findPublicKey(List<Map<String, Object>> keys, String kid, String alg) throws Exception {
+    private PublicKey findPublicKey(List<Map<String, Object>> keys, String kid) throws GeneralSecurityException {
         for (Map<String, Object> key : keys) {
             String keyKid = (String) key.get("kid");
             if (kid != null && !kid.equals(keyKid)) {
@@ -156,7 +173,7 @@ public class JwksVerifier {
         return null;
     }
 
-    private PublicKey buildRsaPublicKey(Map<String, Object> key) throws Exception {
+    private PublicKey buildRsaPublicKey(Map<String, Object> key) throws GeneralSecurityException {
         byte[] nBytes = Base64.getUrlDecoder().decode((String) key.get("n"));
         byte[] eBytes = Base64.getUrlDecoder().decode((String) key.get("e"));
         BigInteger modulus = new BigInteger(1, nBytes);
@@ -179,7 +196,7 @@ public class JwksVerifier {
         }
     }
 
-    private void configureSignatureParameters(Signature sig, String jwtAlg) throws Exception {
+    private void configureSignatureParameters(Signature sig, String jwtAlg) throws GeneralSecurityException {
         if ("PS256".equals(jwtAlg)) {
             sig.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, 32, 1));
         } else if ("PS384".equals(jwtAlg)) {

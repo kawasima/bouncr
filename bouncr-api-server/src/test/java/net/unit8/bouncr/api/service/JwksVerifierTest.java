@@ -19,6 +19,8 @@ import java.security.spec.PSSParameterSpec;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -108,6 +110,54 @@ class JwksVerifierTest {
         }
     }
 
+    @Test
+    void verifyRefreshesJwksImmediatelyWhenKidMismatchesCachedKeys() throws Exception {
+        KeyPair oldKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        KeyPair newKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        String oldKid = "kid-old";
+        String newKid = "kid-new";
+        String oldJwks = jwksFor(oldKeyPair, oldKid);
+        String newJwks = jwksFor(newKeyPair, newKid);
+
+        AtomicReference<String> servedJwks = new AtomicReference<>(oldJwks);
+        AtomicInteger requestCount = new AtomicInteger(0);
+
+        HttpServer server = createServerOrSkip();
+        server.createContext("/jwks", exchange -> {
+            requestCount.incrementAndGet();
+            byte[] body = servedJwks.get().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("content-type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        server.start();
+
+        try {
+            OidcProvider provider = new OidcProvider(
+                    3L, "p", "p", "cid", "sec", "openid",
+                    ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+                    null,
+                    new java.net.URL("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                    "issuer", false
+            );
+            JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
+
+            String oldToken = createJwt("RS256", oldKid, oldKeyPair, "{\"sub\":\"u3\"}");
+            assertThat(verifier.verify(oldToken, provider)).isTrue();
+            assertThat(requestCount.get()).isEqualTo(1);
+
+            servedJwks.set(newJwks);
+            String newToken = createJwt("RS256", newKid, newKeyPair, "{\"sub\":\"u4\"}");
+
+            assertThat(verifier.verify(newToken, provider)).isTrue();
+            assertThat(requestCount.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static String createJwt(String alg, String kid, KeyPair keyPair, String payloadJson) throws Exception {
         String headerJson = "{\"alg\":\"" + alg + "\",\"kid\":\"" + kid + "\",\"typ\":\"JWT\"}";
         String header = base64Url(headerJson.getBytes(StandardCharsets.UTF_8));
@@ -135,6 +185,16 @@ class JwksVerifierTest {
             bytes = trimmed;
         }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String jwksFor(KeyPair keyPair, String kid) {
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        return """
+                {"keys":[{"kty":"RSA","kid":"%s","n":"%s","e":"%s"}]}
+                """.formatted(
+                kid,
+                base64Url(publicKey.getModulus().toByteArray()),
+                base64Url(publicKey.getPublicExponent().toByteArray()));
     }
 
     private static HttpServer createServerOrSkip() throws Exception {

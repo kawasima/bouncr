@@ -33,6 +33,7 @@ import net.unit8.bouncr.util.UriInterpolator;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -157,7 +158,7 @@ public class OidcSignInResource {
                     if (errorStream != null) {
                         try {
                             return jsonMapper.readValue(errorStream, GENERAL_JSON_REF);
-                        } catch (Exception ignored) {
+                        } catch (IOException ignored) {
                             // Fall through to generic error
                         }
                     }

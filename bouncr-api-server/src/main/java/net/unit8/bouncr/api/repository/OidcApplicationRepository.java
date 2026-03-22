@@ -7,6 +7,7 @@ import org.jooq.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.List;
@@ -268,7 +269,7 @@ public class OidcApplicationRepository {
                     toOptionalUrl(frontchannelLogoutUri, "frontchannel_logout_uri", appName),
                     null
             );
-        } catch (Exception e) {
+        } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to map OidcApplication record", e);
         }
     }
@@ -279,7 +280,7 @@ public class OidcApplicationRepository {
         }
         try {
             return URI.create(raw.trim()).toURL();
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | MalformedURLException e) {
             LOG.warn("Ignore invalid {} for OIDC application {}: {}", fieldName, appName, raw);
             return null;
         }
