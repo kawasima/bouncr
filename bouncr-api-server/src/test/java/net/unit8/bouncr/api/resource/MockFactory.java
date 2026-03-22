@@ -27,7 +27,6 @@ public class MockFactory {
 
     private static final JavaMigration[] MIGRATIONS = {
             new db.migration.B28__BouncrV0_3_0(),
-            new db.migration.V29__AddOidcLogoutUris(),
     };
 
     /**
