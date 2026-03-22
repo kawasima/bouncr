@@ -91,11 +91,20 @@ public class PasswordSignInResourceTest {
     }
 
     @Test
-    void authenticate_nonExistentAccount_returnsFalseAndHashIsExecuted() {
-        // Verify that the dummy PBKDF2 path executes without error for unknown accounts.
-        // This guards against accidental removal of the timing-equalization code.
+    void authenticate_nonExistentAccount_returnsFalseAndDummySaltIsUsed() {
+        // Verify that getDummySalt() is called for unknown accounts, confirming the
+        // timing-equalization PBKDF2 path is executed and guards against its removal.
+        boolean[] dummySaltCalled = {false};
+        BouncrConfiguration spyConfig = new BouncrConfiguration() {
+            @Override
+            public String getDummySalt() {
+                dummySaltCalled[0] = true;
+                return super.getDummySalt();
+            }
+        };
+
         PasswordSignInResource resource = new PasswordSignInResource();
-        setField(resource, "config", new BouncrConfiguration());
+        setField(resource, "config", spyConfig);
         setField(resource, "storeProvider", new StoreProvider());
 
         PasswordSignIn req = new PasswordSignIn("no-such-user", "anypassword", null);
@@ -105,7 +114,8 @@ public class PasswordSignInResourceTest {
         boolean result = resource.authenticate(req, new ActionRecord(), context, dsl);
 
         assertThat(result).isFalse();
-        // No message set (no 401 Problem) — the "unknown account" branch is silent
+        assertThat(dummySaltCalled[0]).as("getDummySalt() must be called for unknown accounts").isTrue();
+        // No 401 Problem set — the "unknown account" branch is silent
         assertThat(context.getMessage()).isEmpty();
     }
 
