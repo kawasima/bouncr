@@ -152,7 +152,8 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 .set(CorsMiddleware::setOrigins, corsOrigins())
                 .build());
 
-        if (Env.getString("internal.signing.key", null) == null) {
+        String internalSigningKey = Env.getString("internal.signing.key", null);
+        if (internalSigningKey == null || internalSigningKey.isBlank()) {
             throw new MisconfigurationException("bouncr.INTERNAL_SIGNING_KEY_REQUIRED");
         }
 
