@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 type Cache struct {
 	pool         *pgxpool.Pool
 	mu           sync.RWMutex
-	realms       []*Realm
+	realmsByPath map[string][]*Realm // keyed by Application.VirtualPath
 	applications []*Application
 }
 
@@ -58,7 +58,7 @@ func (c *Cache) Refresh() error {
 	}
 	defer rows.Close()
 
-	var realms []*Realm
+	realmsByPath := make(map[string][]*Realm)
 	appMap := make(map[int64]*Application)
 	for rows.Next() {
 		var appID int64
@@ -81,20 +81,10 @@ func (c *Cache) Refresh() error {
 			appMap[appID] = app
 		}
 
-		// Pattern: ^<virtualPath>($|/<realmURL>)
-		// Matches RealmCache.java line 73
-		pattern := fmt.Sprintf("^%s($|/%s)", regexp.QuoteMeta(virtualPath), realmURL)
-		compiled, err := regexp.Compile(pattern)
-		if err != nil {
-			log.Printf("invalid realm pattern %q: %v", pattern, err)
-			continue
-		}
-
-		realms = append(realms, &Realm{
+		realmsByPath[virtualPath] = append(realmsByPath[virtualPath], &Realm{
 			ID:          realmID,
 			URL:         realmURL,
 			Application: app,
-			PathPattern: compiled,
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -108,23 +98,45 @@ func (c *Cache) Refresh() error {
 	}
 
 	c.mu.Lock()
-	c.realms = realms
+	c.realmsByPath = realmsByPath
 	c.applications = apps
 	c.mu.Unlock()
 
-	log.Printf("realm cache refreshed: %d realm(s), %d application(s)", len(realms), len(apps))
+	realmCount := 0
+	for _, rs := range realmsByPath {
+		realmCount += len(rs)
+	}
+	log.Printf("realm cache refreshed: %d realm(s), %d application(s)", realmCount, len(apps))
 	return nil
 }
 
-// Match finds the first realm whose pattern matches the given path.
+// Match finds the realm whose path matches the given request path.
+// Matching semantics (equivalent to Java RealmCache.matchesPath):
+//
+//	path == virtualPath                   → exact application match
+//	path == virtualPath + "/" + realm.URL → realm sub-path match
 func (c *Cache) Match(path string) *Realm {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	for _, r := range c.realms {
-		if r.Matches(path) {
-			return r
+
+	// Case 1: path == virtualPath (exact application match)
+	if realms, ok := c.realmsByPath[path]; ok && len(realms) > 0 {
+		return realms[0]
+	}
+
+	// Case 2: path == virtualPath + "/" + realm.URL
+	if idx := strings.LastIndex(path, "/"); idx > 0 {
+		prefix := path[:idx]
+		suffix := path[idx+1:]
+		if realms, ok := c.realmsByPath[prefix]; ok {
+			for _, r := range realms {
+				if r.URL == suffix {
+					return r
+				}
+			}
 		}
 	}
+
 	return nil
 }
 

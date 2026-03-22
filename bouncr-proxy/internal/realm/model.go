@@ -3,7 +3,6 @@ package realm
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -68,9 +67,4 @@ type Realm struct {
 	ID          int64
 	URL         string
 	Application *Application
-	PathPattern *regexp.Regexp
-}
-
-func (r *Realm) Matches(path string) bool {
-	return r.PathPattern.MatchString(path)
 }
