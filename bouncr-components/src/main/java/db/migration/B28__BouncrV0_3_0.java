@@ -425,6 +425,27 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                                     .references(table("users"), field("user_id"))
                     ).getSQL());
 
+            stmt.execute(create.createTable(table("webauthn_credentials"))
+                    .column(field("webauthn_credential_id", SQLDataType.BIGINT.identity(true)))
+                    .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("credential_id", SQLDataType.VARBINARY(1024).nullable(false)))
+                    .column(field("credential_public_key", SQLDataType.VARBINARY(1024).nullable(false)))
+                    .column(field("sign_count", SQLDataType.BIGINT.nullable(false).defaultValue(DSL.inline(0L))))
+                    .column(field("transports", SQLDataType.VARCHAR(255)))
+                    .column(field("attestation_format", SQLDataType.VARCHAR(32)))
+                    .column(field("credential_name", SQLDataType.VARCHAR(100)))
+                    .column(field("discoverable", SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.inline(true))))
+                    .constraints(
+                            constraint().primaryKey(field("webauthn_credential_id")),
+                            constraint().unique(field("credential_id")),
+                            constraint().foreignKey(field("user_id"))
+                                    .references(table("users"), field("user_id")).onDeleteCascade()
+                    ).getSQL());
+
+            stmt.execute(create.createIndex(name("idx_webauthn_credentials_user"))
+                    .on(table("webauthn_credentials"), field("user_id"))
+                    .getSQL());
+
             stmt.execute(create.createTable(table("user_profile_verifications"))
                     .column(field("user_profile_field_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))

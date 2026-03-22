@@ -1,7 +1,10 @@
 import { apiRequest } from './client';
+import type { RegistrationOptions, AuthenticationOptions } from '@/lib/webauthn';
 import type {
   User,
   UserSession,
+  WebAuthnCredentialInfo,
+  WebAuthnSignInResponse,
   SignInRequest,
   SignUpRequest,
   PasswordCredentialRequest,
@@ -219,6 +222,52 @@ export function createOtpKey(token: string) {
 
 export function deleteOtpKey(token: string) {
   return apiRequest<void>('/otp_key', { method: 'DELETE', token });
+}
+
+// === WebAuthn ===
+
+export function getWebAuthnRegisterOptions(token: string) {
+  return apiRequest<RegistrationOptions>('/my/webauthn/register/options', {
+    method: 'POST',
+    token,
+  });
+}
+
+export function registerWebAuthn(registrationResponseJSON: string, credentialName: string | null, token: string) {
+  return apiRequest<WebAuthnCredentialInfo>('/my/webauthn/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      registration_response_json: registrationResponseJSON,
+      credential_name: credentialName,
+    }),
+    token,
+  });
+}
+
+export function getWebAuthnCredentials(token: string) {
+  return apiRequest<WebAuthnCredentialInfo[]>('/my/webauthn/credentials', { token });
+}
+
+export function deleteWebAuthnCredential(id: number, token: string) {
+  return apiRequest<void>('/my/webauthn/credentials', {
+    method: 'DELETE',
+    token,
+    params: { id },
+  });
+}
+
+export function getWebAuthnSignInOptions(account?: string) {
+  return apiRequest<AuthenticationOptions>('/sign_in/webauthn/options', {
+    method: 'POST',
+    body: JSON.stringify(account ? { account } : {}),
+  });
+}
+
+export function signInWithWebAuthn(authenticationResponseJSON: string) {
+  return apiRequest<WebAuthnSignInResponse>('/sign_in/webauthn', {
+    method: 'POST',
+    body: JSON.stringify({ authentication_response_json: authenticationResponseJSON }),
+  });
 }
 
 // === Actions (Audit) ===

@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 import { ProblemAlert } from '@/components/problem-alert';
 import { AdminMenu } from './admin-menu';
 import { OtpSection } from './otp-section';
+import { PasskeySection } from './passkey-section';
 import { ROUTES } from '@/routes/route-paths';
 
 export function HomePage() {
@@ -127,6 +128,7 @@ export function HomePage() {
         )}
 
         <OtpSection otpKey={otpKey?.key} account={user.account} onRefresh={loadData} />
+        <PasskeySection onRefresh={loadData} />
       </div>
     </div>
   );

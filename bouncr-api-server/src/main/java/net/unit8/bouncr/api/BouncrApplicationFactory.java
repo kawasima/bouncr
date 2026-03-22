@@ -86,16 +86,21 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 ar.all("/invitation/:code").to(InvitationResource.class);
                 ar.all("/invitations").to(InvitationsResource.class);
 
-                ar.all("/sign_in").to(PasswordSignInResource.class);
-                ar.all("/pre_sign_in").to(PreSignInResource.class);
+                ar.all("/sign_in/webauthn/options").to(WebAuthnSignInOptionsResource.class);
+                ar.all("/sign_in/webauthn").to(WebAuthnSignInResource.class);
                 ar.all("/sign_in/oidc/:name").to(OidcSignInResource.class);
                 ar.all("/sign_in/oidc_authorization/:name").to(OidcAuthorizationResource.class);
+                ar.all("/sign_in").to(PasswordSignInResource.class);
+                ar.all("/pre_sign_in").to(PreSignInResource.class);
                 ar.all("/sign_up").to(SignUpResource.class);
                 ar.all("/user_profile_verification").to(UserProfileVerificationResource.class);
                 ar.all("/password_credential/reset_code").to(PasswordResetChallengeResource.class);
                 ar.all("/password_credential/reset").to(PasswordResetResource.class);
                 ar.all("/password_credential").to(PasswordCredentialResource.class);
                 ar.all("/otp_key").to(OtpKeyResource.class);
+                ar.all("/my/webauthn/register/options").to(WebAuthnRegisterOptionsResource.class);
+                ar.all("/my/webauthn/register").to(WebAuthnRegisterResource.class);
+                ar.all("/my/webauthn/credentials").to(WebAuthnCredentialsResource.class);
                 ar.all("/actions").to(UserActionsResource.class);
                 // Sessions can't be listed by a user now.
                 //ar.all("/sessions").to(UserSessionsResource.class);

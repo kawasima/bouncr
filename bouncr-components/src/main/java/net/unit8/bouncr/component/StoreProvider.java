@@ -21,6 +21,7 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
     private KeyValueStore authorizationCodeStore = new MemoryStore();
     private KeyValueStore oauth2RefreshTokenStore = new MemoryStore();
     private KeyValueStore oidcSessionStore = new MemoryStore();
+    private KeyValueStore webAuthnChallengeStore = new MemoryStore();
 
     @Override
     protected ComponentLifecycle<StoreProvider> lifecycle() {
@@ -45,6 +46,7 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
             case AUTHORIZATION_CODE -> authorizationCodeStore;
             case OAUTH2_REFRESH_TOKEN -> oauth2RefreshTokenStore;
             case OIDC_SESSION -> oidcSessionStore;
+            case WEBAUTHN_CHALLENGE -> webAuthnChallengeStore;
         };
     }
 
@@ -53,12 +55,14 @@ public class StoreProvider extends SystemComponent<StoreProvider> {
     public void setAuthorizationCodeStore(KeyValueStore store) { this.authorizationCodeStore = store; }
     public void setOauth2RefreshTokenStore(KeyValueStore store) { this.oauth2RefreshTokenStore = store; }
     public void setOidcSessionStore(KeyValueStore store) { this.oidcSessionStore = store; }
+    public void setWebAuthnChallengeStore(KeyValueStore store) { this.webAuthnChallengeStore = store; }
 
     public enum StoreType {
         BOUNCR_TOKEN,
         REFRESH_TOKEN,
         AUTHORIZATION_CODE,
         OAUTH2_REFRESH_TOKEN,
-        OIDC_SESSION
+        OIDC_SESSION,
+        WEBAUTHN_CHALLENGE
     }
 }

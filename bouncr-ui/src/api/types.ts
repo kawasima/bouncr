@@ -134,6 +134,13 @@ export interface OtpKey {
   key?: string | null;
 }
 
+export interface WebAuthnCredentialInfo {
+  id: number;
+  credential_name: string;
+  transports: string;
+  discoverable: boolean;
+}
+
 export interface InitialPassword {
   password: string;
 }
@@ -143,6 +150,11 @@ export interface UserSession {
   remote_address: string;
   user_agent: string;
   created_at: string;
+}
+
+export interface WebAuthnSignInResponse {
+  token: string;
+  account: string;
 }
 
 // === API Error ===
