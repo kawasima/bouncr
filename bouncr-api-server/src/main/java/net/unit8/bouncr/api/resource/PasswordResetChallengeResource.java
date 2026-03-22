@@ -65,7 +65,7 @@ public class PasswordResetChallengeResource {
      *
      * <p>When the account does not exist, the same 201 response is returned without creating
      * a challenge or running the AFTER hook. Response-body enumeration is prevented, but a
-     * response-timing difference remains (no DB write / hook for unknown accounts). Callers
+     * response-timing difference remains (no DB write / AFTER hook for unknown accounts). Callers
      * should apply rate-limiting to mitigate timing-based enumeration.
      *
      * @param createRequest a creation request for the password reset challenge
