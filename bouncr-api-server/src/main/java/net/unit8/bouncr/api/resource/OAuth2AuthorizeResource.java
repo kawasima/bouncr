@@ -6,8 +6,12 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.CodecUtils;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.decoder.BouncrFormDecoders;
+import net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -15,19 +19,18 @@ import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.PkceChallenge;
-import net.unit8.bouncr.data.Scope;
 import net.unit8.bouncr.data.UserIdentity;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -39,119 +42,159 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_C
  */
 @AllowedMethods("GET")
 public class OAuth2AuthorizeResource {
+    static final ContextKey<AuthorizeRequest> AUTHORIZE_REQ =
+            ContextKey.of("authorizeRequest", AuthorizeRequest.class);
+    static final ContextKey<OidcApplication> CLIENT_APP = ContextKey.of(OidcApplication.class);
+    static final ContextKey<ApiResponse> NOT_FOUND_RESPONSE =
+            ContextKey.of("notFoundResponse", ApiResponse.class);
+
     @Inject
     private StoreProvider storeProvider;
 
     @Inject
     private BouncrConfiguration config;
 
-    @Decision(AUTHORIZED)
-    public boolean authorized() {
-        return true;
+    @Decision(value = MALFORMED, method = "GET")
+    public Problem isMalformed(Parameters params, RestContext context) {
+        return switch (BouncrFormDecoders.AUTHORIZE_REQUEST.decode(params)) {
+            case Ok<AuthorizeRequest> ok -> {
+                context.put(AUTHORIZE_REQ, ok.value());
+                yield null;
+            }
+            case Err<AuthorizeRequest> err -> {
+                List<Problem.Violation> violations = err.issues().asList().stream()
+                        .map(issue -> new Problem.Violation(
+                                issue.path().toString(), issue.code(), issue.message()))
+                        .toList();
+                yield Problem.fromViolationList(violations);
+            }
+        };
     }
 
-    @Decision(HANDLE_OK)
-    public ApiResponse authorize(Parameters params,
-                                 UserPermissionPrincipal principal,
-                                 DSLContext dsl) {
-        String responseType = params.get("response_type");
-        String clientId = params.get("client_id");
-        String redirectUri = params.get("redirect_uri");
-        String scope = params.get("scope");
-        String state = params.get("state");
-
-        if (!"code".equals(responseType)) {
-            return oauthError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
-                    "Only response_type=code is supported");
-        }
-        if (clientId == null || clientId.isBlank()) {
-            return oauthError(OAuth2Error.INVALID_REQUEST, "client_id is required");
-        }
-
+    @Decision(EXISTS)
+    public boolean exists(AuthorizeRequest authorizeRequest, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        OidcApplication app = repo.findByClientId(clientId).orElse(null);
+        OidcApplication app = repo.findByClientId(authorizeRequest.clientId()).orElse(null);
         if (app == null) {
-            return oauthError(OAuth2Error.INVALID_CLIENT, "Unknown client_id");
+            context.put(NOT_FOUND_RESPONSE, oauthError(OAuth2Error.INVALID_CLIENT, "Unknown client_id"));
+            return false;
         }
 
-        // Compare as strings — URL.toString() may normalize ports, so this is an exact-match check.
-        // Clients must send the exact same redirect_uri as registered.
         if (app.callbackUrl() == null) {
-            return oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URL");
+            context.put(NOT_FOUND_RESPONSE,
+                    oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URL"));
+            return false;
         }
+
+        String redirectUri = authorizeRequest.redirectUri();
         String registeredCallback = app.callbackUrl().toString();
-        if (redirectUri == null || !Objects.equals(redirectUri, registeredCallback)) {
-            return oauthError(OAuth2Error.INVALID_REQUEST,
-                    "redirect_uri does not match registered callback");
+        if (!Objects.equals(redirectUri, registeredCallback)) {
+            context.put(NOT_FOUND_RESPONSE,
+                    oauthError(OAuth2Error.INVALID_REQUEST,
+                            "redirect_uri does not match registered callback"));
+            return false;
         }
-        // Only allow https (or http for localhost/127.0.0.1 in development)
+
         try {
             URI parsed = URI.create(redirectUri);
             String host = parsed.getHost();
             boolean isLocalDev = "http".equals(parsed.getScheme())
                     && ("localhost".equals(host) || "127.0.0.1".equals(host));
             if (!"https".equals(parsed.getScheme()) && !isLocalDev) {
-                return oauthError(OAuth2Error.INVALID_REQUEST,
-                        "redirect_uri must use https (http allowed only for localhost)");
+                context.put(NOT_FOUND_RESPONSE,
+                        oauthError(OAuth2Error.INVALID_REQUEST,
+                                "redirect_uri must use https (http allowed only for localhost)"));
+                return false;
             }
         } catch (IllegalArgumentException e) {
-            return oauthError(OAuth2Error.INVALID_REQUEST, "redirect_uri is not a valid URI");
+            context.put(NOT_FOUND_RESPONSE,
+                    oauthError(OAuth2Error.INVALID_REQUEST, "redirect_uri is not a valid URI"));
+            return false;
         }
 
-        // Validate scope — exact token match, not substring
-        Set<String> scopes = scope != null ? new HashSet<>(Arrays.asList(scope.split("\\s+"))) : Set.of();
-        if (!scopes.contains("openid")) {
+        context.put(CLIENT_APP, app);
+        return true;
+    }
+
+    @Decision(HANDLE_NOT_FOUND)
+    public ApiResponse handleNotFound(RestContext context) {
+        return context.get(NOT_FOUND_RESPONSE)
+                .orElseGet(() -> builder(new ApiResponse())
+                        .set(ApiResponse::setStatus, 404)
+                        .set(ApiResponse::setHeaders, Headers.of(
+                                "Content-Type", "application/json",
+                                "Cache-Control", "no-store",
+                                "Pragma", "no-cache"))
+                        .set(ApiResponse::setBody, Map.of(
+                                "error", "not_found",
+                                "error_description", "Resource not found"))
+                        .build());
+    }
+
+    @Decision(AUTHORIZED)
+    public boolean authorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized(AuthorizeRequest authorizeRequest) {
+        String currentUrl = toAuthorizeUrl(authorizeRequest);
+
+        URI unauthRedirectUrl = config.getOidcConfiguration().getUnauthenticateRedirectUrl();
+        if (unauthRedirectUrl != null) {
+            String target = config.getOidcConfiguration().getUriInterpolator()
+                    .interpolate(unauthRedirectUrl, "return_url", currentUrl).toString();
+            return redirect(target);
+        }
+
+        return redirect(config.getIssuerBaseUrl() + "/sign_in?return_url="
+                + CodecUtils.urlEncode(currentUrl));
+    }
+
+    @Decision(HANDLE_OK)
+    public ApiResponse authorize(AuthorizeRequest authorizeRequest,
+                                 Parameters params,
+                                 UserPermissionPrincipal principal) {
+        if (!"code".equals(authorizeRequest.responseType())) {
+            return oauthError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
+                    "Only response_type=code is supported");
+        }
+
+        String redirectUri = authorizeRequest.redirectUri();
+        String state = authorizeRequest.state();
+
+        if (!authorizeRequest.scope().contains("openid")) {
             return redirectError(redirectUri, "invalid_scope", "scope must include openid", state);
         }
 
-        // PKCE validation — reject code_challenge_method without code_challenge
         String codeChallenge = params.get("code_challenge");
         String codeChallengeMethod = params.get("code_challenge_method");
         if (codeChallengeMethod != null && codeChallenge == null) {
             return redirectError(redirectUri, "invalid_request",
                     "code_challenge is required when code_challenge_method is specified", state);
         }
-        if (codeChallenge != null && !"S256".equals(codeChallengeMethod)) {
+        if (codeChallenge != null && authorizeRequest.pkce() == null) {
             return redirectError(redirectUri, "invalid_request",
                     "Only code_challenge_method=S256 is supported", state);
         }
 
-        // Check if user is authenticated
-        if (principal == null) {
-            String currentUrl = "/oauth2/authorize?"
-                    + "response_type=" + CodecUtils.urlEncode(responseType)
-                    + "&client_id=" + CodecUtils.urlEncode(clientId)
-                    + "&redirect_uri=" + CodecUtils.urlEncode(redirectUri)
-                    + "&scope=" + CodecUtils.urlEncode(scope != null ? scope : "")
-                    + (state != null ? "&state=" + CodecUtils.urlEncode(state) : "")
-                    + (params.get("nonce") != null ? "&nonce=" + CodecUtils.urlEncode(params.get("nonce")) : "")
-                    + (codeChallenge != null ? "&code_challenge=" + CodecUtils.urlEncode(codeChallenge)
-                            + "&code_challenge_method=S256" : "");
-            // Redirect to sign-in page; after authentication, user returns to this URL
-            URI unauthRedirectUrl = config.getOidcConfiguration().getUnauthenticateRedirectUrl();
-            if (unauthRedirectUrl != null) {
-                // Use the configured unauthenticated redirect with return_url interpolation
-                String target = config.getOidcConfiguration().getUriInterpolator()
-                        .interpolate(unauthRedirectUrl, "return_url", currentUrl).toString();
-                return redirect(target);
-            }
-            // Fallback: redirect to issuer base + sign-in path
-            return redirect(config.getIssuerBaseUrl() + "/sign_in?return_url="
-                    + CodecUtils.urlEncode(currentUrl));
-        }
-
-        // Generate authorization code
         long now = config.getClock().instant().getEpochSecond();
         String code = RandomUtils.generateRandomString(32, config.getSecureRandom());
         UserIdentity user = new UserIdentity(principal.getId(), principal.getName());
         PkceChallenge pkce = codeChallenge != null
-                ? new PkceChallenge(codeChallenge, "S256") : null;
+                ? authorizeRequest.pkce()
+                : null;
+
         AuthorizationCode authCode = new AuthorizationCode(
-                clientId, user, Scope.parse(scope),
-                params.get("nonce"), pkce, redirectUri, now);
+                authorizeRequest.clientId(),
+                user,
+                authorizeRequest.scope(),
+                authorizeRequest.nonce(),
+                pkce,
+                redirectUri,
+                now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
-        // Redirect to callback — preserve existing query params
         String separator = redirectUri.contains("?") ? "&" : "?";
         StringBuilder callbackUrl = new StringBuilder(redirectUri)
                 .append(separator).append("code=").append(CodecUtils.urlEncode(code));
@@ -159,6 +202,26 @@ public class OAuth2AuthorizeResource {
             callbackUrl.append("&state=").append(CodecUtils.urlEncode(state));
         }
         return redirect(callbackUrl.toString());
+    }
+
+    private String toAuthorizeUrl(AuthorizeRequest authorizeRequest) {
+        StringBuilder currentUrl = new StringBuilder("/oauth2/authorize?")
+                .append("response_type=").append(CodecUtils.urlEncode(authorizeRequest.responseType()))
+                .append("&client_id=").append(CodecUtils.urlEncode(authorizeRequest.clientId()))
+                .append("&redirect_uri=").append(CodecUtils.urlEncode(authorizeRequest.redirectUri()))
+                .append("&scope=").append(CodecUtils.urlEncode(authorizeRequest.scope().toString()));
+
+        if (authorizeRequest.state() != null) {
+            currentUrl.append("&state=").append(CodecUtils.urlEncode(authorizeRequest.state()));
+        }
+        if (authorizeRequest.nonce() != null) {
+            currentUrl.append("&nonce=").append(CodecUtils.urlEncode(authorizeRequest.nonce()));
+        }
+        if (authorizeRequest.pkce() != null) {
+            currentUrl.append("&code_challenge=").append(CodecUtils.urlEncode(authorizeRequest.pkce().challenge()))
+                    .append("&code_challenge_method=").append(CodecUtils.urlEncode(authorizeRequest.pkce().method()));
+        }
+        return currentUrl.toString();
     }
 
     private ApiResponse redirect(String location) {
