@@ -22,6 +22,7 @@ import tools.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
@@ -55,38 +56,27 @@ public class PasswordResetChallengeResource {
         };
     }
 
-    @Decision(PROCESSABLE)
-    public boolean existsAccount(PasswordResetChallengeCreate createRequest,
-                                 RestContext context,
-                                 DSLContext dsl) {
-        UserRepository userRepo = new UserRepository(dsl);
-        var user = userRepo.findByAccount(createRequest.account());
-        user.ifPresent(u -> context.put(USER, u));
-        return user.isPresent();
-    }
-
-    @Decision(HANDLE_UNPROCESSABLE_ENTITY)
-    public Problem unprocessable() {
-        return Problem.valueOf(422, "Account not found");
-    }
-
     /**
      * Create a code for reset password.
      *
-     * User can only know the code by email or SMS.
-     * So this endpoint returns Void.
+     * If the account does not exist, we return the same 201 response without any side effects
+     * to prevent account enumeration attacks.
      *
      * @param createRequest a creation request for the password reset challenge
-     * @param user a user record
      * @param context a REST context
      * @param dsl a jOOQ DSL context
      * @return null
      */
     @Decision(POST)
     public Void create(PasswordResetChallengeCreate createRequest,
-                       User user,
                        RestContext context,
                        DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        Optional<User> userOpt = userRepo.findByAccount(createRequest.account());
+        if (userOpt.isEmpty()) {
+            return null;
+        }
+        User user = userOpt.get();
         PasswordResetChallengeRepository repo = new PasswordResetChallengeRepository(dsl);
 
         String code = RandomUtils.generateRandomString(8);

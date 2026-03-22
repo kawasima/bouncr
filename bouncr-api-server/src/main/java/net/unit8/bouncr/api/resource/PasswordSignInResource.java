@@ -79,37 +79,41 @@ public class PasswordSignInResource {
 
         User user = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
 
-        if (user != null && user.userLock() != null) {
+        if (user == null) {
+            // Always perform the hash to equalize timing and prevent account enumeration.
+            PasswordUtils.pbkdf2(signInRequest.password(), config.getDummySalt(), 600_000);
+            return false;
+        }
+
+        if (user.userLock() != null) {
             context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
             return false;
         }
 
-        if (user != null) {
-            actionRecord.setActor(user.account());
-            if (user.passwordCredential() != null &&
-                    Arrays.equals(
-                            user.passwordCredential().password(),
-                            PasswordUtils.pbkdf2(
-                                    signInRequest.password(),
-                                    user.passwordCredential().salt(),
-                                    600_000))) {
-                context.put(USER, user);
-                actionRecord.setActionType(USER_SIGNIN);
-                SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
-                if (status == EXPIRED || status == INITIAL) {
-                    context.setMessage(Problem.valueOf(401, "Password must be changed", BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri()));
-                    return false;
-                }
-
-                if (!signInService.validateOtpKey(user.otpKey(), signInRequest.oneTimePassword())) {
-                    context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
-                    return false;
-                }
-                return true;
-            } else {
-                actionRecord.setActionType(USER_FAILED_SIGNIN);
-                userLockService.lockUser(user);
+        actionRecord.setActor(user.account());
+        if (user.passwordCredential() != null &&
+                Arrays.equals(
+                        user.passwordCredential().password(),
+                        PasswordUtils.pbkdf2(
+                                signInRequest.password(),
+                                user.passwordCredential().salt(),
+                                600_000))) {
+            context.put(USER, user);
+            actionRecord.setActionType(USER_SIGNIN);
+            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+            if (status == EXPIRED || status == INITIAL) {
+                context.setMessage(Problem.valueOf(401, "Password must be changed", BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri()));
+                return false;
             }
+
+            if (!signInService.validateOtpKey(user.otpKey(), signInRequest.oneTimePassword())) {
+                context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
+                return false;
+            }
+            return true;
+        } else {
+            actionRecord.setActionType(USER_FAILED_SIGNIN);
+            userLockService.lockUser(user);
         }
         return false;
     }
