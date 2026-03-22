@@ -153,8 +153,10 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 .build());
 
         try {
+            String jwtSecret = Optional.ofNullable(Env.getString("JWT_SECRET", null))
+                    .orElseThrow(() -> new MisconfigurationException("bouncr.JWT_SECRET_REQUIRED"));
             BouncrBackend bouncrBackend = builder(new BouncrBackend())
-                    .set(BouncrBackend::setKey, Env.getString("JWT_SECRET", "abcdefghijklmnopqrstuvwxyzabcdef"))
+                    .set(BouncrBackend::setKey, jwtSecret)
                     .build();
             app.use(new AuthenticationMiddleware<>(Collections
                     .singletonList(injector.inject(bouncrBackend))));
