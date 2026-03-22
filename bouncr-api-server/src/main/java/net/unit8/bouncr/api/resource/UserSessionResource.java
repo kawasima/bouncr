@@ -65,26 +65,16 @@ public class UserSessionResource {
         return false;
     }
 
+    @Decision(ALLOWED)
+    public boolean allowed(RestContext context) {
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_OUT, context);
+        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
+    }
+
     @Decision(DELETE)
     public Map<String, Object> delete(Parameters params, String subject, RestContext context, DSLContext dsl) {
-        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_OUT, context);
-        if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
-            return Map.of();
-        }
-
         String token = params.get("token");
-        String resolvedSubject = subject;
-        if (resolvedSubject == null && token != null) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> profiles = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(token);
-            if (profiles != null && profiles.get("sub") != null) {
-                resolvedSubject = String.valueOf(profiles.get("sub"));
-            }
-        }
-        if (resolvedSubject == null) {
-            resolvedSubject = "unknown";
-        }
-
+        String resolvedSubject = resolveSubject(subject, token);
         OidcLogoutService.LogoutResult logoutResult = new OidcLogoutService(config).propagateSignOut(resolvedSubject, dsl);
         storeProvider.getStore(BOUNCR_TOKEN).delete(token);
         storeProvider.getStore(REFRESH_TOKEN).delete(token);
@@ -100,5 +90,21 @@ public class UserSessionResource {
         response.put("frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()));
         response.put("backchannel_logout", summary);
         return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String resolveSubject(String subject, String token) {
+        if (subject != null && !subject.isBlank()) {
+            return subject;
+        }
+        if (token == null) {
+            return null;
+        }
+
+        Map<String, Object> profiles = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(token);
+        if (profiles == null || profiles.get("sub") == null) {
+            return null;
+        }
+        return String.valueOf(profiles.get("sub"));
     }
 }

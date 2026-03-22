@@ -50,7 +50,7 @@ class UserSessionResourceTest {
                 "https://logout.example",
                 "https://logout.example/callback",
                 "desc",
-                "http://127.0.0.1:9/backchannel",
+                "http://127.0.0.1:0/backchannel",
                 "https://logout.example/frontchannel"
         );
 

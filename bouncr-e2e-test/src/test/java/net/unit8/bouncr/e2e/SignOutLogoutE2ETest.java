@@ -22,7 +22,7 @@ class SignOutLogoutE2ETest extends E2ETestBase {
         createOidcApplication(
                 adminApi,
                 "logout_notify_app",
-                "http://127.0.0.1:9/backchannel-logout",
+                "http://127.0.0.1:0/backchannel-logout",
                 "https://rp.example/frontchannel-logout");
     }
 
