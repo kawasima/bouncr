@@ -13,7 +13,7 @@ class AuthFailureTrackerTest {
     private AuthFailureTracker tracker;
 
     @BeforeEach
-    void setup() throws Exception {
+    void setup() {
         BouncrConfiguration config = new BouncrConfiguration();
         // low thresholds so tests trigger quickly
         config.setFailureIpMax(3);

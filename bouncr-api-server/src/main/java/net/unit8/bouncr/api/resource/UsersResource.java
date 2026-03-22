@@ -43,6 +43,9 @@ public class UsersResource {
             return Problem.valueOf(400, "account is required", BouncrProblem.MALFORMED.problemUri());
         }
         String account = accountNode.asText();
+        if (account.length() > 100 || !account.matches("^\\w+$")) {
+            return Problem.valueOf(400, "account format is invalid", BouncrProblem.MALFORMED.problemUri());
+        }
         context.put(ACCOUNT, account);
 
         // Extract user profile fields dynamically
