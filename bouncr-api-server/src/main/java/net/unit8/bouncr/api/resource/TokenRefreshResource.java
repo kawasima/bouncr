@@ -52,12 +52,13 @@ public class TokenRefreshResource {
     }
 
     @Decision(AUTHORIZED)
+    // sessionId is injected from RestContext, where validate() stored it via SESSION_ID key.
     public boolean authorized(HttpRequest request, String sessionId) {
         String key = config.getInternalSigningKey();
         if (key == null || key.isBlank()) {
             throw new MisconfigurationException("bouncr.INTERNAL_SIGNING_KEY_REQUIRED");
         }
-        String signature = request.getHeaders().get("X-Bouncr-Signature");
+        String signature = request.getHeaders().get(SignatureVerifier.HEADER);
         SignatureVerifier verifier = new SignatureVerifier(key);
         return verifier.verify(signature, sessionId);
     }

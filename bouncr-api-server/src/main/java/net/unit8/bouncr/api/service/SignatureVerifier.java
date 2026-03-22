@@ -16,6 +16,9 @@ import java.util.HexFormat;
  * Timestamp tolerance prevents replay attacks.
  */
 public class SignatureVerifier {
+    /** HTTP header name used to carry the HMAC signature. */
+    public static final String HEADER = "X-Bouncr-Signature";
+
     private static final long TOLERANCE_SECONDS = 30;
     private final byte[] key;
 
