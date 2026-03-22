@@ -56,13 +56,17 @@ export async function createCredential(options: RegistrationOptions): Promise<st
     attestation: (options.attestation ?? 'none') as AttestationConveyancePreference,
   };
 
-  const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential;
-  const response = credential.response as AuthenticatorAttestationResponse;
+  const credential = await navigator.credentials.create({ publicKey });
+  if (!credential) {
+    throw new Error('Credential creation was cancelled or failed.');
+  }
+  const publicKeyCredential = credential as PublicKeyCredential;
+  const response = publicKeyCredential.response as AuthenticatorAttestationResponse;
 
   const registrationResponseJSON = JSON.stringify({
-    id: credential.id,
-    rawId: bufferToBase64url(credential.rawId),
-    type: credential.type,
+    id: publicKeyCredential.id,
+    rawId: bufferToBase64url(publicKeyCredential.rawId),
+    type: publicKeyCredential.type,
     response: {
       attestationObject: bufferToBase64url(response.attestationObject),
       clientDataJSON: bufferToBase64url(response.clientDataJSON),
@@ -85,13 +89,17 @@ export async function getAssertion(options: AuthenticationOptions): Promise<stri
     userVerification: (options.userVerification ?? 'preferred') as UserVerificationRequirement,
   };
 
-  const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
-  const response = credential.response as AuthenticatorAssertionResponse;
+  const credential = await navigator.credentials.get({ publicKey });
+  if (!credential) {
+    throw new Error('Assertion was cancelled or failed.');
+  }
+  const publicKeyCredential = credential as PublicKeyCredential;
+  const response = publicKeyCredential.response as AuthenticatorAssertionResponse;
 
   const authenticationResponseJSON = JSON.stringify({
-    id: credential.id,
-    rawId: bufferToBase64url(credential.rawId),
-    type: credential.type,
+    id: publicKeyCredential.id,
+    rawId: bufferToBase64url(publicKeyCredential.rawId),
+    type: publicKeyCredential.type,
     response: {
       authenticatorData: bufferToBase64url(response.authenticatorData),
       clientDataJSON: bufferToBase64url(response.clientDataJSON),

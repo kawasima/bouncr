@@ -87,7 +87,7 @@ public class WebAuthnRegisterOptionsResource {
 
         String cookieStr = COOKIE_NAME + "=" + sessionId
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
-                + "; Path=/";
+                + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
 
         ApiResponse response = new ApiResponse();
         response.setStatus(201);

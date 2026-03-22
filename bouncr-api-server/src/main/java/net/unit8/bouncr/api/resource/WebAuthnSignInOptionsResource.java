@@ -86,6 +86,11 @@ public class WebAuthnSignInOptionsResource {
                             return desc;
                         })
                         .toList();
+            } else {
+                // Bind challenge to a sentinel userId so the cross-check in
+                // WebAuthnSignInResource always rejects, without revealing
+                // whether the account exists (user enumeration prevention).
+                userId = -1L;
             }
         }
 
@@ -101,7 +106,7 @@ public class WebAuthnSignInOptionsResource {
 
         String cookieStr = COOKIE_NAME + "=" + sessionId
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
-                + "; Path=/";
+                + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
 
         ApiResponse response = new ApiResponse();
         response.setStatus(201);

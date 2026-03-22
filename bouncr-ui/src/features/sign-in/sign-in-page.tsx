@@ -28,17 +28,22 @@ export function SignInPage() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [otpRequired, setOtpRequired] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignInForm>({
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<SignInForm>({
     resolver: zodResolver(signInSchema),
   });
 
   async function onPasskeySignIn() {
     setProblem(null);
     try {
-      const options = await api.getWebAuthnSignInOptions();
+      const enteredAccount = getValues('account') || undefined;
+      const options = await api.getWebAuthnSignInOptions(enteredAccount);
       const authJSON = await getAssertion(options);
       const session = await api.signInWithWebAuthn(authJSON);
-      login(session.account ?? session.token, session.token);
+      if (!session.account) {
+        setProblem({ status: 0, detail: 'Passkey sign-in failed: missing account information.' });
+        return;
+      }
+      login(session.account, session.token);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
       navigate(from, { replace: true });
     } catch (err) {

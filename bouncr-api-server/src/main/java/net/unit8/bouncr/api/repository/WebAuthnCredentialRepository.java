@@ -23,7 +23,7 @@ public class WebAuthnCredentialRepository {
                         field("webauthn_credential_id", Long.class),
                         field("user_id", Long.class),
                         field("credential_id", byte[].class),
-                        field("public_key", byte[].class),
+                        field("attested_credential_data", byte[].class),
                         field("sign_count", Long.class),
                         field("transports", String.class),
                         field("attestation_format", String.class),
@@ -39,7 +39,7 @@ public class WebAuthnCredentialRepository {
                         field("webauthn_credential_id", Long.class),
                         field("user_id", Long.class),
                         field("credential_id", byte[].class),
-                        field("public_key", byte[].class),
+                        field("attested_credential_data", byte[].class),
                         field("sign_count", Long.class),
                         field("transports", String.class),
                         field("attestation_format", String.class),
@@ -50,14 +50,14 @@ public class WebAuthnCredentialRepository {
                 .fetchOptional(this::mapCredential);
     }
 
-    public WebAuthnCredential insert(Long userId, byte[] credentialId, byte[] publicKey,
+    public WebAuthnCredential insert(Long userId, byte[] credentialId, byte[] attestedCredentialData,
                                      long signCount, String transports, String attestationFormat,
                                      String credentialName, boolean discoverable) {
         var rec = dsl.insertInto(table("webauthn_credentials"),
-                        field("user_id"), field("credential_id"), field("public_key"),
+                        field("user_id"), field("credential_id"), field("attested_credential_data"),
                         field("sign_count"), field("transports"), field("attestation_format"),
                         field("credential_name"), field("discoverable"))
-                .values(userId, credentialId, publicKey,
+                .values(userId, credentialId, attestedCredentialData,
                         signCount, transports, attestationFormat,
                         credentialName, discoverable)
                 .returningResult(field("webauthn_credential_id", Long.class))
@@ -67,7 +67,7 @@ public class WebAuthnCredentialRepository {
         }
         Long id = rec.get(field("webauthn_credential_id", Long.class));
 
-        return new WebAuthnCredential(id, userId, credentialId, publicKey,
+        return new WebAuthnCredential(id, userId, credentialId, attestedCredentialData,
                 signCount, transports, attestationFormat, credentialName, discoverable);
     }
 
@@ -90,7 +90,7 @@ public class WebAuthnCredentialRepository {
                 r.get(field("webauthn_credential_id", Long.class)),
                 r.get(field("user_id", Long.class)),
                 r.get(field("credential_id", byte[].class)),
-                r.get(field("public_key", byte[].class)),
+                r.get(field("attested_credential_data", byte[].class)),
                 r.get(field("sign_count", Long.class)),
                 r.get(field("transports", String.class)),
                 r.get(field("attestation_format", String.class)),

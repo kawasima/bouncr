@@ -429,7 +429,7 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                     .column(field("webauthn_credential_id", SQLDataType.BIGINT.identity(true)))
                     .column(field("user_id", SQLDataType.BIGINT.nullable(false)))
                     .column(field("credential_id", SQLDataType.VARBINARY(1024).nullable(false)))
-                    .column(field("public_key", SQLDataType.VARBINARY(1024).nullable(false)))
+                    .column(field("attested_credential_data", SQLDataType.VARBINARY(1024).nullable(false)))
                     .column(field("sign_count", SQLDataType.BIGINT.nullable(false).defaultValue(DSL.inline(0L))))
                     .column(field("transports", SQLDataType.VARCHAR(255)))
                     .column(field("attestation_format", SQLDataType.VARCHAR(32)))
