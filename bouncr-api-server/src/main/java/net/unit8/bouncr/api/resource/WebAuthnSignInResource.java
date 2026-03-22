@@ -19,6 +19,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.WebAuthnService;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -59,6 +60,9 @@ public class WebAuthnSignInResource {
     @Inject
     private BouncrConfiguration config;
 
+    @Inject
+    private AuthFailureTracker authFailureTracker;
+
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(JsonNode body, RestContext context) {
         if (body == null) {
@@ -76,6 +80,13 @@ public class WebAuthnSignInResource {
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
+        String ip = request.getRemoteAddr();
+        if (authFailureTracker.isBlocked(ip, null)) {
+            context.setMessage(Problem.valueOf(429, "Too many failed attempts",
+                    BouncrProblem.TOO_MANY_REQUESTS.problemUri()));
+            return false;
+        }
+
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return false;
@@ -112,6 +123,7 @@ public class WebAuthnSignInResource {
                     .parseAuthenticationResponseJSON(authRequest.authenticationResponseJSON());
         } catch (DataConversionException e) {
             LOG.warn("Failed to parse WebAuthn authentication response", e);
+            authFailureTracker.recordFailure(ip, null);
             context.setMessage(Problem.valueOf(401, "Invalid authentication response",
                     BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
             return false;
@@ -120,6 +132,7 @@ public class WebAuthnSignInResource {
         byte[] credentialIdBytes = authData.getCredentialId();
         WebAuthnCredential storedCredential = credRepo.findByCredentialId(credentialIdBytes).orElse(null);
         if (storedCredential == null) {
+            authFailureTracker.recordFailure(ip, null);
             context.setMessage(Problem.valueOf(401, "Credential not found",
                     BouncrProblem.WEBAUTHN_CREDENTIAL_NOT_FOUND.problemUri()));
             return false;
@@ -139,6 +152,7 @@ public class WebAuthnSignInResource {
                     storedCredential);
         } catch (VerificationException e) {
             LOG.warn("WebAuthn assertion verification failed", e);
+            authFailureTracker.recordFailure(ip, null);
             context.setMessage(Problem.valueOf(401, "Verification failed",
                     BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
             return false;

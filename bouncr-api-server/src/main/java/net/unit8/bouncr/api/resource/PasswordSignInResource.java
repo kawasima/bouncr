@@ -13,6 +13,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -53,6 +54,9 @@ public class PasswordSignInResource {
     @Inject
     private BouncrConfiguration config;
 
+    @Inject
+    private AuthFailureTracker authFailureTracker;
+
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(JsonNode body, RestContext context) {
         if (body == null) {
@@ -66,9 +70,18 @@ public class PasswordSignInResource {
 
     @Decision(AUTHORIZED)
     public boolean authenticate(PasswordSignIn signInRequest,
+                                HttpRequest request,
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
+        String ip = request.getRemoteAddr();
+        String account = signInRequest.account();
+        if (authFailureTracker.isBlocked(ip, account)) {
+            context.setMessage(Problem.valueOf(429, "Too many failed attempts",
+                    BouncrProblem.TOO_MANY_REQUESTS.problemUri()));
+            return false;
+        }
+
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
         if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
             return false;
@@ -89,6 +102,7 @@ public class PasswordSignInResource {
         byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, 600_000);
 
         if (user == null) {
+            authFailureTracker.recordFailure(ip, account);
             return false;
         }
 
@@ -118,6 +132,7 @@ public class PasswordSignInResource {
         } else {
             actionRecord.setActionType(USER_FAILED_SIGNIN);
             userLockService.lockUser(user);
+            authFailureTracker.recordFailure(ip, account);
         }
         return false;
     }

@@ -262,6 +262,11 @@
                 <artifactId>enkan-component-ldaptive</artifactId>
                 <version>${enkan.version}</version>
             </dependency>
+            <dependency>
+                <groupId>net.unit8.enkan</groupId>
+                <artifactId>enkan-throttling</artifactId>
+                <version>${enkan.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.slf4j</groupId>

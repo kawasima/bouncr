@@ -10,6 +10,9 @@ import enkan.endpoint.ResourceEndpoint;
 import enkan.exception.MisconfigurationException;
 import enkan.middleware.*;
 import enkan.middleware.metrics.MetricsMiddleware;
+import enkan.middleware.throttling.ThrottlingMiddleware;
+import enkan.throttling.LimitRate;
+import enkan.throttling.Throttle;
 import enkan.security.bouncr.BouncrBackend;
 import enkan.system.inject.ComponentInjector;
 import is.tagomor.woothee.Classifier;
@@ -31,12 +34,14 @@ import enkan.middleware.jooq.JooqDslContextMiddleware;
 import enkan.middleware.jooq.JooqTransactionMiddleware;
 import net.unit8.bouncr.api.inject.DSLContextInjector;
 import net.unit8.bouncr.api.logging.ActionRecordInjector;
+import net.unit8.bouncr.api.middleware.ClientIpMiddleware;
 import net.unit8.bouncr.api.resource.*;
 import net.unit8.bouncr.util.DigestUtils;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -136,9 +141,19 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         // Enkan
         app.use(new DefaultCharsetMiddleware());
         app.use(new MetricsMiddleware<>());
+        app.use(new ClientIpMiddleware());
         app.use((java.util.function.Predicate<HttpRequest>) NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
+        app.use(path("/bouncr/api/(sign_in|sign_up|password_credential/reset)/?.*"),
+                builder(new ThrottlingMiddleware())
+                        .set(ThrottlingMiddleware::setThrottles, List.of(
+                                new Throttle("auth-ip",
+                                        new LimitRate(
+                                                Env.getInt("rate.limit.auth.max", 20),
+                                                Duration.ofSeconds(Env.getInt("rate.limit.auth.window.seconds", 60))),
+                                        HttpRequest::getRemoteAddr)))
+                        .build());
         app.use(new ParamsMiddleware());
         app.use(new MultipartParamsMiddleware());
         app.use(new NestedParamsMiddleware());

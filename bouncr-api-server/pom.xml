@@ -80,6 +80,10 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-throttling</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jedis</artifactId>
             <version>0.12.0</version>
         </dependency>

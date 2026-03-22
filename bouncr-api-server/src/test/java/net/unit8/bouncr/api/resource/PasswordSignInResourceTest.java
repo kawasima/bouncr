@@ -5,6 +5,7 @@ import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -103,15 +104,23 @@ public class PasswordSignInResourceTest {
             }
         };
 
+        AuthFailureTracker tracker = new AuthFailureTracker() {
+            { lifecycle().start(this); }
+        };
+        setField(tracker, "config", spyConfig);
+
         PasswordSignInResource resource = new PasswordSignInResource();
         setField(resource, "config", spyConfig);
         setField(resource, "storeProvider", new StoreProvider());
+        setField(resource, "authFailureTracker", tracker);
 
         PasswordSignIn req = new PasswordSignIn("no-such-user", "anypassword", null);
+        DefaultHttpRequest httpReq = new DefaultHttpRequest();
+        httpReq.setRemoteAddr("127.0.0.1");
         RestContext context = restContext();
         context.put(PasswordSignInResource.SIGN_IN_REQ, req);
 
-        boolean result = resource.authenticate(req, new ActionRecord(), context, dsl);
+        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
 
         assertThat(result).isFalse();
         assertThat(dummySaltCalled[0]).as("getDummySalt() must be called for unknown accounts").isTrue();
@@ -126,9 +135,18 @@ public class PasswordSignInResourceTest {
 
     private void setField(Object target, String fieldName, Object value) {
         try {
-            var field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
+            Class<?> clazz = target.getClass();
+            while (clazz != null) {
+                try {
+                    var field = clazz.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    field.set(target, value);
+                    return;
+                } catch (NoSuchFieldException e) {
+                    clazz = clazz.getSuperclass();
+                }
+            }
+            throw new NoSuchFieldException(fieldName);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }

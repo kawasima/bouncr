@@ -13,6 +13,7 @@ import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
+import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;
@@ -66,6 +67,7 @@ public class BouncrDevEnkanSystemFactory implements EnkanSystemFactory {
                         .set(FlywayMigration::setCleanBeforeMigration, Objects.equals(Env.getString("CLEAR_SCHEMA", "false"), "true"))
                         .build(),
                 "metrics", new MetricsComponent(),
+                "authFailureTracker", new AuthFailureTracker(),
                 "datasource", new HikariCPComponent(OptionMap.of(
                         "uri", jdbcUrl,
                         "username", Env.get("JDBC_USER"),
@@ -78,7 +80,8 @@ public class BouncrDevEnkanSystemFactory implements EnkanSystemFactory {
         ).relationships(
                 component("http").using("app"),
                 component("app").using("config", "storeprovider", "realmCache", "jooq", "jwt",
-                        "converter", "metrics"),
+                        "converter", "metrics", "authFailureTracker"),
+                component("authFailureTracker").using("config"),
                 component("storeprovider").using("config"),
                 component("realmCache").using("jooq", "flyway"),
                 component("jooq").using("datasource"),

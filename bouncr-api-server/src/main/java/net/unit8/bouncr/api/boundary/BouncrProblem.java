@@ -19,7 +19,8 @@ public enum BouncrProblem {
     SESSION_EXPIRED,
     WEBAUTHN_CHALLENGE_EXPIRED,
     WEBAUTHN_VERIFICATION_FAILED,
-    WEBAUTHN_CREDENTIAL_NOT_FOUND;
+    WEBAUTHN_CREDENTIAL_NOT_FOUND,
+    TOO_MANY_REQUESTS;
 
     public URI problemUri() {
         return URI.create("/bouncr/problem/" + this.name());

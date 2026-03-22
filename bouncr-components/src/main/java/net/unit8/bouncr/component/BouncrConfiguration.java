@@ -56,6 +56,16 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
             Locale.JAPANESE))
     );
     private String internalSigningKey;
+
+    // Rate limiting: Layer 1 (per IP failure count)
+    private int failureIpMax = 10;
+    private int failureIpWindowSeconds = 600;
+    private int failureIpBlockSeconds = 900;
+    // Rate limiting: Layer 2 (per account+IP failure count)
+    private int failureAccountIpMax = 5;
+    private int failureAccountIpWindowSeconds = 300;
+    private int failureAccountIpBlockSeconds = 600;
+
     private OidcConfiguration oidcConfiguration = new OidcConfiguration();
 
     private RetryPolicy<Object> httpClientRetryPolicy = RetryPolicy.builder()
@@ -189,6 +199,24 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     public void setInternalSigningKey(String internalSigningKey) {
         this.internalSigningKey = internalSigningKey;
     }
+
+    public int getFailureIpMax() { return failureIpMax; }
+    public void setFailureIpMax(int failureIpMax) { this.failureIpMax = failureIpMax; }
+
+    public int getFailureIpWindowSeconds() { return failureIpWindowSeconds; }
+    public void setFailureIpWindowSeconds(int failureIpWindowSeconds) { this.failureIpWindowSeconds = failureIpWindowSeconds; }
+
+    public int getFailureIpBlockSeconds() { return failureIpBlockSeconds; }
+    public void setFailureIpBlockSeconds(int failureIpBlockSeconds) { this.failureIpBlockSeconds = failureIpBlockSeconds; }
+
+    public int getFailureAccountIpMax() { return failureAccountIpMax; }
+    public void setFailureAccountIpMax(int failureAccountIpMax) { this.failureAccountIpMax = failureAccountIpMax; }
+
+    public int getFailureAccountIpWindowSeconds() { return failureAccountIpWindowSeconds; }
+    public void setFailureAccountIpWindowSeconds(int failureAccountIpWindowSeconds) { this.failureAccountIpWindowSeconds = failureAccountIpWindowSeconds; }
+
+    public int getFailureAccountIpBlockSeconds() { return failureAccountIpBlockSeconds; }
+    public void setFailureAccountIpBlockSeconds(int failureAccountIpBlockSeconds) { this.failureAccountIpBlockSeconds = failureAccountIpBlockSeconds; }
 
     public boolean isSecureCookie() {
         return secureCookie;
