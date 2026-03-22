@@ -1,14 +1,14 @@
 package net.unit8.bouncr.api.service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Thread-safe sliding window counter that tracks event timestamps
  * and supports blocking when the threshold is exceeded.
  */
 public class SlidingWindowCounter {
-    private final List<Long> timestamps = new ArrayList<>();
+    private final Deque<Long> timestamps = new ArrayDeque<>();
     private final int maxFailures;
     private final long windowSeconds;
     private final long blockSeconds;
@@ -48,6 +48,8 @@ public class SlidingWindowCounter {
 
     private void evict(long now) {
         long cutoff = now - windowSeconds;
-        timestamps.removeIf(t -> t < cutoff);
+        while (!timestamps.isEmpty() && timestamps.peekFirst() < cutoff) {
+            timestamps.pollFirst();
+        }
     }
 }

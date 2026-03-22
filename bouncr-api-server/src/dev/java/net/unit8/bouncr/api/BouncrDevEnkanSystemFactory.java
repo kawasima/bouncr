@@ -46,6 +46,18 @@ public class BouncrDevEnkanSystemFactory implements EnkanSystemFactory {
                         builder(new PasswordPolicy())
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))
                                 .build())
+                .set(BouncrConfiguration::setFailureIpMax,
+                        Env.getInt("failure.ip.max", 10))
+                .set(BouncrConfiguration::setFailureIpWindowSeconds,
+                        Env.getInt("failure.ip.window.seconds", 600))
+                .set(BouncrConfiguration::setFailureIpBlockSeconds,
+                        Env.getInt("failure.ip.block.seconds", 900))
+                .set(BouncrConfiguration::setFailureAccountIpMax,
+                        Env.getInt("failure.account.ip.max", 5))
+                .set(BouncrConfiguration::setFailureAccountIpWindowSeconds,
+                        Env.getInt("failure.account.ip.window.seconds", 300))
+                .set(BouncrConfiguration::setFailureAccountIpBlockSeconds,
+                        Env.getInt("failure.account.ip.block.seconds", 600))
                 .build();
         GrantBouncrUserRole grantBouncrUserRole = new GrantBouncrUserRole();
         config.getHookRepo().register(HookPoint.BEFORE_CREATE_USER, grantBouncrUserRole);
