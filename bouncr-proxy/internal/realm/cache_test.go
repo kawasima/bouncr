@@ -95,8 +95,7 @@ func BenchmarkMatch(b *testing.B) {
 			target := fmt.Sprintf("/app%d/realm%d", n-1, n-1)
 
 			b.ResetTimer()
-			for b.N > 0 {
-				b.N--
+			for range b.N {
 				_ = c.Match(target)
 			}
 		})
