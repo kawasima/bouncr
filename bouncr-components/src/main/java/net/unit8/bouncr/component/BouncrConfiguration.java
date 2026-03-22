@@ -34,9 +34,9 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     private long authorizationCodeExpires = 60L;
     private long oidcSessionExpires = 180L;
     private long webAuthnChallengeExpires = 300L;
-    private String webAuthnRpId = "localhost";
+    private String webAuthnRpId;
     private String webAuthnRpName = "Bouncr";
-    private String webAuthnOrigin = "http://localhost:3000";
+    private String webAuthnOrigin;
     private String tokenName = "BOUNCR_TOKEN";
     private String backendHeaderName = "X-Bouncr-Credential";
     private boolean secureCookie = true;
@@ -319,7 +319,12 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     }
 
     public String getWebAuthnRpId() {
-        return webAuthnRpId;
+        if (webAuthnRpId != null) return webAuthnRpId;
+        try {
+            return java.net.URI.create(issuerBaseUrl).getHost();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void setWebAuthnRpId(String webAuthnRpId) {
@@ -335,7 +340,8 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     }
 
     public String getWebAuthnOrigin() {
-        return webAuthnOrigin;
+        if (webAuthnOrigin != null) return webAuthnOrigin;
+        return issuerBaseUrl;
     }
 
     public void setWebAuthnOrigin(String webAuthnOrigin) {

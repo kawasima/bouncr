@@ -104,6 +104,15 @@ public class WebAuthnRegisterResource {
             return false;
         }
 
+        UserRepository userRepo = new UserRepository(dsl);
+        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
+
+        if (challengeData.userId() != null && !challengeData.userId().equals(user.id())) {
+            context.setMessage(Problem.valueOf(400, "Challenge was not issued for this user",
+                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
+            return false;
+        }
+
         WebAuthnService webAuthnService = new WebAuthnService(config);
         RegistrationData registrationData;
         try {
@@ -129,8 +138,6 @@ public class WebAuthnRegisterResource {
                 .collect(Collectors.toSet())
                 : Set.of();
 
-        UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
 
         WebAuthnCredential credential = credRepo.insert(user.id(), credentialId, credentialPublicKey, signCount,
