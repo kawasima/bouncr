@@ -5,9 +5,11 @@ import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData;
 import com.webauthn4j.verifier.exception.VerificationException;
 import enkan.data.Cookie;
+import enkan.collection.Headers;
 import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
@@ -36,6 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static enkan.util.ThreadingUtils.some;
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLENGE;
@@ -138,11 +141,18 @@ public class WebAuthnRegisterResource {
     }
 
     @Decision(HANDLE_CREATED)
-    public Map<String, Object> handleCreated(WebAuthnCredential credential) {
-        return Map.of(
-                "id", credential.id(),
-                "credential_name", credential.credentialName() != null ? credential.credentialName() : "",
-                "transports", credential.transports() != null ? credential.transports() : "",
-                "discoverable", credential.discoverable());
+    public ApiResponse handleCreated(WebAuthnCredential credential) {
+        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
+                + (config.isSecureCookie() ? "; Secure" : "");
+
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 201)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearSessionCookie))
+                .set(ApiResponse::setBody, Map.of(
+                        "id", credential.id(),
+                        "credential_name", credential.credentialName() != null ? credential.credentialName() : "",
+                        "transports", credential.transports() != null ? credential.transports() : "",
+                        "discoverable", credential.discoverable()))
+                .build();
     }
 }

@@ -22,6 +22,7 @@ import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.WebAuthnService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
+import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.UserSession;
 import net.unit8.bouncr.data.WebAuthnChallenge;
@@ -75,6 +76,11 @@ public class WebAuthnSignInResource {
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
+        config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_IN, context);
+        if (context.getMessage().filter(Problem.class::isInstance).isPresent()) {
+            return false;
+        }
+
         String sessionId = some(request.getCookies().get(COOKIE_NAME), Cookie::getValue).orElse(null);
         if (sessionId == null) {
             context.setMessage(Problem.valueOf(401, "WebAuthn session not found",
@@ -90,7 +96,6 @@ public class WebAuthnSignInResource {
         }
         storeProvider.getStore(WEBAUTHN_CHALLENGE).delete(sessionId);
 
-        // Fix #2: Validate challenge type
         if (!WebAuthnChallenge.TYPE_AUTHENTICATION.equals(challengeData.type())) {
             context.setMessage(Problem.valueOf(401, "Invalid challenge type",
                     BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
@@ -101,7 +106,6 @@ public class WebAuthnSignInResource {
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         UserRepository userRepo = new UserRepository(dsl);
 
-        // Fix #4: Parse once, pass AuthenticationData to verifyAuthentication
         AuthenticationData authData;
         try {
             authData = webAuthnService.getWebAuthnManager()
@@ -113,7 +117,6 @@ public class WebAuthnSignInResource {
             return false;
         }
 
-        // Fix #7: Single query to get credential with userId
         byte[] credentialIdBytes = authData.getCredentialId();
         WebAuthnCredential storedCredential = credRepo.findByCredentialId(credentialIdBytes).orElse(null);
         if (storedCredential == null) {
@@ -123,7 +126,6 @@ public class WebAuthnSignInResource {
         }
         Long userId = storedCredential.userId();
 
-        // Fix #5: Cross-check userId from challenge vs credential
         if (challengeData.userId() != null && !challengeData.userId().equals(userId)) {
             context.setMessage(Problem.valueOf(401, "Credential does not match requested user",
                     BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
@@ -164,24 +166,36 @@ public class WebAuthnSignInResource {
         return true;
     }
 
+    @Decision(ALLOWED)
+    public boolean allowed(RestContext context) {
+        config.getHookRepo().runHook(HookPoint.ALLOWED_SIGN_IN, context);
+        return !context.getMessage().filter(Problem.class::isInstance).isPresent();
+    }
+
     @Decision(POST)
     public boolean doPost(User user, HttpRequest request, RestContext context, DSLContext dsl) {
         SignInService signInService = new SignInService(dsl, storeProvider, config);
         String token = signInService.createToken();
         UserSession userSession = signInService.createUserSession(request, user, token);
         context.put(SESSION, userSession);
+        config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
         return true;
     }
 
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(User user, UserSession userSession) {
-        String cookie = config.getTokenName() + "=" + userSession.token()
+        String tokenCookie = config.getTokenName() + "=" + userSession.token()
                 + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
                 + "; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
                 + "; Path=/";
+        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
+                + (config.isSecureCookie() ? "; Secure" : "");
+
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
-                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookie))
+                .set(ApiResponse::setHeaders, Headers.of(
+                        "Set-Cookie", tokenCookie,
+                        "Set-Cookie", clearSessionCookie))
                 .set(ApiResponse::setBody, Map.of(
                         "token", userSession.token(),
                         "account", user.account()))

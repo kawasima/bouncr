@@ -41,10 +41,6 @@ export function SignInPage() {
       const options = await api.getWebAuthnSignInOptions(enteredAccount);
       const authJSON = await getAssertion(options);
       const session = await api.signInWithWebAuthn(authJSON);
-      if (!session.account) {
-        setProblem({ status: 0, detail: 'Passkey sign-in failed: missing account information.' });
-        return;
-      }
       login(session.account, session.token);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
       navigate(from, { replace: true });

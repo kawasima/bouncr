@@ -4,6 +4,7 @@ import type {
   User,
   UserSession,
   WebAuthnCredentialInfo,
+  WebAuthnSignInResponse,
   SignInRequest,
   SignUpRequest,
   PasswordCredentialRequest,
@@ -263,7 +264,7 @@ export function getWebAuthnSignInOptions(account?: string) {
 }
 
 export function signInWithWebAuthn(authenticationResponseJSON: string) {
-  return apiRequest<UserSession & { account?: string }>('/sign_in/webauthn', {
+  return apiRequest<WebAuthnSignInResponse>('/sign_in/webauthn', {
     method: 'POST',
     body: JSON.stringify({ authentication_response_json: authenticationResponseJSON }),
   });

@@ -152,6 +152,11 @@ export interface UserSession {
   created_at: string;
 }
 
+export interface WebAuthnSignInResponse {
+  token: string;
+  account: string;
+}
+
 // === API Error ===
 
 export interface Problem {
