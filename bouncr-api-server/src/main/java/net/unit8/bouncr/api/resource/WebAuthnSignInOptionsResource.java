@@ -16,7 +16,6 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.WebAuthnChallenge;
-
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
@@ -30,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLENGE;
@@ -38,6 +38,9 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLE
 public class WebAuthnSignInOptionsResource {
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
     static final ContextKey<WebAuthnSignInOptions> REQ = ContextKey.of(WebAuthnSignInOptions.class);
+
+    record OptionsResult(Map<String, Object> options, String sessionId) {}
+    static final ContextKey<OptionsResult> RESULT = ContextKey.of(OptionsResult.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -48,7 +51,6 @@ public class WebAuthnSignInOptionsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(JsonNode body, RestContext context) {
         if (body == null) {
-            // Allow empty body for discoverable credential flow
             context.put(REQ, new WebAuthnSignInOptions(null));
             return null;
         }
@@ -58,10 +60,10 @@ public class WebAuthnSignInOptionsResource {
         };
     }
 
-    @Decision(HANDLE_CREATED)
-    public ApiResponse handleCreated(WebAuthnSignInOptions request,
-                                     RestContext context,
-                                     DSLContext dsl) {
+    @Decision(POST)
+    public boolean doPost(WebAuthnSignInOptions request,
+                          RestContext context,
+                          DSLContext dsl) {
         WebAuthnService webAuthnService = new WebAuthnService(config);
         byte[] challenge = webAuthnService.generateChallenge();
         Base64.Encoder b64url = Base64.getUrlEncoder().withoutPadding();
@@ -104,14 +106,20 @@ public class WebAuthnSignInOptionsResource {
         options.put("allowCredentials", allowCredentials);
         options.put("userVerification", "preferred");
 
-        String cookieStr = COOKIE_NAME + "=" + sessionId
+        context.put(RESULT, new OptionsResult(options, sessionId));
+        return true;
+    }
+
+    @Decision(HANDLE_CREATED)
+    public ApiResponse handleCreated(OptionsResult result) {
+        String cookieStr = COOKIE_NAME + "=" + result.sessionId()
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
                 + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
 
-        ApiResponse response = new ApiResponse();
-        response.setStatus(201);
-        response.setHeaders(Headers.of("Set-Cookie", cookieStr));
-        response.setBody(options);
-        return response;
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 201)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookieStr))
+                .set(ApiResponse::setBody, result.options())
+                .build();
     }
 }

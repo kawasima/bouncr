@@ -3,7 +3,11 @@ package net.unit8.bouncr.api.resource;
 import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.Problem;
+import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.data.User;
@@ -17,6 +21,8 @@ import static kotowari.restful.DecisionPoint.*;
 @AllowedMethods({"GET", "DELETE"})
 public class WebAuthnCredentialsResource {
 
+    static final ContextKey<Long> CREDENTIAL_ID = ContextKey.of(Long.class);
+
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
@@ -25,6 +31,19 @@ public class WebAuthnCredentialsResource {
     @Decision(value = ALLOWED, method = "DELETE")
     public boolean allowed(UserPermissionPrincipal principal) {
         return principal.hasPermission("my:update");
+    }
+
+    @Decision(value = MALFORMED, method = "DELETE")
+    public Problem validateDelete(HttpRequest request, RestContext context) {
+        if (request.getParams() == null || request.getParams().get("id") == null) {
+            return Problem.valueOf(400, "id parameter is required", BouncrProblem.MALFORMED.problemUri());
+        }
+        try {
+            context.put(CREDENTIAL_ID, Long.parseLong(request.getParams().get("id")));
+        } catch (NumberFormatException e) {
+            return Problem.valueOf(400, "id must be a number", BouncrProblem.MALFORMED.problemUri());
+        }
+        return null;
     }
 
     @Decision(HANDLE_OK)
@@ -42,20 +61,9 @@ public class WebAuthnCredentialsResource {
     }
 
     @Decision(DELETE)
-    public Void delete(UserPermissionPrincipal principal,
-                       HttpRequest request,
+    public Void delete(Long credentialId,
+                       UserPermissionPrincipal principal,
                        DSLContext dsl) {
-        if (request.getParams() == null) return null;
-        String idParam = request.getParams().get("id");
-        if (idParam == null) return null;
-
-        long credentialId;
-        try {
-            credentialId = Long.parseLong(idParam);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-
         UserRepository userRepo = new UserRepository(dsl);
         User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);

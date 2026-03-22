@@ -27,6 +27,7 @@ export function SignInPage() {
   const location = useLocation();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [otpRequired, setOtpRequired] = useState(false);
+  const [passkeySubmitting, setPasskeySubmitting] = useState(false);
 
   const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<SignInForm>({
     resolver: zodResolver(signInSchema),
@@ -34,6 +35,7 @@ export function SignInPage() {
 
   async function onPasskeySignIn() {
     setProblem(null);
+    setPasskeySubmitting(true);
     try {
       const enteredAccount = getValues('account') || undefined;
       const options = await api.getWebAuthnSignInOptions(enteredAccount);
@@ -54,6 +56,8 @@ export function SignInPage() {
       } else {
         setProblem({ status: 0, detail: 'Passkey sign-in failed.' });
       }
+    } finally {
+      setPasskeySubmitting(false);
     }
   }
 
@@ -135,10 +139,10 @@ export function SignInPage() {
                 type="button"
                 variant="outline"
                 className="w-full uppercase tracking-[0.15em] text-xs border-gold-muted text-gold hover:bg-gold/10"
-                disabled={isSubmitting}
+                disabled={isSubmitting || passkeySubmitting}
                 onClick={onPasskeySignIn}
               >
-                Sign in with Passkey
+                {passkeySubmitting ? 'Authenticating...' : 'Sign in with Passkey'}
               </Button>
             </>
           )}

@@ -4,6 +4,7 @@ import com.webauthn4j.converter.exception.DataConversionException;
 import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData;
 import com.webauthn4j.verifier.exception.VerificationException;
+import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
@@ -17,7 +18,6 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnRegister;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;
-import net.unit8.bouncr.api.util.CookieUtils;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLENGE;
@@ -79,8 +80,7 @@ public class WebAuthnRegisterResource {
                           HttpRequest httpRequest,
                           RestContext context,
                           DSLContext dsl) {
-        Map<String, String> cookies = CookieUtils.parseCookies(httpRequest);
-        String sessionId = cookies.get(COOKIE_NAME);
+        String sessionId = some(httpRequest.getCookies().get(COOKIE_NAME), Cookie::getValue).orElse(null);
         if (sessionId == null) {
             context.setMessage(Problem.valueOf(400, "WebAuthn session cookie not found",
                     BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri()));

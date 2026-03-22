@@ -4,6 +4,7 @@ import com.webauthn4j.converter.exception.DataConversionException;
 import com.webauthn4j.data.AuthenticationData;
 import com.webauthn4j.verifier.exception.VerificationException;
 import enkan.collection.Headers;
+import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
@@ -19,7 +20,6 @@ import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.WebAuthnService;
-import net.unit8.bouncr.api.util.CookieUtils;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
@@ -36,6 +36,8 @@ import tools.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import java.util.Map;
 
+import static enkan.util.BeanBuilder.builder;
+import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLENGE;
@@ -73,8 +75,7 @@ public class WebAuthnSignInResource {
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
-        Map<String, String> cookies = CookieUtils.parseCookies(request);
-        String sessionId = cookies.get(COOKIE_NAME);
+        String sessionId = some(request.getCookies().get(COOKIE_NAME), Cookie::getValue).orElse(null);
         if (sessionId == null) {
             context.setMessage(Problem.valueOf(401, "WebAuthn session not found",
                     BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri()));
@@ -146,6 +147,8 @@ public class WebAuthnSignInResource {
 
         User user = userRepo.findById(userId).orElse(null);
         if (user == null) {
+            context.setMessage(Problem.valueOf(401, "User not found",
+                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
             return false;
         }
 
@@ -176,12 +179,12 @@ public class WebAuthnSignInResource {
                 + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
                 + "; SameSite=Lax; Max-Age=" + config.getRefreshTokenExpires()
                 + "; Path=/";
-        ApiResponse response = new ApiResponse();
-        response.setStatus(201);
-        response.setHeaders(Headers.of("Set-Cookie", cookie));
-        response.setBody(Map.of(
-                "token", userSession.token(),
-                "account", user.account()));
-        return response;
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 201)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookie))
+                .set(ApiResponse::setBody, Map.of(
+                        "token", userSession.token(),
+                        "account", user.account()))
+                .build();
     }
 }

@@ -4,6 +4,7 @@ import enkan.collection.Headers;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
+import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLENGE;
 
@@ -36,6 +38,9 @@ public class WebAuthnRegisterOptionsResource {
 
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
 
+    record OptionsResult(Map<String, Object> options, String sessionId) {}
+    static final ContextKey<OptionsResult> RESULT = ContextKey.of(OptionsResult.class);
+
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
@@ -46,10 +51,10 @@ public class WebAuthnRegisterOptionsResource {
         return principal.hasPermission("my:update");
     }
 
-    @Decision(HANDLE_CREATED)
-    public ApiResponse handleCreated(UserPermissionPrincipal principal,
-                                     RestContext context,
-                                     DSLContext dsl) {
+    @Decision(POST)
+    public boolean doPost(UserPermissionPrincipal principal,
+                          RestContext context,
+                          DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
@@ -85,14 +90,20 @@ public class WebAuthnRegisterOptionsResource {
                 "userVerification", "preferred"));
         options.put("attestation", "none");
 
-        String cookieStr = COOKIE_NAME + "=" + sessionId
+        context.put(RESULT, new OptionsResult(options, sessionId));
+        return true;
+    }
+
+    @Decision(HANDLE_CREATED)
+    public ApiResponse handleCreated(OptionsResult result) {
+        String cookieStr = COOKIE_NAME + "=" + result.sessionId()
                 + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
                 + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
 
-        ApiResponse response = new ApiResponse();
-        response.setStatus(201);
-        response.setHeaders(Headers.of("Set-Cookie", cookieStr));
-        response.setBody(options);
-        return response;
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 201)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookieStr))
+                .set(ApiResponse::setBody, result.options())
+                .build();
     }
 }
