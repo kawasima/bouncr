@@ -52,6 +52,11 @@ type AuthResult struct {
 	RewritePath string // Rewritten path for the backend
 }
 
+// CredentialHeaderName returns the HTTP header name used to pass the JWT credential to the backend.
+func (a *Authenticator) CredentialHeaderName() string {
+	return a.backendHeaderName
+}
+
 // Authenticate extracts a token, looks it up in Redis, and generates a JWT.
 // It also resolves routing information (cluster + path rewrite) from the matched realm.
 // Returns nil if no realm matches the path.
