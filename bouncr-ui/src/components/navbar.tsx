@@ -30,6 +30,8 @@ function loadFrontchannelUrl(url: string): Promise<void> {
     iframe.style.border = '0';
     iframe.style.opacity = '0';
     iframe.referrerPolicy = 'no-referrer';
+    iframe.sandbox.add('allow-same-origin');
+    iframe.sandbox.add('allow-scripts');
     iframe.setAttribute('aria-hidden', 'true');
 
     let finished = false;

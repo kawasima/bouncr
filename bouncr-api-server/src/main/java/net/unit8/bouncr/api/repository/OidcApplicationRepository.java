@@ -4,8 +4,11 @@ import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.Permission;
 import org.jooq.DSLContext;
 import org.jooq.Record;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -14,6 +17,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
 import static org.jooq.impl.DSL.*;
 
 public class OidcApplicationRepository {
+    private static final Logger LOG = LoggerFactory.getLogger(OidcApplicationRepository.class);
     private final DSLContext dsl;
 
     public OidcApplicationRepository(DSLContext dsl) {
@@ -245,10 +249,11 @@ public class OidcApplicationRepository {
             String callbackUrl = rec.get(field("callback_url", String.class));
             String backchannelLogoutUri = rec.get(field("backchannel_logout_uri", String.class));
             String frontchannelLogoutUri = rec.get(field("frontchannel_logout_uri", String.class));
+            String appName = rec.get(field("name", String.class));
 
             return new OidcApplication(
                     rec.get(field("oidc_application_id", Long.class)),
-                    rec.get(field("name", String.class)),
+                    appName,
                     rec.get(field("name_lower", String.class)),
                     rec.get(field("client_id", String.class)),
                     rec.get(field("client_secret", String.class)),
@@ -257,12 +262,24 @@ public class OidcApplicationRepository {
                     homeUrl != null ? URI.create(homeUrl).toURL() : null,
                     callbackUrl != null ? URI.create(callbackUrl).toURL() : null,
                     rec.get(field("description", String.class)),
-                    backchannelLogoutUri != null ? URI.create(backchannelLogoutUri).toURL() : null,
-                    frontchannelLogoutUri != null ? URI.create(frontchannelLogoutUri).toURL() : null,
+                    toOptionalUrl(backchannelLogoutUri, "backchannel_logout_uri", appName),
+                    toOptionalUrl(frontchannelLogoutUri, "frontchannel_logout_uri", appName),
                     null
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to map OidcApplication record", e);
+        }
+    }
+
+    private URL toOptionalUrl(String raw, String fieldName, String appName) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return URI.create(raw.trim()).toURL();
+        } catch (Exception e) {
+            LOG.warn("Ignore invalid {} for OIDC application {}: {}", fieldName, appName, raw);
+            return null;
         }
     }
 }

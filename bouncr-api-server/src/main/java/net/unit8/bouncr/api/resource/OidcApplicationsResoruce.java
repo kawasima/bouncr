@@ -11,8 +11,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import kotowari.restful.data.ContextKey;
-import kotowari.restful.data.RestContext;
+import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
@@ -49,7 +48,16 @@ public class OidcApplicationsResoruce {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_CREATE.decode(body)) {
-            case Ok<OidcApplicationCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
+            case Ok<OidcApplicationCreate> ok -> {
+                try {
+                    LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
+                    LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
+                    context.put(CREATE_REQ, ok.value());
+                    yield null;
+                } catch (IllegalArgumentException e) {
+                    yield Problem.valueOf(400, e.getMessage());
+                }
+            }
             case Err<OidcApplicationCreate>(var issues) -> toProblem(issues);
         };
     }
@@ -118,8 +126,8 @@ public class OidcApplicationsResoruce {
                 createRequest.homeUrl(),
                 createRequest.callbackUrl(),
                 createRequest.description(),
-                createRequest.backchannelLogoutUri(),
-                createRequest.frontchannelLogoutUri()
+                LogoutUriPolicy.normalizeBackchannelLogoutUri(createRequest.backchannelLogoutUri()),
+                LogoutUriPolicy.normalizeLogoutUri(createRequest.frontchannelLogoutUri())
         );
 
         if (createRequest.permissions() != null && !createRequest.permissions().isEmpty()) {

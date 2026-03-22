@@ -126,4 +126,24 @@ class OidcApplicationRepositoryTest {
         assertThat(updated.frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/frontchannel-logout");
     }
+
+    @Test
+    void findByName_treatsBlankLogoutUrisAsNull() {
+        repo.insert(
+                "oidc-app-d",
+                "client-d",
+                "secret-d",
+                new byte[]{1},
+                new byte[]{2},
+                "https://client-d.example",
+                "https://client-d.example/callback",
+                "desc-d",
+                "",
+                "   "
+        );
+
+        OidcApplication found = repo.findByName("oidc-app-d").orElseThrow();
+        assertThat(found.backchannelLogoutUri()).isNull();
+        assertThat(found.frontchannelLogoutUri()).isNull();
+    }
 }

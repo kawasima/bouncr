@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.service;
 
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.sign.RsaJwtSigner;
@@ -142,11 +143,19 @@ public class OidcLogoutService {
             LOG.warn("Skip back-channel logout for app {} due to missing key/client data", app.name());
             return CompletableFuture.completedFuture(false);
         }
+        if (app.backchannelLogoutUri() == null) {
+            return CompletableFuture.completedFuture(false);
+        }
 
         try {
+            var targetUri = app.backchannelLogoutUri().toURI();
+            if (!LogoutUriPolicy.isAllowedBackchannelTarget(targetUri)) {
+                LOG.warn("Skip back-channel logout for app {} due to disallowed target URI", app.name());
+                return CompletableFuture.completedFuture(false);
+            }
             String logoutToken = createLogoutToken(app, subject);
             String body = "logout_token=" + URLEncoder.encode(logoutToken, StandardCharsets.UTF_8);
-            HttpRequest request = HttpRequest.newBuilder(app.backchannelLogoutUri().toURI())
+            HttpRequest request = HttpRequest.newBuilder(targetUri)
                     .timeout(REQUEST_TIMEOUT)
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString(body))

@@ -10,6 +10,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -35,7 +36,16 @@ public class OidcApplicationResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_UPDATE.decode(body)) {
-            case Ok<OidcApplicationUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Ok<OidcApplicationUpdate> ok -> {
+                try {
+                    LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
+                    LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
+                    context.put(UPDATE_REQ, ok.value());
+                    yield null;
+                } catch (IllegalArgumentException e) {
+                    yield Problem.valueOf(400, e.getMessage());
+                }
+            }
             case Err<OidcApplicationUpdate>(var issues) -> toProblem(issues);
         };
     }
@@ -101,8 +111,8 @@ public class OidcApplicationResource {
                 updateRequest.homeUrl(),
                 updateRequest.callbackUrl(),
                 updateRequest.description(),
-                updateRequest.backchannelLogoutUri(),
-                updateRequest.frontchannelLogoutUri()
+                LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri()),
+                LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri())
         );
         if (updateRequest.permissions() != null) {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());

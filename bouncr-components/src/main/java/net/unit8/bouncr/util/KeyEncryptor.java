@@ -18,7 +18,7 @@ import java.util.Arrays;
  * <p>Format: [12-byte IV][ciphertext + 16-byte GCM tag]</p>
  *
  * <p>When no encryption key is configured (dev mode), {@link #encrypt} and {@link #decrypt}
- * return the input unchanged.</p>
+ * return a defensive copy of the input bytes.</p>
  */
 public class KeyEncryptor {
     private static final Logger LOG = LoggerFactory.getLogger(KeyEncryptor.class);
