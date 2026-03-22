@@ -71,7 +71,7 @@ func runServer() {
 	)
 
 	// Start admin HTTP server (for /_refresh, /_clusters, /_healthcheck)
-	adminHandler := admin.NewHandler(realmCache)
+	adminHandler := admin.NewHandler(realmCache, cfg.InternalSigningKey)
 	go func() {
 		addr := fmt.Sprintf(":%s", cfg.AdminPort)
 		log.Printf("admin HTTP server listening on %s", addr)

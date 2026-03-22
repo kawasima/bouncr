@@ -49,3 +49,65 @@ func TestSignatureHeaderConstant(t *testing.T) {
 		t.Errorf("expected X-Bouncr-Signature, got %s", SignatureHeader)
 	}
 }
+
+func TestVerifySignature_validSignature(t *testing.T) {
+	key := []byte("test-secret-key")
+	payload := "test-session-id"
+
+	header := SignRequest(key, payload)
+	if !VerifySignature(key, header, payload) {
+		t.Error("expected valid signature to verify")
+	}
+}
+
+func TestVerifySignature_wrongKey(t *testing.T) {
+	key := []byte("test-secret-key")
+	wrongKey := []byte("wrong-key")
+	payload := "test-session-id"
+
+	header := SignRequest(key, payload)
+	if VerifySignature(wrongKey, header, payload) {
+		t.Error("expected verification to fail with wrong key")
+	}
+}
+
+func TestVerifySignature_wrongPayload(t *testing.T) {
+	key := []byte("test-secret-key")
+	payload := "test-session-id"
+
+	header := SignRequest(key, payload)
+	if VerifySignature(key, header, "different-payload") {
+		t.Error("expected verification to fail with different payload")
+	}
+}
+
+func TestVerifySignature_emptyHeader(t *testing.T) {
+	key := []byte("test-secret-key")
+	if VerifySignature(key, "", "payload") {
+		t.Error("expected verification to fail with empty header")
+	}
+}
+
+func TestVerifySignature_expiredTimestamp(t *testing.T) {
+	key := []byte("test-secret-key")
+	payload := "test-session-id"
+
+	// Manually construct a signature with an old timestamp
+	oldTimestamp := "1000000000"
+	signed := fmt.Sprintf("%s.%s", oldTimestamp, payload)
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(signed))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	header := fmt.Sprintf("t=%s,v1=%s", oldTimestamp, sig)
+
+	if VerifySignature(key, header, payload) {
+		t.Error("expected verification to fail with expired timestamp")
+	}
+}
+
+func TestVerifySignature_malformedHeader(t *testing.T) {
+	key := []byte("test-secret-key")
+	if VerifySignature(key, "garbage", "payload") {
+		t.Error("expected verification to fail with malformed header")
+	}
+}
