@@ -244,6 +244,8 @@
                             <environmentVariables>
                                 <JWT_SECRET>abcdefghijklmnopqrstuvwxyzabcdef</JWT_SECRET>
                                 <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                                <!-- CORS_ORIGINS is normalized to cors.origins by enkan.Env.normalizeKey().
+                                     Wildcard is allowed here because enkan.env defaults to "development". -->
                                 <CORS_ORIGINS>*</CORS_ORIGINS>
                             </environmentVariables>
                         </configuration>

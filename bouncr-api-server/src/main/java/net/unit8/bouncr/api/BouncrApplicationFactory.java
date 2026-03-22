@@ -220,6 +220,8 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
     }
 
     private Set<String> corsOrigins() {
+        // Env.normalizeKey() converts '_' to '.' and lowercases, so the CORS_ORIGINS
+        // environment variable is automatically resolved by getString("cors.origins").
         final String corsOriginsConfig = Env.getString("cors.origins", null);
         if (corsOriginsConfig == null || corsOriginsConfig.isBlank()) {
             throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
