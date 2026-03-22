@@ -233,8 +233,8 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         if (origins.isEmpty()) {
             throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
         }
-        boolean isProduction = !Objects.equals(Env.getString("enkan.env", "development"), "development");
-        if (isProduction && origins.contains("*")) {
+        boolean isNonDevelopment = !Objects.equals(Env.getString("enkan.env", "development"), "development");
+        if (isNonDevelopment && origins.contains("*")) {
             throw new MisconfigurationException("bouncr.CORS_WILDCARD_FORBIDDEN");
         }
         return origins;
