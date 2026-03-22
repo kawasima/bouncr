@@ -131,6 +131,18 @@ public class UserSessionResource {
                 .build();
     }
 
+    @Decision(HANDLE_UNAUTHORIZED)
+    public ApiResponse handleUnauthorized() {
+        // The JWT is missing or invalid (e.g. cookie present but principal unresolvable).
+        // Clear the cookie so the browser stops sending a credential that cannot be verified.
+        Problem body = Problem.valueOf(401, "Unauthorized");
+        return builder(new ApiResponse())
+                .set(ApiResponse::setStatus, 401)
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
+                .set(ApiResponse::setBody, body)
+                .build();
+    }
+
     private String buildClearCookie() {
         return config.getTokenName() + "=; HttpOnly"
                 + (config.isSecureCookie() ? "; Secure" : "")
