@@ -67,7 +67,8 @@ class UserSessionResourceTest {
         setField(resource, "config", new BouncrConfiguration());
 
         RestContext context = restContext();
-        Map<String, Object> response = resource.delete(Parameters.of("token", "session-token"), "admin", context, dsl);
+        resource.delete(Parameters.of("token", "session-token"), "admin", context, dsl);
+        Map<String, Object> response = resource.handleOk(context);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> backchannel = (Map<String, Object>) response.get("backchannel_logout");

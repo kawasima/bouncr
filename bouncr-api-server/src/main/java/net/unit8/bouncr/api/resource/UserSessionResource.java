@@ -33,6 +33,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 @AllowedMethods("DELETE")
 public class UserSessionResource {
     static final ContextKey<String> SUBJECT = ContextKey.of("subject", String.class);
+    @SuppressWarnings("unchecked")
+    static final ContextKey<Map<String, Object>> LOGOUT_RESULT = (ContextKey<Map<String, Object>>) (ContextKey<?>) ContextKey.of("logoutResult", Map.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -72,7 +74,7 @@ public class UserSessionResource {
     }
 
     @Decision(DELETE)
-    public Map<String, Object> delete(Parameters params, String subject, RestContext context, DSLContext dsl) {
+    public Void delete(Parameters params, String subject, RestContext context, DSLContext dsl) {
         String token = params.get("token");
         String resolvedSubject = resolveSubject(subject, token);
         OidcLogoutService.LogoutResult logoutResult = new OidcLogoutService(config).propagateSignOut(resolvedSubject, dsl);
@@ -89,7 +91,18 @@ public class UserSessionResource {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()));
         response.put("backchannel_logout", summary);
-        return response;
+        context.put(LOGOUT_RESULT, response);
+        return null;
+    }
+
+    @Decision(RESPOND_WITH_ENTITY)
+    public boolean respondWithEntity() {
+        return true;
+    }
+
+    @Decision(HANDLE_OK)
+    public Map<String, Object> handleOk(RestContext context) {
+        return context.get(LOGOUT_RESULT).orElse(Map.of());
     }
 
     @SuppressWarnings("unchecked")

@@ -36,13 +36,9 @@ class SignOutLogoutE2ETest extends E2ETestBase {
     @Test
     @Tag("e2e-full")
     void signOut_returnsLogoutDispatchSummary() throws Exception {
-        APIResponse signInResponse = api.post("/bouncr/api/sign_in",
-                RequestOptions.create()
-                        .setHeader("Content-Type", "application/json")
-                        .setData(JSON.writeValueAsString(Map.of(
-                                "account", "admin",
-                                "password", "password"
-                        ))));
+        // Sign in via password to create a real session token in the store
+        APIResponse signInResponse = postJson(api, "/bouncr/api/sign_in",
+                Map.of("account", "admin", "password", "password"));
         assertThat(signInResponse.status()).isEqualTo(201);
 
         @SuppressWarnings("unchecked")
@@ -50,16 +46,24 @@ class SignOutLogoutE2ETest extends E2ETestBase {
         String token = (String) session.get("token");
         assertThat(token).isNotBlank();
 
-        APIResponse signOutResponse = api.delete("/bouncr/api/session/" + token,
-                RequestOptions.create().setHeader("Authorization", "Bearer " + token));
-        assertThat(signOutResponse.status()).isEqualTo(200);
+        // Sign out using the authenticated context (x-bouncr-credential JWT),
+        // passing the session token as the path parameter.
+        // In E2E tests there is no bouncr-proxy, so Bearer token auth is not
+        // available — we must use x-bouncr-credential for authentication.
+        APIResponse signOutResponse = adminApi.delete("/bouncr/api/session/" + token);
+        assertThat(signOutResponse.status())
+                .as("Sign-out response: %s", new String(signOutResponse.body()))
+                .isEqualTo(200);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> body = JSON.readValue(signOutResponse.body(), Map.class);
 
         @SuppressWarnings("unchecked")
         List<String> frontchannelUrls = (List<String>) body.get("frontchannel_logout_urls");
-        assertThat(frontchannelUrls).contains("https://rp.example/frontchannel-logout");
+        assertThat(frontchannelUrls)
+                .as("body=%s", body)
+                .isNotNull()
+                .contains("https://rp.example/frontchannel-logout");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> summary = (Map<String, Object>) body.get("backchannel_logout");
