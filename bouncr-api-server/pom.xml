@@ -244,6 +244,11 @@
                             <environmentVariables>
                                 <JWT_SECRET>abcdefghijklmnopqrstuvwxyzabcdef</JWT_SECRET>
                                 <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                                <!-- CORS_ORIGINS is normalized to cors.origins by enkan.Env.normalizeKey(). -->
+                                <CORS_ORIGINS>*</CORS_ORIGINS>
+                                <!-- Explicitly set development mode so wildcard CORS is permitted
+                                     even if enkan.env is set in the developer's shell. -->
+                                <enkan.env>development</enkan.env>
                             </environmentVariables>
                         </configuration>
                     </plugin>

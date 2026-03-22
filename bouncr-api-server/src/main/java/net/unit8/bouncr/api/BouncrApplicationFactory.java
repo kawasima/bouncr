@@ -220,10 +220,24 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
     }
 
     private Set<String> corsOrigins() {
-        final String corsOrigins = Env.getString("cors.origins", "*");
-        return Stream.of(corsOrigins.split(","))
+        // Env.normalizeKey() converts '_' to '.' and lowercases, so the CORS_ORIGINS
+        // environment variable is automatically resolved by getString("cors.origins").
+        final String corsOriginsConfig = Env.getString("cors.origins", null);
+        if (corsOriginsConfig == null || corsOriginsConfig.isBlank()) {
+            throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
+        }
+        Set<String> origins = Stream.of(corsOriginsConfig.split(","))
                 .map(String::strip)
+                .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
+        if (origins.isEmpty()) {
+            throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
+        }
+        boolean isNonDevelopment = !Objects.equals(Env.getString("enkan.env", "development"), "development");
+        if (isNonDevelopment && origins.contains("*")) {
+            throw new MisconfigurationException("bouncr.CORS_WILDCARD_FORBIDDEN");
+        }
+        return origins;
     }
 
 }
