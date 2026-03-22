@@ -47,3 +47,6 @@ pom.xml.versionsBackup
 
 # Go binary
 bouncr-proxy/bouncr-proxy
+
+/.vscode
+/.circleci
