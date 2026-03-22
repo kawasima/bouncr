@@ -20,7 +20,7 @@ export function OidcCallbackPage() {
     } else if (code) {
       navigate(`${ROUTES.SIGN_UP}?code=${encodeURIComponent(code)}`, { replace: true });
     } else {
-      setError('Invalid OIDC callback. Missing token or code.');
+      setError('Invalid OIDC callback. Missing account or code.');
     }
   }, [searchParams, login, navigate]);
 
