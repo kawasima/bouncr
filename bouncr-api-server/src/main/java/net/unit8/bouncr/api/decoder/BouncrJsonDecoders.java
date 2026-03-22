@@ -111,7 +111,7 @@ public final class BouncrJsonDecoders {
     // ===== Password Sign In =====
     public record PasswordSignIn(String account, String password, String oneTimePassword) {}
     public static final JsonDecoder<PasswordSignIn> PASSWORD_SIGN_IN = combine(
-            field("account", string().nonBlank().maxLength(100)),
+            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("password", string().nonBlank().maxLength(300)),
             optionalField("one_time_password", string().maxLength(100))
     ).map((acc, pwd, otp) -> new PasswordSignIn(acc, pwd, otp.orElse(null)))::decode;

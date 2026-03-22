@@ -31,7 +31,7 @@ class AuthFailureTrackerTest {
 
     @AfterEach
     void teardown() {
-        tracker.lifecycle().stop(tracker);
+        if (tracker != null) tracker.lifecycle().stop(tracker);
     }
 
     @Test
@@ -75,6 +75,17 @@ class AuthFailureTrackerTest {
     void nullAccountOnlyChecksIp() {
         // No IP failures — should not be blocked regardless of account
         assertThat(tracker.isBlocked("1.2.3.4", null)).isFalse();
+    }
+
+    @Test
+    void additionalFailuresAfterBlockDoNotResetBlockedUntil() {
+        // Exhaust the account+IP threshold (2 failures)
+        tracker.recordFailure("1.2.3.4", "alice");
+        tracker.recordFailure("1.2.3.4", "alice");
+        assertThat(tracker.isBlocked("1.2.3.4", "alice")).isTrue();
+        // Extra failures while already blocked must not shorten the block
+        tracker.recordFailure("1.2.3.4", "alice");
+        assertThat(tracker.isBlocked("1.2.3.4", "alice")).isTrue();
     }
 
     private void setField(Object target, String fieldName, Object value) {

@@ -6,13 +6,12 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tracks authentication failures per IP (Layer 1) and per account+IP pair (Layer 2).
- * Uses in-memory sliding window counters with LRU eviction.
+ * Uses in-memory sliding window counters with size-capped ConcurrentHashMap.
  */
 public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
     private static final Logger LOG = LoggerFactory.getLogger(AuthFailureTracker.class);
@@ -27,20 +26,8 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
         return new ComponentLifecycle<>() {
             @Override
             public void start(AuthFailureTracker component) {
-                component.ipCounters = Collections.synchronizedMap(
-                        new LinkedHashMap<>(MAX_ENTRIES, 0.75f, true) {
-                            @Override
-                            protected boolean removeEldestEntry(Map.Entry<String, SlidingWindowCounter> eldest) {
-                                return size() > MAX_ENTRIES;
-                            }
-                        });
-                component.accountIpCounters = Collections.synchronizedMap(
-                        new LinkedHashMap<>(MAX_ENTRIES, 0.75f, true) {
-                            @Override
-                            protected boolean removeEldestEntry(Map.Entry<String, SlidingWindowCounter> eldest) {
-                                return size() > MAX_ENTRIES;
-                            }
-                        });
+                component.ipCounters = new ConcurrentHashMap<>();
+                component.accountIpCounters = new ConcurrentHashMap<>();
             }
 
             @Override
@@ -66,29 +53,36 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
 
     /** Record a failed authentication attempt. */
     public void recordFailure(String ip, String account) {
-        SlidingWindowCounter ipCounter = ipCounters.computeIfAbsent(ip,
-                k -> new SlidingWindowCounter(
-                        config.getFailureIpMax(),
-                        config.getFailureIpWindowSeconds(),
-                        config.getFailureIpBlockSeconds()));
+        SlidingWindowCounter ipCounter = getOrCreate(ipCounters, ip,
+                config.getFailureIpMax(),
+                config.getFailureIpWindowSeconds(),
+                config.getFailureIpBlockSeconds());
         if (ipCounter.recordFailure()) {
-            LOG.warn("Rate limit: IP {} blocked for {} seconds (failures: {})",
+            LOG.warn("Rate limit: IP {} blocked for {} seconds (threshold: {} failures)",
                     ip, config.getFailureIpBlockSeconds(), config.getFailureIpMax());
         }
 
         if (account != null) {
             String key = account + "|" + ip;
-            SlidingWindowCounter accountIpCounter = accountIpCounters.computeIfAbsent(key,
-                    k -> new SlidingWindowCounter(
-                            config.getFailureAccountIpMax(),
-                            config.getFailureAccountIpWindowSeconds(),
-                            config.getFailureAccountIpBlockSeconds()));
+            SlidingWindowCounter accountIpCounter = getOrCreate(accountIpCounters, key,
+                    config.getFailureAccountIpMax(),
+                    config.getFailureAccountIpWindowSeconds(),
+                    config.getFailureAccountIpBlockSeconds());
             if (accountIpCounter.recordFailure()) {
-                LOG.warn("Rate limit: account={} IP={} blocked for {} seconds (failures: {})",
+                LOG.warn("Rate limit: account={} IP={} blocked for {} seconds (threshold: {} failures)",
                         account, ip, config.getFailureAccountIpBlockSeconds(),
                         config.getFailureAccountIpMax());
             }
         }
+    }
+
+    private SlidingWindowCounter getOrCreate(Map<String, SlidingWindowCounter> map, String key,
+                                             int max, int windowSeconds, int blockSeconds) {
+        if (map.size() >= MAX_ENTRIES && !map.containsKey(key)) {
+            // Map is full and this is a new key: return a throwaway counter to avoid unbounded growth.
+            return new SlidingWindowCounter(max, windowSeconds, blockSeconds);
+        }
+        return map.computeIfAbsent(key, k -> new SlidingWindowCounter(max, windowSeconds, blockSeconds));
     }
 
     private boolean isIpBlocked(String ip) {
