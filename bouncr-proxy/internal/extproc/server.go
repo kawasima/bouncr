@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	extprocpb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
@@ -85,13 +84,7 @@ func (s *Server) handleRequestHeaders(
 		return immediateResponse(typev3.StatusCode_BadRequest)
 	}
 
-	// Strip query string before realm matching; the realm table stores only path segments.
-	matchPath := path
-	if i := strings.IndexByte(path, '?'); i >= 0 {
-		matchPath = path[:i]
-	}
-
-	result, err := s.authenticator.Authenticate(ctx, headerMap, matchPath)
+	result, err := s.authenticator.Authenticate(ctx, headerMap, path)
 	if err != nil {
 		log.Printf("ext_proc: authentication error: %v", err)
 		return immediateResponse(typev3.StatusCode_ServiceUnavailable)

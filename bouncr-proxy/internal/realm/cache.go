@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,7 +16,11 @@ type Cache struct {
 	pool         *pgxpool.Pool
 	mu           sync.RWMutex
 	realmsByPath map[string][]*Realm // keyed by Application.VirtualPath
-	applications []*Application
+	// sortedVirtualPaths holds virtualPaths sorted by descending length so that
+	// the longest (most specific) virtualPath is matched first when multiple
+	// virtualPaths can be a prefix of the same request path (e.g. /a and /a/b).
+	sortedVirtualPaths []string
+	applications       []*Application
 }
 
 func NewCache(dsn string) (*Cache, error) {
@@ -91,6 +96,16 @@ func (c *Cache) Refresh() error {
 		return fmt.Errorf("iterating realm rows: %w", err)
 	}
 
+	// Build a slice of virtualPaths sorted by descending length so that the
+	// most specific (longest) prefix wins when paths nest (e.g. /a/b before /a).
+	sortedVPs := make([]string, 0, len(realmsByPath))
+	for vp := range realmsByPath {
+		sortedVPs = append(sortedVPs, vp)
+	}
+	sort.Slice(sortedVPs, func(i, j int) bool {
+		return len(sortedVPs[i]) > len(sortedVPs[j])
+	})
+
 	// Collect unique applications
 	apps := make([]*Application, 0, len(appMap))
 	for _, app := range appMap {
@@ -99,6 +114,7 @@ func (c *Cache) Refresh() error {
 
 	c.mu.Lock()
 	c.realmsByPath = realmsByPath
+	c.sortedVirtualPaths = sortedVPs
 	c.applications = apps
 	c.mu.Unlock()
 
@@ -115,6 +131,9 @@ func (c *Cache) Refresh() error {
 //
 //	path == virtualPath                   → exact application match
 //	path == virtualPath + "/" + realm.URL → realm sub-path match
+//
+// When multiple virtualPaths are prefixes of path, the longest (most specific)
+// virtualPath wins, making the result deterministic.
 func (c *Cache) Match(path string) *Realm {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -125,16 +144,16 @@ func (c *Cache) Match(path string) *Realm {
 	}
 
 	// Case 2: path == virtualPath + "/" + realm.URL
-	// Iterate over virtualPaths rather than splitting path, because realm.URL
-	// may itself contain "/" (e.g. "api/users"), making LastIndex-based
-	// splitting incorrect.
-	for vp, realms := range c.realmsByPath {
+	// Iterate in descending virtualPath length order so the most specific prefix
+	// wins. realm.URL may itself contain "/" (e.g. "api/users"), so we compare
+	// the full remainder rather than splitting on the last "/".
+	for _, vp := range c.sortedVirtualPaths {
 		prefix := vp + "/"
 		if !strings.HasPrefix(path, prefix) {
 			continue
 		}
 		realmURL := path[len(prefix):]
-		for _, r := range realms {
+		for _, r := range c.realmsByPath[vp] {
 			if r.URL == realmURL {
 				return r
 			}

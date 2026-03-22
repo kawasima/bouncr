@@ -2,6 +2,7 @@ package realm
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 )
 
@@ -12,7 +13,14 @@ func buildCache(realms []*Realm) *Cache {
 		vp := r.Application.VirtualPath
 		m[vp] = append(m[vp], r)
 	}
-	return &Cache{realmsByPath: m}
+	sortedVPs := make([]string, 0, len(m))
+	for vp := range m {
+		sortedVPs = append(sortedVPs, vp)
+	}
+	sort.Slice(sortedVPs, func(i, j int) bool {
+		return len(sortedVPs[i]) > len(sortedVPs[j])
+	})
+	return &Cache{realmsByPath: m, sortedVirtualPaths: sortedVPs}
 }
 
 func app(id int64, virtualPath string) *Application {
@@ -94,6 +102,23 @@ func TestMatch_PartialPrefixDoesNotMatch(t *testing.T) {
 	// "/bouncr/api/extra" should NOT match
 	if got := c.Match("/bouncr/api/extra"); got != nil {
 		t.Errorf("expected nil for partial prefix, got realm ID %d", got.ID)
+	}
+}
+
+func TestMatch_NestedVirtualPaths_LongestWins(t *testing.T) {
+	// Two applications share a common path prefix. The more specific (longer)
+	// virtualPath must win deterministically regardless of map iteration order.
+	r1 := &Realm{ID: 20, URL: "endpoint", Application: app(7, "/a")}
+	r2 := &Realm{ID: 21, URL: "endpoint", Application: app(8, "/a/b")}
+	c := buildCache([]*Realm{r1, r2})
+
+	got := c.Match("/a/b/endpoint")
+	if got == nil || got.ID != 21 {
+		t.Errorf("expected realm 21 (longer virtualPath /a/b wins), got %v", got)
+	}
+	got = c.Match("/a/endpoint")
+	if got == nil || got.ID != 20 {
+		t.Errorf("expected realm 20 (/a match), got %v", got)
 	}
 }
 
