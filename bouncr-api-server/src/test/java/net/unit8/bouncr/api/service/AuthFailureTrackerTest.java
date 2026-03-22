@@ -1,11 +1,8 @@
 package net.unit8.bouncr.api.service;
 
 import net.unit8.bouncr.component.BouncrConfiguration;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.Field;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,15 +20,8 @@ class AuthFailureTrackerTest {
         config.setFailureAccountIpWindowSeconds(300);
         config.setFailureAccountIpBlockSeconds(600);
 
-        tracker = new AuthFailureTracker() {{
-            lifecycle().start(this);
-        }};
-        setField(tracker, "config", config);
-    }
-
-    @AfterEach
-    void teardown() {
-        if (tracker != null) tracker.lifecycle().stop(tracker);
+        tracker = new AuthFailureTracker();
+        tracker.initForTest(config);
     }
 
     @Test
@@ -86,24 +76,5 @@ class AuthFailureTrackerTest {
         // Extra failures while already blocked must not shorten the block
         tracker.recordFailure("1.2.3.4", "alice");
         assertThat(tracker.isBlocked("1.2.3.4", "alice")).isTrue();
-    }
-
-    private void setField(Object target, String fieldName, Object value) {
-        try {
-            Class<?> clazz = target.getClass();
-            while (clazz != null) {
-                try {
-                    Field field = clazz.getDeclaredField(fieldName);
-                    field.setAccessible(true);
-                    field.set(target, value);
-                    return;
-                } catch (NoSuchFieldException e) {
-                    clazz = clazz.getSuperclass();
-                }
-            }
-            throw new NoSuchFieldException(fieldName);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

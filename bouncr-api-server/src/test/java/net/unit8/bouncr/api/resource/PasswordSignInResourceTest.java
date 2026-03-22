@@ -16,6 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import kotowari.restful.data.Problem;
+
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,10 +106,8 @@ public class PasswordSignInResourceTest {
             }
         };
 
-        AuthFailureTracker tracker = new AuthFailureTracker() {
-            { lifecycle().start(this); }
-        };
-        setField(tracker, "config", spyConfig);
+        AuthFailureTracker tracker = new AuthFailureTracker();
+        tracker.initForTest(spyConfig);
 
         PasswordSignInResource resource = new PasswordSignInResource();
         setField(resource, "config", spyConfig);
@@ -126,6 +126,40 @@ public class PasswordSignInResourceTest {
         assertThat(dummySaltCalled[0]).as("getDummySalt() must be called for unknown accounts").isTrue();
         // No 401 Problem set — the "unknown account" branch is silent
         assertThat(context.getMessage()).isEmpty();
+    }
+
+    @Test
+    void authenticate_blockedIp_returns429() {
+        BouncrConfiguration config = new BouncrConfiguration();
+        config.setFailureIpMax(2);
+        config.setFailureIpWindowSeconds(600);
+        config.setFailureIpBlockSeconds(900);
+        config.setFailureAccountIpMax(5);
+        config.setFailureAccountIpWindowSeconds(300);
+        config.setFailureAccountIpBlockSeconds(600);
+
+        AuthFailureTracker tracker = new AuthFailureTracker();
+        tracker.initForTest(config);
+        // exhaust IP threshold
+        tracker.recordFailure("10.0.0.1", null);
+        tracker.recordFailure("10.0.0.1", null);
+
+        PasswordSignInResource resource = new PasswordSignInResource();
+        setField(resource, "config", config);
+        setField(resource, "storeProvider", new StoreProvider());
+        setField(resource, "authFailureTracker", tracker);
+
+        PasswordSignIn req = new PasswordSignIn("alice", "anypassword", null);
+        DefaultHttpRequest httpReq = new DefaultHttpRequest();
+        httpReq.setRemoteAddr("10.0.0.1");
+        RestContext context = restContext();
+
+        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
+
+        assertThat(result).isFalse();
+        assertThat(context.getMessage())
+                .isPresent()
+                .hasValueSatisfying(msg -> assertThat(((Problem) msg).getStatus()).isEqualTo(429));
     }
 
     private RestContext restContext() {

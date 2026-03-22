@@ -26,6 +26,7 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
         return new ComponentLifecycle<>() {
             @Override
             public void start(AuthFailureTracker component) {
+                component.config = getDependency(BouncrConfiguration.class);
                 component.ipCounters = new ConcurrentHashMap<>();
                 component.accountIpCounters = new ConcurrentHashMap<>();
             }
@@ -92,6 +93,12 @@ public class AuthFailureTracker extends SystemComponent<AuthFailureTracker> {
             return new SlidingWindowCounter(max, windowSeconds, blockSeconds);
         }
         return map.computeIfAbsent(key, k -> new SlidingWindowCounter(max, windowSeconds, blockSeconds));
+    }
+
+    public void initForTest(BouncrConfiguration config) {
+        this.config = config;
+        this.ipCounters = new ConcurrentHashMap<>();
+        this.accountIpCounters = new ConcurrentHashMap<>();
     }
 
     private boolean isIpBlocked(String ip) {

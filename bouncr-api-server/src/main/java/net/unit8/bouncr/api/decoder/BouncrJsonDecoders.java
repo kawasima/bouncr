@@ -119,7 +119,7 @@ public final class BouncrJsonDecoders {
     // ===== Password Credential =====
     public record PasswordCredentialCreate(String account, String password, boolean initial) {}
     public static final JsonDecoder<PasswordCredentialCreate> PASSWORD_CREDENTIAL_CREATE = combine(
-            field("account", string().nonBlank().maxLength(100)),
+            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("password", string().nonBlank()),
             optionalField("initial", bool())
     ).map((acc, pwd, initial) -> new PasswordCredentialCreate(acc, pwd, initial.orElse(true)))::decode;
@@ -133,7 +133,7 @@ public final class BouncrJsonDecoders {
 
     public record PasswordCredentialDelete(String account, String password) {}
     public static final JsonDecoder<PasswordCredentialDelete> PASSWORD_CREDENTIAL_DELETE = combine(
-            field("account", string().nonBlank().maxLength(100)),
+            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("password", string().nonBlank())
     ).map(PasswordCredentialDelete::new)::decode;
 
