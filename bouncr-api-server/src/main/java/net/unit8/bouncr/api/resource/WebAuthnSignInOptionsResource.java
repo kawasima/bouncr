@@ -23,7 +23,6 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -83,7 +82,7 @@ public class WebAuthnSignInOptionsResource {
                                 b64url.encodeToString(c.credentialId()),
                                 c.transports() != null && !c.transports().isEmpty()
                                         ? List.of(c.transports().split(","))
-                                        : null))
+                                        : List.of()))
                         .toList();
             } else {
                 userId = -1L;

@@ -38,7 +38,6 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"GET", "POST"})
 public class OidcApplicationsResoruce {
     static final ContextKey<OidcApplicationCreate> CREATE_REQ = ContextKey.of(OidcApplicationCreate.class);
-    @SuppressWarnings("rawtypes")
     static final ContextKey<OidcApplicationCreatedResponse> RESPONSE = ContextKey.of(OidcApplicationCreatedResponse.class);
 
     @Inject

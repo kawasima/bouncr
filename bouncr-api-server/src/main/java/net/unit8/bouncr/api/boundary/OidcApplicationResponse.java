@@ -30,6 +30,6 @@ public record OidcApplicationResponse(
                 app.description(),
                 app.backchannelLogoutUri() != null ? app.backchannelLogoutUri().toString() : null,
                 app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null,
-                app.permissions());
+                app.permissions() != null ? app.permissions() : List.of());
     }
 }
