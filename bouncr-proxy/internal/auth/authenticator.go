@@ -17,12 +17,13 @@ import (
 )
 
 type Authenticator struct {
-	store             *store.RedisStore
-	realmCache        *realm.Cache
-	jwtSecret         []byte
-	cookieName        string
-	backendHeaderName string
-	apiServerURL      string
+	store              *store.RedisStore
+	realmCache         *realm.Cache
+	jwtSecret          []byte
+	cookieName         string
+	backendHeaderName  string
+	apiServerURL       string
+	internalSigningKey []byte
 }
 
 func NewAuthenticator(
@@ -32,14 +33,16 @@ func NewAuthenticator(
 	cookieName string,
 	backendHeaderName string,
 	apiServerURL string,
+	internalSigningKey string,
 ) *Authenticator {
 	return &Authenticator{
-		store:             store,
-		realmCache:        realmCache,
-		jwtSecret:         []byte(jwtSecret),
-		cookieName:        cookieName,
-		backendHeaderName: backendHeaderName,
-		apiServerURL:      apiServerURL,
+		store:              store,
+		realmCache:         realmCache,
+		jwtSecret:          []byte(jwtSecret),
+		cookieName:         cookieName,
+		backendHeaderName:  backendHeaderName,
+		apiServerURL:       apiServerURL,
+		internalSigningKey: []byte(internalSigningKey),
 	}
 }
 
@@ -167,6 +170,7 @@ func (a *Authenticator) refreshFromAPIServer(ctx context.Context, sessionID stri
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SignatureHeader, SignRequest(a.internalSigningKey, sessionID))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

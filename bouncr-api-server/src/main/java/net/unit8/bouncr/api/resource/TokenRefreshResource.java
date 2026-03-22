@@ -1,5 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
+import enkan.data.HttpRequest;
+import enkan.exception.MisconfigurationException;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
@@ -7,6 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.service.SignInService;
+import net.unit8.bouncr.api.service.SignatureVerifier;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import org.jooq.DSLContext;
@@ -49,8 +52,14 @@ public class TokenRefreshResource {
     }
 
     @Decision(AUTHORIZED)
-    public boolean authorized() {
-        return true;
+    public boolean authorized(HttpRequest request, String sessionId) {
+        String key = config.getInternalSigningKey();
+        if (key == null || key.isBlank()) {
+            throw new MisconfigurationException("bouncr.INTERNAL_SIGNING_KEY_REQUIRED");
+        }
+        String signature = request.getHeaders().get("X-Bouncr-Signature");
+        SignatureVerifier verifier = new SignatureVerifier(key);
+        return verifier.verify(signature, sessionId);
     }
 
     @Decision(POST)

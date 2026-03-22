@@ -40,6 +40,9 @@ func runServer() {
 	if cfg.DBDSN == "" {
 		log.Fatal("DB_DSN is required")
 	}
+	if cfg.InternalSigningKey == "" {
+		log.Fatal("INTERNAL_SIGNING_KEY is required")
+	}
 
 	// Initialize Redis store
 	redisStore, err := store.NewRedisStore(cfg.RedisURL, cfg.RedisKeyPrefix)
@@ -64,6 +67,7 @@ func runServer() {
 		cfg.TokenCookieName,
 		cfg.BackendHeaderName,
 		cfg.APIServerURL,
+		cfg.InternalSigningKey,
 	)
 
 	// Start admin HTTP server (for /_refresh, /_clusters, /_healthcheck)

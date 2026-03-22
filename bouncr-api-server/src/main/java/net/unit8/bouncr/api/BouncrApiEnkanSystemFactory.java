@@ -39,6 +39,8 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
         SQLDialect sqlDialect = jdbcUrl.startsWith("jdbc:postgresql") ? SQLDialect.POSTGRES : SQLDialect.H2;
 
         BouncrConfiguration config = builder(new BouncrConfiguration())
+                .set(BouncrConfiguration::setInternalSigningKey,
+                        Env.getString("internal.signing.key", null))
                 .set(BouncrConfiguration::setPasswordPolicy,
                         builder(new PasswordPolicy())
                                 .set(PasswordPolicy::setExpires, Duration.ofDays(180))

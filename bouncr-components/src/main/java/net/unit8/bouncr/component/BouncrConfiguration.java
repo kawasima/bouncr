@@ -55,6 +55,7 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
             Locale.ENGLISH,
             Locale.JAPANESE))
     );
+    private String internalSigningKey;
     private OidcConfiguration oidcConfiguration = new OidcConfiguration();
 
     private RetryPolicy<Object> httpClientRetryPolicy = RetryPolicy.builder()
@@ -179,6 +180,14 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
 
     public void setBackendHeaderName(String backendHeaderName) {
         this.backendHeaderName = backendHeaderName;
+    }
+
+    public String getInternalSigningKey() {
+        return internalSigningKey;
+    }
+
+    public void setInternalSigningKey(String internalSigningKey) {
+        this.internalSigningKey = internalSigningKey;
     }
 
     public boolean isSecureCookie() {
