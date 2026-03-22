@@ -15,12 +15,12 @@ func buildCache(realms []*Realm) *Cache {
 	return &Cache{realmsByPath: m}
 }
 
-func app(virtualPath string) *Application {
-	return &Application{ID: 1, VirtualPath: virtualPath, PassTo: "http://backend:8080"}
+func app(id int64, virtualPath string) *Application {
+	return &Application{ID: id, VirtualPath: virtualPath, PassTo: "http://backend:8080"}
 }
 
 func TestMatch_ExactVirtualPath(t *testing.T) {
-	r := &Realm{ID: 1, URL: "admin", Application: app("/bouncr")}
+	r := &Realm{ID: 1, URL: "admin", Application: app(1, "/bouncr")}
 	c := buildCache([]*Realm{r})
 
 	got := c.Match("/bouncr")
@@ -33,7 +33,7 @@ func TestMatch_ExactVirtualPath(t *testing.T) {
 }
 
 func TestMatch_VirtualPathPlusURL(t *testing.T) {
-	r := &Realm{ID: 2, URL: "api", Application: app("/bouncr")}
+	r := &Realm{ID: 2, URL: "api", Application: app(2, "/bouncr")}
 	c := buildCache([]*Realm{r})
 
 	got := c.Match("/bouncr/api")
@@ -46,7 +46,7 @@ func TestMatch_VirtualPathPlusURL(t *testing.T) {
 }
 
 func TestMatch_NoMatch(t *testing.T) {
-	r := &Realm{ID: 3, URL: "api", Application: app("/bouncr")}
+	r := &Realm{ID: 3, URL: "api", Application: app(3, "/bouncr")}
 	c := buildCache([]*Realm{r})
 
 	if got := c.Match("/other/path"); got != nil {
@@ -55,7 +55,7 @@ func TestMatch_NoMatch(t *testing.T) {
 }
 
 func TestMatch_MultipleRealmsUnderSameVirtualPath(t *testing.T) {
-	a := app("/app")
+	a := app(4, "/app")
 	r1 := &Realm{ID: 10, URL: "admin", Application: a}
 	r2 := &Realm{ID: 11, URL: "user", Application: a}
 	c := buildCache([]*Realm{r1, r2})
@@ -69,12 +69,22 @@ func TestMatch_MultipleRealmsUnderSameVirtualPath(t *testing.T) {
 }
 
 func TestMatch_PartialPrefixDoesNotMatch(t *testing.T) {
-	r := &Realm{ID: 4, URL: "api", Application: app("/bouncr")}
+	r := &Realm{ID: 4, URL: "api", Application: app(5, "/bouncr")}
 	c := buildCache([]*Realm{r})
 
 	// "/bouncr/api/extra" should NOT match
 	if got := c.Match("/bouncr/api/extra"); got != nil {
 		t.Errorf("expected nil for partial prefix, got realm ID %d", got.ID)
+	}
+}
+
+func TestMatch_RootPath(t *testing.T) {
+	r := &Realm{ID: 5, URL: "api", Application: app(6, "/bouncr")}
+	c := buildCache([]*Realm{r})
+
+	// "/" has no "/" after index 0, so idx > 0 is false — must not match
+	if got := c.Match("/"); got != nil {
+		t.Errorf("expected nil for root path, got realm ID %d", got.ID)
 	}
 }
 
@@ -87,7 +97,7 @@ func BenchmarkMatch(b *testing.B) {
 				realms[i] = &Realm{
 					ID:          int64(i),
 					URL:         fmt.Sprintf("realm%d", i),
-					Application: app(fmt.Sprintf("/app%d", i)),
+					Application: app(int64(i), fmt.Sprintf("/app%d", i)),
 				}
 			}
 			c := buildCache(realms)
