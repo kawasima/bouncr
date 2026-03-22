@@ -79,9 +79,11 @@ public class PasswordSignInResource {
 
         User user = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
 
-        // Always perform the hash first to equalize timing regardless of account state,
-        // preventing both "account not found" and "account locked" timing-based enumeration.
-        String salt = user != null && user.passwordCredential() != null
+        // Always perform the hash before any branching to equalize response timing,
+        // preventing "account not found" and "account locked" timing-based enumeration.
+        // Use the account's own salt when available; fall back to a per-process random
+        // dummy salt for unknown accounts or accounts without a password credential.
+        String salt = (user != null && user.passwordCredential() != null)
                 ? user.passwordCredential().salt()
                 : config.getDummySalt();
         byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, 600_000);
