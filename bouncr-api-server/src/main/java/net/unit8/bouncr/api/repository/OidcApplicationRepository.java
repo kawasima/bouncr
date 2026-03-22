@@ -165,7 +165,9 @@ public class OidcApplicationRepository {
     public void update(String currentName, String newName, String clientId, String clientSecret,
                        byte[] privateKey, byte[] publicKey,
                        String homeUrl, String callbackUrl, String description,
-                       String backchannelLogoutUri, String frontchannelLogoutUri) {
+                       String backchannelLogoutUri, String frontchannelLogoutUri,
+                       boolean updateBackchannelLogoutUri,
+                       boolean updateFrontchannelLogoutUri) {
         var updateSet = dsl.update(table("oidc_applications"))
                 .set(field("name"), (Object) (newName != null ? newName : field("name")));
         if (newName != null) {
@@ -192,10 +194,10 @@ public class OidcApplicationRepository {
         if (description != null) {
             updateSet = updateSet.set(field("description"), (Object) description);
         }
-        if (backchannelLogoutUri != null) {
+        if (updateBackchannelLogoutUri) {
             updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri);
         }
-        if (frontchannelLogoutUri != null) {
+        if (updateFrontchannelLogoutUri) {
             updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri);
         }
         updateSet.where(field("name").eq(currentName))

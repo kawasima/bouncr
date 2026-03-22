@@ -29,6 +29,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 public class OidcApplicationResource {
     static final ContextKey<OidcApplicationUpdate> UPDATE_REQ = ContextKey.of(OidcApplicationUpdate.class);
     static final ContextKey<OidcApplication> OIDC_APPLICATION = ContextKey.of(OidcApplication.class);
+    static final ContextKey<Boolean> HAS_BACKCHANNEL_LOGOUT_URI = ContextKey.of("hasBackchannelLogoutUri", Boolean.class);
+    static final ContextKey<Boolean> HAS_FRONTCHANNEL_LOGOUT_URI = ContextKey.of("hasFrontchannelLogoutUri", Boolean.class);
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdate(JsonNode body, RestContext context) {
@@ -38,6 +40,8 @@ public class OidcApplicationResource {
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_UPDATE.decode(body)) {
             case Ok<OidcApplicationUpdate> ok -> {
                 try {
+                    context.put(HAS_BACKCHANNEL_LOGOUT_URI, body.get("backchannel_logout_uri") != null);
+                    context.put(HAS_FRONTCHANNEL_LOGOUT_URI, body.get("frontchannel_logout_uri") != null);
                     LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
                     LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
                     context.put(UPDATE_REQ, ok.value());
@@ -99,8 +103,10 @@ public class OidcApplicationResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
+    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        boolean hasBackchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_BACKCHANNEL_LOGOUT_URI));
+        boolean hasFrontchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_FRONTCHANNEL_LOGOUT_URI));
         repo.update(
                 oidcApplication.name(),
                 updateRequest.name(),
@@ -112,7 +118,9 @@ public class OidcApplicationResource {
                 updateRequest.callbackUrl(),
                 updateRequest.description(),
                 LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri()),
-                LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri())
+                LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()),
+                hasBackchannelLogoutUri,
+                hasFrontchannelLogoutUri
         );
         if (updateRequest.permissions() != null) {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());

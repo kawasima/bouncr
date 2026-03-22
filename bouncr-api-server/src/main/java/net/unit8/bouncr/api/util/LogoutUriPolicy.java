@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.util;
 
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.Locale;
 
 public final class LogoutUriPolicy {
@@ -31,13 +32,35 @@ public final class LogoutUriPolicy {
         if (normalized == null) return null;
 
         URI uri = URI.create(normalized);
-        if (!isAllowedBackchannelTarget(uri)) {
+        if (!isAllowedBackchannelTargetForRegistration(uri)) {
             throw new IllegalArgumentException("backchannel_logout_uri is not allowed");
         }
         return normalized;
     }
 
     public static boolean isAllowedBackchannelTarget(URI uri) {
+        if (!isAllowedBackchannelTargetForRegistration(uri)) {
+            return false;
+        }
+
+        String host = uri.getHost();
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(host);
+            if (addresses.length == 0) {
+                return false;
+            }
+            for (InetAddress addr : addresses) {
+                if (!isSafeAddress(addr)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (UnknownHostException e) {
+            return false;
+        }
+    }
+
+    public static boolean isAllowedBackchannelTargetForRegistration(URI uri) {
         String host = uri.getHost();
         if (host == null || host.isBlank()) {
             return false;
@@ -50,11 +73,7 @@ public final class LogoutUriPolicy {
         if (isIpLiteral(host)) {
             try {
                 InetAddress addr = InetAddress.getByName(host);
-                return !(addr.isAnyLocalAddress()
-                        || addr.isLoopbackAddress()
-                        || addr.isSiteLocalAddress()
-                        || addr.isLinkLocalAddress()
-                        || addr.isMulticastAddress());
+                return isSafeAddress(addr);
             } catch (Exception e) {
                 return false;
             }
@@ -73,5 +92,13 @@ public final class LogoutUriPolicy {
             }
         }
         return host.contains(".");
+    }
+
+    private static boolean isSafeAddress(InetAddress addr) {
+        return !(addr.isAnyLocalAddress()
+                || addr.isLoopbackAddress()
+                || addr.isSiteLocalAddress()
+                || addr.isLinkLocalAddress()
+                || addr.isMulticastAddress());
     }
 }

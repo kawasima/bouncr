@@ -81,14 +81,10 @@ function OidcAppEditForm({
   const doSubmit = (d: OidcAppFormData) => {
     const payload: Record<string, unknown> = {
       ...d,
+      backchannel_logout_uri: d.backchannel_logout_uri?.trim() ?? '',
+      frontchannel_logout_uri: d.frontchannel_logout_uri?.trim() ?? '',
       permissions: Array.from(selectedPerms),
     };
-    if (!d.backchannel_logout_uri) {
-      delete payload.backchannel_logout_uri;
-    }
-    if (!d.frontchannel_logout_uri) {
-      delete payload.frontchannel_logout_uri;
-    }
     return onSubmit(payload);
   };
 

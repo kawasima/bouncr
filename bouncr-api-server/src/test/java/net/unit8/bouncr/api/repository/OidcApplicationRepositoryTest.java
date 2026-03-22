@@ -77,7 +77,9 @@ class OidcApplicationRepositoryTest {
                 "https://client-b.example/callback-new",
                 "desc-b-new",
                 "https://client-b.example/backchannel-logout-new",
-                "https://client-b.example/frontchannel-logout-new"
+                "https://client-b.example/frontchannel-logout-new",
+                true,
+                true
         );
 
         OidcApplication updated = repo.findByName("oidc-app-b").orElseThrow();
@@ -115,7 +117,9 @@ class OidcApplicationRepositoryTest {
                 "https://client-c.example/callback-new",
                 "desc-c-new",
                 null,
-                null
+                null,
+                false,
+                false
         );
 
         OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
@@ -125,6 +129,42 @@ class OidcApplicationRepositoryTest {
                 .isEqualTo("https://client-c.example/backchannel-logout");
         assertThat(updated.frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/frontchannel-logout");
+    }
+
+    @Test
+    void update_clearsLogoutUrisWhenFieldIsExplicitlySet() {
+        repo.insert(
+                "oidc-app-e",
+                "client-e",
+                "secret-e",
+                new byte[]{1},
+                new byte[]{2},
+                "https://client-e.example",
+                "https://client-e.example/callback",
+                "desc-e",
+                "https://client-e.example/backchannel-logout",
+                "https://client-e.example/frontchannel-logout"
+        );
+
+        repo.update(
+                "oidc-app-e",
+                "oidc-app-e",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                true
+        );
+
+        OidcApplication updated = repo.findByName("oidc-app-e").orElseThrow();
+        assertThat(updated.backchannelLogoutUri()).isNull();
+        assertThat(updated.frontchannelLogoutUri()).isNull();
     }
 
     @Test
