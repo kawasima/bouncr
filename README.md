@@ -23,6 +23,7 @@ An authentication gateway and OIDC Identity Provider for backend applications, p
 - **Multiple credential types** — Password, OpenID Connect (RP), TOTP two-factor authentication
 - **BFF session management** — Short-lived access cache (15 min) + long-lived refresh marker (7 days) with transparent refresh via bouncr-proxy
 - **Fine-grained authorization** — Group → Role → Permission model with per-Realm scope
+- **Cross-application session reuse (current Phase 3 behavior)** — one Bouncr session token is reused across applications; proxy filters `permissionsByRealm` into realm-specific `permissions` before forwarding
 
 ### OIDC Identity Provider
 
@@ -45,6 +46,10 @@ Bouncr acts as a full OIDC Identity Provider ([comparable to Kanidm](https://kan
 - Private keys encrypted at rest with AES-256-GCM
 - RS256 JWT signing with per-client RSA key pairs
 - Constant-time comparisons for secrets and PKCE verification
+
+**Logout propagation (Issue #80):**
+- Back-channel logout on sign-out: Bouncr sends OIDC Logout Token (`iss`, `aud`, `iat`, `jti`, `events`, `sub`) to each registered RP `backchannel_logout_uri` (best-effort)
+- Front-channel logout on sign-out: API returns `frontchannel_logout_urls` for UI-side hidden iframe dispatch (bounded parallel fan-out with overall timeout in UI)
 
 ### Administration
 

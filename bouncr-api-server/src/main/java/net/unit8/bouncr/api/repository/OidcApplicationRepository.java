@@ -4,7 +4,11 @@ import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.Permission;
 import org.jooq.DSLContext;
 import org.jooq.Record;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -13,6 +17,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
 import static org.jooq.impl.DSL.*;
 
 public class OidcApplicationRepository {
+    private static final Logger LOG = LoggerFactory.getLogger(OidcApplicationRepository.class);
     private final DSLContext dsl;
 
     public OidcApplicationRepository(DSLContext dsl) {
@@ -30,18 +35,21 @@ public class OidcApplicationRepository {
                         field("public_key", byte[].class),
                         field("home_url", String.class),
                         field("callback_url", String.class),
-                        field("description", String.class))
+                        field("description", String.class),
+                        field("backchannel_logout_uri", String.class),
+                        field("frontchannel_logout_uri", String.class))
                 .from(table("oidc_applications"))
                 .where(field("name").eq(name))
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        OidcApplication app = OIDC_APPLICATION.decode(rec).getOrThrow();
+        OidcApplication app = mapOidcApplication(rec);
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUrl(), app.callbackUrl(), app.description(), permissions));
+                app.homeUrl(), app.callbackUrl(), app.description(),
+                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions));
     }
 
     /**
@@ -67,18 +75,21 @@ public class OidcApplicationRepository {
                         field("public_key", byte[].class),
                         field("home_url", String.class),
                         field("callback_url", String.class),
-                        field("description", String.class))
+                        field("description", String.class),
+                        field("backchannel_logout_uri", String.class),
+                        field("frontchannel_logout_uri", String.class))
                 .from(table("oidc_applications"))
                 .where(field("client_id").eq(clientId))
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        OidcApplication app = OIDC_APPLICATION.decode(rec).getOrThrow();
+        OidcApplication app = mapOidcApplication(rec);
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUrl(), app.callbackUrl(), app.description(), permissions));
+                app.homeUrl(), app.callbackUrl(), app.description(),
+                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions));
     }
 
     public List<OidcApplication> search(String q, int offset, int limit) {
@@ -98,13 +109,34 @@ public class OidcApplicationRepository {
                         field("public_key", byte[].class),
                         field("home_url", String.class),
                         field("callback_url", String.class),
-                        field("description", String.class))
+                        field("description", String.class),
+                        field("backchannel_logout_uri", String.class),
+                        field("frontchannel_logout_uri", String.class))
                 .from(table("oidc_applications"))
                 .where(condition)
                 .orderBy(field("oidc_application_id").asc())
                 .offset(offset)
                 .limit(limit)
-                .fetch(rec -> OIDC_APPLICATION.decode(rec).getOrThrow());
+                .fetch(this::mapOidcApplication);
+    }
+
+    public List<OidcApplication> listAll() {
+        return dsl.select(
+                        field("oidc_application_id", Long.class),
+                        field("name", String.class),
+                        field("name_lower", String.class),
+                        field("client_id", String.class),
+                        field("client_secret", String.class),
+                        field("private_key", byte[].class),
+                        field("public_key", byte[].class),
+                        field("home_url", String.class),
+                        field("callback_url", String.class),
+                        field("description", String.class),
+                        field("backchannel_logout_uri", String.class),
+                        field("frontchannel_logout_uri", String.class))
+                .from(table("oidc_applications"))
+                .orderBy(field("oidc_application_id").asc())
+                .fetch(this::mapOidcApplication);
     }
 
     public boolean isNameUnique(String name) {
@@ -116,31 +148,26 @@ public class OidcApplicationRepository {
 
     public OidcApplication insert(String name, String clientId, String clientSecret,
                                   byte[] privateKey, byte[] publicKey,
-                                  String homeUrl, String callbackUrl, String description) {
-        Record rec = dsl.insertInto(table("oidc_applications"),
+                                  String homeUrl, String callbackUrl, String description,
+                                  String backchannelLogoutUri, String frontchannelLogoutUri) {
+        dsl.insertInto(table("oidc_applications"),
                         field("name"), field("name_lower"), field("client_id"), field("client_secret"),
                         field("private_key"), field("public_key"),
-                        field("home_url"), field("callback_url"), field("description"))
+                        field("home_url"), field("callback_url"), field("description"),
+                        field("backchannel_logout_uri"), field("frontchannel_logout_uri"))
                 .values(name, name.toLowerCase(Locale.US), clientId, clientSecret,
-                        privateKey, publicKey, homeUrl, callbackUrl, description)
-                .returningResult(
-                        field("oidc_application_id", Long.class),
-                        field("name", String.class),
-                        field("name_lower", String.class),
-                        field("client_id", String.class),
-                        field("client_secret", String.class),
-                        field("private_key", byte[].class),
-                        field("public_key", byte[].class),
-                        field("home_url", String.class),
-                        field("callback_url", String.class),
-                        field("description", String.class))
-                .fetchOne();
-        return OIDC_APPLICATION.decode(rec).getOrThrow();
+                        privateKey, publicKey, homeUrl, callbackUrl, description,
+                        backchannelLogoutUri, frontchannelLogoutUri)
+                .execute();
+        return findByName(name).orElseThrow();
     }
 
     public void update(String currentName, String newName, String clientId, String clientSecret,
                        byte[] privateKey, byte[] publicKey,
-                       String homeUrl, String callbackUrl, String description) {
+                       String homeUrl, String callbackUrl, String description,
+                       String backchannelLogoutUri, String frontchannelLogoutUri,
+                       boolean updateBackchannelLogoutUri,
+                       boolean updateFrontchannelLogoutUri) {
         var updateSet = dsl.update(table("oidc_applications"))
                 .set(field("name"), (Object) (newName != null ? newName : field("name")));
         if (newName != null) {
@@ -166,6 +193,12 @@ public class OidcApplicationRepository {
         }
         if (description != null) {
             updateSet = updateSet.set(field("description"), (Object) description);
+        }
+        if (updateBackchannelLogoutUri) {
+            updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri);
+        }
+        if (updateFrontchannelLogoutUri) {
+            updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri);
         }
         updateSet.where(field("name").eq(currentName))
                 .execute();
@@ -210,5 +243,45 @@ public class OidcApplicationRepository {
                 .on(field("oas.permission_id").eq(field("p.permission_id")))
                 .where(field("oas.oidc_application_id").eq(oidcApplicationId))
                 .fetch(rec -> PERMISSION.decode(rec).getOrThrow());
+    }
+
+    private OidcApplication mapOidcApplication(Record rec) {
+        try {
+            String homeUrl = rec.get(field("home_url", String.class));
+            String callbackUrl = rec.get(field("callback_url", String.class));
+            String backchannelLogoutUri = rec.get(field("backchannel_logout_uri", String.class));
+            String frontchannelLogoutUri = rec.get(field("frontchannel_logout_uri", String.class));
+            String appName = rec.get(field("name", String.class));
+
+            return new OidcApplication(
+                    rec.get(field("oidc_application_id", Long.class)),
+                    appName,
+                    rec.get(field("name_lower", String.class)),
+                    rec.get(field("client_id", String.class)),
+                    rec.get(field("client_secret", String.class)),
+                    rec.get(field("private_key", byte[].class)),
+                    rec.get(field("public_key", byte[].class)),
+                    homeUrl != null ? URI.create(homeUrl).toURL() : null,
+                    callbackUrl != null ? URI.create(callbackUrl).toURL() : null,
+                    rec.get(field("description", String.class)),
+                    toOptionalUrl(backchannelLogoutUri, "backchannel_logout_uri", appName),
+                    toOptionalUrl(frontchannelLogoutUri, "frontchannel_logout_uri", appName),
+                    null
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to map OidcApplication record", e);
+        }
+    }
+
+    private URL toOptionalUrl(String raw, String fieldName, String appName) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return URI.create(raw.trim()).toURL();
+        } catch (Exception e) {
+            LOG.warn("Ignore invalid {} for OIDC application {}: {}", fieldName, appName, raw);
+            return null;
+        }
     }
 }

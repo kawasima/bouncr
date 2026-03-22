@@ -10,6 +10,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -28,6 +29,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 public class OidcApplicationResource {
     static final ContextKey<OidcApplicationUpdate> UPDATE_REQ = ContextKey.of(OidcApplicationUpdate.class);
     static final ContextKey<OidcApplication> OIDC_APPLICATION = ContextKey.of(OidcApplication.class);
+    static final ContextKey<Boolean> HAS_BACKCHANNEL_LOGOUT_URI = ContextKey.of("hasBackchannelLogoutUri", Boolean.class);
+    static final ContextKey<Boolean> HAS_FRONTCHANNEL_LOGOUT_URI = ContextKey.of("hasFrontchannelLogoutUri", Boolean.class);
 
     @Decision(value = MALFORMED, method = "PUT")
     public Problem validateUpdate(JsonNode body, RestContext context) {
@@ -35,7 +38,18 @@ public class OidcApplicationResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_UPDATE.decode(body)) {
-            case Ok<OidcApplicationUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
+            case Ok<OidcApplicationUpdate> ok -> {
+                try {
+                    context.put(HAS_BACKCHANNEL_LOGOUT_URI, body.get("backchannel_logout_uri") != null);
+                    context.put(HAS_FRONTCHANNEL_LOGOUT_URI, body.get("frontchannel_logout_uri") != null);
+                    LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
+                    LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
+                    context.put(UPDATE_REQ, ok.value());
+                    yield null;
+                } catch (IllegalArgumentException e) {
+                    yield Problem.valueOf(400, e.getMessage());
+                }
+            }
             case Err<OidcApplicationUpdate>(var issues) -> toProblem(issues);
         };
     }
@@ -89,8 +103,10 @@ public class OidcApplicationResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
+    public Map<String, Object> update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        boolean hasBackchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_BACKCHANNEL_LOGOUT_URI));
+        boolean hasFrontchannelLogoutUri = Boolean.TRUE.equals(context.get(HAS_FRONTCHANNEL_LOGOUT_URI));
         repo.update(
                 oidcApplication.name(),
                 updateRequest.name(),
@@ -100,7 +116,11 @@ public class OidcApplicationResource {
                 null, // publicKey not updated
                 updateRequest.homeUrl(),
                 updateRequest.callbackUrl(),
-                updateRequest.description()
+                updateRequest.description(),
+                LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri()),
+                LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()),
+                hasBackchannelLogoutUri,
+                hasFrontchannelLogoutUri
         );
         if (updateRequest.permissions() != null) {
             Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
@@ -127,6 +147,8 @@ public class OidcApplicationResource {
         result.put("home_url", app.homeUrl());
         result.put("callback_url", app.callbackUrl());
         result.put("description", app.description());
+        result.put("backchannel_logout_uri", app.backchannelLogoutUri());
+        result.put("frontchannel_logout_uri", app.frontchannelLogoutUri());
         if (app.permissions() != null) {
             result.put("permissions", app.permissions());
         }

@@ -299,6 +299,8 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                     .column(field("callback_url", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("description", SQLDataType.VARCHAR(255).nullable(false)))
                     .column(field("name_lower", SQLDataType.VARCHAR(100).nullable(false)))
+                    .column(field("backchannel_logout_uri", SQLDataType.VARCHAR(2048)))
+                    .column(field("frontchannel_logout_uri", SQLDataType.VARCHAR(2048)))
                     .constraints(
                             constraint().primaryKey(field("oidc_application_id")),
                             constraint().unique(field("name"))

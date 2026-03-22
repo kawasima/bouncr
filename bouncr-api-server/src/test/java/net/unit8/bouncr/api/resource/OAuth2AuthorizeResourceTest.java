@@ -86,7 +86,9 @@ class OAuth2AuthorizeResourceTest {
                 new byte[]{2},
                 "https://client.example",
                 "https://client.example/callback",
-                "test app");
+                "test app",
+                null,
+                null);
 
         RestContext context = restContext();
         AuthorizeRequest request = new AuthorizeRequest(

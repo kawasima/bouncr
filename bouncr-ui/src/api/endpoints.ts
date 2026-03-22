@@ -34,6 +34,7 @@ import type {
   ApplicationUpdateRequest,
   RealmCreateRequest,
   RealmUpdateRequest,
+  SignOutResponse,
   UserSearchParams,
   ActionSearchParams,
   PaginationParams,
@@ -56,7 +57,7 @@ export function signUp(data: SignUpRequest) {
 }
 
 export function signOut(sessionToken: string, token: string) {
-  return apiRequest<void>(`/session/${sessionToken}`, {
+  return apiRequest<SignOutResponse>(`/session/${sessionToken}`, {
     method: 'DELETE',
     token,
   });

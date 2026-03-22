@@ -267,8 +267,11 @@ public final class BouncrJooqDecoders {
             optionalField("public_key", BYTES_DECODER),
             optionalField("home_url", string()),
             optionalField("callback_url", string()),
-            optionalField("description", string())
-    ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey, homeUrl, callbackUrl, desc) -> {
+            optionalField("description", string()),
+            optionalField("backchannel_logout_uri", string()),
+            optionalField("frontchannel_logout_uri", string())
+    ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey,
+            homeUrl, callbackUrl, desc, backchannelLogoutUri, frontchannelLogoutUri) -> {
         try {
             return new OidcApplication(
                     id, name, nameLower.orElse(null),
@@ -281,6 +284,12 @@ public final class BouncrJooqDecoders {
                         try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
                     }).orElse(null),
                     desc.orElse(null),
+                    backchannelLogoutUri.map(u -> {
+                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
+                    }).orElse(null),
+                    frontchannelLogoutUri.map(u -> {
+                        try { return URI.create(u).toURL(); } catch (Exception e) { throw new RuntimeException(e); }
+                    }).orElse(null),
                     null);
         } catch (Exception e) {
             throw new RuntimeException("Failed to map OidcApplication record", e);

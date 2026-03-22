@@ -215,23 +215,33 @@ public final class BouncrJsonDecoders {
                     jwks.orElse(null), iss.orElse(null), pkce.orElse(false)))::decode;
 
     // ===== OIDC Application =====
-    public record OidcApplicationCreate(String name, String homeUrl, String callbackUrl, String description, List<String> permissions) {}
+    public record OidcApplicationCreate(String name, String homeUrl, String callbackUrl, String description,
+                                        String backchannelLogoutUri, String frontchannelLogoutUri,
+                                        List<String> permissions) {}
     public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = combine(
             field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("home_url", string().nonBlank()),
             field("callback_url", string().nonBlank()),
             field("description", string().nonBlank()),
+            optionalField("backchannel_logout_uri", string().maxLength(2048)),
+            optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, perms) -> new OidcApplicationCreate(name, hu, cu, desc, perms.orElse(List.of())))::decode;
+    ).map((name, hu, cu, desc, bcu, fcu, perms) ->
+            new OidcApplicationCreate(name, hu, cu, desc, bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))::decode;
 
-    public record OidcApplicationUpdate(String name, String homeUrl, String callbackUrl, String description, List<String> permissions) {}
+    public record OidcApplicationUpdate(String name, String homeUrl, String callbackUrl, String description,
+                                        String backchannelLogoutUri, String frontchannelLogoutUri,
+                                        List<String> permissions) {}
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = combine(
             field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("home_url", string().nonBlank()),
             field("callback_url", string().nonBlank()),
             field("description", string().nonBlank()),
+            optionalField("backchannel_logout_uri", string().maxLength(2048)),
+            optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, perms) -> new OidcApplicationUpdate(name, hu, cu, desc, perms.orElse(List.of())))::decode;
+    ).map((name, hu, cu, desc, bcu, fcu, perms) ->
+            new OidcApplicationUpdate(name, hu, cu, desc, bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))::decode;
 
     // ===== WebAuthn =====
     public record WebAuthnRegister(String registrationResponseJSON, String credentialName) {}

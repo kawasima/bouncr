@@ -78,12 +78,23 @@ export interface OidcProvider {
 export interface OidcApplication {
   id: number;
   name: string;
-  clientId?: string;
-  clientSecret?: string;
-  homeUrl: string;
-  callbackUrl: string;
+  client_id?: string;
+  client_secret?: string;
+  home_url: string;
+  callback_url: string;
   description: string;
+  backchannel_logout_uri?: string;
+  frontchannel_logout_uri?: string;
   permissions?: Permission[];
+}
+
+export interface SignOutResponse {
+  frontchannel_logout_urls: string[];
+  backchannel_logout: {
+    attempted: number;
+    succeeded: number;
+    failed: number;
+  };
 }
 
 export interface Invitation {
@@ -259,9 +270,11 @@ export interface OidcProviderUpdateRequest extends OidcProviderCreateRequest {}
 
 export interface OidcApplicationCreateRequest {
   name: string;
-  homeUrl: string;
-  callbackUrl: string;
+  home_url: string;
+  callback_url: string;
   description: string;
+  backchannel_logout_uri?: string;
+  frontchannel_logout_uri?: string;
   permissions?: string[];
 }
 

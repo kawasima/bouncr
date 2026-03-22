@@ -149,6 +149,36 @@ public abstract class E2ETestBase {
         return new OidcClient(clientId, clientSecret, callbackUrl);
     }
 
+    protected OidcClient createOidcApplication(APIRequestContext adminApi, String name,
+                                               String backchannelLogoutUri, String frontchannelLogoutUri) throws Exception {
+        String callbackUrl = "http://localhost:9999/callback/" + name;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("name", name);
+        payload.put("home_url", "http://localhost:9999/" + name);
+        payload.put("callback_url", callbackUrl);
+        payload.put("description", "E2E test application: " + name);
+        if (backchannelLogoutUri != null) {
+            payload.put("backchannel_logout_uri", backchannelLogoutUri);
+        }
+        if (frontchannelLogoutUri != null) {
+            payload.put("frontchannel_logout_uri", frontchannelLogoutUri);
+        }
+
+        APIResponse response = adminApi.post("/bouncr/api/oidc_applications",
+                RequestOptions.create()
+                        .setHeader("Content-Type", "application/json")
+                        .setData(JSON.writeValueAsString(payload)));
+
+        assertThat(response.status()).isEqualTo(201);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> app = JSON.readValue(response.body(), Map.class);
+        String clientId = (String) app.get("client_id");
+        String clientSecret = (String) app.get("client_secret");
+        assertThat(clientId).isNotNull().isNotBlank();
+        assertThat(clientSecret).isNotNull().isNotBlank();
+        return new OidcClient(clientId, clientSecret, callbackUrl);
+    }
+
     protected String codeChallengeS256(String verifier) throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256")
                 .digest(verifier.getBytes(StandardCharsets.UTF_8));

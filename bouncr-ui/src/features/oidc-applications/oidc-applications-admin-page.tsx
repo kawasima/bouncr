@@ -21,15 +21,17 @@ const config: AdminCrudConfig<OidcApplication> = {
 
 const columns: ColumnDef<OidcApplication>[] = [
   { header: 'Name', accessor: 'name' },
-  { header: 'Home URL', accessor: 'homeUrl' },
+  { header: 'Home URL', accessor: 'home_url' },
   { header: 'Description', accessor: 'description' },
 ];
 
 const oidcAppSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  homeUrl: z.string().url('Must be a valid URL'),
-  callbackUrl: z.string().url('Must be a valid URL'),
+  home_url: z.string().url('Must be a valid URL'),
+  callback_url: z.string().url('Must be a valid URL'),
   description: z.string().min(1, 'Description is required'),
+  backchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
+  frontchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
   permissions: z.array(z.string()).optional(),
 });
 
@@ -58,12 +60,32 @@ function OidcAppEditForm({
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcAppFormData>({
     resolver: zodResolver(oidcAppSchema),
     defaultValues: target
-      ? { name: target.name, homeUrl: target.homeUrl, callbackUrl: target.callbackUrl, description: target.description }
-      : { name: '', homeUrl: '', callbackUrl: '', description: '' },
+      ? {
+        name: target.name,
+        home_url: target.home_url,
+        callback_url: target.callback_url,
+        description: target.description,
+        backchannel_logout_uri: target.backchannel_logout_uri ?? '',
+        frontchannel_logout_uri: target.frontchannel_logout_uri ?? '',
+      }
+      : {
+        name: '',
+        home_url: '',
+        callback_url: '',
+        description: '',
+        backchannel_logout_uri: '',
+        frontchannel_logout_uri: '',
+      },
   });
 
   const doSubmit = (d: OidcAppFormData) => {
-    return onSubmit({ ...d, permissions: Array.from(selectedPerms) });
+    const payload: Record<string, unknown> = {
+      ...d,
+      backchannel_logout_uri: d.backchannel_logout_uri?.trim() ?? '',
+      frontchannel_logout_uri: d.frontchannel_logout_uri?.trim() ?? '',
+      permissions: Array.from(selectedPerms),
+    };
+    return onSubmit(payload);
   };
 
   return (
@@ -74,8 +96,8 @@ function OidcAppEditForm({
         <div className="mansion-card p-4 space-y-2">
           <p className="text-xs uppercase tracking-[0.15em] text-gold">Credentials</p>
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Client ID:</span> <code className="font-mono">{target.clientId}</code></p>
-            <p><span className="text-muted-foreground">Client Secret:</span> <code className="font-mono">{target.clientSecret ?? '••••••'}</code></p>
+            <p><span className="text-muted-foreground">Client ID:</span> <code className="font-mono">{target.client_id}</code></p>
+            <p><span className="text-muted-foreground">Client Secret:</span> <code className="font-mono">{target.client_secret ?? '••••••'}</code></p>
           </div>
         </div>
       )}
@@ -91,14 +113,24 @@ function OidcAppEditForm({
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       <div className="space-y-2">
-        <label htmlFor="homeUrl" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
-        <input id="homeUrl" {...register('homeUrl')} className="mansion-input w-full py-2" />
-        {errors.homeUrl && <p className="text-sm text-destructive">{errors.homeUrl.message}</p>}
+        <label htmlFor="home_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
+        <input id="home_url" {...register('home_url')} className="mansion-input w-full py-2" />
+        {errors.home_url && <p className="text-sm text-destructive">{errors.home_url.message}</p>}
       </div>
       <div className="space-y-2">
-        <label htmlFor="callbackUrl" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Callback URL</label>
-        <input id="callbackUrl" {...register('callbackUrl')} className="mansion-input w-full py-2" />
-        {errors.callbackUrl && <p className="text-sm text-destructive">{errors.callbackUrl.message}</p>}
+        <label htmlFor="callback_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Callback URL</label>
+        <input id="callback_url" {...register('callback_url')} className="mansion-input w-full py-2" />
+        {errors.callback_url && <p className="text-sm text-destructive">{errors.callback_url.message}</p>}
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="backchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Back-channel Logout URI</label>
+        <input id="backchannel_logout_uri" {...register('backchannel_logout_uri')} className="mansion-input w-full py-2" />
+        {errors.backchannel_logout_uri && <p className="text-sm text-destructive">{errors.backchannel_logout_uri.message}</p>}
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="frontchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Front-channel Logout URI</label>
+        <input id="frontchannel_logout_uri" {...register('frontchannel_logout_uri')} className="mansion-input w-full py-2" />
+        {errors.frontchannel_logout_uri && <p className="text-sm text-destructive">{errors.frontchannel_logout_uri.message}</p>}
       </div>
 
       {allPermissions.length > 0 && (
