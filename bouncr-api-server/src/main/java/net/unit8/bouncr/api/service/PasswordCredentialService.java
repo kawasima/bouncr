@@ -20,7 +20,7 @@ public class PasswordCredentialService {
     public void changePassword(User user, String password) {
         UserRepository repo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(password, salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2(password, salt, config.getPbkdf2Iterations());
         repo.deletePasswordCredential(user.id());
         repo.insertPasswordCredential(user.id(), hash, salt, false);
     }
@@ -28,7 +28,7 @@ public class PasswordCredentialService {
     public InitialPassword initializePassword(User user) {
         String password = RandomUtils.generateRandomString(8, config.getSecureRandom());
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(password, salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2(password, salt, config.getPbkdf2Iterations());
 
         UserRepository repo = new UserRepository(dsl);
         repo.insertPasswordCredential(user.id(), hash, salt, true);
