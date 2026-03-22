@@ -4,10 +4,12 @@ import com.sun.net.httpserver.HttpServer;
 import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.ResponseType;
 import net.unit8.bouncr.data.TokenEndpointAuthMethod;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -34,7 +36,7 @@ class JwksVerifierTest {
                 base64Url(publicKey.getModulus().toByteArray()),
                 base64Url(publicKey.getPublicExponent().toByteArray()));
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        HttpServer server = createServerOrSkip();
         server.createContext("/jwks", exchange -> {
             byte[] body = jwks.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("content-type", "application/json");
@@ -78,7 +80,7 @@ class JwksVerifierTest {
                 base64Url(publicKey.getModulus().toByteArray()),
                 base64Url(publicKey.getPublicExponent().toByteArray()));
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        HttpServer server = createServerOrSkip();
         server.createContext("/jwks", exchange -> {
             byte[] body = jwks.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("content-type", "application/json");
@@ -133,5 +135,15 @@ class JwksVerifierTest {
             bytes = trimmed;
         }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static HttpServer createServerOrSkip() throws Exception {
+        try {
+            return HttpServer.create(new InetSocketAddress(0), 0);
+        } catch (SocketException | SecurityException e) {
+            Assumptions.assumeTrue(false,
+                    "Skipping test because local socket bind is not permitted: " + e.getMessage());
+            return null; // unreachable when assumption fails
+        }
     }
 }

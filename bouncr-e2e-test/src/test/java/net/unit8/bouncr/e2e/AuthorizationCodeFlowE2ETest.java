@@ -89,6 +89,23 @@ class AuthorizationCodeFlowE2ETest extends E2ETestBase {
 
     @Test
     @Tag("e2e-full")
+    void authorize_missingRequiredQuery_returnsProblem() throws Exception {
+        String authorizeUrl = "/oauth2/authorize"
+                + "?client_id=" + urlEncode(client.clientId())
+                + "&redirect_uri=" + urlEncode(client.callbackUrl())
+                + "&scope=" + urlEncode("openid")
+                + "&state=st-missing";
+
+        APIResponse response = adminApi.get(authorizeUrl);
+        assertThat(response.status()).isEqualTo(400);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = JSON.readValue(response.body(), Map.class);
+        assertThat(body).containsKey("violations");
+    }
+
+    @Test
+    @Tag("e2e-full")
     void tokenExchange_wrongCodeVerifier_returnsInvalidGrant() throws Exception {
         String codeVerifier = "correct-verifier-value";
         String codeChallenge = codeChallengeS256(codeVerifier);
