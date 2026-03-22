@@ -116,7 +116,7 @@ public class WebAuthnRegisterResource {
         AttestedCredentialData attestedCredentialData =
                 registrationData.getAttestationObject().getAuthenticatorData().getAttestedCredentialData();
         byte[] credentialId = attestedCredentialData.getCredentialId();
-        byte[] attestedCredData = webAuthnService.serializeAttestedCredentialData(registrationData);
+        byte[] credentialPublicKey = webAuthnService.serializeAttestedCredentialData(registrationData);
         long signCount = registrationData.getAttestationObject().getAuthenticatorData().getSignCount();
         String format = registrationData.getAttestationObject().getAttestationStatement().getFormat();
 
@@ -130,7 +130,7 @@ public class WebAuthnRegisterResource {
         User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
 
-        WebAuthnCredential credential = credRepo.insert(user.id(), credentialId, attestedCredData, signCount,
+        WebAuthnCredential credential = credRepo.insert(user.id(), credentialId, credentialPublicKey, signCount,
                 String.join(",", transports), format,
                 request.credentialName(), true);
         context.put(CREDENTIAL, credential);

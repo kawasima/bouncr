@@ -89,7 +89,7 @@ public class WebAuthnService {
                 .challenge(challenge)
                 .build();
 
-        AttestedCredentialData attestedCredentialData = attestedCredentialDataConverter.convert(storedCredential.attestedCredentialData());
+        AttestedCredentialData attestedCredentialData = attestedCredentialDataConverter.convert(storedCredential.credentialPublicKey());
 
         CredentialRecord credentialRecord = new CredentialRecordImpl(
                 null,  // attestationStatement
