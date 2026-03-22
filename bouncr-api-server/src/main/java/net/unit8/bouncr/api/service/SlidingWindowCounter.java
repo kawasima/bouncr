@@ -40,12 +40,6 @@ public class SlidingWindowCounter {
         return blockedUntil > now;
     }
 
-    /** Returns seconds remaining until the block expires, or 0 if not blocked. */
-    public synchronized long remainingBlockSeconds() {
-        long now = System.currentTimeMillis() / 1000;
-        return Math.max(0, blockedUntil - now);
-    }
-
     private void evict(long now) {
         long cutoff = now - windowSeconds;
         while (!timestamps.isEmpty() && timestamps.peekFirst() < cutoff) {
