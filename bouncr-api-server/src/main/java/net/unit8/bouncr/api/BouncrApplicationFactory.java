@@ -224,10 +224,14 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         if (corsOrigins == null || corsOrigins.isBlank()) {
             throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
         }
-        return Stream.of(corsOrigins.split(","))
+        Set<String> origins = Stream.of(corsOrigins.split(","))
                 .map(String::strip)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
+        if (origins.isEmpty()) {
+            throw new MisconfigurationException("bouncr.CORS_ORIGINS_REQUIRED");
+        }
+        return origins;
     }
 
 }
