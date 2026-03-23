@@ -36,9 +36,9 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <PermissionContext value={{ permissions, loading, hasPermission }}>
+    <PermissionContext.Provider value={{ permissions, loading, hasPermission }}>
       {children}
-    </PermissionContext>
+    </PermissionContext.Provider>
   );
 }
 

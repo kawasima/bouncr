@@ -23,6 +23,7 @@ const columns: ColumnDef<Permission>[] = [
 export function PermissionsAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.permission.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.permission.update);
 
   return (
     <AdminCrudPage
@@ -30,7 +31,8 @@ export function PermissionsAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
-      renderEditForm={(props) => <NameDescriptionForm {...props} />}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <NameDescriptionForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

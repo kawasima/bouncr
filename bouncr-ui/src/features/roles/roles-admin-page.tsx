@@ -37,10 +37,12 @@ function RoleEditForm({
   target,
   onSubmit,
   problem,
+  canUpdate = true,
 }: {
   target: Role | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }) {
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Set<number>>(
@@ -86,13 +88,15 @@ function RoleEditForm({
           <input id="description" {...register('description')} className="mansion-input w-full py-2" />
           {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
         </div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
+        {(!target || canUpdate) && (
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
       </form>
 
       {target && allPermissions.length > 0 && (
@@ -135,6 +139,7 @@ function RoleEditForm({
 export function RolesAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.role.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.role.update);
 
   return (
     <AdminCrudPage
@@ -142,7 +147,8 @@ export function RolesAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
-      renderEditForm={(props) => <RoleEditForm {...props} />}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <RoleEditForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

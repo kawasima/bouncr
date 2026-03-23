@@ -64,6 +64,11 @@ export const router = createBrowserRouter([
             element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.application.read]} />,
             children: [
               { path: ROUTES.APPLICATIONS, element: <ApplicationsAdminPage /> },
+            ],
+          },
+          {
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.realm.read]} />,
+            children: [
               { path: ROUTES.REALMS, element: <RealmsAdminPage /> },
             ],
           },

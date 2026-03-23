@@ -272,7 +272,7 @@ function UserEditForm({
           >
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
-          {!isCreate && (
+          {!isCreate && onDeleted && (
             <>
               {confirmDelete ? (
                 <div className="flex items-center gap-2">
@@ -317,6 +317,7 @@ function UserEditForm({
 export function UsersAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.user.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.user.update);
   const canDelete = hasPermission(...RESOURCE_PERMISSIONS.user.delete);
 
   return (
@@ -325,6 +326,7 @@ export function UsersAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
+      canUpdate={canUpdate}
       renderEditForm={(props) => (
         <UserEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
       )}

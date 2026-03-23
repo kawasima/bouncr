@@ -46,10 +46,12 @@ function OidcProviderEditForm({
   target,
   onSubmit,
   problem,
+  canUpdate = true,
 }: {
   target: OidcProvider | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcProviderFormData>({
     resolver: zodResolver(oidcProviderSchema),
@@ -100,13 +102,15 @@ function OidcProviderEditForm({
           PKCE Enabled
         </label>
       </div>
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-      >
-        {isSubmitting ? 'Saving...' : 'Save'}
-      </Button>
+      {(!target || canUpdate) && (
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+        >
+          {isSubmitting ? 'Saving...' : 'Save'}
+        </Button>
+      )}
     </form>
   );
 }
@@ -114,6 +118,7 @@ function OidcProviderEditForm({
 export function OidcProvidersAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcProvider.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcProvider.update);
 
   return (
     <AdminCrudPage
@@ -121,7 +126,8 @@ export function OidcProvidersAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
-      renderEditForm={(props) => <OidcProviderEditForm {...props} />}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <OidcProviderEditForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

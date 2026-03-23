@@ -362,7 +362,7 @@ function GroupEditFormWithUsers(props: {
       <NameDescriptionForm {...props} />
       <ProblemAlert problem={deleteProblem} />
 
-      {props.target && !isWriteProtected && (
+      {props.target && !isWriteProtected && props.onDeleted && (
         <div className="mt-6">
           {confirmDelete ? (
             <div className="flex items-center gap-2">
@@ -408,6 +408,7 @@ function GroupEditFormWithUsers(props: {
 export function GroupsAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.group.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.group.update);
   const canDelete = hasPermission(...RESOURCE_PERMISSIONS.group.delete);
 
   return (
@@ -416,6 +417,7 @@ export function GroupsAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
+      canUpdate={canUpdate}
       renderEditForm={(props) => (
         <GroupEditFormWithUsers {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
       )}

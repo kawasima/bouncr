@@ -342,14 +342,16 @@ function OidcAppEditForm({
       )}
 
       <div className="flex items-center gap-4">
-        <Button
-          type="submit"
-          disabled={isSubmitting || watchedGrants.length === 0}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
-        {!isCreate && (
+        {(!target || canUpdate) && (
+          <Button
+            type="submit"
+            disabled={isSubmitting || watchedGrants.length === 0}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
+        {!isCreate && onDeleted && (
           <>
             {confirmDelete ? (
               <div className="flex items-center gap-2">
@@ -413,6 +415,7 @@ export function OidcApplicationsAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
+      canUpdate={canUpdate}
       renderEditForm={(props) => (
         <OidcAppEditForm
           {...props}

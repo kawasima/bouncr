@@ -52,10 +52,12 @@ function AppEditForm({
   target,
   onSubmit,
   problem,
+  canUpdate = true,
 }: {
   target: Application | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<AppFormData>({
     resolver: zodResolver(appSchema),
@@ -100,13 +102,15 @@ function AppEditForm({
         <input id="top_page" {...register('top_page')} placeholder="/app/" className="mansion-input w-full py-2" />
         {errors.top_page && <p className="text-sm text-destructive">{errors.top_page.message}</p>}
       </div>
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-      >
-        {isSubmitting ? 'Saving...' : 'Save'}
-      </Button>
+      {(!target || canUpdate) && (
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+        >
+          {isSubmitting ? 'Saving...' : 'Save'}
+        </Button>
+      )}
     </form>
   );
 }
@@ -114,6 +118,7 @@ function AppEditForm({
 export function ApplicationsAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.application.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.application.update);
 
   return (
     <AdminCrudPage
@@ -121,7 +126,8 @@ export function ApplicationsAdminPage() {
       config={config}
       columns={columns}
       canCreate={canCreate}
-      renderEditForm={(props) => <AppEditForm {...props} />}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <AppEditForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

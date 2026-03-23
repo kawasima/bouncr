@@ -15,15 +15,17 @@ interface AdminCrudPageProps<T> {
   config: AdminCrudConfig<T>;
   columns: ColumnDef<T>[];
   canCreate?: boolean;
+  canUpdate?: boolean;
   renderEditForm: (props: {
     target: T | null;
     onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
     problem: Problem | null;
     onDeleted?: () => void;
+    canUpdate?: boolean;
   }) => ReactNode;
 }
 
-export function AdminCrudPage<T>({ title, config, columns, canCreate = true, renderEditForm }: AdminCrudPageProps<T>) {
+export function AdminCrudPage<T>({ title, config, columns, canCreate = true, canUpdate = true, renderEditForm }: AdminCrudPageProps<T>) {
   const crud = useAdminCrud(config);
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export function AdminCrudPage<T>({ title, config, columns, canCreate = true, ren
           onSubmit: crud.save,
           problem: crud.problem,
           onDeleted: () => { crud.exitEdit(); crud.loadList('', 0, false); },
+          canUpdate,
         })}
       </div>
     );
