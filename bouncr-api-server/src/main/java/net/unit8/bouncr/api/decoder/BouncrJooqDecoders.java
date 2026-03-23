@@ -140,11 +140,11 @@ public final class BouncrJooqDecoders {
     public static final Decoder<Record, UserSession> USER_SESSION = combine(
             field("user_session_id", long_()),
             field("token", string()),
-            optionalField("remote_address", string()),
-            optionalField("user_agent", string()),
+            optionalNullableField("remote_address", string()),
+            optionalNullableField("user_agent", string()),
             field("created_at", dateTime())
     ).map((sessionId, token, remoteAddr, userAgent, createdAt) -> new UserSession(
-            sessionId, null, token, remoteAddr.orElse(null), userAgent.orElse(null), createdAt));
+            sessionId, null, token, valueOf(remoteAddr), valueOf(userAgent), createdAt));
 
     public static final Decoder<Record, UserSession> USER_SESSION_WITH_USER = combine(
             field("user_session_id", long_()),
@@ -152,16 +152,16 @@ public final class BouncrJooqDecoders {
             field("account", string()),
             optionalField("write_protected", bool()),
             field("token", string()),
-            optionalField("remote_address", string()),
-            optionalField("user_agent", string()),
+            optionalNullableField("remote_address", string()),
+            optionalNullableField("user_agent", string()),
             field("created_at", dateTime())
     ).map((sessionId, userId, account, wp, token, remoteAddr, userAgent, createdAt) -> new UserSession(
             sessionId,
             new User(userId, account, wp.orElse(false),
                     null, null, null, null, null, null),
             token,
-            remoteAddr.orElse(null),
-            userAgent.orElse(null),
+            valueOf(remoteAddr),
+            valueOf(userAgent),
             createdAt));
 
     // --- UserAction ---
@@ -174,10 +174,7 @@ public final class BouncrJooqDecoders {
             optionalNullableField("options", string()),
             field("created_at", dateTime())
     ).map((id, actionId, actor, actorIp, options, createdAt) -> new UserAction(
-            id, ActionType.of(actionId), actor,
-            actorIp instanceof Presence.Present<String> p ? p.value() : null,
-            options instanceof Presence.Present<String> p ? p.value() : null,
-            createdAt));
+            id, ActionType.of(actionId), actor, valueOf(actorIp), valueOf(options), createdAt));
 
     // --- Invitation ---
 
@@ -249,17 +246,17 @@ public final class BouncrJooqDecoders {
     public static final Decoder<Record, UserProfileField> USER_PROFILE_FIELD = combine(
             field("user_profile_field_id", long_()),
             field("name", string()),
-            optionalField("json_name", string()),
+            optionalNullableField("json_name", string()),
             field("is_required", bool()),
             field("is_identity", bool()),
-            optionalField("regular_expression", string()),
-            optionalField("max_length", int_()),
-            optionalField("min_length", int_()),
+            optionalNullableField("regular_expression", string()),
+            optionalNullableField("max_length", int_()),
+            optionalNullableField("min_length", int_()),
             field("needs_verification", bool()),
             optionalField("position", int_())
     ).map((id, name, jsonName, isRequired, isIdentity, regex, maxLen, minLen, needsVerification, position) ->
-            new UserProfileField(id, name, jsonName.orElse(null), isRequired, isIdentity,
-                    regex.orElse(null), maxLen.orElse(null), minLen.orElse(null),
+            new UserProfileField(id, name, valueOf(jsonName), isRequired, isIdentity,
+                    valueOf(regex), valueOf(maxLen), valueOf(minLen),
                     needsVerification, position.orElse(null)));
 
     // --- OidcProvider ---
@@ -270,28 +267,28 @@ public final class BouncrJooqDecoders {
             optionalField("name_lower", string()),
             optionalField("client_id", string()),
             optionalField("client_secret", string()),
-            optionalField("scope", string()),
-            optionalField("response_type", string()),
+            optionalNullableField("scope", string()),
+            optionalNullableField("response_type", string()),
             optionalField("token_endpoint", string()),
             optionalField("authorization_endpoint", string()),
             optionalField("token_endpoint_auth_method", string()),
-            optionalField("redirect_uri", string()),
-            optionalField("jwks_uri", string()),
-            optionalField("issuer", string()),
+            optionalNullableField("redirect_uri", string()),
+            optionalNullableField("jwks_uri", string()),
+            optionalNullableField("issuer", string()),
             optionalField("pkce_enabled", bool())
     ).map((id, name, nameLower, clientId, clientSecret, scope, responseType,
            tokenEndpoint, authorizationEndpoint, authMethod, redirectUri, jwksUri, issuer, pkceEnabled) -> {
         return new OidcProvider(
                 id, name, nameLower.orElse(null),
                 clientId.orElse(null), clientSecret.orElse(null),
-                scope.orElse(null),
-                responseType.map(ResponseType::of).orElse(null),
+                valueOf(scope),
+                mapOf(responseType, ResponseType::of),
                 tokenEndpoint.orElse(null),
                 authorizationEndpoint.orElse(null),
                 authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
-                redirectUri.map(URI::create).orElse(null),
-                jwksUri.map(BouncrJooqDecoders::toUrl).orElse(null),
-                issuer.orElse(null),
+                mapOf(redirectUri, URI::create),
+                mapOf(jwksUri, BouncrJooqDecoders::toUrl),
+                valueOf(issuer),
                 pkceEnabled.orElse(false));
     });
 
@@ -308,8 +305,8 @@ public final class BouncrJooqDecoders {
             optionalField("home_url", string()),
             optionalField("callback_url", string()),
             optionalField("description", string()),
-            optionalField("backchannel_logout_uri", string()),
-            optionalField("frontchannel_logout_uri", string())
+            optionalNullableField("backchannel_logout_uri", string()),
+            optionalNullableField("frontchannel_logout_uri", string())
     ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey,
             homeUrl, callbackUrl, desc, backchannelLogoutUri, frontchannelLogoutUri) -> {
         return new OidcApplication(
@@ -319,10 +316,20 @@ public final class BouncrJooqDecoders {
                 homeUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
                 callbackUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
                 desc.orElse(null),
-                backchannelLogoutUri.map(BouncrJooqDecoders::toUrl).orElse(null),
-                frontchannelLogoutUri.map(BouncrJooqDecoders::toUrl).orElse(null),
+                mapOf(backchannelLogoutUri, BouncrJooqDecoders::toUrl),
+                mapOf(frontchannelLogoutUri, BouncrJooqDecoders::toUrl),
                 null);
     });
+
+    /** Extract value from Presence, returning null for Absent/PresentNull. */
+    private static <T> T valueOf(Presence<T> p) {
+        return p instanceof Presence.Present<T> present ? present.value() : null;
+    }
+
+    /** Extract and map value from Presence, returning null for Absent/PresentNull. */
+    private static <T, R> R mapOf(Presence<T> p, java.util.function.Function<T, R> f) {
+        return p instanceof Presence.Present<T> present ? f.apply(present.value()) : null;
+    }
 
     private static URL toUrl(String raw) {
         try {
