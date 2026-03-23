@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.Permission;
 import org.jooq.DSLContext;
@@ -10,9 +11,11 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
 import static org.jooq.impl.DSL.*;
@@ -47,10 +50,11 @@ public class OidcApplicationRepository {
         OidcApplication app = mapOidcApplication(rec);
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
+        Set<GrantType> grantTypes = loadGrantTypes(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
                 app.homeUrl(), app.callbackUrl(), app.description(),
-                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions));
+                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
     }
 
     /**
@@ -87,10 +91,11 @@ public class OidcApplicationRepository {
         OidcApplication app = mapOidcApplication(rec);
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
+        Set<GrantType> grantTypes = loadGrantTypes(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
                 app.homeUrl(), app.callbackUrl(), app.description(),
-                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions));
+                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
     }
 
     public List<OidcApplication> search(String q, int offset, int limit) {
@@ -226,6 +231,31 @@ public class OidcApplicationRepository {
         }
     }
 
+    public Set<GrantType> loadGrantTypes(Long oidcApplicationId) {
+        List<String> values = dsl.select(field("grant_type", String.class))
+                .from(table("oidc_application_grant_types"))
+                .where(field("oidc_application_id").eq(oidcApplicationId))
+                .fetch(rec -> rec.get(field("grant_type", String.class)));
+        if (values.isEmpty()) return Set.of();
+        EnumSet<GrantType> result = EnumSet.noneOf(GrantType.class);
+        for (String v : values) {
+            GrantType.fromString(v).ifPresent(result::add);
+        }
+        return result;
+    }
+
+    public void setGrantTypes(Long oidcApplicationId, Set<GrantType> grantTypes) {
+        dsl.deleteFrom(table("oidc_application_grant_types"))
+                .where(field("oidc_application_id").eq(oidcApplicationId))
+                .execute();
+        for (GrantType gt : grantTypes) {
+            dsl.insertInto(table("oidc_application_grant_types"),
+                            field("oidc_application_id"), field("grant_type"))
+                    .values(oidcApplicationId, gt.getValue())
+                    .execute();
+        }
+    }
+
     public void delete(String name) {
         dsl.deleteFrom(table("oidc_applications"))
                 .where(field("name").eq(name))
@@ -266,7 +296,7 @@ public class OidcApplicationRepository {
                     rec.get(field("description", String.class)),
                     toOptionalUrl(backchannelLogoutUri, "backchannel_logout_uri", appName),
                     toOptionalUrl(frontchannelLogoutUri, "frontchannel_logout_uri", appName),
-                    null
+                    null, null
             );
         } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to map OidcApplication record", e);

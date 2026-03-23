@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -115,10 +116,11 @@ public class OidcApplicationResource {
                 updateRequest.hasBackchannelLogoutUri(),
                 updateRequest.hasFrontchannelLogoutUri()
         );
+        Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
         if (updateRequest.permissions() != null) {
-            Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
             repo.setPermissions(appId, updateRequest.permissions());
         }
+        repo.setGrantTypes(appId, GrantType.parseAll(updateRequest.grantTypes()));
         return OidcApplicationResponse.of(repo.findByName(updateRequest.name()).orElseThrow());
     }
 

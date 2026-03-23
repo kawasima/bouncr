@@ -1,6 +1,9 @@
 package net.unit8.bouncr.api.boundary;
 
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
+
+import java.util.List;
 
 /**
  * Response returned once after creating an OIDC application.
@@ -15,7 +18,8 @@ public record OidcApplicationCreatedResponse(
         String callback_url,
         String description,
         String backchannel_logout_uri,
-        String frontchannel_logout_uri
+        String frontchannel_logout_uri,
+        List<String> grant_types
 ) {
     public static OidcApplicationCreatedResponse of(OidcApplication app, String plaintextSecret) {
         return new OidcApplicationCreatedResponse(
@@ -27,6 +31,9 @@ public record OidcApplicationCreatedResponse(
                 app.callbackUrl() != null ? app.callbackUrl().toString() : null,
                 app.description(),
                 app.backchannelLogoutUri() != null ? app.backchannelLogoutUri().toString() : null,
-                app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null);
+                app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null,
+                app.grantTypes() != null
+                        ? app.grantTypes().stream().map(GrantType::getValue).toList()
+                        : List.of());
     }
 }

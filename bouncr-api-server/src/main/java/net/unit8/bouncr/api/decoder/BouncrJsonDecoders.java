@@ -8,6 +8,7 @@ import net.unit8.bouncr.data.UserProfileField;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.json.JsonDecoder;
 import tools.jackson.databind.JsonNode;
@@ -260,36 +261,62 @@ public final class BouncrJsonDecoders {
                     jwks.orElse(null), iss.orElse(null), pkce.orElse(false)))::decode;
 
     // ===== OIDC Application =====
-    public record OidcApplicationCreate(String name, String homeUrl, String callbackUrl, String description,
+    public record OidcApplicationCreate(String name, List<String> grantTypes,
+                                        String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions) {}
-    public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = combine(
+    public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = (in, path) -> combine(
             field("name", WORD_NAME),
-            field("home_url", string().nonBlank()),
-            field("callback_url", string().nonBlank()),
-            field("description", string().nonBlank()),
+            field("grant_types", list(string())),
+            optionalField("home_url", string().maxLength(2048)),
+            optionalField("callback_url", string().maxLength(2048)),
+            optionalField("description", string().maxLength(500)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, bcu, fcu, perms) ->
-            new OidcApplicationCreate(name, hu, cu, desc, bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))::decode;
+    ).map((name, gt, hu, cu, desc, bcu, fcu, perms) ->
+            new OidcApplicationCreate(name, gt, hu.orElse(null), cu.orElse(null), desc.orElse(null),
+                    bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))
+    .<OidcApplicationCreate>flatMap(app -> {
+        if (app.grantTypes().isEmpty()) {
+            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
+            return Result.fail(Path.ROOT.append("callback_url"), "required",
+                    "callback_url is required when authorization_code grant is enabled");
+        }
+        return Result.ok(app);
+    })
+    .decode(in, path);
 
-    public record OidcApplicationUpdate(String name, String homeUrl, String callbackUrl, String description,
+    public record OidcApplicationUpdate(String name, List<String> grantTypes,
+                                        String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions,
                                         boolean hasBackchannelLogoutUri, boolean hasFrontchannelLogoutUri) {}
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = (in, path) -> combine(
             field("name", WORD_NAME),
-            field("home_url", string().nonBlank()),
-            field("callback_url", string().nonBlank()),
-            field("description", string().nonBlank()),
+            field("grant_types", list(string())),
+            optionalField("home_url", string().maxLength(2048)),
+            optionalField("callback_url", string().maxLength(2048)),
+            optionalField("description", string().maxLength(500)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
-            name, hu, cu, desc,
+    ).map((name, gt, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
+            name, gt, hu.orElse(null), cu.orElse(null), desc.orElse(null),
             bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of()),
             in.has("backchannel_logout_uri"), in.has("frontchannel_logout_uri")))
+    .<OidcApplicationUpdate>flatMap(app -> {
+        if (app.grantTypes().isEmpty()) {
+            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
+            return Result.fail(Path.ROOT.append("callback_url"), "required",
+                    "callback_url is required when authorization_code grant is enabled");
+        }
+        return Result.ok(app);
+    })
     .decode(in, path);
 
     // ===== Sign Up =====

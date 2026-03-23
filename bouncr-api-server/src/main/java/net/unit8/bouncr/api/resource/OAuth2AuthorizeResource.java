@@ -16,6 +16,7 @@ import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.PkceChallenge;
@@ -77,6 +78,13 @@ public class OAuth2AuthorizeResource {
         OidcApplication app = repo.findByClientId(authorizeRequest.clientId()).orElse(null);
         if (app == null) {
             context.put(NOT_FOUND_RESPONSE, oauthError(OAuth2Error.INVALID_CLIENT, "Unknown client_id"));
+            return false;
+        }
+
+        if (app.grantTypes() != null && !app.grantTypes().contains(GrantType.AUTHORIZATION_CODE)) {
+            context.put(NOT_FOUND_RESPONSE,
+                    oauthError(OAuth2Error.UNAUTHORIZED_CLIENT,
+                            "This client is not authorized for authorization_code grant"));
             return false;
         }
 

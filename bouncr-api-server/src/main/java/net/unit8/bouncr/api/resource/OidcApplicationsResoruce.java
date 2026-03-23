@@ -14,6 +14,7 @@ import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
@@ -134,6 +135,8 @@ public class OidcApplicationsResoruce {
         if (createRequest.permissions() != null && !createRequest.permissions().isEmpty()) {
             repo.setPermissions(app.id(), createRequest.permissions());
         }
+
+        repo.setGrantTypes(app.id(), GrantType.parseAll(createRequest.grantTypes()));
 
         // Return plaintext client_secret once (never stored or retrievable again)
         OidcApplication saved = repo.findByName(createRequest.name()).orElse(app);

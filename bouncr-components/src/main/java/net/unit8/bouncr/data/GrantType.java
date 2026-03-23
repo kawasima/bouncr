@@ -1,7 +1,10 @@
 package net.unit8.bouncr.data;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * OAuth2 grant types supported by the Bouncr Identity Provider.
@@ -46,5 +49,17 @@ public enum GrantType {
         return Arrays.stream(values())
                 .filter(gt -> gt.value.equals(s))
                 .findFirst();
+    }
+
+    /**
+     * Parses a collection of grant_type strings into a {@code Set<GrantType>}.
+     * Unknown values are silently ignored.
+     */
+    public static Set<GrantType> parseAll(Collection<String> values) {
+        EnumSet<GrantType> result = EnumSet.noneOf(GrantType.class);
+        for (String v : values) {
+            fromString(v).ifPresent(result::add);
+        }
+        return result;
     }
 }

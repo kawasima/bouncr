@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.boundary;
 
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.Permission;
 
@@ -18,7 +19,8 @@ public record OidcApplicationResponse(
         String description,
         String backchannel_logout_uri,
         String frontchannel_logout_uri,
-        List<Permission> permissions
+        List<Permission> permissions,
+        List<String> grant_types
 ) {
     public static OidcApplicationResponse of(OidcApplication app) {
         return new OidcApplicationResponse(
@@ -30,6 +32,9 @@ public record OidcApplicationResponse(
                 app.description(),
                 app.backchannelLogoutUri() != null ? app.backchannelLogoutUri().toString() : null,
                 app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null,
-                app.permissions() != null ? app.permissions() : List.of());
+                app.permissions() != null ? app.permissions() : List.of(),
+                app.grantTypes() != null
+                        ? app.grantTypes().stream().map(GrantType::getValue).toList()
+                        : List.of());
     }
 }
