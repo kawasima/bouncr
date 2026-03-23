@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.api.repository.OidcApplicationRepository.NullableUpdate;
 import net.unit8.bouncr.api.resource.MockFactory;
 import net.unit8.bouncr.data.OidcApplication;
 import org.jooq.DSLContext;
@@ -52,35 +53,20 @@ class OidcApplicationRepositoryTest {
     }
 
     @Test
-    void update_overwritesLogoutUris() {
-        repo.insert(
-                "oidc-app-b",
-                "client-b",
-                "secret-b",
-                new byte[]{1},
-                new byte[]{2},
-                "https://client-b.example",
-                "https://client-b.example/callback",
+    void updateProfile_overwritesAllFields() {
+        repo.insert("oidc-app-b", "client-b", "secret-b",
+                new byte[]{1}, new byte[]{2},
+                "https://client-b.example", "https://client-b.example/callback",
                 "desc-b",
                 "https://client-b.example/backchannel-logout",
-                "https://client-b.example/frontchannel-logout"
-        );
+                "https://client-b.example/frontchannel-logout");
 
-        repo.update(
-                "oidc-app-b",
-                "oidc-app-b",
-                null,
-                null,
-                null,
-                null,
-                "https://client-b.example/home-new",
-                "https://client-b.example/callback-new",
-                "desc-b-new",
-                "https://client-b.example/backchannel-logout-new",
-                "https://client-b.example/frontchannel-logout-new",
-                true,
-                true
-        );
+        repo.updateProfile("oidc-app-b", "oidc-app-b",
+                NullableUpdate.of("https://client-b.example/home-new"),
+                NullableUpdate.of("https://client-b.example/callback-new"),
+                NullableUpdate.of("desc-b-new"),
+                NullableUpdate.of("https://client-b.example/backchannel-logout-new"),
+                NullableUpdate.of("https://client-b.example/frontchannel-logout-new"));
 
         OidcApplication updated = repo.findByName("oidc-app-b").orElseThrow();
         assertThat(updated.homeUrl().toString()).isEqualTo("https://client-b.example/home-new");
@@ -92,39 +78,23 @@ class OidcApplicationRepositoryTest {
     }
 
     @Test
-    void update_doesNotClearLogoutUrisWhenOmitted() {
-        repo.insert(
-                "oidc-app-c",
-                "client-c",
-                "secret-c",
-                new byte[]{1},
-                new byte[]{2},
-                "https://client-c.example",
-                "https://client-c.example/callback",
+    void updateProfile_absentFieldsLeftUnchanged() {
+        repo.insert("oidc-app-c", "client-c", "secret-c",
+                new byte[]{1}, new byte[]{2},
+                "https://client-c.example", "https://client-c.example/callback",
                 "desc-c",
                 "https://client-c.example/backchannel-logout",
-                "https://client-c.example/frontchannel-logout"
-        );
+                "https://client-c.example/frontchannel-logout");
 
-        repo.update(
-                "oidc-app-c",
-                "oidc-app-c",
-                null,
-                null,
-                null,
-                null,
-                "https://client-c.example/home-new",
-                "https://client-c.example/callback-new",
-                "desc-c-new",
-                null,
-                null,
-                false,
-                false
-        );
+        repo.updateProfile("oidc-app-c", "oidc-app-c",
+                NullableUpdate.of("https://client-c.example/home-new"),
+                NullableUpdate.of("https://client-c.example/callback-new"),
+                NullableUpdate.of("desc-c-new"),
+                NullableUpdate.absent(),
+                NullableUpdate.absent());
 
         OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
         assertThat(updated.homeUrl().toString()).isEqualTo("https://client-c.example/home-new");
-        assertThat(updated.callbackUrl().toString()).isEqualTo("https://client-c.example/callback-new");
         assertThat(updated.backchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/backchannel-logout");
         assertThat(updated.frontchannelLogoutUri().toString())
@@ -132,55 +102,49 @@ class OidcApplicationRepositoryTest {
     }
 
     @Test
-    void update_clearsLogoutUrisWhenFieldIsExplicitlySet() {
-        repo.insert(
-                "oidc-app-e",
-                "client-e",
-                "secret-e",
-                new byte[]{1},
-                new byte[]{2},
-                "https://client-e.example",
-                "https://client-e.example/callback",
+    void updateProfile_clearsNullableFieldsWhenSetToNull() {
+        repo.insert("oidc-app-e", "client-e", "secret-e",
+                new byte[]{1}, new byte[]{2},
+                "https://client-e.example", "https://client-e.example/callback",
                 "desc-e",
                 "https://client-e.example/backchannel-logout",
-                "https://client-e.example/frontchannel-logout"
-        );
+                "https://client-e.example/frontchannel-logout");
 
-        repo.update(
-                "oidc-app-e",
-                "oidc-app-e",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                true,
-                true
-        );
+        repo.updateProfile("oidc-app-e", "oidc-app-e",
+                NullableUpdate.of(null),
+                NullableUpdate.of(null),
+                NullableUpdate.of(null),
+                NullableUpdate.of(null),
+                NullableUpdate.of(null));
 
         OidcApplication updated = repo.findByName("oidc-app-e").orElseThrow();
+        assertThat(updated.homeUrl()).isNull();
+        assertThat(updated.callbackUrl()).isNull();
+        assertThat(updated.description()).isNull();
         assertThat(updated.backchannelLogoutUri()).isNull();
         assertThat(updated.frontchannelLogoutUri()).isNull();
     }
 
     @Test
+    void updateClientSecret_onlyChangesSecret() {
+        repo.insert("oidc-app-f", "client-f", "old-secret",
+                new byte[]{1}, new byte[]{2},
+                "https://client-f.example", "https://client-f.example/callback",
+                "desc-f", null, null);
+
+        repo.updateClientSecret("oidc-app-f", "new-secret");
+
+        OidcApplication updated = repo.findByName("oidc-app-f").orElseThrow();
+        assertThat(updated.clientSecret()).isEqualTo("new-secret");
+        assertThat(updated.homeUrl().toString()).isEqualTo("https://client-f.example");
+    }
+
+    @Test
     void findByName_treatsBlankLogoutUrisAsNull() {
-        repo.insert(
-                "oidc-app-d",
-                "client-d",
-                "secret-d",
-                new byte[]{1},
-                new byte[]{2},
-                "https://client-d.example",
-                "https://client-d.example/callback",
-                "desc-d",
-                "",
-                "   "
-        );
+        repo.insert("oidc-app-d", "client-d", "secret-d",
+                new byte[]{1}, new byte[]{2},
+                "https://client-d.example", "https://client-d.example/callback",
+                "desc-d", "", "   ");
 
         OidcApplication found = repo.findByName("oidc-app-d").orElseThrow();
         assertThat(found.backchannelLogoutUri()).isNull();

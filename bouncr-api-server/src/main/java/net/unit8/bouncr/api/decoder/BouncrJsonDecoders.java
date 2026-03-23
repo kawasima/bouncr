@@ -8,6 +8,7 @@ import net.unit8.bouncr.data.UserProfileField;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.json.JsonDecoder;
 import tools.jackson.databind.JsonNode;
@@ -260,36 +261,54 @@ public final class BouncrJsonDecoders {
                     jwks.orElse(null), iss.orElse(null), pkce.orElse(false)))::decode;
 
     // ===== OIDC Application =====
-    public record OidcApplicationCreate(String name, String homeUrl, String callbackUrl, String description,
+    public record OidcApplicationCreate(String name, List<String> grantTypes,
+                                        String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions) {}
-    public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = combine(
+    public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = (in, path) -> combine(
             field("name", WORD_NAME),
-            field("home_url", string().nonBlank()),
-            field("callback_url", string().nonBlank()),
-            field("description", string().nonBlank()),
+            field("grant_types", list(string())),
+            optionalField("home_url", string().maxLength(2048)),
+            optionalField("callback_url", string().maxLength(2048)),
+            optionalField("description", string().maxLength(255)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, bcu, fcu, perms) ->
-            new OidcApplicationCreate(name, hu, cu, desc, bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))::decode;
+    ).map((name, gt, hu, cu, desc, bcu, fcu, perms) ->
+            new OidcApplicationCreate(name, gt,
+                    blankToNull(hu.orElse(null)), blankToNull(cu.orElse(null)),
+                    blankToNull(desc.orElse(null)),
+                    blankToNull(bcu.orElse(null)), blankToNull(fcu.orElse(null)),
+                    perms.orElse(List.of())))
+    .<OidcApplicationCreate>flatMap(app -> validateOidcAppGrantTypes(
+            app.grantTypes(), app.callbackUrl(), app.homeUrl()).map(v -> app))
+    .decode(in, path);
 
-    public record OidcApplicationUpdate(String name, String homeUrl, String callbackUrl, String description,
+    public record OidcApplicationUpdate(String name, List<String> grantTypes,
+                                        String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions,
+                                        boolean hasHomeUrl, boolean hasCallbackUrl, boolean hasDescription,
                                         boolean hasBackchannelLogoutUri, boolean hasFrontchannelLogoutUri) {}
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = (in, path) -> combine(
             field("name", WORD_NAME),
-            field("home_url", string().nonBlank()),
-            field("callback_url", string().nonBlank()),
-            field("description", string().nonBlank()),
+            field("grant_types", list(string())),
+            optionalField("home_url", string().maxLength(2048)),
+            optionalField("callback_url", string().maxLength(2048)),
+            optionalField("description", string().maxLength(255)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
-            name, hu, cu, desc,
-            bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of()),
+    ).map((name, gt, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
+            name, gt,
+            blankToNull(hu.orElse(null)), blankToNull(cu.orElse(null)),
+            blankToNull(desc.orElse(null)),
+            blankToNull(bcu.orElse(null)), blankToNull(fcu.orElse(null)),
+            perms.orElse(List.of()),
+            in.has("home_url"), in.has("callback_url"), in.has("description"),
             in.has("backchannel_logout_uri"), in.has("frontchannel_logout_uri")))
+    .<OidcApplicationUpdate>flatMap(app -> validateOidcAppGrantTypes(
+            app.grantTypes(), app.callbackUrl(), app.homeUrl()).map(v -> app))
     .decode(in, path);
 
     // ===== Sign Up =====
@@ -365,4 +384,47 @@ public final class BouncrJsonDecoders {
     public static final JsonDecoder<WebAuthnSignInOptions> WEBAUTHN_SIGN_IN_OPTIONS =
             optionalField("account", string().maxLength(100))
                     .map(acc -> new WebAuthnSignInOptions(acc.orElse(null)))::decode;
+
+    // ===== OIDC Application helpers =====
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    private static Result<Void> validateOidcAppGrantTypes(List<String> grantTypes, String callbackUrl, String homeUrl) {
+        if (grantTypes.isEmpty()) {
+            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        for (String gt : grantTypes) {
+            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
+                return Result.fail(Path.ROOT.append("grant_types"), "invalid", "unknown grant_type: " + gt);
+            }
+        }
+        if (grantTypes.contains("authorization_code") && (callbackUrl == null || callbackUrl.isBlank())) {
+            return Result.fail(Path.ROOT.append("callback_url"), "required",
+                    "callback_url is required when authorization_code grant is enabled");
+        }
+        // Validate URLs are absolute http(s)
+        if (callbackUrl != null) {
+            Result<Void> r = validateHttpUrl(callbackUrl, "callback_url");
+            if (r instanceof net.unit8.raoh.Err) return r;
+        }
+        if (homeUrl != null) {
+            Result<Void> r = validateHttpUrl(homeUrl, "home_url");
+            if (r instanceof net.unit8.raoh.Err) return r;
+        }
+        return Result.ok(null);
+    }
+
+    private static Result<Void> validateHttpUrl(String url, String fieldName) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            if (!uri.isAbsolute() || (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme()))) {
+                return Result.fail(Path.ROOT.append(fieldName), "invalid", "must be an absolute http or https URL");
+            }
+        } catch (IllegalArgumentException e) {
+            return Result.fail(Path.ROOT.append(fieldName), "invalid", "not a valid URI");
+        }
+        return Result.ok(null);
+    }
 }

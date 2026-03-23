@@ -9,6 +9,7 @@ import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.Scope;
 import org.jooq.DSLContext;
@@ -78,7 +79,7 @@ class OAuth2AuthorizeResourceTest {
     @Test
     void exists_redirectUriMismatch_returnsInvalidRequestErrorViaHandleNotFound() {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        repo.insert(
+        OidcApplication app = repo.insert(
                 "test-app",
                 "client-1",
                 "secret-1",
@@ -89,6 +90,9 @@ class OAuth2AuthorizeResourceTest {
                 "test app",
                 null,
                 null);
+        repo.setGrantTypes(app.id(), java.util.EnumSet.of(
+                net.unit8.bouncr.data.GrantType.AUTHORIZATION_CODE,
+                net.unit8.bouncr.data.GrantType.REFRESH_TOKEN));
 
         RestContext context = restContext();
         AuthorizeRequest request = new AuthorizeRequest(

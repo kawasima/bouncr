@@ -152,6 +152,10 @@ export function updateRole(name: string, data: NameDescriptionRequest) {
   });
 }
 
+export function getRolePermissions(roleName: string) {
+  return apiRequest<Permission[]>(`/role/${encodeURIComponent(roleName)}/permissions`, {});
+}
+
 export function updateRolePermissions(roleName: string, permissions: Permission[]) {
   return apiRequest<void>(`/role/${encodeURIComponent(roleName)}/permissions`, {
     method: 'PUT',
@@ -393,6 +397,12 @@ export function updateOidcApplication(name: string, data: OidcApplicationUpdateR
 export function deleteOidcApplication(name: string) {
   return apiRequest<void>(`/oidc_application/${encodeURIComponent(name)}`, {
     method: 'DELETE',
+  });
+}
+
+export function regenerateOidcApplicationSecret(name: string) {
+  return apiRequest<{ client_id: string; client_secret: string }>(`/oidc_application/${encodeURIComponent(name)}/secret`, {
+    method: 'POST',
   });
 }
 

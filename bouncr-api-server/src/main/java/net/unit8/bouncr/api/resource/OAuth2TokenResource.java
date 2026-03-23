@@ -19,6 +19,7 @@ import net.unit8.bouncr.api.service.OidcClaimMapper;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OAuth2RefreshToken;
 import net.unit8.bouncr.data.OidcApplication;
@@ -144,6 +145,19 @@ public class OAuth2TokenResource {
     public boolean doPost(TokenRequest tokenRequest, OidcApplication oidcApplication,
                           RestContext context, DSLContext dsl) {
         String clientId = oidcApplication.clientId();
+
+        // Check if the requested grant type is allowed for this application
+        GrantType requestedGrant = switch (tokenRequest) {
+            case AuthorizationCodeGrant ignored -> GrantType.AUTHORIZATION_CODE;
+            case RefreshTokenGrant ignored -> GrantType.REFRESH_TOKEN;
+            case ClientCredentialsGrant ignored -> GrantType.CLIENT_CREDENTIALS;
+        };
+        if (oidcApplication.grantTypes() != null && !oidcApplication.grantTypes().contains(requestedGrant)) {
+            context.put(TOKEN_RESPONSE, tokenError(OAuth2Error.UNAUTHORIZED_CLIENT,
+                    "This client is not authorized for " + requestedGrant.getValue() + " grant"));
+            return true;
+        }
+
         ApiResponse response = switch (tokenRequest) {
             case AuthorizationCodeGrant grant -> handleAuthorizationCode(grant, oidcApplication, clientId, dsl);
             case RefreshTokenGrant grant -> handleRefreshToken(grant, oidcApplication, clientId);

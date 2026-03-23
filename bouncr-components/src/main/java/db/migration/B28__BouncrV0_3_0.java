@@ -295,9 +295,9 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                     .column(field("client_secret", SQLDataType.VARCHAR(512).nullable(false)))
                     .column(field("private_key", SQLDataType.VARBINARY(10000).nullable(false)))
                     .column(field("public_key", SQLDataType.VARBINARY(10000).nullable(false)))
-                    .column(field("home_url", SQLDataType.VARCHAR(100).nullable(false)))
-                    .column(field("callback_url", SQLDataType.VARCHAR(100).nullable(false)))
-                    .column(field("description", SQLDataType.VARCHAR(255).nullable(false)))
+                    .column(field("home_url", SQLDataType.VARCHAR(2048)))
+                    .column(field("callback_url", SQLDataType.VARCHAR(2048)))
+                    .column(field("description", SQLDataType.VARCHAR(255)))
                     .column(field("name_lower", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("backchannel_logout_uri", SQLDataType.VARCHAR(2048)))
                     .column(field("frontchannel_logout_uri", SQLDataType.VARCHAR(2048)))
@@ -315,6 +315,15 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                                     .references(table("oidc_applications"), field("oidc_application_id")).onDeleteCascade(),
                             constraint().foreignKey(field("permission_id"))
                                     .references(table("permissions"), field("permission_id")).onDeleteCascade()
+                    ).getSQL());
+
+            stmt.execute(create.createTable(table("oidc_application_grant_types"))
+                    .column(field("oidc_application_id", SQLDataType.BIGINT.nullable(false)))
+                    .column(field("grant_type", SQLDataType.VARCHAR(30).nullable(false)))
+                    .constraints(
+                            constraint().primaryKey(field("oidc_application_id"), field("grant_type")),
+                            constraint().foreignKey(field("oidc_application_id"))
+                                    .references(table("oidc_applications"), field("oidc_application_id")).onDeleteCascade()
                     ).getSQL());
 
             stmt.execute(create.createTable(table("invitations"))

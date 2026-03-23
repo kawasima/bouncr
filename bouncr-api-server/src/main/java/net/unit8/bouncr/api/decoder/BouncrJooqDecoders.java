@@ -341,7 +341,7 @@ public final class BouncrJooqDecoders {
                 desc.orElse(null),
                 mapOf(backchannelLogoutUri, BouncrJooqDecoders::toUrl),
                 mapOf(frontchannelLogoutUri, BouncrJooqDecoders::toUrl),
-                null);
+                null, null);
     });
 
     /** Extract value from Presence, returning null for Absent/PresentNull. */

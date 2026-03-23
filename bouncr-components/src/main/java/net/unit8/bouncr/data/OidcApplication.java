@@ -2,6 +2,7 @@ package net.unit8.bouncr.data;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Set;
 
 /**
  * OIDC client application registered in Bouncr.
@@ -19,6 +20,7 @@ import java.util.List;
  * @param backchannelLogoutUri OIDC back-channel logout endpoint
  * @param frontchannelLogoutUri OIDC front-channel logout endpoint
  * @param permissions permissions granted to this client
+ * @param grantTypes allowed OAuth2 grant types
  */
 public record OidcApplication(
     Long id,
@@ -33,5 +35,6 @@ public record OidcApplication(
     String description,
     URL backchannelLogoutUri,
     URL frontchannelLogoutUri,
-    List<Permission> permissions
+    List<Permission> permissions,
+    Set<GrantType> grantTypes
 ) {}

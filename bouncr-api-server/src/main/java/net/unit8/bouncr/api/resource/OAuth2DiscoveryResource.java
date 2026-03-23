@@ -7,6 +7,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import org.jooq.DSLContext;
 
@@ -57,7 +58,10 @@ public class OAuth2DiscoveryResource {
                 Map.entry("introspection_endpoint", baseUrl + "/oauth2/token/introspect"),
                 Map.entry("jwks_uri", issuer + "/certs"),
                 Map.entry("response_types_supported", List.of("code")),
-                Map.entry("grant_types_supported", List.of("authorization_code", "refresh_token", "client_credentials")),
+                Map.entry("grant_types_supported",
+                        oidcApplication.grantTypes() != null
+                                ? oidcApplication.grantTypes().stream().map(GrantType::getValue).toList()
+                                : GrantType.DEFAULT_GRANT_TYPES),
                 Map.entry("subject_types_supported", List.of("public")),
                 Map.entry("id_token_signing_alg_values_supported", List.of("RS256")),
                 Map.entry("scopes_supported", List.of("openid", "profile", "email")),

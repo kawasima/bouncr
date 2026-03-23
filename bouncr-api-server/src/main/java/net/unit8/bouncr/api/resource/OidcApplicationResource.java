@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
+import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -100,25 +101,22 @@ public class OidcApplicationResource {
     @Decision(PUT)
     public OidcApplicationResponse update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        repo.update(
+        repo.updateProfile(
                 oidcApplication.name(),
                 updateRequest.name(),
-                null, // clientId not updated
-                null, // clientSecret not updated
-                null, // privateKey not updated
-                null, // publicKey not updated
-                updateRequest.homeUrl(),
-                updateRequest.callbackUrl(),
-                updateRequest.description(),
-                LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri()),
-                LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()),
-                updateRequest.hasBackchannelLogoutUri(),
-                updateRequest.hasFrontchannelLogoutUri()
+                nullable(updateRequest.hasHomeUrl(), updateRequest.homeUrl()),
+                nullable(updateRequest.hasCallbackUrl(), updateRequest.callbackUrl()),
+                nullable(updateRequest.hasDescription(), updateRequest.description()),
+                nullable(updateRequest.hasBackchannelLogoutUri(),
+                        LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri())),
+                nullable(updateRequest.hasFrontchannelLogoutUri(),
+                        LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()))
         );
+        Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
         if (updateRequest.permissions() != null) {
-            Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
             repo.setPermissions(appId, updateRequest.permissions());
         }
+        repo.setGrantTypes(appId, GrantType.parseAll(updateRequest.grantTypes()));
         return OidcApplicationResponse.of(repo.findByName(updateRequest.name()).orElseThrow());
     }
 
@@ -127,5 +125,9 @@ public class OidcApplicationResource {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.delete(oidcApplication.name());
         return null;
+    }
+
+    private static <T> OidcApplicationRepository.NullableUpdate<T> nullable(boolean present, T value) {
+        return present ? OidcApplicationRepository.NullableUpdate.of(value) : OidcApplicationRepository.NullableUpdate.absent();
     }
 }
