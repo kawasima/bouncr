@@ -336,6 +336,7 @@ function GroupEditFormWithUsers(props: {
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -359,7 +360,7 @@ function GroupEditFormWithUsers(props: {
 
   return (
     <div>
-      <NameDescriptionForm {...props} />
+      <NameDescriptionForm target={props.target} onSubmit={props.onSubmit} problem={props.problem} canUpdate={props.canUpdate} />
       <ProblemAlert problem={deleteProblem} />
 
       {props.target && !isWriteProtected && props.onDeleted && (
@@ -419,7 +420,7 @@ export function GroupsAdminPage() {
       canCreate={canCreate}
       canUpdate={canUpdate}
       renderEditForm={(props) => (
-        <GroupEditFormWithUsers {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
+        <GroupEditFormWithUsers {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
       )}
     />
   );

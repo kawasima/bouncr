@@ -49,7 +49,11 @@ export function AdminCrudPage<T>({ title, config, columns, canCreate = true, can
         </div>
         {renderEditForm({
           target: crud.editTarget,
-          onSubmit: crud.save,
+          onSubmit: async (data) => {
+            if (crud.editTarget && !canUpdate) return false;
+            if (!crud.editTarget && !canCreate) return false;
+            return crud.save(data);
+          },
           problem: crud.problem,
           onDeleted: () => { crud.exitEdit(); crud.loadList('', 0, false); },
           canUpdate,

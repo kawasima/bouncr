@@ -12,11 +12,20 @@ const menuItems = [
   { label: 'OIDC Applications', path: ROUTES.OIDC_APPLICATIONS, permissions: RESOURCE_PERMISSIONS.oidcApplication.read },
   { label: 'OIDC Providers', path: ROUTES.OIDC_PROVIDERS, permissions: RESOURCE_PERMISSIONS.oidcProvider.read },
   { label: 'Invitations', path: ROUTES.INVITATIONS, permissions: RESOURCE_PERMISSIONS.invitation.create },
-  { label: 'Audit', path: ROUTES.AUDIT, permissions: RESOURCE_PERMISSIONS.user.read },
+  { label: 'Audit', path: ROUTES.AUDIT, permissions: ['any_user:read'] },
 ] as const;
 
 export function AdminMenu() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading } = usePermissions();
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <h3 className="mansion-heading text-xs">Administration</h3>
+        <div className="mansion-divider" />
+      </div>
+    );
+  }
 
   const visibleItems = menuItems.filter((item) => hasPermission(...item.permissions));
   if (visibleItems.length === 0) return null;

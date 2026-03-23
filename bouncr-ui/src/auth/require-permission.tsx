@@ -7,9 +7,19 @@ interface RequirePermissionProps {
 }
 
 export function RequirePermission({ permissions }: RequirePermissionProps) {
-  const { hasPermission, loading } = usePermissions();
+  const { hasPermission, loading, error } = usePermissions();
 
   if (loading) return <LoadingSpinner />;
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="mansion-card p-8 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">Failed to load permissions. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasPermission(...permissions)) {
     return (

@@ -51,6 +51,11 @@ export const router = createBrowserRouter([
             element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.user.read]} />,
             children: [
               { path: ROUTES.USERS, element: <UsersAdminPage /> },
+            ],
+          },
+          {
+            element: <RequirePermission permissions={['any_user:read']} />,
+            children: [
               { path: ROUTES.AUDIT, element: <AuditPage /> },
             ],
           },

@@ -124,11 +124,13 @@ function UserEditForm({
   onSubmit,
   problem,
   onDeleted,
+  canUpdate = true,
 }: {
   target: User | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const isCreate = !target;
   const [enablePassword, setEnablePassword] = useState(false);
@@ -265,6 +267,7 @@ function UserEditForm({
         )}
 
         <div className="flex items-center gap-4">
+          {(isCreate || canUpdate) && (
           <Button
             type="submit"
             disabled={isSubmitting}
@@ -272,6 +275,7 @@ function UserEditForm({
           >
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
+          )}
           {!isCreate && onDeleted && (
             <>
               {confirmDelete ? (
@@ -328,7 +332,7 @@ export function UsersAdminPage() {
       canCreate={canCreate}
       canUpdate={canUpdate}
       renderEditForm={(props) => (
-        <UserEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
+        <UserEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
       )}
     />
   );

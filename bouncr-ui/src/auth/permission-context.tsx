@@ -5,6 +5,7 @@ import * as api from '@/api/endpoints';
 interface PermissionContextValue {
   permissions: string[];
   loading: boolean;
+  error: boolean;
   hasPermission: (...names: string[]) => boolean;
 }
 
@@ -14,17 +15,23 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const { account, isAuthenticated } = useAuth();
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !account) {
       setPermissions([]);
       setLoading(false);
+      setError(false);
       return;
     }
     setLoading(true);
+    setError(false);
     api.getUser(account, '(permissions)')
       .then((user) => setPermissions(user.permissions ?? []))
-      .catch(() => setPermissions([]))
+      .catch(() => {
+        setPermissions([]);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   }, [account, isAuthenticated]);
 
@@ -36,7 +43,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <PermissionContext.Provider value={{ permissions, loading, hasPermission }}>
+    <PermissionContext.Provider value={{ permissions, loading, error, hasPermission }}>
       {children}
     </PermissionContext.Provider>
   );

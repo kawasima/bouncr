@@ -24,7 +24,7 @@ export function HomePage() {
     if (!account) return;
     try {
       const [userData, otpData, actionsData] = await Promise.all([
-        api.getUser(account, '(permissions,groups,oidc_providers)'),
+        api.getUser(account, '(groups,oidc_providers)'),
         api.getOtpKey().catch(() => ({ key: null }) as OtpKey),
         api.getActions({ actor: account, limit: 10 }).catch(() => [] as UserAction[]),
       ]);
