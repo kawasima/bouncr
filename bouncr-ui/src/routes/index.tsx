@@ -34,6 +34,7 @@ export const router = createBrowserRouter([
       { path: ROUTES.SIGN_IN, element: <SignInPage /> },
       { path: ROUTES.SIGN_UP, element: <SignUpPage /> },
       { path: ROUTES.SIGN_IN_BY_OIDC, element: <OidcCallbackPage /> },
+      { path: ROUTES.CHANGE_PASSWORD, element: <ChangePasswordPage /> },
       { path: ROUTES.RESET_PASSWORD_CHALLENGE, element: <ResetChallengePage /> },
       { path: ROUTES.RESET_PASSWORD, element: <ResetPasswordPage /> },
       { path: ROUTES.EMAIL_VERIFICATION, element: <EmailVerificationPage /> },
@@ -43,7 +44,6 @@ export const router = createBrowserRouter([
         element: <RequireAuth />,
         children: [
           { path: ROUTES.HOME, element: <HomePage /> },
-          { path: ROUTES.CHANGE_PASSWORD, element: <ChangePasswordPage /> },
           { path: ROUTES.CHANGE_PROFILE, element: <ChangeProfilePage /> },
 
           // Admin routes with permission guards

@@ -30,10 +30,17 @@ export function ChangePasswordPage() {
   const location = useLocation();
   const [problem, setProblem] = useState<Problem | null>(null);
 
-  const overrideAccount = (location.state as { account?: string } | null)?.account ?? account;
+  const locationState = (location.state as { account?: string; old_password?: string } | null);
+  const overrideAccount = locationState?.account ?? account;
+  const overrideOldPassword = locationState?.old_password ?? '';
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      old_password: overrideOldPassword,
+      new_password: '',
+      confirm_password: '',
+    },
   });
 
   async function onSubmit(data: FormData) {

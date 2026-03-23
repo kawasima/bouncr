@@ -21,6 +21,17 @@ const signInSchema = z.object({
 
 type SignInForm = z.infer<typeof signInSchema>;
 
+function isProblemMatch(problem: Problem, expectedType: string, expectedDetail?: string): boolean {
+  const rawType = problem.type ?? '';
+  const normalizedType = rawType.toUpperCase();
+  const expectedTypeUpper = expectedType.toUpperCase();
+  if (normalizedType === expectedTypeUpper || normalizedType.endsWith(expectedTypeUpper)) {
+    return true;
+  }
+  if (!expectedDetail) return false;
+  return (problem.detail ?? '').toLowerCase().includes(expectedDetail.toLowerCase());
+}
+
 export function SignInPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -70,12 +81,17 @@ export function SignInPage() {
       navigate(from, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.problem.type === PROBLEM_TYPES.ONE_TIME_PASSWORD_IS_NEEDED) {
+        if (isProblemMatch(err.problem, PROBLEM_TYPES.ONE_TIME_PASSWORD_IS_NEEDED, 'one time password is needed')) {
           setOtpRequired(true);
           return;
         }
-        if (err.problem.type === PROBLEM_TYPES.PASSWORD_MUST_BE_CHANGED) {
-          navigate(ROUTES.CHANGE_PASSWORD, { state: { account: data.account } });
+        if (isProblemMatch(err.problem, PROBLEM_TYPES.PASSWORD_MUST_BE_CHANGED, 'password must be changed')) {
+          navigate(ROUTES.CHANGE_PASSWORD, {
+            state: {
+              account: data.account,
+              old_password: data.password,
+            },
+          });
           return;
         }
         setProblem(err.problem);
