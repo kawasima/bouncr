@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for password credential operations using a real H2 database.
  */
 public class PasswordCredentialResourceTest {
+    private static final int TEST_PBKDF2_ITERATIONS = 10_000;
     private DSLContext dsl;
 
     @BeforeEach
@@ -33,7 +34,7 @@ public class PasswordCredentialResourceTest {
         User user = userRepo.insert("test_user");
 
         String salt = "abcdef1234567890";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
 
         userRepo.insertPasswordCredential(user.id(), hash, salt, true);
 
@@ -52,12 +53,12 @@ public class PasswordCredentialResourceTest {
 
         // Create initial credential
         String salt1 = "saltsaltsaltsalt";
-        byte[] hash1 = PasswordUtils.pbkdf2("pass1234", salt1, 600_000);
+        byte[] hash1 = PasswordUtils.pbkdf2("pass1234", salt1, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash1, salt1, true);
 
         // Update credential (upsert)
         String salt2 = "newsaltnewsaltne";
-        byte[] hash2 = PasswordUtils.pbkdf2("pass5678", salt2, 600_000);
+        byte[] hash2 = PasswordUtils.pbkdf2("pass5678", salt2, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash2, salt2, false);
 
         // Verify the credential is updated
@@ -74,11 +75,11 @@ public class PasswordCredentialResourceTest {
         User user = userRepo.insert("test_user");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
-        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), TEST_PBKDF2_ITERATIONS);
         assertThat(loaded.passwordCredential().password()).isEqualTo(checkHash);
     }
 
@@ -88,11 +89,11 @@ public class PasswordCredentialResourceTest {
         User user = userRepo.insert("test_user");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
-        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpassword", loaded.passwordCredential().salt(), 600_000);
+        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpassword", loaded.passwordCredential().salt(), TEST_PBKDF2_ITERATIONS);
         assertThat(loaded.passwordCredential().password()).isNotEqualTo(wrongHash);
     }
 
@@ -102,7 +103,7 @@ public class PasswordCredentialResourceTest {
         User user = userRepo.insert("test_user");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         // Delete

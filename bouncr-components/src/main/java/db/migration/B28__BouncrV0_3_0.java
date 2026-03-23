@@ -10,6 +10,10 @@ import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -26,6 +30,8 @@ import static org.jooq.impl.DSL.name;
 import static org.jooq.impl.DSL.table;
 
 public class B28__BouncrV0_3_0 implements JavaMigration {
+    private static final Logger LOG = LoggerFactory.getLogger(B28__BouncrV0_3_0.class);
+
     private static final String[] ADMIN_PERMISSIONS = new String[]{
             "any_user:read", "any_user:create", "any_user:update", "any_user:delete",
             "any_user:lock", "any_user:unlock",
@@ -549,12 +555,19 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
             stmtInsUserProfileValue.setString(3, "Admin User");
             stmtInsUserProfileValue.executeUpdate();
 
+            SecureRandom random = new SecureRandom();
+            String adminPassword = net.unit8.bouncr.util.RandomUtils.generateRandomString(20, random);
+            String adminSalt = net.unit8.bouncr.util.RandomUtils.generateRandomString(16, random);
+            int iterations = Env.getInt("pbkdf2.iterations", 10000);
+
             stmtInsPasswdCred.setLong(1, userId);
-            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2("password", "0123456789012345", 600_000));
-            stmtInsPasswdCred.setString(3, "0123456789012345");
-            stmtInsPasswdCred.setBoolean(4, false);
+            stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2(adminPassword, adminSalt, iterations));
+            stmtInsPasswdCred.setString(3, adminSalt);
+            stmtInsPasswdCred.setBoolean(4, true);
             stmtInsPasswdCred.setTimestamp(5, Timestamp.from(Instant.now()));
             stmtInsPasswdCred.executeUpdate();
+
+            LOG.warn("Initial admin password: {} (change immediately after first login)", adminPassword);
 
             stmtInsGroup.setString(1, "BOUNCR_ADMIN");
             stmtInsGroup.setString(2, "Bouncr administrators");

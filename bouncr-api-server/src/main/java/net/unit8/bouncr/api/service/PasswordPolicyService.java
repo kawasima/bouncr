@@ -17,40 +17,26 @@ import static org.jooq.impl.DSL.*;
 public class PasswordPolicyService {
     private final DSLContext dsl;
     private final PasswordPolicy policy;
+    private final int pbkdf2Iterations;
 
-    public PasswordPolicyService(PasswordPolicy policy, DSLContext dsl) {
+    public PasswordPolicyService(PasswordPolicy policy, DSLContext dsl, int pbkdf2Iterations) {
         this.dsl = dsl;
         this.policy = policy;
+        this.pbkdf2Iterations = pbkdf2Iterations;
     }
 
-    protected Problem.Violation conformPolicy(String password) {
-        int passwordLen = some(password, String::length).orElse(0);
-        if (passwordLen > policy.getMaxLength()) {
-            return new Problem.Violation("password", "must be less than " + policy.getMaxLength() + " characters");
+    public Problem.Violation conformPolicy(String password) {
+        if (policy.getMinLength() > 0 && password.length() < policy.getMinLength()) {
+            return new Problem.Violation("password", "must be at least " + policy.getMinLength() + " characters");
         }
-
-        if (passwordLen < policy.getMinLength()) {
-            return new Problem.Violation("password", "must be greater than " + policy.getMinLength() + " characters");
-        }
-
-        return Optional.ofNullable(policy.getPattern())
-                .filter(ptn -> !ptn.matcher(password).matches())
-                .map(ptn -> new Problem.Violation("password", "doesn't match pattern"))
-                .orElse(null);
+        return null;
     }
 
-    public Problem.Violation validateCreatePassword(BouncrJsonDecoders.PasswordCredentialCreate createRequest) {
-        return conformPolicy(createRequest.password());
-    }
-
-    public Problem.Violation validateUpdatePassword(BouncrJsonDecoders.PasswordCredentialUpdate updateRequest) {
-        if (Objects.equals(updateRequest.newPassword(), updateRequest.oldPassword())) {
-            return new Problem.Violation("new_password", "is the same as the old password");
-        }
-
+    public Problem.Violation verifyPasswordChange(BouncrJsonDecoders.PasswordCredentialUpdate updateRequest) {
         var rec = dsl.select(
-                        field("pc.password", byte[].class).as("password"),
-                        field("pc.salt", String.class).as("salt"))
+                        field("pc.password", byte[].class),
+                        field("pc.salt", String.class),
+                        field("pc.created_at", LocalDateTime.class))
                 .from(table("password_credentials").as("pc"))
                 .join(table("users").as("u")).on(field("u.user_id").eq(field("pc.user_id")))
                 .where(field("u.account").eq(updateRequest.account()))
@@ -61,7 +47,7 @@ public class PasswordPolicyService {
         }
 
         byte[] currentPassword = rec.get(field("password", byte[].class));
-        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.oldPassword(), rec.get(field("salt", String.class)), 600_000);
+        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.oldPassword(), rec.get(field("salt", String.class)), pbkdf2Iterations);
         if (!Arrays.equals(currentPassword, oldPassword)) {
             return new Problem.Violation("old_password", "does not match current password");
         }

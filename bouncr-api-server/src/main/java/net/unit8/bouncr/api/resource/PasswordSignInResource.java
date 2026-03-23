@@ -101,7 +101,7 @@ public class PasswordSignInResource {
         String salt = (creds != null && creds.passwordCredential() != null)
                 ? creds.passwordCredential().salt()
                 : config.getDummySalt();
-        byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, 600_000);
+        byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, config.getPbkdf2Iterations());
 
         if (creds == null) {
             authFailureTracker.recordFailure(ip, account);

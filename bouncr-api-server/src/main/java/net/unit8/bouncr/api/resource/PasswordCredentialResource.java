@@ -150,7 +150,7 @@ public class PasswordCredentialResource {
                 .filter(creds -> creds.passwordCredential() != null)
                 .filter(creds ->
                         Arrays.equals(creds.passwordCredential().password(),
-                                PasswordUtils.pbkdf2(updateRequest.oldPassword(), creds.passwordCredential().salt(), 600_000))
+                                PasswordUtils.pbkdf2(updateRequest.oldPassword(), creds.passwordCredential().salt(), config.getPbkdf2Iterations()))
                 )
                 .flatMap(creds -> userRepo.findById(creds.id()))
                 .map(user -> {
@@ -169,7 +169,7 @@ public class PasswordCredentialResource {
                                      DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(createRequest.password(), salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2(createRequest.password(), salt, config.getPbkdf2Iterations());
 
         userRepo.insertPasswordCredential(user.id(), hash, salt, createRequest.initial());
 
@@ -193,7 +193,7 @@ public class PasswordCredentialResource {
                                      DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(updateRequest.newPassword(), salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2(updateRequest.newPassword(), salt, config.getPbkdf2Iterations());
 
         userRepo.deletePasswordCredential(user.id());
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);

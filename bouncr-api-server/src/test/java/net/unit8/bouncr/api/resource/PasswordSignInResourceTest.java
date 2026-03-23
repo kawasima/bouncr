@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests the authentication flow: load user with credentials, verify password.
  */
 public class PasswordSignInResourceTest {
+    private static final int TEST_PBKDF2_ITERATIONS = 10_000;
     private DSLContext dsl;
 
     @BeforeEach
@@ -46,14 +47,14 @@ public class PasswordSignInResourceTest {
         User user = userRepo.insert("kawasima");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         // Simulate authentication: load user and verify password
         UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
         assertThat(loaded.passwordCredential()).isNotNull();
 
-        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), TEST_PBKDF2_ITERATIONS);
         assertThat(Arrays.equals(loaded.passwordCredential().password(), checkHash)).isTrue();
     }
 
@@ -63,11 +64,11 @@ public class PasswordSignInResourceTest {
         User user = userRepo.insert("kawasima");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
-        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpass", loaded.passwordCredential().salt(), 600_000);
+        byte[] wrongHash = PasswordUtils.pbkdf2("wrongpass", loaded.passwordCredential().salt(), TEST_PBKDF2_ITERATIONS);
         assertThat(Arrays.equals(loaded.passwordCredential().password(), wrongHash)).isFalse();
     }
 
@@ -83,14 +84,14 @@ public class PasswordSignInResourceTest {
         User user = userRepo.insert("kawasima");
 
         String salt = "saltsaltsaltsalt";
-        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
+        byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, TEST_PBKDF2_ITERATIONS);
         userRepo.insertPasswordCredential(user.id(), hash, salt, true);
 
         UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
         assertThat(loaded.passwordCredential().initial()).isTrue();
 
         // Password still matches even though it's initial
-        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
+        byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), TEST_PBKDF2_ITERATIONS);
         assertThat(Arrays.equals(loaded.passwordCredential().password(), checkHash)).isTrue();
     }
 
