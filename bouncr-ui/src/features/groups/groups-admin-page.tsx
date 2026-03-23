@@ -26,7 +26,7 @@ const columns: ColumnDef<Group>[] = [
   { header: 'Description', accessor: 'description' },
 ];
 
-function GroupUsersSection({ groupName }: { groupName: string }) {
+function GroupUsersSection({ groupName, readOnly = false }: { groupName: string; readOnly?: boolean }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -90,7 +90,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
       <ProblemAlert problem={problem} />
 
       {/* Add user search */}
-      <div className="flex gap-2">
+      {!readOnly && <div className="flex gap-2">
         <input
           type="text"
           value={searchQuery}
@@ -124,6 +124,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
           ))}
         </div>
       )}
+      }
 
       {/* Current members */}
       {users.length === 0 ? (
@@ -142,6 +143,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
               <tr key={u.account} className="border-b border-gold/10">
                 <td className="px-3 py-2 text-sm">{u.account}</td>
                 <td className="px-3 py-2 text-sm text-muted-foreground">{u.name ? String(u.name) : '-'}</td>
+                {!readOnly && (
                 <td className="px-3 py-2">
                   <button
                     onClick={() => handleRemove(u.account)}
@@ -151,6 +153,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
                     <X className="h-4 w-4" />
                   </button>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -160,7 +163,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
   );
 }
 
-function GroupAssignmentsSection({ group }: { group: Group }) {
+function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; readOnly?: boolean }) {
   const [realms, setRealms] = useState<Realm[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [assignments, setAssignments] = useState<{ realm: { id: number; name: string }; role: { id: number; name: string } }[]>([]);
@@ -256,6 +259,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
               <tr key={`${a.realm.id}-${a.role.id}`} className="border-b border-gold/10">
                 <td className="px-3 py-2 text-sm">{a.realm.name}</td>
                 <td className="px-3 py-2 text-sm">{a.role.name}</td>
+                {!readOnly && (
                 <td className="px-3 py-2">
                   <button
                     onClick={() => handleRemove(a)}
@@ -265,6 +269,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
                     <X className="h-4 w-4" />
                   </button>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -272,7 +277,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
       )}
 
       {/* Add new assignment */}
-      <div className="space-y-4">
+      {!readOnly && <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Realm</label>
           <select
@@ -326,7 +331,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
         >
           {submitting ? 'Adding...' : 'Add Assignment'}
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -400,8 +405,8 @@ function GroupEditFormWithUsers(props: {
         </div>
       )}
 
-      {props.target && <GroupUsersSection groupName={props.target.name} />}
-      {props.target && <GroupAssignmentsSection group={props.target} />}
+      {props.target && <GroupUsersSection groupName={props.target.name} readOnly={!props.canUpdate} />}
+      {props.target && <GroupAssignmentsSection group={props.target} readOnly={!props.canUpdate} />}
     </div>
   );
 }

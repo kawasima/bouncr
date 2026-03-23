@@ -262,7 +262,7 @@ function UserEditForm({
           </div>
         )}
 
-        {!isCreate && !credCreated && (
+        {!isCreate && !credCreated && canUpdate && (
           <PasswordCredentialSection account={target.account} onCreated={() => setCredCreated(true)} />
         )}
 

@@ -18,6 +18,8 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!isAuthenticated || !account) {
       setPermissions([]);
       setLoading(false);
@@ -27,12 +29,21 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(false);
     api.getUser(account, '(permissions)')
-      .then((user) => setPermissions(user.permissions ?? []))
+      .then((user) => {
+        if (cancelled) return;
+        setPermissions(user.permissions ?? []);
+      })
       .catch(() => {
+        if (cancelled) return;
         setPermissions([]);
         setError(true);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, [account, isAuthenticated]);
 
   const permissionSet = useMemo(() => new Set(permissions), [permissions]);
