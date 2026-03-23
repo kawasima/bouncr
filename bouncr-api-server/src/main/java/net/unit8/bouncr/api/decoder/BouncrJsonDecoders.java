@@ -270,7 +270,7 @@ public final class BouncrJsonDecoders {
             field("grant_types", list(string())),
             optionalField("home_url", string().maxLength(2048)),
             optionalField("callback_url", string().maxLength(2048)),
-            optionalField("description", string().maxLength(500)),
+            optionalField("description", string().maxLength(255)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
@@ -280,6 +280,12 @@ public final class BouncrJsonDecoders {
     .<OidcApplicationCreate>flatMap(app -> {
         if (app.grantTypes().isEmpty()) {
             return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        for (String gt : app.grantTypes()) {
+            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
+                return Result.fail(Path.ROOT.append("grant_types"), "invalid",
+                        "unknown grant_type: " + gt);
+            }
         }
         if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
             return Result.fail(Path.ROOT.append("callback_url"), "required",
@@ -299,7 +305,7 @@ public final class BouncrJsonDecoders {
             field("grant_types", list(string())),
             optionalField("home_url", string().maxLength(2048)),
             optionalField("callback_url", string().maxLength(2048)),
-            optionalField("description", string().maxLength(500)),
+            optionalField("description", string().maxLength(255)),
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
@@ -310,6 +316,12 @@ public final class BouncrJsonDecoders {
     .<OidcApplicationUpdate>flatMap(app -> {
         if (app.grantTypes().isEmpty()) {
             return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        for (String gt : app.grantTypes()) {
+            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
+                return Result.fail(Path.ROOT.append("grant_types"), "invalid",
+                        "unknown grant_type: " + gt);
+            }
         }
         if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
             return Result.fail(Path.ROOT.append("callback_url"), "required",

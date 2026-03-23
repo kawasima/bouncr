@@ -38,10 +38,7 @@ class OidcApplicationResourceTest {
     void setup() {
         dsl = MockFactory.beginTransaction();
 
-        BouncrConfiguration config = new BouncrConfiguration();
-        config.setIssuerBaseUrl("https://issuer.example");
-        config.setSecureRandom(new java.security.SecureRandom());
-        config.setPbkdf2Iterations(1);
+        BouncrConfiguration config = createConfig();
 
         createResource = new OidcApplicationsResoruce();
         setField(createResource, "config", config);
@@ -200,7 +197,77 @@ class OidcApplicationResourceTest {
         assertThat(body.get("error")).isEqualTo(OAuth2Error.UNAUTHORIZED_CLIENT.getValue());
     }
 
+    // ==================== Scenario 5: Secret regeneration ====================
+
+    @Test
+    void regenerateSecret_producesNewWorkingSecret() throws Exception {
+        // Create an application
+        JsonNode body = JSON.readTree("""
+                {
+                  "name": "regen_test",
+                  "grant_types": ["client_credentials"]
+                }
+                """);
+        RestContext createCtx = restContext();
+        createResource.validateCreate(body, createCtx);
+        createResource.create(
+                createCtx.get(OidcApplicationsResoruce.CREATE_REQ).orElseThrow(),
+                createCtx, dsl);
+        OidcApplicationCreatedResponse created = createCtx.get(OidcApplicationsResoruce.RESPONSE).orElseThrow();
+        String originalSecret = created.client_secret();
+
+        // Regenerate secret
+        OidcApplicationSecretResource secretResource = new OidcApplicationSecretResource();
+        setField(secretResource, "config", createConfig());
+
+        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
+        OidcApplication app = repo.findByName("regen_test").orElseThrow();
+
+        RestContext regenCtx = restContext();
+        secretResource.regenerate(app, regenCtx, dsl);
+        String newSecret = regenCtx.get(OidcApplicationSecretResource.NEW_SECRET).orElseThrow();
+
+        assertThat(newSecret).isNotBlank();
+        assertThat(newSecret).isNotEqualTo(originalSecret);
+
+        // Verify the new secret matches the stored hash
+        OidcApplication updated = repo.findByClientId(app.clientId()).orElseThrow();
+        byte[] newHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(newSecret, app.clientId(), 1);
+        byte[] storedHash = java.util.Base64.getDecoder().decode(updated.clientSecret());
+        assertThat(java.security.MessageDigest.isEqual(newHash, storedHash)).isTrue();
+
+        // Verify old secret no longer matches
+        byte[] oldHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(originalSecret, app.clientId(), 1);
+        assertThat(java.security.MessageDigest.isEqual(oldHash, storedHash)).isFalse();
+    }
+
+    // ==================== Scenario 6: Unknown grant type rejected ====================
+
+    @Test
+    void create_unknownGrantType_fails() throws Exception {
+        JsonNode body = JSON.readTree("""
+                {
+                  "name": "bogus_app",
+                  "grant_types": ["bogus"]
+                }
+                """);
+        RestContext context = restContext();
+        Problem problem = createResource.validateCreate(body, context);
+
+        assertThat(problem).isNotNull();
+        assertThat(problem.getViolations().stream().map(Problem.Violation::field))
+                .contains("/grant_types");
+    }
+
     // ==================== Helpers ====================
+
+    private BouncrConfiguration createConfig() {
+        BouncrConfiguration config = new BouncrConfiguration();
+        config.setIssuerBaseUrl("https://issuer.example");
+        config.setSecureRandom(new java.security.SecureRandom());
+        config.setPbkdf2Iterations(1);
+        return config;
+    }
 
     private RestContext restContext() {
         Resource stubResource = decisionPoint -> ctx -> null;

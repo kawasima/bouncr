@@ -122,7 +122,8 @@ public class OidcApplicationRepository {
                 .orderBy(field("oidc_application_id").asc())
                 .offset(offset)
                 .limit(limit)
-                .fetch(this::mapOidcApplication);
+                .fetch(this::mapOidcApplication)
+                .stream().map(this::withGrantTypes).toList();
     }
 
     public List<OidcApplication> listAll() {
@@ -141,7 +142,8 @@ public class OidcApplicationRepository {
                         field("frontchannel_logout_uri", String.class))
                 .from(table("oidc_applications"))
                 .orderBy(field("oidc_application_id").asc())
-                .fetch(this::mapOidcApplication);
+                .fetch(this::mapOidcApplication)
+                .stream().map(this::withGrantTypes).toList();
     }
 
     public boolean isNameUnique(String name) {
@@ -273,6 +275,15 @@ public class OidcApplicationRepository {
                 .on(field("oas.permission_id").eq(field("p.permission_id")))
                 .where(field("oas.oidc_application_id").eq(oidcApplicationId))
                 .fetch(rec -> PERMISSION.decode(rec).getOrThrow());
+    }
+
+    private OidcApplication withGrantTypes(OidcApplication app) {
+        if (app == null || app.id() == null) return app;
+        return new OidcApplication(app.id(), app.name(), app.nameLower(),
+                app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
+                app.homeUrl(), app.callbackUrl(), app.description(),
+                app.backchannelLogoutUri(), app.frontchannelLogoutUri(),
+                app.permissions(), loadGrantTypes(app.id()));
     }
 
     private OidcApplication mapOidcApplication(Record rec) {

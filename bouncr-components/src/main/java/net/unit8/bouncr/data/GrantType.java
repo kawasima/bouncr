@@ -53,12 +53,14 @@ public enum GrantType {
 
     /**
      * Parses a collection of grant_type strings into a {@code Set<GrantType>}.
-     * Unknown values are silently ignored.
+     *
+     * @throws IllegalArgumentException if any value is not a recognized grant type
      */
     public static Set<GrantType> parseAll(Collection<String> values) {
         EnumSet<GrantType> result = EnumSet.noneOf(GrantType.class);
         for (String v : values) {
-            fromString(v).ifPresent(result::add);
+            result.add(fromString(v)
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown grant_type: " + v)));
         }
         return result;
     }

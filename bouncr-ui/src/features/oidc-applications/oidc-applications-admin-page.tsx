@@ -6,7 +6,7 @@ import * as api from '@/api/endpoints';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
 import type { ColumnDef } from '@/components/data-table';
-import type { OidcApplication, OidcApplicationCreateRequest, Permission, Role, Problem } from '@/api/types';
+import type { OidcApplication, OidcApplicationCreateRequest, OidcApplicationUpdateRequest, Permission, Role, Problem } from '@/api/types';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
@@ -20,8 +20,8 @@ const GRANT_TYPES = [
 const config: AdminCrudConfig<OidcApplication> = {
   fetchList: api.getOidcApplications,
   fetchOne: api.getOidcApplication,
-  create: (data) => api.createOidcApplication(data as unknown as OidcApplicationCreateRequest),
-  update: (name, data) => api.updateOidcApplication(name, data as unknown as OidcApplicationCreateRequest),
+  create: (data) => api.createOidcApplication(data as OidcApplicationCreateRequest),
+  update: (name, data) => api.updateOidcApplication(name, data as OidcApplicationUpdateRequest),
   getIdentifier: (a) => a.name,
 };
 
@@ -32,12 +32,21 @@ const columns: ColumnDef<OidcApplication>[] = [
 
 const oidcAppSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  grant_types: z.array(z.string()).min(1, 'At least one grant type is required'),
   description: z.union([z.string(), z.literal('')]).optional(),
   home_url: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
   callback_url: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
   backchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
   frontchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
   permissions: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  if (data.grant_types.includes('authorization_code') && (!data.callback_url || data.callback_url === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Callback URL is required when Authorization Code grant is enabled',
+      path: ['callback_url'],
+    });
+  }
 });
 
 type OidcAppFormData = z.infer<typeof oidcAppSchema>;
@@ -64,11 +73,6 @@ function OidcAppEditForm({
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(
     new Set(target?.permissions?.map((p) => p.name) ?? []),
   );
-  const [selectedGrants, setSelectedGrants] = useState<Set<string>>(
-    new Set(target?.grant_types ?? ['authorization_code', 'refresh_token']),
-  );
-
-  const hasAuthCode = selectedGrants.has('authorization_code');
 
   useEffect(() => {
     Promise.all([
@@ -91,11 +95,12 @@ function OidcAppEditForm({
     } catch { /* ignore */ }
   };
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcAppFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<OidcAppFormData>({
     resolver: zodResolver(oidcAppSchema),
     defaultValues: target
       ? {
         name: target.name,
+        grant_types: target.grant_types ?? ['authorization_code', 'refresh_token'],
         description: target.description ?? '',
         home_url: target.home_url ?? '',
         callback_url: target.callback_url ?? '',
@@ -104,6 +109,7 @@ function OidcAppEditForm({
       }
       : {
         name: '',
+        grant_types: ['authorization_code', 'refresh_token'],
         description: '',
         home_url: '',
         callback_url: '',
@@ -112,14 +118,17 @@ function OidcAppEditForm({
       },
   });
 
+  const watchedGrants = watch('grant_types') ?? [];
+  const hasAuthCode = watchedGrants.includes('authorization_code');
+
   const buildPayload = (d: OidcAppFormData): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
       name: d.name,
-      grant_types: Array.from(selectedGrants),
+      grant_types: d.grant_types,
       permissions: Array.from(selectedPerms),
     };
     if (d.description?.trim()) payload.description = d.description.trim();
-    if (hasAuthCode) {
+    if (d.grant_types.includes('authorization_code')) {
       if (d.callback_url?.trim()) payload.callback_url = d.callback_url.trim();
       if (d.home_url?.trim()) payload.home_url = d.home_url.trim();
       payload.backchannel_logout_uri = d.backchannel_logout_uri?.trim() ?? '';
@@ -133,7 +142,7 @@ function OidcAppEditForm({
       setCreateProblem(null);
       try {
         const result = await api.createOidcApplication(
-            buildPayload(d) as unknown as OidcApplicationCreateRequest);
+            buildPayload(d) as OidcApplicationCreateRequest);
         setCreatedCredentials({
           clientId: result.client_id ?? '',
           clientSecret: result.client_secret ?? '',
@@ -225,12 +234,13 @@ function OidcAppEditForm({
             <label key={gt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gold/5 px-2 py-1 rounded-sm">
               <input
                 type="checkbox"
-                checked={selectedGrants.has(gt.value)}
+                checked={watchedGrants.includes(gt.value)}
                 onChange={(e) => {
-                  const next = new Set(selectedGrants);
-                  if (e.target.checked) next.add(gt.value);
-                  else next.delete(gt.value);
-                  setSelectedGrants(next);
+                  const current = watchedGrants;
+                  const next = e.target.checked
+                    ? [...current, gt.value]
+                    : current.filter((v) => v !== gt.value);
+                  setValue('grant_types', next, { shouldValidate: true });
                 }}
                 className="accent-gold"
               />
@@ -238,8 +248,8 @@ function OidcAppEditForm({
             </label>
           ))}
         </div>
-        {selectedGrants.size === 0 && (
-          <p className="text-sm text-destructive">At least one grant type is required</p>
+        {errors.grant_types && (
+          <p className="text-sm text-destructive">{errors.grant_types.message}</p>
         )}
       </div>
 
