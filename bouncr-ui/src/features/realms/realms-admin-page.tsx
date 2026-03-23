@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { ArrowLeft, Plus, X } from 'lucide-react';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const realmSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -185,13 +187,16 @@ function RealmEditForm({
   problem,
   appVirtualPath,
   appName,
+  canUpdate = true,
 }: {
   target: Realm | null;
   onSubmit: (data: RealmFormData) => Promise<boolean>;
   problem: Problem | null;
   appVirtualPath: string;
   appName: string;
+  canUpdate?: boolean;
 }) {
+  const isReadOnly = !!target && !canUpdate;
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RealmFormData>({
     resolver: zodResolver(realmSchema),
     defaultValues: target ?? { name: '', description: '', url: '' },
@@ -199,7 +204,7 @@ function RealmEditForm({
 
   return (
     <div className="space-y-0">
-      <form onSubmit={handleSubmit((d) => onSubmit(d))} className="max-w-md space-y-6">
+      <form onSubmit={handleSubmit((d) => { if (isReadOnly) return; onSubmit(d); })} className="max-w-md space-y-6">
         <ProblemAlert problem={problem} />
         <div className="space-y-2">
           <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
@@ -225,13 +230,15 @@ function RealmEditForm({
           </div>
           {errors.url && <p className="text-sm text-destructive">{errors.url.message}</p>}
         </div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
+        {!isReadOnly && (
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
       </form>
       {target && <AssignmentSection realm={target} appName={appName} />}
     </div>
@@ -239,6 +246,9 @@ function RealmEditForm({
 }
 
 export function RealmsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.realm.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.realm.update);
   const [searchParams] = useSearchParams();
   const appName = searchParams.get('app') ?? '';
   const [app, setApp] = useState<Application | null>(null);
@@ -269,6 +279,8 @@ export function RealmsAdminPage() {
 
   const handleSave = async (data: RealmFormData) => {
     if (!appName) return false;
+    if (editTarget && !canUpdate) return false;
+    if (!editTarget && !canCreate) return false;
     setProblem(null);
     try {
       if (editTarget) {
@@ -309,6 +321,7 @@ export function RealmsAdminPage() {
           problem={problem}
           appVirtualPath={app?.virtual_path ?? ''}
           appName={appName}
+          canUpdate={canUpdate}
         />
       </div>
     );
@@ -328,14 +341,16 @@ export function RealmsAdminPage() {
       </div>
       <div className="flex items-center justify-between">
         <h3 className="mansion-heading text-lg">Realms</h3>
-        <Button
-          size="sm"
-          onClick={() => { setMode('edit'); setEditTarget(null); setProblem(null); }}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          New
-        </Button>
+        {canCreate && (
+          <Button
+            size="sm"
+            onClick={() => { setMode('edit'); setEditTarget(null); setProblem(null); }}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New
+          </Button>
+        )}
       </div>
       <ProblemAlert problem={problem} />
       {realms.length === 0 ? (

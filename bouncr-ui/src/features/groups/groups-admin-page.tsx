@@ -135,7 +135,7 @@ function GroupUsersSection({ groupName, readOnly = false }: { groupName: string;
             <tr className="border-b border-gold-muted">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Account</th>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Name</th>
-              <th className="px-3 py-2 w-10"></th>
+              {!readOnly && <th className="px-3 py-2 w-10"></th>}
             </tr>
           </thead>
           <tbody>
@@ -251,7 +251,7 @@ function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; re
             <tr className="border-b border-gold-muted">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Realm</th>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Role</th>
-              <th className="px-3 py-2 w-10"></th>
+              {!readOnly && <th className="px-3 py-2 w-10"></th>}
             </tr>
           </thead>
           <tbody>
