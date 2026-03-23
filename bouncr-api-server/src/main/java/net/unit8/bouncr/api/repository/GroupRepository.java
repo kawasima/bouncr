@@ -105,11 +105,7 @@ public class GroupRepository {
     }
 
     public void addUser(String groupName, Long userId) {
-        Long groupId = dsl.select(field("group_id", Long.class))
-                .from(table("groups"))
-                .where(field("name").eq(groupName))
-                .fetchOne(field("group_id", Long.class));
-
+        Long groupId = resolveGroupId(groupName);
         dsl.insertInto(table("memberships"),
                         field("user_id"), field("group_id"))
                 .values(userId, groupId)
@@ -117,15 +113,22 @@ public class GroupRepository {
     }
 
     public void removeUser(String groupName, Long userId) {
-        Long groupId = dsl.select(field("group_id", Long.class))
-                .from(table("groups"))
-                .where(field("name").eq(groupName))
-                .fetchOne(field("group_id", Long.class));
-
+        Long groupId = resolveGroupId(groupName);
         dsl.deleteFrom(table("memberships"))
                 .where(field("user_id").eq(userId)
                         .and(field("group_id").eq(groupId)))
                 .execute();
+    }
+
+    private Long resolveGroupId(String groupName) {
+        Long groupId = dsl.select(field("group_id", Long.class))
+                .from(table("groups"))
+                .where(field("name").eq(groupName))
+                .fetchOne(field("group_id", Long.class));
+        if (groupId == null) {
+            throw new IllegalArgumentException("Group not found: " + groupName);
+        }
+        return groupId;
     }
 
     private List<User> findUsersByGroupId(Long groupId) {
