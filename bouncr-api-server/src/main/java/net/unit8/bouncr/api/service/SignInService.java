@@ -9,6 +9,7 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OtpKey;
 import net.unit8.bouncr.data.PasswordCredential;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.data.UserSession;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
@@ -49,8 +50,8 @@ public class SignInService {
                 .contains(code);
     }
 
-    public PasswordCredentialStatus validatePasswordCredentialAttributes(User user) {
-        PasswordCredential passwordCredential = user.passwordCredential();
+    public PasswordCredentialStatus validatePasswordCredentialAttributes(UserCredentials creds) {
+        PasswordCredential passwordCredential = creds.passwordCredential();
         if (passwordCredential.initial()) {
             return INITIAL;
         }

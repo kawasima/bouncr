@@ -3,7 +3,7 @@ package net.unit8.bouncr.api.decoder;
 import net.unit8.bouncr.data.*;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Result;
-import net.unit8.raoh.jooq.JooqRecordDecoders;
+import net.unit8.raoh.jooq.JooqRecordDecoder;
 import org.jooq.Record;
 
 import java.net.MalformedURLException;
@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.URL;
 
 import static net.unit8.raoh.Decoders.combine;
+import static net.unit8.raoh.Decoders.recover;
 import static net.unit8.raoh.ObjectDecoders.*;
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
 
@@ -21,7 +22,10 @@ public final class BouncrJooqDecoders {
 
     private BouncrJooqDecoders() {}
 
-    private static final Decoder<Object, byte[]> BYTES_DECODER = (in, path) -> Result.ok((byte[]) in);
+    private static final Decoder<Object, byte[]> BYTES_DECODER = (in, path) -> {
+        if (in == null) return Result.fail(path, "required", "is required");
+        return Result.ok((byte[]) in);
+    };
 
     // --- Permission ---
 
@@ -84,7 +88,51 @@ public final class BouncrJooqDecoders {
             field("account", string()),
             optionalField("write_protected", bool())
     ).map((id, account, wp) -> new User(id, account, wp.orElse(false),
-            null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null));
+
+    // --- PasswordCredential ---
+
+    public static final Decoder<Record, PasswordCredential> PASSWORD_CREDENTIAL = combine(
+            optionalField("password", BYTES_DECODER),
+            optionalField("salt", string()),
+            field("initial", bool()),
+            field("created_at", dateTime())
+    ).map((password, salt, initial, createdAt) -> new PasswordCredential(
+            null, password.orElse(null), salt.orElse(null), initial, createdAt));
+
+    // --- OtpKey ---
+
+    public static final Decoder<Record, OtpKey> OTP_KEY =
+            field("otp_key", BYTES_DECODER)
+                    .map(key -> new OtpKey(key));
+
+    // --- UserLock ---
+
+    public static final Decoder<Record, UserLock> USER_LOCK = combine(
+            field("lock_level", string()),
+            field("locked_at", dateTime())
+    ).map((level, lockedAt) -> new UserLock(LockLevel.valueOf(level), lockedAt));
+
+    // --- Nullable wrappers for LEFT JOIN ---
+
+    private static final JooqRecordDecoder<PasswordCredential> NULLABLE_PASSWORD_CREDENTIAL =
+            recover(nested(PASSWORD_CREDENTIAL::decode), (PasswordCredential) null)::decode;
+
+    private static final JooqRecordDecoder<OtpKey> NULLABLE_OTP_KEY =
+            recover(nested(OTP_KEY::decode), (OtpKey) null)::decode;
+
+    private static final JooqRecordDecoder<UserLock> NULLABLE_USER_LOCK =
+            recover(nested(USER_LOCK::decode), (UserLock) null)::decode;
+
+    // --- UserCredentials (for sign-in) ---
+
+    public static final Decoder<Record, UserCredentials> USER_CREDENTIALS = combine(
+            field("user_id", long_()),
+            field("account", string()),
+            nested(NULLABLE_PASSWORD_CREDENTIAL),
+            nested(NULLABLE_OTP_KEY),
+            nested(NULLABLE_USER_LOCK)
+    ).map(UserCredentials::new);
 
     // --- UserSession ---
 
@@ -109,7 +157,7 @@ public final class BouncrJooqDecoders {
     ).map((sessionId, userId, account, wp, token, remoteAddr, userAgent, createdAt) -> new UserSession(
             sessionId,
             new User(userId, account, wp.orElse(false),
-                    null, null, null, null, null, null, null, null),
+                    null, null, null, null, null, null),
             token,
             remoteAddr.orElse(null),
             userAgent.orElse(null),
@@ -171,16 +219,6 @@ public final class BouncrJooqDecoders {
             new Role(roleId, roleName, roleDesc.orElse(null), roleWp.orElse(false), null),
             null));
 
-    // --- PasswordCredential ---
-
-    public static final Decoder<Record, PasswordCredential> PASSWORD_CREDENTIAL = combine(
-            optionalField("password", BYTES_DECODER),
-            optionalField("salt", string()),
-            field("initial", bool()),
-            field("created_at", dateTime())
-    ).map((password, salt, initial, createdAt) -> new PasswordCredential(
-            null, password.orElse(null), salt.orElse(null), initial, createdAt));
-
     // --- PasswordResetChallenge ---
 
     public static final Decoder<Record, PasswordResetChallenge> PASSWORD_RESET_CHALLENGE = combine(
@@ -199,7 +237,7 @@ public final class BouncrJooqDecoders {
     ).map((id, userId, account, wp, code, expiresAt) -> new PasswordResetChallenge(
             id,
             new User(userId, account, wp.orElse(false),
-                    null, null, null, null, null, null, null, null),
+                    null, null, null, null, null, null),
             code, expiresAt));
 
     // --- UserProfileField ---

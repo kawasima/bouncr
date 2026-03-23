@@ -34,7 +34,7 @@ public class OtpKeyResource {
         UserRepository userRepo = new UserRepository(dsl);
         return userRepo.findByAccount(principal.getName())
                 .flatMap(user -> userRepo.findOtpKey(user.id()))
-                .orElse(new OtpKey(null, null));
+                .orElse(new OtpKey(null));
     }
 
     @Decision(PUT)
@@ -43,7 +43,7 @@ public class OtpKeyResource {
         User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         byte[] key = RandomUtils.generateRandomString(20, config.getSecureRandom()).getBytes();
         userRepo.insertOtpKey(user.id(), key);
-        return new OtpKey(null, key);
+        return new OtpKey(key);
     }
 
     @Decision(DELETE)

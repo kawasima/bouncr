@@ -118,16 +118,14 @@ public class UserResource {
             List<OidcUser> oidcUsers = userRepo2.loadOidcUsers(user.id());
             user = new User(user.id(), user.account(), user.writeProtected(),
                     user.groups(), user.userProfileValues(), user.userLock(),
-                    user.passwordCredential(), user.otpKey(), oidcUsers,
-                    user.permissions(), user.unverifiedProfiles());
+                    oidcUsers, user.permissions(), user.unverifiedProfiles());
         }
 
         List<String> unverifiedProfiles = userRepo2.loadUnverifiedProfiles(user.id());
         if (!unverifiedProfiles.isEmpty()) {
             user = new User(user.id(), user.account(), user.writeProtected(),
                     user.groups(), user.userProfileValues(), user.userLock(),
-                    user.passwordCredential(), user.otpKey(), user.oidcUsers(),
-                    user.permissions(), unverifiedProfiles);
+                    user.oidcUsers(), user.permissions(), unverifiedProfiles);
         }
 
         context.put(USER, user);
@@ -165,8 +163,7 @@ public class UserResource {
                     .collect(Collectors.toSet());
             user = new User(user.id(), user.account(), user.writeProtected(),
                     user.groups(), user.userProfileValues(), user.userLock(),
-                    user.passwordCredential(), user.otpKey(), user.oidcUsers(),
-                    new ArrayList<>(permissions), user.unverifiedProfiles());
+                    user.oidcUsers(), new ArrayList<>(permissions), user.unverifiedProfiles());
         }
 
         return user;

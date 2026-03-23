@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +38,7 @@ public class PasswordCredentialResourceTest {
         userRepo.insertPasswordCredential(user.id(), hash, salt, true);
 
         // Verify the credential is stored by loading user for sign-in
-        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
         assertThat(loaded.passwordCredential()).isNotNull();
         assertThat(loaded.passwordCredential().salt()).isEqualTo(salt);
         assertThat(loaded.passwordCredential().initial()).isTrue();
@@ -60,7 +61,7 @@ public class PasswordCredentialResourceTest {
         userRepo.insertPasswordCredential(user.id(), hash2, salt2, false);
 
         // Verify the credential is updated
-        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
         assertThat(loaded.passwordCredential()).isNotNull();
         assertThat(loaded.passwordCredential().salt()).isEqualTo(salt2);
         assertThat(loaded.passwordCredential().initial()).isFalse();
@@ -76,7 +77,7 @@ public class PasswordCredentialResourceTest {
         byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
-        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
         byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
         assertThat(loaded.passwordCredential().password()).isEqualTo(checkHash);
     }
@@ -90,7 +91,7 @@ public class PasswordCredentialResourceTest {
         byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
-        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
         byte[] wrongHash = PasswordUtils.pbkdf2("wrongpassword", loaded.passwordCredential().salt(), 600_000);
         assertThat(loaded.passwordCredential().password()).isNotEqualTo(wrongHash);
     }
@@ -108,7 +109,7 @@ public class PasswordCredentialResourceTest {
         userRepo.deletePasswordCredential(user.id());
 
         // Verify it's gone
-        User loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("test_user").orElseThrow();
         assertThat(loaded.passwordCredential()).isNull();
     }
 }

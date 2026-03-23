@@ -17,8 +17,8 @@ class UserTest {
     void cyclicSerialize() {
         JsonMapper mapper = JsonMapper.builder().build();
         User user = new User(1L, "test", false,
-                List.of(), null, null, null, null, null, null, null);
-        UserLock userLock = new UserLock(user, LockLevel.LOOSE, LocalDateTime.now());
+                List.of(), null, null, null, null, null);
+        UserLock userLock = new UserLock(LockLevel.LOOSE, LocalDateTime.now());
 
         assertThatCode(() -> {
             mapper.writerFor(User.class).writeValueAsString(user);

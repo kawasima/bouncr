@@ -147,15 +147,16 @@ public class PasswordCredentialResource {
         if (account == null) return false;
 
         return userRepo.findByAccountForSignIn(account)
+                .filter(creds -> creds.passwordCredential() != null)
+                .filter(creds ->
+                        Arrays.equals(creds.passwordCredential().password(),
+                                PasswordUtils.pbkdf2(updateRequest.oldPassword(), creds.passwordCredential().salt(), 600_000))
+                )
+                .flatMap(creds -> userRepo.findById(creds.id()))
                 .map(user -> {
                     context.put(USER, user);
                     return user;
                 })
-                .filter(user -> user.passwordCredential() != null)
-                .filter(user ->
-                        Arrays.equals(user.passwordCredential().password(),
-                                PasswordUtils.pbkdf2(updateRequest.oldPassword(), user.passwordCredential().salt(), 600_000))
-                )
                 .isPresent();
     }
 

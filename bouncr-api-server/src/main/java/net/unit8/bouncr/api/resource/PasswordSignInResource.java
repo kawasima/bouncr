@@ -21,6 +21,7 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.data.UserSession;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.raoh.Err;
@@ -91,48 +92,50 @@ public class PasswordSignInResource {
         UserLockService userLockService = new UserLockService(dsl, config);
         UserRepository userRepo = new UserRepository(dsl);
 
-        User user = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
+        UserCredentials creds = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
 
         // Always perform the hash before any branching to equalize response timing,
         // preventing "account not found" and "account locked" timing-based enumeration.
         // Use the account's own salt when available; fall back to a per-process random
         // dummy salt for unknown accounts or accounts without a password credential.
-        String salt = (user != null && user.passwordCredential() != null)
-                ? user.passwordCredential().salt()
+        String salt = (creds != null && creds.passwordCredential() != null)
+                ? creds.passwordCredential().salt()
                 : config.getDummySalt();
         byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, 600_000);
 
-        if (user == null) {
+        if (creds == null) {
             authFailureTracker.recordFailure(ip, account);
             return false;
         }
 
-        if (user.userLock() != null) {
+        if (creds.userLock() != null) {
             context.setMessage(Problem.valueOf(401, "Account is locked", BouncrProblem.ACCOUNT_IS_LOCKED.problemUri()));
             return false;
         }
 
-        actionRecord.setActor(user.account());
-        if (user.passwordCredential() != null &&
+        actionRecord.setActor(creds.account());
+        if (creds.passwordCredential() != null &&
                 Arrays.equals(
-                        user.passwordCredential().password(),
+                        creds.passwordCredential().password(),
                         computedHash)) {
+            User user = userRepo.findById(creds.id()).orElse(null);
+            if (user == null) return false;
             context.put(USER, user);
             actionRecord.setActionType(USER_SIGNIN);
-            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(user);
+            SignInService.PasswordCredentialStatus status = signInService.validatePasswordCredentialAttributes(creds);
             if (status == EXPIRED || status == INITIAL) {
                 context.setMessage(Problem.valueOf(401, "Password must be changed", BouncrProblem.PASSWORD_MUST_BE_CHANGED.problemUri()));
                 return false;
             }
 
-            if (!signInService.validateOtpKey(user.otpKey(), signInRequest.oneTimePassword())) {
+            if (!signInService.validateOtpKey(creds.otpKey(), signInRequest.oneTimePassword())) {
                 context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
                 return false;
             }
             return true;
         } else {
             actionRecord.setActionType(USER_FAILED_SIGNIN);
-            userLockService.lockUser(user);
+            userLockService.lockUser(creds);
             authFailureTracker.recordFailure(ip, account);
         }
         return false;

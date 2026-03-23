@@ -10,6 +10,7 @@ import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
@@ -49,7 +50,7 @@ public class PasswordSignInResourceTest {
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
         // Simulate authentication: load user and verify password
-        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
         assertThat(loaded.passwordCredential()).isNotNull();
 
         byte[] checkHash = PasswordUtils.pbkdf2("pass1234", loaded.passwordCredential().salt(), 600_000);
@@ -65,7 +66,7 @@ public class PasswordSignInResourceTest {
         byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);
 
-        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
         byte[] wrongHash = PasswordUtils.pbkdf2("wrongpass", loaded.passwordCredential().salt(), 600_000);
         assertThat(Arrays.equals(loaded.passwordCredential().password(), wrongHash)).isFalse();
     }
@@ -85,7 +86,7 @@ public class PasswordSignInResourceTest {
         byte[] hash = PasswordUtils.pbkdf2("pass1234", salt, 600_000);
         userRepo.insertPasswordCredential(user.id(), hash, salt, true);
 
-        User loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
+        UserCredentials loaded = userRepo.findByAccountForSignIn("kawasima").orElseThrow();
         assertThat(loaded.passwordCredential().initial()).isTrue();
 
         // Password still matches even though it's initial

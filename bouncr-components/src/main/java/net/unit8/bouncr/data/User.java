@@ -6,7 +6,8 @@ import net.unit8.bouncr.json.UserSerializer;
 import java.util.List;
 
 /**
- * User aggregate root in Bouncr.
+ * User entity for API responses.
+ * Authentication credentials (passwordCredential, otpKey) are in {@link UserCredentials}.
  *
  * @param id persistent identifier
  * @param account account name used for sign-in
@@ -14,8 +15,6 @@ import java.util.List;
  * @param groups groups the user belongs to
  * @param userProfileValues profile values assigned to the user
  * @param userLock current lock state
- * @param passwordCredential password credential data
- * @param otpKey one-time-password key
  * @param oidcUsers external OIDC identities linked to this user
  * @param permissions effective permission names
  * @param unverifiedProfiles profile fields pending verification
@@ -28,8 +27,6 @@ public record User(
     List<Group> groups,
     List<UserProfileValue> userProfileValues,
     UserLock userLock,
-    PasswordCredential passwordCredential,
-    OtpKey otpKey,
     List<OidcUser> oidcUsers,
     List<String> permissions,
     List<String> unverifiedProfiles

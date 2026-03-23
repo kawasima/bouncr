@@ -28,51 +28,25 @@ public class UserRepository {
                 .fetchOptional(rec -> buildUser(rec, false, false, false));
     }
 
-    public Optional<User> findByAccountForSignIn(String account) {
-        var userRec = dsl.select(
-                        field("user_id", Long.class),
-                        field("account", String.class),
-                        field("write_protected", Boolean.class))
-                .from(table("users"))
-                .where(field("account").eq(account))
+    public Optional<UserCredentials> findByAccountForSignIn(String account) {
+        var rec = dsl.select(
+                        field("u.user_id", Long.class).as("user_id"),
+                        field("u.account", String.class).as("account"),
+                        field("pc.password", byte[].class).as("password"),
+                        field("pc.salt", String.class).as("salt"),
+                        field("pc.initial", Boolean.class).as("initial"),
+                        field("pc.created_at", LocalDateTime.class).as("created_at"),
+                        field("ok.otp_key", byte[].class).as("otp_key"),
+                        field("ul.lock_level", String.class).as("lock_level"),
+                        field("ul.locked_at", LocalDateTime.class).as("locked_at"))
+                .from(table("users").as("u"))
+                .leftJoin(table("password_credentials").as("pc")).on(field("pc.user_id").eq(field("u.user_id")))
+                .leftJoin(table("otp_keys").as("ok")).on(field("ok.user_id").eq(field("u.user_id")))
+                .leftJoin(table("user_locks").as("ul")).on(field("ul.user_id").eq(field("u.user_id")))
+                .where(field("u.account").eq(account))
                 .fetchOne();
-        if (userRec == null) return Optional.empty();
-
-        User baseUser = USER.decode(userRec).getOrThrow();
-        Long userId = baseUser.id();
-
-        PasswordCredential credential = dsl.select(
-                        field("password", byte[].class),
-                        field("salt", String.class),
-                        field("initial", Boolean.class),
-                        field("created_at", LocalDateTime.class))
-                .from(table("password_credentials"))
-                .where(field("user_id").eq(userId))
-                .fetchOptional(r -> PASSWORD_CREDENTIAL.decode(r).getOrThrow())
-                .orElse(null);
-
-        OtpKey otpKey = dsl.select(field("otp_key", byte[].class))
-                .from(table("otp_keys"))
-                .where(field("user_id").eq(userId))
-                .fetchOptional(r -> new OtpKey(null, r.get(field("otp_key", byte[].class))))
-                .orElse(null);
-
-        UserLock userLock = dsl.select(
-                        field("lock_level", String.class),
-                        field("locked_at", LocalDateTime.class))
-                .from(table("user_locks"))
-                .where(field("user_id").eq(userId))
-                .fetchOptional(r -> new UserLock(
-                        null,
-                        LockLevel.valueOf(r.get(field("lock_level", String.class))),
-                        r.get(field("locked_at", LocalDateTime.class))))
-                .orElse(null);
-
-        List<UserProfileValue> profileValues = loadProfileValues(userId);
-
-        return Optional.of(new User(
-                userId, baseUser.account(), baseUser.writeProtected(),
-                null, profileValues, userLock, credential, otpKey, null, null, null));
+        if (rec == null) return Optional.empty();
+        return Optional.of(USER_CREDENTIALS.decode(rec).getOrThrow());
     }
 
     public Optional<User> findById(Long userId) {
@@ -390,7 +364,7 @@ public class UserRepository {
         return dsl.select(field("otp_key", byte[].class))
                 .from(table("otp_keys"))
                 .where(field("user_id").eq(userId))
-                .fetchOptional(r -> new OtpKey(null, r.get(field("otp_key", byte[].class))));
+                .fetchOptional(r -> OTP_KEY.decode(r).getOrThrow());
     }
 
     public boolean isLocked(Long userId) {
@@ -417,7 +391,7 @@ public class UserRepository {
                 rec.get(field("user_id", Long.class)),
                 rec.get(field("account", String.class)),
                 rec.get(field("write_protected", Boolean.class)),
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null);
         return Optional.of(new OidcUser(null, user, rec.get(field("oidc_sub", String.class))));
     }
 
@@ -445,7 +419,7 @@ public class UserRepository {
 
         return new User(
                 userId, baseUser.account(), baseUser.writeProtected(),
-                groups, profileValues, null, null, null, null, permissions, null);
+                groups, profileValues, null, null, permissions, null);
     }
 
     private List<Group> loadGroups(Long userId) {
