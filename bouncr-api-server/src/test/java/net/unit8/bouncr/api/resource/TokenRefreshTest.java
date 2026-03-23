@@ -289,24 +289,25 @@ class TokenRefreshTest {
         }
 
         @Test
-        void refreshWithLockedUser_stillReturnsProfileMap() {
-            // BUG FINDER: verify that a locked user can still get a refreshed token
-            // (locking prevents sign-in, not existing sessions -- this may be a bug!)
+        void refreshWithLockedUser_returnsNullAndDeletesTokens() {
             UserRepository userRepo = new UserRepository(dsl);
             User user = userRepo.insert("locked_refresh_user");
             userRepo.lockUser(user.id(), LockLevel.BAN);
 
             InMemoryStore bouncrStore = new InMemoryStore();
             InMemoryStore refreshStore = new InMemoryStore();
+            // Pre-populate tokens to verify they get deleted
+            bouncrStore.write("locked-session", new java.util.HashMap<>(java.util.Map.of("sub", "locked_refresh_user")));
+            refreshStore.write("locked-session", new java.util.HashMap<>(java.util.Map.of("userId", user.id())));
+
             StoreProvider sp = new TestStoreProvider(bouncrStore, refreshStore);
             SignInService service = new SignInService(dsl, sp, config);
 
             HashMap<String, Object> result = service.refreshAccessToken(user.id(), "locked-session");
-            // refreshAccessToken does NOT check lock status -- it just rebuilds the profile.
-            // This means a banned user can still refresh tokens until the session expires.
-            // Documenting this behavior for security review.
-            assertThat(result).isNotNull();
-            assertThat(result.get("sub")).isEqualTo("locked_refresh_user");
+            assertThat(result).isNull();
+            // Tokens should be cleaned up
+            assertThat(bouncrStore.read("locked-session")).isNull();
+            assertThat(refreshStore.read("locked-session")).isNull();
         }
 
         @Test

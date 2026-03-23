@@ -106,6 +106,13 @@ public class SignInService {
         User user = userRepo.findById(userId).orElse(null);
         if (user == null) return null;
 
+        if (userRepo.isLocked(userId)) {
+            LOG.info("Token refresh denied for locked user {}", user.account());
+            storeProvider.getStore(BOUNCR_TOKEN).delete(sessionId);
+            storeProvider.getStore(REFRESH_TOKEN).delete(sessionId);
+            return null;
+        }
+
         HashMap<String, Object> profileMap = new HashMap<>(
                 userRepo.loadProfileValues(userId).stream()
                         .collect(Collectors.toMap(v -> v.userProfileField().jsonName(), v -> v.value())));
