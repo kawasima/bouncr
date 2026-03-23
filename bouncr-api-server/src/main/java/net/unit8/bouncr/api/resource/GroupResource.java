@@ -7,6 +7,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.GroupUpdate;
 import net.unit8.bouncr.api.repository.GroupRepository;
@@ -60,7 +61,7 @@ public class GroupResource {
     @Decision(value = ALLOWED, method = "DELETE")
     public boolean isDeleteAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("group:delete") || p.hasPermission("any_group:update"))
+                .filter(p -> p.hasPermission("group:delete") || p.hasPermission("any_group:delete"))
                 .isPresent();
     }
 
@@ -95,7 +96,11 @@ public class GroupResource {
     }
 
     @Decision(DELETE)
-    public Void delete(Group group, DSLContext dsl) {
+    public Object delete(Group group, DSLContext dsl) {
+        if (Boolean.TRUE.equals(group.writeProtected())) {
+            return Problem.valueOf(403, "Cannot delete a write-protected group",
+                    BouncrProblem.UNPROCESSABLE.problemUri());
+        }
         GroupRepository repo = new GroupRepository(dsl);
         repo.delete(group.name());
         return null;

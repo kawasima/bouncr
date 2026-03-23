@@ -3,6 +3,7 @@ package realm
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -66,5 +67,6 @@ func (a *Application) BackendAddress() (string, int, error) {
 type Realm struct {
 	ID          int64
 	URL         string
+	URLPattern  *regexp.Regexp
 	Application *Application
 }

@@ -73,10 +73,12 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 ar.all("/groups").to(GroupsResource.class);
                 ar.all("/group/:name").to(GroupResource.class);
                 ar.all("/group/:name/users").to(GroupUsersResource.class);
+                ar.all("/group/:name/assignments").to(GroupAssignmentsResource.class);
                 ar.all("/applications").to(ApplicationsResource.class);
                 ar.all("/application/:name").to(ApplicationResource.class);
                 ar.all("/application/:name/realms").to(RealmsResource.class);
                 ar.all("/application/:name/realm/:realmName").to(RealmResource.class);
+                ar.all("/application/:name/realm/:realmName/assignments").to(RealmAssignmentsResource.class);
                 ar.all("/assignments").to(AssignmentsResource.class);
                 ar.all("/assignment").to(AssignmentResource.class);
                 ar.all("/roles").to(RolesResource.class);

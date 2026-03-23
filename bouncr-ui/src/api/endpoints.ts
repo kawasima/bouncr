@@ -118,6 +118,16 @@ export function updateGroup(name: string, data: NameDescriptionRequest) {
   });
 }
 
+export function deleteGroup(name: string) {
+  return apiRequest<void>(`/group/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getGroupAssignments(groupName: string) {
+  return apiRequest<Assignment[]>(`/group/${encodeURIComponent(groupName)}/assignments`, {});
+}
+
 // === Roles ===
 
 export function getRoles(params: PaginationParams & { q?: string }) {
@@ -320,6 +330,10 @@ export function deleteRealm(appName: string, realmName: string) {
   return apiRequest<void>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}`, {
     method: 'DELETE',
   });
+}
+
+export function getRealmAssignments(appName: string, realmName: string) {
+  return apiRequest<Assignment[]>(`/application/${encodeURIComponent(appName)}/realm/${encodeURIComponent(realmName)}/assignments`, {});
 }
 
 // === OIDC Providers ===

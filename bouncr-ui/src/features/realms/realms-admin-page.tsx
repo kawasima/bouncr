@@ -9,7 +9,7 @@ import type { Application, Realm, Group, Role, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 
 const realmSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -19,34 +19,40 @@ const realmSchema = z.object({
 
 type RealmFormData = z.infer<typeof realmSchema>;
 
-function AssignmentSection({ realm }: { realm: Realm }) {
+function AssignmentSection({ realm, appName }: { realm: Realm; appName: string }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [assignments, setAssignments] = useState<{ group: { id: number; name: string }; role: { id: number; name: string } }[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<Set<number>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      api.getGroups({ limit: 1000 }),
-      api.getRoles({ limit: 1000 }),
-    ]).then(([g, r]) => {
+  const loadData = useCallback(async () => {
+    try {
+      const [g, r, a] = await Promise.all([
+        api.getGroups({ limit: 1000 }),
+        api.getRoles({ limit: 1000 }),
+        api.getRealmAssignments(appName, realm.name),
+      ]);
       setGroups(g);
       setRoles(r);
-    }).catch(() => {});
-  }, []);
+      setAssignments(a.map((x) => ({ group: x.group, role: x.role })));
+    } catch (err) {
+      if (err instanceof ApiError) setProblem(err.problem);
+    }
+  }, [appName, realm.name]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleAdd = async () => {
     if (!selectedGroup || selectedRoles.size === 0) return;
     setSubmitting(true);
     setProblem(null);
-    setSuccess(null);
     try {
       const group = groups.find((g) => g.name === selectedGroup);
       if (!group) return;
-      const assignments = Array.from(selectedRoles).map((roleId) => {
+      const reqs = Array.from(selectedRoles).map((roleId) => {
         const role = roles.find((r) => r.id === roleId)!;
         return {
           group: { id: group.id, name: group.name },
@@ -54,10 +60,10 @@ function AssignmentSection({ realm }: { realm: Realm }) {
           realm: { id: realm.id, name: realm.name },
         };
       });
-      await api.createAssignments(assignments);
-      setSuccess(`Assigned ${group.name} with ${assignments.length} role(s)`);
+      await api.createAssignments(reqs);
       setSelectedGroup('');
       setSelectedRoles(new Set());
+      loadData();
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     } finally {
@@ -65,13 +71,56 @@ function AssignmentSection({ realm }: { realm: Realm }) {
     }
   };
 
+  const handleRemove = async (row: { group: { id: number; name: string }; role: { id: number; name: string } }) => {
+    setProblem(null);
+    try {
+      await api.deleteAssignments([{
+        group: row.group,
+        role: row.role,
+        realm: { id: realm.id, name: realm.name },
+      }]);
+      loadData();
+    } catch (err) {
+      if (err instanceof ApiError) setProblem(err.problem);
+    }
+  };
+
   return (
     <div className="space-y-4 border-t border-gold/20 pt-6 mt-6">
       <h3 className="text-xs uppercase tracking-[0.15em] text-gold">Assignments</h3>
       <ProblemAlert problem={problem} />
-      {success && (
-        <div className="text-sm text-gold border border-gold/30 rounded-sm p-3">{success}</div>
+
+      {/* Existing assignments */}
+      {assignments.length > 0 && (
+        <table className="w-full mb-4">
+          <thead>
+            <tr className="border-b border-gold-muted">
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Group</th>
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Role</th>
+              <th className="px-3 py-2 w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {assignments.map((a) => (
+              <tr key={`${a.group.id}-${a.role.id}`} className="border-b border-gold/10">
+                <td className="px-3 py-2 text-sm">{a.group.name}</td>
+                <td className="px-3 py-2 text-sm">{a.role.name}</td>
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => handleRemove(a)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title="Remove assignment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
+
+      {/* Add new assignment */}
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Group</label>
@@ -86,29 +135,37 @@ function AssignmentSection({ realm }: { realm: Realm }) {
             ))}
           </select>
         </div>
-        {selectedGroup && (
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Roles</label>
-            <div className="max-h-48 overflow-y-auto space-y-1 border border-gold/20 rounded-sm p-3">
-              {roles.map((r) => (
-                <label key={r.id} className="flex items-center gap-2 cursor-pointer hover:bg-gold/5 px-2 py-1 rounded-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.has(r.id)}
-                    onChange={(e) => {
-                      const next = new Set(selectedRoles);
-                      if (e.target.checked) next.add(r.id);
-                      else next.delete(r.id);
-                      setSelectedRoles(next);
-                    }}
-                    className="accent-gold"
-                  />
-                  <span className="text-sm">{r.name}</span>
-                </label>
-              ))}
+        {selectedGroup && (() => {
+          const assignedRoleIds = new Set(
+            assignments.filter((a) => a.group.name === selectedGroup).map((a) => a.role.id)
+          );
+          const available = roles.filter((r) => !assignedRoleIds.has(r.id));
+          return available.length > 0 ? (
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Roles</label>
+              <div className="max-h-48 overflow-y-auto space-y-1 border border-gold/20 rounded-sm p-3">
+                {available.map((r) => (
+                  <label key={r.id} className="flex items-center gap-2 cursor-pointer hover:bg-gold/5 px-2 py-1 rounded-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.has(r.id)}
+                      onChange={(e) => {
+                        const next = new Set(selectedRoles);
+                        if (e.target.checked) next.add(r.id);
+                        else next.delete(r.id);
+                        setSelectedRoles(next);
+                      }}
+                      className="accent-gold"
+                    />
+                    <span className="text-sm">{r.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">All roles are already assigned for this group.</p>
+          );
+        })()}
         <Button
           type="button"
           onClick={handleAdd}
@@ -127,11 +184,13 @@ function RealmEditForm({
   onSubmit,
   problem,
   appVirtualPath,
+  appName,
 }: {
   target: Realm | null;
   onSubmit: (data: RealmFormData) => Promise<boolean>;
   problem: Problem | null;
   appVirtualPath: string;
+  appName: string;
 }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RealmFormData>({
     resolver: zodResolver(realmSchema),
@@ -174,7 +233,7 @@ function RealmEditForm({
           {isSubmitting ? 'Saving...' : 'Save'}
         </Button>
       </form>
-      {target && <AssignmentSection realm={target} />}
+      {target && <AssignmentSection realm={target} appName={appName} />}
     </div>
   );
 }
@@ -249,6 +308,7 @@ export function RealmsAdminPage() {
           onSubmit={handleSave}
           problem={problem}
           appVirtualPath={app?.virtual_path ?? ''}
+          appName={appName}
         />
       </div>
     );

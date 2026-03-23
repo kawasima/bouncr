@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -86,9 +87,15 @@ func (c *Cache) Refresh() error {
 			appMap[appID] = app
 		}
 
+		urlPattern, err := regexp.Compile("^" + realmURL + "$")
+		if err != nil {
+			return fmt.Errorf("compiling realm URL pattern %q: %w", realmURL, err)
+		}
+
 		realmsByPath[virtualPath] = append(realmsByPath[virtualPath], &Realm{
 			ID:          realmID,
 			URL:         realmURL,
+			URLPattern:  urlPattern,
 			Application: app,
 		})
 	}
@@ -127,27 +134,28 @@ func (c *Cache) Refresh() error {
 }
 
 // Match finds the realm whose path matches the given request path.
-// Matching semantics (equivalent to Java RealmCache.matchesPath):
+// Two-stage matching:
 //
-//	path == virtualPath                   → exact application match
-//	path == virtualPath + "/" + realm.URL → realm sub-path match
+//  1. Stage 1: Find the application by longest virtualPath prefix match.
+//  2. Stage 2: Match the remainder (path after virtualPath + "/") against
+//     each realm's URLPattern (compiled as ^{url}$).
 //
-// When multiple virtualPaths are prefixes of path, the longest (most specific)
-// virtualPath wins, making the result deterministic.
+// When path == virtualPath exactly, the remainder is "" which matches url ".*".
 func (c *Cache) Match(path string) *Realm {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	// Case 1: path == virtualPath (exact application match)
-	if realms, ok := c.realmsByPath[path]; ok && len(realms) > 0 {
-		return realms[0]
-	}
-
-	// Case 2: path == virtualPath + "/" + realm.URL
-	// Iterate in descending virtualPath length order so the most specific prefix
-	// wins. realm.URL may itself contain "/" (e.g. "api/users"), so we compare
-	// the full remainder rather than splitting on the last "/".
 	for _, vp := range c.sortedVirtualPaths {
+		if path == vp {
+			// Exact virtualPath match — remainder is ""
+			for _, r := range c.realmsByPath[vp] {
+				if r.URLPattern.MatchString("") {
+					return r
+				}
+			}
+			return nil
+		}
+
 		var prefix string
 		if strings.HasSuffix(vp, "/") {
 			prefix = vp
@@ -157,9 +165,9 @@ func (c *Cache) Match(path string) *Realm {
 		if !strings.HasPrefix(path, prefix) {
 			continue
 		}
-		realmURL := path[len(prefix):]
+		remainder := path[len(prefix):]
 		for _, r := range c.realmsByPath[vp] {
-			if r.URL == realmURL {
+			if r.URLPattern.MatchString(remainder) {
 				return r
 			}
 		}

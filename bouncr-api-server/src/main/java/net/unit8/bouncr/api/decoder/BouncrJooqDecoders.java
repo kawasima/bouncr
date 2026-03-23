@@ -220,6 +220,29 @@ public final class BouncrJooqDecoders {
             new Role(roleId, roleName, roleDesc.orElse(null), roleWp.orElse(false), null),
             null));
 
+    public static final Decoder<Record, Assignment> ASSIGNMENT_WITH_REALM = combine(
+            field("group_id", long_()),
+            field("group_name", string()),
+            optionalField("group_description", string()),
+            optionalField("group_write_protected", bool()),
+            field("role_id", long_()),
+            field("role_name", string()),
+            optionalField("role_description", string()),
+            optionalField("role_write_protected", bool()),
+            field("realm_id", long_()),
+            field("realm_name", string()),
+            optionalField("realm_name_lower", string()),
+            optionalField("realm_url", string()),
+            optionalField("realm_description", string()),
+            optionalField("realm_write_protected", bool())
+    ).map((groupId, groupName, groupDesc, groupWp,
+           roleId, roleName, roleDesc, roleWp,
+           realmId, realmName, realmNameLower, realmUrl, realmDesc, realmWp) -> new Assignment(
+            new Group(groupId, groupName, groupDesc.orElse(null), groupWp.orElse(false), null),
+            new Role(roleId, roleName, roleDesc.orElse(null), roleWp.orElse(false), null),
+            new Realm(realmId, realmName, realmNameLower.orElse(null), realmUrl.orElse(null),
+                    realmDesc.orElse(null), null, realmWp.orElse(false), null)));
+
     // --- PasswordResetChallenge ---
 
     public static final Decoder<Record, PasswordResetChallenge> PASSWORD_RESET_CHALLENGE = combine(

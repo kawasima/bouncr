@@ -11,6 +11,7 @@ import org.jooq.Field;
 import org.jooq.Record;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static net.unit8.raoh.Decoders.combine;
@@ -24,8 +25,8 @@ public class RealmCache extends SystemComponent<RealmCache> {
 
     private List<CachedRealm> cache;
 
-    public record CachedRealm(Long realmId, String name, String url, Long applicationId,
-                               String virtualPath, String passTo) {
+    public record CachedRealm(Long realmId, String name, String url, Pattern urlPattern,
+                               Long applicationId, String virtualPath, String passTo) {
     }
 
     // Unquoted field references — compatible with both H2 (uppercase) and PostgreSQL (lowercase)
@@ -44,7 +45,9 @@ public class RealmCache extends SystemComponent<RealmCache> {
             JooqRecordDecoders.field("application_id", long_()),
             JooqRecordDecoders.field("virtual_path", string()),
             JooqRecordDecoders.field("pass_to", string())
-    ).map(CachedRealm::new);
+    ).map((realmId, name, url, appId, virtualPath, passTo) ->
+            new CachedRealm(realmId, name, url, Pattern.compile("^" + url + "$"),
+                    appId, virtualPath, passTo));
 
     @Override
     protected ComponentLifecycle<RealmCache> lifecycle() {
@@ -64,17 +67,26 @@ public class RealmCache extends SystemComponent<RealmCache> {
     }
 
     public CachedRealm matches(String path) {
+        if (path == null) return null;
         return cache.stream()
-                .filter(realm -> matchesPath(path, realm.virtualPath(), realm.url()))
-                .findAny()
-                .orElse(null);
-    }
+                .filter(realm -> {
+                    String vp = realm.virtualPath();
+                    if (vp == null) return false;
 
-    private boolean matchesPath(String path, String virtualPath, String url) {
-        if (path == null || virtualPath == null || url == null) return false;
-        if (path.equals(virtualPath)) return true;
-        String joined = virtualPath.endsWith("/") ? virtualPath + url : virtualPath + "/" + url;
-        return path.equals(joined);
+                    if (path.equals(vp)) {
+                        // Exact virtualPath match — remainder is ""
+                        return realm.urlPattern().matcher("").matches();
+                    }
+
+                    String prefix = vp.endsWith("/") ? vp : vp + "/";
+                    if (path.startsWith(prefix)) {
+                        String remainder = path.substring(prefix.length());
+                        return realm.urlPattern().matcher(remainder).matches();
+                    }
+                    return false;
+                })
+                .findFirst()
+                .orElse(null);
     }
 
     public synchronized void refresh() {
