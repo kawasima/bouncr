@@ -12,9 +12,9 @@ export function PasskeySection({ onRefresh }: { onRefresh: () => void }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.getWebAuthnCredentials().then(setCredentials).catch((err) => {
-      if (err instanceof ApiError) setProblem(err.problem);
-    });
+    api.getWebAuthnCredentials()
+      .then(setCredentials)
+      .catch(() => setCredentials([]));
   }, []);
 
   async function handleRegister() {

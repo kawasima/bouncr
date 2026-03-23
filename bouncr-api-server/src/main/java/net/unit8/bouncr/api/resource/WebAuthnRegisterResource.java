@@ -79,39 +79,38 @@ public class WebAuthnRegisterResource {
     }
 
     @Decision(POST)
-    public boolean doPost(WebAuthnRegister request,
-                          UserPermissionPrincipal principal,
-                          HttpRequest httpRequest,
-                          RestContext context,
-                          DSLContext dsl) {
+    public Object doPost(WebAuthnRegister request,
+                         UserPermissionPrincipal principal,
+                         HttpRequest httpRequest,
+                         RestContext context,
+                         DSLContext dsl) {
         String sessionId = some(httpRequest.getCookies().get(COOKIE_NAME), Cookie::getValue).orElse(null);
         if (sessionId == null) {
-            context.setMessage(Problem.valueOf(400, "WebAuthn session cookie not found",
-                    BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri()));
-            return false;
+            return Problem.valueOf(400, "WebAuthn session cookie not found",
+                    BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri());
         }
 
         WebAuthnChallenge challengeData = (WebAuthnChallenge) storeProvider.getStore(WEBAUTHN_CHALLENGE).read(sessionId);
         if (challengeData == null) {
-            context.setMessage(Problem.valueOf(400, "Challenge expired",
-                    BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri()));
-            return false;
+            return Problem.valueOf(400, "Challenge expired",
+                    BouncrProblem.WEBAUTHN_CHALLENGE_EXPIRED.problemUri());
         }
         storeProvider.getStore(WEBAUTHN_CHALLENGE).delete(sessionId);
 
         if (!WebAuthnChallenge.TYPE_REGISTRATION.equals(challengeData.type())) {
-            context.setMessage(Problem.valueOf(400, "Invalid challenge type",
-                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
-            return false;
+            return Problem.valueOf(400, "Invalid challenge type",
+                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri());
         }
 
         UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
+        User user = userRepo.findByAccount(principal.getName()).orElse(null);
+        if (user == null) {
+            return Problem.valueOf(404, "User not found", java.net.URI.create("about:blank"));
+        }
 
         if (challengeData.userId() != null && !challengeData.userId().equals(user.id())) {
-            context.setMessage(Problem.valueOf(400, "Challenge was not issued for this user",
-                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
-            return false;
+            return Problem.valueOf(400, "Challenge was not issued for this user",
+                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri());
         }
 
         WebAuthnService webAuthnService = new WebAuthnService(config);
@@ -121,9 +120,8 @@ public class WebAuthnRegisterResource {
                     request.registrationResponseJSON(), challengeData.challenge());
         } catch (DataConversionException | VerificationException e) {
             LOG.warn("WebAuthn registration verification failed", e);
-            context.setMessage(Problem.valueOf(400, "Verification failed",
-                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri()));
-            return false;
+            return Problem.valueOf(400, "Verification failed",
+                    BouncrProblem.WEBAUTHN_VERIFICATION_FAILED.problemUri());
         }
 
         AttestedCredentialData attestedCredentialData =

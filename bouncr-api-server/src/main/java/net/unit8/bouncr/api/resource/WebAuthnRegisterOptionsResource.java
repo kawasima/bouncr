@@ -5,9 +5,11 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import java.net.URI;
 import net.unit8.bouncr.api.boundary.WebAuthnRegistrationOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
@@ -53,11 +55,15 @@ public class WebAuthnRegisterOptionsResource {
     }
 
     @Decision(POST)
-    public boolean doPost(UserPermissionPrincipal principal,
-                          RestContext context,
-                          DSLContext dsl) {
+    public Object doPost(UserPermissionPrincipal principal,
+                         RestContext context,
+                         DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
+        User user = userRepo.findByAccount(principal.getName()).orElse(null);
+        if (user == null) {
+            return Problem.valueOf(404, "User not found", URI.create("about:blank"));
+        }
+
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         WebAuthnService webAuthnService = new WebAuthnService(config);
 

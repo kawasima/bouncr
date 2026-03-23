@@ -2,6 +2,8 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
+import kotowari.restful.data.ContextKey;
+import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -16,6 +18,8 @@ import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class OtpKeyResource {
+    static final ContextKey<User> USER = ContextKey.of(User.class);
+
     @Inject
     private BouncrConfiguration config;
 
@@ -29,28 +33,33 @@ public class OtpKeyResource {
         return principal.hasPermission("my:update");
     }
 
-    @Decision(HANDLE_OK)
-    public OtpKey find(UserPermissionPrincipal principal, DSLContext dsl) {
+    @Decision(EXISTS)
+    public boolean exists(UserPermissionPrincipal principal, RestContext context, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        return userRepo.findByAccount(principal.getName())
-                .flatMap(user -> userRepo.findOtpKey(user.id()))
+        var user = userRepo.findByAccount(principal.getName());
+        user.ifPresent(u -> context.put(USER, u));
+        return user.isPresent();
+    }
+
+    @Decision(HANDLE_OK)
+    public OtpKey find(User user, DSLContext dsl) {
+        UserRepository userRepo = new UserRepository(dsl);
+        return userRepo.findOtpKey(user.id())
                 .orElse(new OtpKey(null));
     }
 
     @Decision(PUT)
-    public OtpKey create(UserPermissionPrincipal principal, DSLContext dsl) {
+    public OtpKey create(User user, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
         byte[] key = RandomUtils.generateRandomString(20, config.getSecureRandom()).getBytes();
         userRepo.insertOtpKey(user.id(), key);
         return new OtpKey(key);
     }
 
     @Decision(DELETE)
-    public Void delete(UserPermissionPrincipal principal, DSLContext dsl) {
+    public Void delete(User user, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        userRepo.findByAccount(principal.getName())
-                .ifPresent(user -> userRepo.deleteOtpKey(user.id()));
+        userRepo.deleteOtpKey(user.id());
         return null;
     }
 }

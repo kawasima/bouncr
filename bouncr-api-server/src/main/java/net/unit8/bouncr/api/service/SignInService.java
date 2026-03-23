@@ -74,7 +74,9 @@ public class SignInService {
                 ua -> ua.substring(0, Math.min(ua.length(), 255))).orElse("");
 
         UserSessionRepository sessionRepo = new UserSessionRepository(dsl);
-        UserSession userSession = sessionRepo.insert(user.id(), token, request.getRemoteAddr(), userAgent, LocalDateTime.now());
+        UserSession inserted = sessionRepo.insert(user.id(), token, request.getRemoteAddr(), userAgent, LocalDateTime.now());
+        UserSession userSession = new UserSession(inserted.id(), user, inserted.token(),
+                inserted.remoteAddress(), inserted.userAgent(), inserted.createdAt());
 
         UserRepository userRepo = new UserRepository(dsl);
         HashMap<String, Object> profileMap = new HashMap<>(

@@ -21,6 +21,7 @@ import static kotowari.restful.DecisionPoint.*;
 @AllowedMethods({"GET", "DELETE"})
 public class WebAuthnCredentialsResource {
 
+    static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<Long> CREDENTIAL_ID = ContextKey.of(Long.class);
 
     @Decision(AUTHORIZED)
@@ -46,10 +47,16 @@ public class WebAuthnCredentialsResource {
         return null;
     }
 
-    @Decision(HANDLE_OK)
-    public List<WebAuthnCredentialResponse> list(UserPermissionPrincipal principal, DSLContext dsl) {
+    @Decision(EXISTS)
+    public boolean exists(UserPermissionPrincipal principal, RestContext context, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
+        var user = userRepo.findByAccount(principal.getName());
+        user.ifPresent(u -> context.put(USER, u));
+        return user.isPresent();
+    }
+
+    @Decision(HANDLE_OK)
+    public List<WebAuthnCredentialResponse> list(User user, DSLContext dsl) {
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         return credRepo.findByUserId(user.id()).stream()
                 .map(WebAuthnCredentialResponse::of)
@@ -57,11 +64,7 @@ public class WebAuthnCredentialsResource {
     }
 
     @Decision(DELETE)
-    public Void delete(Long credentialId,
-                       UserPermissionPrincipal principal,
-                       DSLContext dsl) {
-        UserRepository userRepo = new UserRepository(dsl);
-        User user = userRepo.findByAccount(principal.getName()).orElseThrow();
+    public Void delete(Long credentialId, User user, DSLContext dsl) {
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         credRepo.deleteByUserIdAndCredentialId(user.id(), credentialId);
         return null;

@@ -150,9 +150,9 @@ export default function bouncrAuth(): Plugin {
                 const userId: string | undefined =
                   String(data.user?.id ?? data.user_id ?? data.id ?? '0')
 
-                if (token) {
+                if (token && account) {
                   tokenStore.set(token, {
-                    account: account ?? 'dev',
+                    account,
                     userId: userId,
                   })
                   console.log(
