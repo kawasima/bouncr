@@ -9,6 +9,7 @@ import type { OidcProvider, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<OidcProvider> = {
   fetchList: api.getOidcProviders,
@@ -112,7 +113,7 @@ function OidcProviderEditForm({
 
 export function OidcProvidersAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('oidc_provider:create');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcProvider.create);
 
   return (
     <AdminCrudPage

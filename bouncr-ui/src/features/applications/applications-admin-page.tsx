@@ -10,6 +10,7 @@ import type { Application, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Application> = {
   fetchList: api.getApplications,
@@ -112,7 +113,7 @@ function AppEditForm({
 
 export function ApplicationsAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('any_application:create', 'application:create');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.application.create);
 
   return (
     <AdminCrudPage

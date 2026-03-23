@@ -11,6 +11,7 @@ import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { X, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Group> = {
   fetchList: api.getGroups,
@@ -406,8 +407,8 @@ function GroupEditFormWithUsers(props: {
 
 export function GroupsAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('any_group:create', 'group:create');
-  const canDelete = hasPermission('any_group:delete', 'group:delete');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.group.create);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.group.delete);
 
   return (
     <AdminCrudPage

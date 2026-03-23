@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from './auth-context';
 import * as api from '@/api/endpoints';
 
@@ -28,9 +28,11 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, [account, isAuthenticated]);
 
+  const permissionSet = useMemo(() => new Set(permissions), [permissions]);
+
   const hasPermission = useCallback(
-    (...names: string[]) => names.some((n) => permissions.includes(n)),
-    [permissions],
+    (...names: string[]) => names.some((n) => permissionSet.has(n)),
+    [permissionSet],
   );
 
   return (

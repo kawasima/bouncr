@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/routes/route-paths';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const menuItems = [
-  { label: 'Users', path: ROUTES.USERS, permissions: ['any_user:read', 'user:read'] },
-  { label: 'Groups', path: ROUTES.GROUPS, permissions: ['any_group:read', 'group:read'] },
-  { label: 'Applications', path: ROUTES.APPLICATIONS, permissions: ['any_application:read', 'application:read'] },
-  { label: 'Roles', path: ROUTES.ROLES, permissions: ['any_role:read', 'role:read'] },
-  { label: 'Permissions', path: ROUTES.PERMISSIONS, permissions: ['any_permission:read', 'permission:read'] },
-  { label: 'OIDC Applications', path: ROUTES.OIDC_APPLICATIONS, permissions: ['oidc_application:read'] },
-  { label: 'OIDC Providers', path: ROUTES.OIDC_PROVIDERS, permissions: ['oidc_provider:read'] },
-  { label: 'Invitations', path: ROUTES.INVITATIONS, permissions: ['invitation:create'] },
-  { label: 'Audit', path: ROUTES.AUDIT, permissions: ['any_user:read', 'user:read'] },
+  { label: 'Users', path: ROUTES.USERS, permissions: RESOURCE_PERMISSIONS.user.read },
+  { label: 'Groups', path: ROUTES.GROUPS, permissions: RESOURCE_PERMISSIONS.group.read },
+  { label: 'Applications', path: ROUTES.APPLICATIONS, permissions: RESOURCE_PERMISSIONS.application.read },
+  { label: 'Roles', path: ROUTES.ROLES, permissions: RESOURCE_PERMISSIONS.role.read },
+  { label: 'Permissions', path: ROUTES.PERMISSIONS, permissions: RESOURCE_PERMISSIONS.permission.read },
+  { label: 'OIDC Applications', path: ROUTES.OIDC_APPLICATIONS, permissions: RESOURCE_PERMISSIONS.oidcApplication.read },
+  { label: 'OIDC Providers', path: ROUTES.OIDC_PROVIDERS, permissions: RESOURCE_PERMISSIONS.oidcProvider.read },
+  { label: 'Invitations', path: ROUTES.INVITATIONS, permissions: RESOURCE_PERMISSIONS.invitation.create },
+  { label: 'Audit', path: ROUTES.AUDIT, permissions: RESOURCE_PERMISSIONS.user.read },
 ] as const;
 
 export function AdminMenu() {

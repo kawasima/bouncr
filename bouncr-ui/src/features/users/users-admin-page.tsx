@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
@@ -315,8 +316,8 @@ function UserEditForm({
 
 export function UsersAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('any_user:create', 'user:create');
-  const canDelete = hasPermission('any_user:delete', 'user:delete');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.user.create);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.user.delete);
 
   return (
     <AdminCrudPage

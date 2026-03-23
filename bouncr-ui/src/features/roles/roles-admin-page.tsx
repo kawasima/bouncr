@@ -11,6 +11,7 @@ import type { Role, Permission, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Role> = {
   fetchList: api.getRoles,
@@ -133,7 +134,7 @@ function RoleEditForm({
 
 export function RolesAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('any_role:create', 'role:create');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.role.create);
 
   return (
     <AdminCrudPage

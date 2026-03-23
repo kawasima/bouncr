@@ -11,6 +11,7 @@ import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const GRANT_TYPES = [
   { value: 'authorization_code', label: 'Authorization Code' },
@@ -402,9 +403,9 @@ function OidcAppEditForm({
 
 export function OidcApplicationsAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('oidc_application:create');
-  const canDelete = hasPermission('oidc_application:delete');
-  const canUpdate = hasPermission('oidc_application:update');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.create);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.delete);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.update);
 
   return (
     <AdminCrudPage

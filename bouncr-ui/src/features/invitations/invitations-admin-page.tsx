@@ -8,6 +8,7 @@ import type { Group, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const invitationSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -17,7 +18,7 @@ type InvitationFormData = z.infer<typeof invitationSchema>;
 
 export function InvitationsAdminPage() {
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('invitation:create');
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.invitation.create);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<Set<number>>(new Set());

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { RootLayout } from '@/layouts/root-layout';
 import { RequireAuth } from '@/auth/require-auth';
 import { RequirePermission } from '@/auth/require-permission';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 import { ROUTES } from './route-paths';
 
 import { SignInPage } from '@/features/sign-in/sign-in-page';
@@ -47,51 +48,51 @@ export const router = createBrowserRouter([
 
           // Admin routes with permission guards
           {
-            element: <RequirePermission permissions={['any_user:read', 'user:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.user.read]} />,
             children: [
               { path: ROUTES.USERS, element: <UsersAdminPage /> },
               { path: ROUTES.AUDIT, element: <AuditPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['any_group:read', 'group:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.group.read]} />,
             children: [
               { path: ROUTES.GROUPS, element: <GroupsAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['any_application:read', 'application:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.application.read]} />,
             children: [
               { path: ROUTES.APPLICATIONS, element: <ApplicationsAdminPage /> },
               { path: ROUTES.REALMS, element: <RealmsAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['any_role:read', 'role:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.role.read]} />,
             children: [
               { path: ROUTES.ROLES, element: <RolesAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['any_permission:read', 'permission:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.permission.read]} />,
             children: [
               { path: ROUTES.PERMISSIONS, element: <PermissionsAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['oidc_provider:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.oidcProvider.read]} />,
             children: [
               { path: ROUTES.OIDC_PROVIDERS, element: <OidcProvidersAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['oidc_application:read']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.oidcApplication.read]} />,
             children: [
               { path: ROUTES.OIDC_APPLICATIONS, element: <OidcApplicationsAdminPage /> },
             ],
           },
           {
-            element: <RequirePermission permissions={['invitation:create']} />,
+            element: <RequirePermission permissions={[...RESOURCE_PERMISSIONS.invitation.create]} />,
             children: [
               { path: ROUTES.INVITATIONS, element: <InvitationsAdminPage /> },
             ],
