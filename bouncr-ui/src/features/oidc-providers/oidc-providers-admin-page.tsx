@@ -53,6 +53,7 @@ function OidcProviderEditForm({
   problem: Problem | null;
   canUpdate?: boolean;
 }) {
+  const isReadOnly = !!target && !canUpdate;
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcProviderFormData>({
     resolver: zodResolver(oidcProviderSchema),
     defaultValues: target ?? {
@@ -64,7 +65,7 @@ function OidcProviderEditForm({
   });
 
   const fields: { id: keyof OidcProviderFormData; label: string; type?: string; placeholder?: string; disabled?: boolean }[] = [
-    { id: 'name', label: 'Name', disabled: !!target },
+    { id: 'name', label: 'Name', disabled: !!target || isReadOnly },
     { id: 'clientId', label: 'Client ID' },
     { id: 'clientSecret', label: 'Client Secret', type: 'password' },
     { id: 'scope', label: 'Scope', placeholder: 'openid email profile' },
@@ -89,7 +90,7 @@ function OidcProviderEditForm({
             id={f.id}
             type={f.type ?? 'text'}
             {...register(f.id)}
-            disabled={f.disabled}
+            disabled={f.disabled || isReadOnly}
             placeholder={f.placeholder}
             className="mansion-input w-full py-2"
           />
@@ -97,7 +98,7 @@ function OidcProviderEditForm({
         </div>
       ))}
       <div className="flex items-center gap-3">
-        <input type="checkbox" id="pkceEnabled" {...register('pkceEnabled')} className="accent-gold" />
+        <input type="checkbox" id="pkceEnabled" {...register('pkceEnabled')} disabled={isReadOnly} className="accent-gold" />
         <label htmlFor="pkceEnabled" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           PKCE Enabled
         </label>

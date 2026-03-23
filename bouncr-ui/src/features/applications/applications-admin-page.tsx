@@ -59,6 +59,7 @@ function AppEditForm({
   problem: Problem | null;
   canUpdate?: boolean;
 }) {
+  const isReadOnly = !!target && !canUpdate;
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<AppFormData>({
     resolver: zodResolver(appSchema),
     defaultValues: target ?? { name: '', description: '', pass_to: '', virtual_path: '', top_page: '' },
@@ -78,28 +79,28 @@ function AppEditForm({
         <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Description
         </label>
-        <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+        <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
       <div className="space-y-2">
         <label htmlFor="pass_to" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Pass To
         </label>
-        <input id="pass_to" {...register('pass_to')} placeholder="http://localhost:8080" className="mansion-input w-full py-2" />
+        <input id="pass_to" {...register('pass_to')} disabled={isReadOnly} placeholder="http://localhost:8080" className="mansion-input w-full py-2" />
         {errors.pass_to && <p className="text-sm text-destructive">{errors.pass_to.message}</p>}
       </div>
       <div className="space-y-2">
         <label htmlFor="virtual_path" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Virtual Path
         </label>
-        <input id="virtual_path" {...register('virtual_path')} placeholder="/app" className="mansion-input w-full py-2" />
+        <input id="virtual_path" {...register('virtual_path')} disabled={isReadOnly} placeholder="/app" className="mansion-input w-full py-2" />
         {errors.virtual_path && <p className="text-sm text-destructive">{errors.virtual_path.message}</p>}
       </div>
       <div className="space-y-2">
         <label htmlFor="top_page" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Top Page
         </label>
-        <input id="top_page" {...register('top_page')} placeholder="/app/" className="mansion-input w-full py-2" />
+        <input id="top_page" {...register('top_page')} disabled={isReadOnly} placeholder="/app/" className="mansion-input w-full py-2" />
         {errors.top_page && <p className="text-sm text-destructive">{errors.top_page.message}</p>}
       </div>
       {(!target || canUpdate) && (

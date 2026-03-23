@@ -72,6 +72,7 @@ function OidcAppEditForm({
   canUpdate?: boolean;
 }) {
   const isCreate = !target;
+  const isReadOnly = !!target && !canUpdate;
   const [createdCredentials, setCreatedCredentials] = useState<{ clientId: string; clientSecret: string } | null>(null);
   const [regeneratedSecret, setRegeneratedSecret] = useState<string | null>(null);
   const [createProblem, setCreateProblem] = useState<Problem | null>(null);
@@ -251,6 +252,7 @@ function OidcAppEditForm({
                     : current.filter((v) => v !== gt.value);
                   setValue('grant_types', next, { shouldValidate: true });
                 }}
+                disabled={isReadOnly}
                 className="accent-gold"
               />
               <span className="text-sm">{gt.label}</span>
@@ -264,7 +266,7 @@ function OidcAppEditForm({
 
       <div className="space-y-2">
         <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Description</label>
-        <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+        <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
 
@@ -274,22 +276,22 @@ function OidcAppEditForm({
             <label htmlFor="callback_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
               Callback URL <span className="text-destructive">*</span>
             </label>
-            <input id="callback_url" {...register('callback_url')} className="mansion-input w-full py-2" />
+            <input id="callback_url" {...register('callback_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.callback_url && <p className="text-sm text-destructive">{errors.callback_url.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="home_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
-            <input id="home_url" {...register('home_url')} className="mansion-input w-full py-2" />
+            <input id="home_url" {...register('home_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.home_url && <p className="text-sm text-destructive">{errors.home_url.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="backchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Back-channel Logout URI</label>
-            <input id="backchannel_logout_uri" {...register('backchannel_logout_uri')} className="mansion-input w-full py-2" />
+            <input id="backchannel_logout_uri" {...register('backchannel_logout_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.backchannel_logout_uri && <p className="text-sm text-destructive">{errors.backchannel_logout_uri.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="frontchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Front-channel Logout URI</label>
-            <input id="frontchannel_logout_uri" {...register('frontchannel_logout_uri')} className="mansion-input w-full py-2" />
+            <input id="frontchannel_logout_uri" {...register('frontchannel_logout_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.frontchannel_logout_uri && <p className="text-sm text-destructive">{errors.frontchannel_logout_uri.message}</p>}
           </div>
         </>
@@ -310,6 +312,7 @@ function OidcAppEditForm({
                   }
                 }}
                 defaultValue=""
+                disabled={isReadOnly}
                 className="mansion-input py-1 text-sm bg-transparent"
               >
                 <option value="">Select a role...</option>
@@ -332,6 +335,7 @@ function OidcAppEditForm({
                     else next.delete(p.name);
                     setSelectedPerms(next);
                   }}
+                  disabled={isReadOnly}
                   className="accent-gold"
                 />
                 <span className="text-sm">{p.name}</span>

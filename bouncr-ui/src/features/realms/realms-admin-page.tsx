@@ -21,7 +21,7 @@ const realmSchema = z.object({
 
 type RealmFormData = z.infer<typeof realmSchema>;
 
-function AssignmentSection({ realm, appName }: { realm: Realm; appName: string }) {
+function AssignmentSection({ realm, appName, readOnly = false }: { realm: Realm; appName: string; readOnly?: boolean }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [assignments, setAssignments] = useState<{ group: { id: number; name: string }; role: { id: number; name: string } }[]>([]);
@@ -99,7 +99,7 @@ function AssignmentSection({ realm, appName }: { realm: Realm; appName: string }
             <tr className="border-b border-gold-muted">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Group</th>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Role</th>
-              <th className="px-3 py-2 w-10"></th>
+              {!readOnly && <th className="px-3 py-2 w-10"></th>}
             </tr>
           </thead>
           <tbody>
@@ -107,15 +107,17 @@ function AssignmentSection({ realm, appName }: { realm: Realm; appName: string }
               <tr key={`${a.group.id}-${a.role.id}`} className="border-b border-gold/10">
                 <td className="px-3 py-2 text-sm">{a.group.name}</td>
                 <td className="px-3 py-2 text-sm">{a.role.name}</td>
-                <td className="px-3 py-2">
-                  <button
-                    onClick={() => handleRemove(a)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title="Remove assignment"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </td>
+                {!readOnly && (
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => handleRemove(a)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      title="Remove assignment"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -123,60 +125,62 @@ function AssignmentSection({ realm, appName }: { realm: Realm; appName: string }
       )}
 
       {/* Add new assignment */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Group</label>
-          <select
-            value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
-            className="mansion-input w-full py-2 bg-transparent"
-          >
-            <option value="">Select a group...</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.name}>{g.name}</option>
-            ))}
-          </select>
-        </div>
-        {selectedGroup && (() => {
-          const assignedRoleIds = new Set(
-            assignments.filter((a) => a.group.name === selectedGroup).map((a) => a.role.id)
-          );
-          const available = roles.filter((r) => !assignedRoleIds.has(r.id));
-          return available.length > 0 ? (
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Roles</label>
-              <div className="max-h-48 overflow-y-auto space-y-1 border border-gold/20 rounded-sm p-3">
-                {available.map((r) => (
-                  <label key={r.id} className="flex items-center gap-2 cursor-pointer hover:bg-gold/5 px-2 py-1 rounded-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedRoles.has(r.id)}
-                      onChange={(e) => {
-                        const next = new Set(selectedRoles);
-                        if (e.target.checked) next.add(r.id);
-                        else next.delete(r.id);
-                        setSelectedRoles(next);
-                      }}
-                      className="accent-gold"
-                    />
-                    <span className="text-sm">{r.name}</span>
-                  </label>
-                ))}
+      {!readOnly && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Group</label>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="mansion-input w-full py-2 bg-transparent"
+            >
+              <option value="">Select a group...</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.name}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+          {selectedGroup && (() => {
+            const assignedRoleIds = new Set(
+              assignments.filter((a) => a.group.name === selectedGroup).map((a) => a.role.id)
+            );
+            const available = roles.filter((r) => !assignedRoleIds.has(r.id));
+            return available.length > 0 ? (
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Roles</label>
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-gold/20 rounded-sm p-3">
+                  {available.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer hover:bg-gold/5 px-2 py-1 rounded-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedRoles.has(r.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedRoles);
+                          if (e.target.checked) next.add(r.id);
+                          else next.delete(r.id);
+                          setSelectedRoles(next);
+                        }}
+                        className="accent-gold"
+                      />
+                      <span className="text-sm">{r.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">All roles are already assigned for this group.</p>
-          );
-        })()}
-        <Button
-          type="button"
-          onClick={handleAdd}
-          disabled={submitting || !selectedGroup || selectedRoles.size === 0}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {submitting ? 'Adding...' : 'Add Assignment'}
-        </Button>
-      </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">All roles are already assigned for this group.</p>
+            );
+          })()}
+          <Button
+            type="button"
+            onClick={handleAdd}
+            disabled={submitting || !selectedGroup || selectedRoles.size === 0}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {submitting ? 'Adding...' : 'Add Assignment'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -210,14 +214,14 @@ function RealmEditForm({
           <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Name
           </label>
-          <input id="name" {...register('name')} className="mansion-input w-full py-2" />
+          <input id="name" {...register('name')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Description
           </label>
-          <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+          <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
         </div>
         <div className="space-y-2">
@@ -226,7 +230,7 @@ function RealmEditForm({
           </label>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{appVirtualPath}/</span>
-            <input id="url" {...register('url')} className="mansion-input flex-1 py-2" disabled={!!target} />
+            <input id="url" {...register('url')} className="mansion-input flex-1 py-2" disabled={!!target || isReadOnly} />
           </div>
           {errors.url && <p className="text-sm text-destructive">{errors.url.message}</p>}
         </div>
@@ -240,7 +244,7 @@ function RealmEditForm({
           </Button>
         )}
       </form>
-      {target && <AssignmentSection realm={target} appName={appName} />}
+      {target && <AssignmentSection realm={target} appName={appName} readOnly={isReadOnly} />}
     </div>
   );
 }

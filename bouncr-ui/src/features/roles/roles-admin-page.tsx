@@ -50,6 +50,7 @@ function RoleEditForm({
   );
   const [permProblem, setPermProblem] = useState<Problem | null>(null);
   const [savingPerms, setSavingPerms] = useState(false);
+  const isReadOnly = !!target && !canUpdate;
 
   useEffect(() => {
     api.getPermissions({ limit: 1000 }).then(setAllPermissions).catch(() => {});
@@ -85,7 +86,7 @@ function RoleEditForm({
         </div>
         <div className="space-y-2">
           <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Description</label>
-          <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+          <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
         </div>
         {(!target || canUpdate) && (
@@ -116,20 +117,23 @@ function RoleEditForm({
                     else next.delete(p.id);
                     setSelectedPerms(next);
                   }}
+                  disabled={isReadOnly}
                   className="accent-gold"
                 />
                 <span className="text-sm">{p.name}</span>
               </label>
             ))}
           </div>
-          <Button
-            type="button"
-            onClick={handleSavePermissions}
-            disabled={savingPerms}
-            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-          >
-            {savingPerms ? 'Saving...' : 'Save Permissions'}
-          </Button>
+          {!isReadOnly && (
+            <Button
+              type="button"
+              onClick={handleSavePermissions}
+              disabled={savingPerms}
+              className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+            >
+              {savingPerms ? 'Saving...' : 'Save Permissions'}
+            </Button>
+          )}
         </div>
       )}
     </div>
