@@ -56,22 +56,11 @@ public class OAuth2ClientAuthenticator {
         try {
             storedHash = Base64.getDecoder().decode(app.clientSecret());
         } catch (IllegalArgumentException e) {
-            storedHash = null;
+            return null;
         }
 
-        // If decoded length matches PBKDF2 output, compare as hashed secret
-        if (storedHash != null && storedHash.length == inputHash.length) {
-            if (!MessageDigest.isEqual(inputHash, storedHash)) {
-                return null;
-            }
-        } else {
-            // Legacy plaintext secret — compare directly
-            LOG.warn("Client {} using legacy plaintext secret — migrate to PBKDF2 hash", clientId);
-            if (!MessageDigest.isEqual(
-                    clientSecret.getBytes(StandardCharsets.UTF_8),
-                    app.clientSecret().getBytes(StandardCharsets.UTF_8))) {
-                return null;
-            }
+        if (!MessageDigest.isEqual(inputHash, storedHash)) {
+            return null;
         }
 
         return new AuthResult(app, basicAuthAttempted);

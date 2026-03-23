@@ -55,6 +55,13 @@ public class InvitationsResource {
                 .isPresent();
     }
 
+    @Decision(value = ALLOWED, method = "POST")
+    public boolean isPostAllowed(UserPermissionPrincipal principal) {
+        return Optional.ofNullable(principal)
+                .filter(p -> p.hasPermission("invitation:create"))
+                .isPresent();
+    }
+
     @Decision(POST)
     public Invitation create(InvitationCreate createRequest, DSLContext dsl) {
         InvitationRepository repo = new InvitationRepository(dsl);

@@ -437,9 +437,9 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                     .constraints(
                             constraint().primaryKey(field("user_profile_field_id"), field("user_id")),
                             constraint().foreignKey(field("user_profile_field_id"))
-                                    .references(table("user_profile_fields"), field("user_profile_field_id")),
+                                    .references(table("user_profile_fields"), field("user_profile_field_id")).onDeleteCascade(),
                             constraint().foreignKey(field("user_id"))
-                                    .references(table("users"), field("user_id"))
+                                    .references(table("users"), field("user_id")).onDeleteCascade()
                     ).getSQL());
 
             stmt.execute(create.createTable(table("webauthn_credentials"))

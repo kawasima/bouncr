@@ -114,7 +114,10 @@ public class PasswordCredentialResource {
 
     @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdate updateRequest) {
-        if (principal == null) return true;
+        if (principal == null) return false;
+        if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
+            return true;
+        }
         return updateRequest.account() == null || principal.getName().equals(updateRequest.account());
     }
 
