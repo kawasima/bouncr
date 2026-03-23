@@ -149,7 +149,7 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         app.use((java.util.function.Predicate<HttpRequest>) NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
-        app.use(path("/bouncr/api/(sign_in|sign_up|password_credential/reset)/?.*"),
+        app.use(path("/bouncr/api/(sign_in|sign_up|password_credential/(reset|reset_code))/?.*"),
                 builder(new ThrottlingMiddleware())
                         .set(ThrottlingMiddleware::setThrottles, List.of(
                                 new Throttle("auth-ip",
