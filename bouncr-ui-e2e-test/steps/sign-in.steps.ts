@@ -1,11 +1,11 @@
 import { When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { BouncrWorld } from '../support/world';
-import { ADMIN_PASSWORD, BASE_URL } from '../support/config';
+import { BASE_URL } from '../support/config';
 
 When('I enter account {string} and the admin password', async function (this: BouncrWorld, account: string) {
   await this.page.locator('#account').fill(account);
-  await this.page.locator('#password').fill(ADMIN_PASSWORD);
+  await this.page.locator('#password').fill(this.adminPassword);
 });
 
 When('I enter account {string} and password {string}', async function (this: BouncrWorld, account: string, password: string) {

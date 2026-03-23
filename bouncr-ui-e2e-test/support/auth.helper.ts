@@ -20,19 +20,64 @@ export async function signIn(page: Page, account: string, password: string): Pro
   await page.waitForURL(`${BASE_URL}/`);
 }
 
+export interface SignInResult {
+  token: string;
+  /** The password that was actually used (may differ from input if initial password was changed). */
+  actualPassword: string;
+}
+
 /**
- * Sign in via API, returns the session token.
+ * Sign in via API, returns the session token and actual password.
+ * Handles initial password (PASSWORD_MUST_BE_CHANGED) by changing password first.
  */
-export async function signInViaApi(request: APIRequestContext, account: string, password: string): Promise<string> {
+export async function signInViaApi(request: APIRequestContext, account: string, password: string): Promise<SignInResult> {
   const response = await request.post(`${API_URL}/sign_in`, {
     data: { account, password },
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
   });
+
+  if (response.status() === 401) {
+    const body = await response.text();
+    if (body.includes('PASSWORD_MUST_BE_CHANGED')) {
+      // First login: change initial password
+      const newPassword = password + '_e2e';
+      await changePassword(request, account, password, newPassword);
+      return signInViaApi(request, account, newPassword);
+    }
+    // If the original password failed, try the _e2e variant (already changed in a previous run)
+    if (!password.endsWith('_e2e')) {
+      try {
+        return await signInViaApi(request, account, password + '_e2e');
+      } catch {
+        // Both passwords failed
+      }
+    }
+    throw new Error(`Sign-in failed for ${account}: ${response.status()} ${body}`);
+  }
+
   if (!response.ok()) {
     throw new Error(`Sign-in failed for ${account}: ${response.status()} ${await response.text()}`);
   }
   const body = await response.json();
-  return body.token;
+  return { token: body.token, actualPassword: password };
+}
+
+/**
+ * Change password via API (unauthenticated, uses old password).
+ */
+async function changePassword(
+  request: APIRequestContext,
+  account: string,
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const response = await request.put(`${API_URL}/password_credential`, {
+    data: { account, old_password: oldPassword, new_password: newPassword },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+  });
+  if (!response.ok()) {
+    throw new Error(`Password change failed for ${account}: ${response.status()} ${await response.text()}`);
+  }
 }
 
 /**
@@ -155,16 +200,16 @@ export async function createAssignment(
 }
 
 /**
- * Set permissions on a role (PUT replaces all permissions).
+ * Set permissions on a role (POST adds permission names).
  */
 export async function setRolePermissions(
   request: APIRequestContext,
   token: string,
   roleName: string,
-  permissions: Array<{ id: number; name: string }>,
+  permissionNames: string[],
 ): Promise<void> {
-  const response = await request.put(`${API_URL}/role/${encodeURIComponent(roleName)}/permissions`, {
-    data: permissions,
+  const response = await request.post(`${API_URL}/role/${encodeURIComponent(roleName)}/permissions`, {
+    data: permissionNames,
     headers: headers(token),
   });
   if (!response.ok()) {
@@ -257,11 +302,19 @@ export async function deleteRole(
   token: string,
   name: string,
 ): Promise<void> {
-  // First remove permissions so role can be deleted
-  await request.put(`${API_URL}/role/${encodeURIComponent(name)}/permissions`, {
-    data: [],
+  // First get permissions to remove them
+  const permsResp = await request.get(`${API_URL}/role/${encodeURIComponent(name)}/permissions`, {
     headers: headers(token),
   });
+  if (permsResp.ok()) {
+    const perms = await permsResp.json() as Array<{ name: string }>;
+    if (perms.length > 0) {
+      await request.delete(`${API_URL}/role/${encodeURIComponent(name)}/permissions`, {
+        data: perms.map(p => p.name),
+        headers: headers(token),
+      });
+    }
+  }
   await request.delete(`${API_URL}/role/${encodeURIComponent(name)}`, {
     headers: headers(token),
   });

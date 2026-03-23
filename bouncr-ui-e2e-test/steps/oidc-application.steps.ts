@@ -47,7 +47,7 @@ Then('the client ID should not be empty', async function (this: BouncrWorld) {
 });
 
 Then('the client secret should not be empty', async function (this: BouncrWorld) {
-  const clientSecretCode = this.page.locator('text=Client Secret').locator('..').locator('code');
+  const clientSecretCode = this.page.locator('code.text-gold');
   const clientSecret = await clientSecretCode.textContent();
   expect(clientSecret).toBeTruthy();
   expect(clientSecret!.trim().length).toBeGreaterThan(0);

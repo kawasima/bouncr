@@ -7,6 +7,8 @@ export class BouncrWorld extends World {
   browser!: Browser;
   request!: APIRequestContext;
   adminToken!: string;
+  adminPassword!: string;
+  cachedTokens: Record<string, string> = {};
   testData: Map<string, unknown> = new Map();
 }
 

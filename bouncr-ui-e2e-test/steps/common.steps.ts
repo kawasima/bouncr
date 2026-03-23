@@ -4,48 +4,49 @@ import { BouncrWorld } from '../support/world';
 import {
   BASE_URL,
   ADMIN_ACCOUNT,
-  ADMIN_PASSWORD,
   TEST_USERS,
 } from '../support/config';
 import { signInViaApi } from '../support/auth.helper';
-
-/**
- * Resolves account name to credentials.
- * "admin" uses the real admin account; test user names map to TEST_USERS.
- */
-function resolveCredentials(account: string): { account: string; password: string } {
-  if (account === 'admin') {
-    return { account: ADMIN_ACCOUNT, password: ADMIN_PASSWORD };
-  }
-  const testUser = TEST_USERS[account as keyof typeof TEST_USERS];
-  if (testUser) {
-    return { account: testUser.account, password: testUser.password };
-  }
-  throw new Error(`Unknown test account: ${account}`);
-}
 
 Given('I am on the sign-in page', async function (this: BouncrWorld) {
   await this.page.goto(`${BASE_URL}/sign_in`);
   await this.page.waitForSelector('#account');
 });
 
-Given('I am signed in as {string}', async function (this: BouncrWorld, account: string) {
-  const creds = resolveCredentials(account);
-  const token = await signInViaApi(this.request, creds.account, creds.password);
-  // Set the BOUNCR_TOKEN cookie in the browser context so the UI recognizes the session
+Given('I am signed in as {string}', { timeout: 30_000 }, async function (this: BouncrWorld, account: string) {
+  let acct: string;
+  let token: string | undefined;
+
+  if (account === 'admin') {
+    acct = ADMIN_ACCOUNT;
+    token = this.cachedTokens['admin'];
+  } else {
+    const testUser = TEST_USERS[account as keyof typeof TEST_USERS];
+    if (!testUser) throw new Error(`Unknown test account: ${account}`);
+    acct = testUser.account;
+    token = this.cachedTokens[account];
+  }
+
+  // Fallback to API sign-in if no cached token
+  if (!token) {
+    const password = account === 'admin'
+      ? this.adminPassword
+      : TEST_USERS[account as keyof typeof TEST_USERS]?.password;
+    if (!password) throw new Error(`No password for ${account}`);
+    const result = await signInViaApi(this.request, acct, password);
+    token = result.token;
+  }
+
   await this.context.addCookies([{
     name: 'BOUNCR_TOKEN',
     value: token,
     url: BASE_URL,
   }]);
-  // Also store the account name in localStorage so auth-context picks it up
   await this.page.goto(BASE_URL);
-  await this.page.evaluate((acct: string) => {
-    localStorage.setItem('bouncr_account', acct);
-  }, creds.account);
-  // Reload to apply the auth state
+  await this.page.evaluate((a: string) => {
+    localStorage.setItem('bouncr_session', JSON.stringify({ account: a }));
+  }, acct);
   await this.page.reload();
-  // Wait for the home page to load (user account visible in navbar)
   await this.page.waitForSelector('text=Sign Out', { timeout: 15_000 });
 });
 

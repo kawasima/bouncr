@@ -99,7 +99,7 @@ public class PasswordCredentialResource {
         };
     }
 
-    @Decision(value = AUTHORIZED, method = {"POST", "PUT", "DELETE"})
+    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }
@@ -112,9 +112,18 @@ public class PasswordCredentialResource {
         return principal.getName().equals(createRequest.account());
     }
 
+    /**
+     * PUT (password change) allows unauthenticated access because the old password
+     * serves as proof of identity. This is required for initial password changes
+     * where the user cannot sign in (PASSWORD_MUST_BE_CHANGED).
+     * The actual old-password verification happens in the PUT handler.
+     */
     @Decision(value = ALLOWED, method = "PUT")
     public boolean isPutAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdate updateRequest) {
-        if (principal == null) return false;
+        if (principal == null) {
+            // Unauthenticated: allowed only for self-service password change (old password verified in handler)
+            return updateRequest.account() != null;
+        }
         if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
             return true;
         }

@@ -30,7 +30,10 @@ import {
 
 let browser: Browser;
 let globalAdminToken: string;
+let globalAdminPassword: string;
 let globalRequest: APIRequestContext;
+// Pre-cached tokens for test users (avoid repeated signInViaApi calls)
+const cachedTokens: Record<string, string> = {};
 
 // All known admin-level permissions (prefixed with any_ or bare resource names)
 const ADMIN_PERMISSION_PREFIXES = [
@@ -48,8 +51,10 @@ BeforeAll({ timeout: 120_000 }, async function () {
   browser = await chromium.launch({ headless: !headed });
   globalRequest = await playwrightRequest.newContext();
 
-  // 1. Sign in as admin
-  globalAdminToken = await signInViaApi(globalRequest, ADMIN_ACCOUNT, ADMIN_PASSWORD);
+  // 1. Sign in as admin (may change password if initial)
+  const adminSignIn = await signInViaApi(globalRequest, ADMIN_ACCOUNT, ADMIN_PASSWORD);
+  globalAdminToken = adminSignIn.token;
+  globalAdminPassword = adminSignIn.actualPassword;
 
   // 2. Get all permissions
   const allPermissions = await getPermissions(globalRequest, globalAdminToken);
@@ -101,7 +106,7 @@ BeforeAll({ timeout: 120_000 }, async function () {
       globalRequest,
       globalAdminToken,
       rc.name,
-      rc.perms.map((p) => ({ id: p.id, name: p.name })),
+      rc.perms.map((p) => p.name),
     );
 
     // 5. Create corresponding group
@@ -156,6 +161,17 @@ BeforeAll({ timeout: 120_000 }, async function () {
       }
     }
   }
+
+  // 8. Pre-cache tokens for all test users
+  cachedTokens['admin'] = globalAdminToken;
+  for (const [key, userInfo] of Object.entries(TEST_USERS)) {
+    try {
+      const result = await signInViaApi(globalRequest, userInfo.account, userInfo.password);
+      cachedTokens[key] = result.token;
+    } catch {
+      // Token will be obtained on demand if needed
+    }
+  }
 });
 
 Before({ timeout: 30_000 }, async function (this: BouncrWorld) {
@@ -164,6 +180,8 @@ Before({ timeout: 30_000 }, async function (this: BouncrWorld) {
   this.page = await this.context.newPage();
   this.request = await playwrightRequest.newContext();
   this.adminToken = globalAdminToken;
+  this.adminPassword = globalAdminPassword;
+  this.cachedTokens = cachedTokens;
   this.testData = new Map();
 });
 

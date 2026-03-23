@@ -69,7 +69,7 @@
         <module>bouncr-api-server</module>
         <module>bouncr-hook-email</module>
         <module>bouncr-hook-license</module>
-        <module>bouncr-e2e-test</module>
+        <module>bouncr-api-e2e-test</module>
     </modules>
 
     <distributionManagement>

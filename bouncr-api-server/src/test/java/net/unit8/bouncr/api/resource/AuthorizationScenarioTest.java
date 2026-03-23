@@ -50,8 +50,16 @@ class AuthorizationScenarioTest {
         }
 
         @Test
-        void putAllowed_nullPrincipal_rejected() {
+        void putAllowed_nullPrincipal_withAccount_allowedForSelfService() {
+            // Unauthenticated password change is allowed when account is specified
+            // (old password verification happens in the handler, not here)
             var req = new PasswordCredentialUpdate("alice", "old", "new");
+            assertThat(resource.isPutAllowed(null, req)).isTrue();
+        }
+
+        @Test
+        void putAllowed_nullPrincipal_withoutAccount_rejected() {
+            var req = new PasswordCredentialUpdate(null, "old", "new");
             assertThat(resource.isPutAllowed(null, req)).isFalse();
         }
 
