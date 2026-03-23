@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.ApplicationCreate;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
@@ -67,8 +68,8 @@ public class ApplicationsResource {
     public List<Application> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
         String q = params.get("q");
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean embedRealms = Objects.equals(params.get("embed"), "realms");
         return repo.search(q, embedRealms, offset, limit);
     }

@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcProviderCreate;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
 import net.unit8.bouncr.data.OidcProvider;
@@ -66,8 +67,8 @@ public class OidcProvidersResource {
     public List<OidcProvider> list(Parameters params, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         String q = params.get("q");
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         return repo.search(q, offset, limit);
     }
 

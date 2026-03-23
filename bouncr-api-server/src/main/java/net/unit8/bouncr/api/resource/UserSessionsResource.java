@@ -5,6 +5,7 @@ import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.UserSessionRepository;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.data.UserSession;
 import org.jooq.DSLContext;
 
@@ -34,8 +35,8 @@ public class UserSessionsResource {
     @Decision(HANDLE_OK)
     public List<UserSession> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         UserSessionRepository repo = new UserSessionRepository(dsl);
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         return repo.searchByUserId(principal.getId(), offset, limit);
     }
 }

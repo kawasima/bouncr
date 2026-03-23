@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RealmCreate;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
@@ -77,8 +78,8 @@ public class RealmsResource {
     public List<Realm> list(Parameters params, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
         String q = params.get("q");
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         return repo.search(application.name(), q, offset, limit);
     }
 }

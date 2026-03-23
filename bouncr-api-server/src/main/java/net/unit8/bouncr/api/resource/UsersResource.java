@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.UserCreate;
 import net.unit8.bouncr.api.logging.ActionRecord;
@@ -92,9 +93,9 @@ public class UsersResource {
     public List<User> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String q = params.get("q");
-        Long groupId = Optional.ofNullable(params.<String>get("group_id")).map(Long::parseLong).orElse(null);
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        Long groupId = PaginationParams.parseLong(params.get("group_id"));
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean isAdmin = principal.hasPermission("any_user:read");
         return userRepo.search(q, groupId, principal.getId(), isAdmin, offset, limit);
     }

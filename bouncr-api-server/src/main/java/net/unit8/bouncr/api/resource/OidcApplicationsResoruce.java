@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
 import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
@@ -93,8 +94,8 @@ public class OidcApplicationsResoruce {
     public List<OidcApplicationResponse> list(Parameters params, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         String q = params.get("q");
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         return repo.search(q, offset, limit).stream()
                 .map(OidcApplicationResponse::of)
                 .toList();

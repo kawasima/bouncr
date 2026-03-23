@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.GroupCreate;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
@@ -66,8 +67,8 @@ public class GroupsResource {
     public List<Group> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         String q = params.get("q");
-        int offset = Optional.ofNullable(params.<String>get("offset")).map(Integer::parseInt).orElse(0);
-        int limit = Optional.ofNullable(params.<String>get("limit")).map(Integer::parseInt).orElse(10);
+        int offset = PaginationParams.parseOffset(params.get("offset"));
+        int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean isAdmin = principal.hasPermission("any_group:read");
         return repo.search(q, principal.getId(), isAdmin, offset, limit);
     }
