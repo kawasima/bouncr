@@ -171,46 +171,55 @@ public class OidcApplicationRepository {
         return findByName(name).orElseThrow();
     }
 
-    public void update(String currentName, String newName, String clientId, String clientSecret,
-                       byte[] privateKey, byte[] publicKey,
-                       String homeUrl, String callbackUrl, String description,
-                       String backchannelLogoutUri, String frontchannelLogoutUri,
-                       boolean updateHomeUrl, boolean updateCallbackUrl, boolean updateDescription,
-                       boolean updateBackchannelLogoutUri,
-                       boolean updateFrontchannelLogoutUri) {
+    /**
+     * Nullable field update: present = set to value (including null to clear), absent = leave unchanged.
+     */
+    public record NullableUpdate<T>(boolean present, T value) {
+        public static <T> NullableUpdate<T> of(T value) { return new NullableUpdate<>(true, value); }
+        public static <T> NullableUpdate<T> absent() { return new NullableUpdate<>(false, null); }
+    }
+
+    /**
+     * Update profile fields of an OIDC application.
+     * Nullable fields use {@link NullableUpdate} to distinguish "set to null" from "leave unchanged".
+     */
+    public void updateProfile(String currentName, String newName,
+                              NullableUpdate<String> homeUrl,
+                              NullableUpdate<String> callbackUrl,
+                              NullableUpdate<String> description,
+                              NullableUpdate<String> backchannelLogoutUri,
+                              NullableUpdate<String> frontchannelLogoutUri) {
         var updateSet = dsl.update(table("oidc_applications"))
                 .set(field("name"), (Object) (newName != null ? newName : field("name")));
         if (newName != null) {
             updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
         }
-        if (clientId != null) {
-            updateSet = updateSet.set(field("client_id"), (Object) clientId);
+        if (homeUrl.present()) {
+            updateSet = updateSet.set(field("home_url"), (Object) homeUrl.value());
         }
-        if (clientSecret != null) {
-            updateSet = updateSet.set(field("client_secret"), (Object) clientSecret);
+        if (callbackUrl.present()) {
+            updateSet = updateSet.set(field("callback_url"), (Object) callbackUrl.value());
         }
-        if (privateKey != null) {
-            updateSet = updateSet.set(field("private_key"), (Object) privateKey);
+        if (description.present()) {
+            updateSet = updateSet.set(field("description"), (Object) description.value());
         }
-        if (publicKey != null) {
-            updateSet = updateSet.set(field("public_key"), (Object) publicKey);
+        if (backchannelLogoutUri.present()) {
+            updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri.value());
         }
-        if (updateHomeUrl) {
-            updateSet = updateSet.set(field("home_url"), (Object) homeUrl);
-        }
-        if (updateCallbackUrl) {
-            updateSet = updateSet.set(field("callback_url"), (Object) callbackUrl);
-        }
-        if (updateDescription) {
-            updateSet = updateSet.set(field("description"), (Object) description);
-        }
-        if (updateBackchannelLogoutUri) {
-            updateSet = updateSet.set(field("backchannel_logout_uri"), (Object) backchannelLogoutUri);
-        }
-        if (updateFrontchannelLogoutUri) {
-            updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri);
+        if (frontchannelLogoutUri.present()) {
+            updateSet = updateSet.set(field("frontchannel_logout_uri"), (Object) frontchannelLogoutUri.value());
         }
         updateSet.where(field("name").eq(currentName))
+                .execute();
+    }
+
+    /**
+     * Update only the client_secret (for secret regeneration).
+     */
+    public void updateClientSecret(String name, String hashedSecret) {
+        dsl.update(table("oidc_applications"))
+                .set(field("client_secret"), (Object) hashedSecret)
+                .where(field("name").eq(name))
                 .execute();
     }
 

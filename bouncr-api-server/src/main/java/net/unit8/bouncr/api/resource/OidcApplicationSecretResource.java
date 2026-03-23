@@ -59,9 +59,7 @@ public class OidcApplicationSecretResource {
         String hashedSecret = Base64.getEncoder().encodeToString(secretHash);
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        repo.update(app.name(), null, null, hashedSecret,
-                null, null, null, null, null, null, null,
-                false, false, false, false, false);
+        repo.updateClientSecret(app.name(), hashedSecret);
 
         context.put(NEW_SECRET, plaintextSecret);
         return true;
