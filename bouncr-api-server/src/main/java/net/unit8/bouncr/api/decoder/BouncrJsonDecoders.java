@@ -275,24 +275,13 @@ public final class BouncrJsonDecoders {
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
     ).map((name, gt, hu, cu, desc, bcu, fcu, perms) ->
-            new OidcApplicationCreate(name, gt, hu.orElse(null), cu.orElse(null), desc.orElse(null),
-                    bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))
-    .<OidcApplicationCreate>flatMap(app -> {
-        if (app.grantTypes().isEmpty()) {
-            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
-        }
-        for (String gt : app.grantTypes()) {
-            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
-                return Result.fail(Path.ROOT.append("grant_types"), "invalid",
-                        "unknown grant_type: " + gt);
-            }
-        }
-        if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
-            return Result.fail(Path.ROOT.append("callback_url"), "required",
-                    "callback_url is required when authorization_code grant is enabled");
-        }
-        return Result.ok(app);
-    })
+            new OidcApplicationCreate(name, gt,
+                    blankToNull(hu.orElse(null)), blankToNull(cu.orElse(null)),
+                    blankToNull(desc.orElse(null)),
+                    blankToNull(bcu.orElse(null)), blankToNull(fcu.orElse(null)),
+                    perms.orElse(List.of())))
+    .<OidcApplicationCreate>flatMap(app -> validateOidcAppGrantTypes(
+            app.grantTypes(), app.callbackUrl(), app.homeUrl()).map(v -> app))
     .decode(in, path);
 
     public record OidcApplicationUpdate(String name, List<String> grantTypes,
@@ -310,25 +299,14 @@ public final class BouncrJsonDecoders {
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
     ).map((name, gt, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
-            name, gt, hu.orElse(null), cu.orElse(null), desc.orElse(null),
-            bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of()),
+            name, gt,
+            blankToNull(hu.orElse(null)), blankToNull(cu.orElse(null)),
+            blankToNull(desc.orElse(null)),
+            blankToNull(bcu.orElse(null)), blankToNull(fcu.orElse(null)),
+            perms.orElse(List.of()),
             in.has("backchannel_logout_uri"), in.has("frontchannel_logout_uri")))
-    .<OidcApplicationUpdate>flatMap(app -> {
-        if (app.grantTypes().isEmpty()) {
-            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
-        }
-        for (String gt : app.grantTypes()) {
-            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
-                return Result.fail(Path.ROOT.append("grant_types"), "invalid",
-                        "unknown grant_type: " + gt);
-            }
-        }
-        if (app.grantTypes().contains("authorization_code") && (app.callbackUrl() == null || app.callbackUrl().isBlank())) {
-            return Result.fail(Path.ROOT.append("callback_url"), "required",
-                    "callback_url is required when authorization_code grant is enabled");
-        }
-        return Result.ok(app);
-    })
+    .<OidcApplicationUpdate>flatMap(app -> validateOidcAppGrantTypes(
+            app.grantTypes(), app.callbackUrl(), app.homeUrl()).map(v -> app))
     .decode(in, path);
 
     // ===== Sign Up =====
@@ -404,4 +382,47 @@ public final class BouncrJsonDecoders {
     public static final JsonDecoder<WebAuthnSignInOptions> WEBAUTHN_SIGN_IN_OPTIONS =
             optionalField("account", string().maxLength(100))
                     .map(acc -> new WebAuthnSignInOptions(acc.orElse(null)))::decode;
+
+    // ===== OIDC Application helpers =====
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    private static Result<Void> validateOidcAppGrantTypes(List<String> grantTypes, String callbackUrl, String homeUrl) {
+        if (grantTypes.isEmpty()) {
+            return Result.fail(Path.ROOT.append("grant_types"), "required", "at least one grant type is required");
+        }
+        for (String gt : grantTypes) {
+            if (net.unit8.bouncr.data.GrantType.fromString(gt).isEmpty()) {
+                return Result.fail(Path.ROOT.append("grant_types"), "invalid", "unknown grant_type: " + gt);
+            }
+        }
+        if (grantTypes.contains("authorization_code") && (callbackUrl == null || callbackUrl.isBlank())) {
+            return Result.fail(Path.ROOT.append("callback_url"), "required",
+                    "callback_url is required when authorization_code grant is enabled");
+        }
+        // Validate URLs are absolute http(s)
+        if (callbackUrl != null) {
+            Result<Void> r = validateHttpUrl(callbackUrl, "callback_url");
+            if (r instanceof net.unit8.raoh.Err) return r;
+        }
+        if (homeUrl != null) {
+            Result<Void> r = validateHttpUrl(homeUrl, "home_url");
+            if (r instanceof net.unit8.raoh.Err) return r;
+        }
+        return Result.ok(null);
+    }
+
+    private static Result<Void> validateHttpUrl(String url, String fieldName) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            if (!uri.isAbsolute() || (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme()))) {
+                return Result.fail(Path.ROOT.append(fieldName), "invalid", "must be an absolute http or https URL");
+            }
+        } catch (IllegalArgumentException e) {
+            return Result.fail(Path.ROOT.append(fieldName), "invalid", "not a valid URI");
+        }
+        return Result.ok(null);
+    }
 }

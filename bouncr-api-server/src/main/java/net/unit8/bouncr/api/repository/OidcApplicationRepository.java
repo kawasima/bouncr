@@ -12,8 +12,10 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -122,12 +124,12 @@ public class OidcApplicationRepository {
                 .orderBy(field("oidc_application_id").asc())
                 .offset(offset)
                 .limit(limit)
-                .fetch(this::mapOidcApplication)
-                .stream().map(this::withGrantTypes).toList();
+                .fetch(this::mapOidcApplication);
+        return attachGrantTypes(apps);
     }
 
     public List<OidcApplication> listAll() {
-        return dsl.select(
+        List<OidcApplication> apps = dsl.select(
                         field("oidc_application_id", Long.class),
                         field("name", String.class),
                         field("name_lower", String.class),
@@ -142,8 +144,8 @@ public class OidcApplicationRepository {
                         field("frontchannel_logout_uri", String.class))
                 .from(table("oidc_applications"))
                 .orderBy(field("oidc_application_id").asc())
-                .fetch(this::mapOidcApplication)
-                .stream().map(this::withGrantTypes).toList();
+                .fetch(this::mapOidcApplication);
+        return attachGrantTypes(apps);
     }
 
     public boolean isNameUnique(String name) {
@@ -238,10 +240,29 @@ public class OidcApplicationRepository {
                 .from(table("oidc_application_grant_types"))
                 .where(field("oidc_application_id").eq(oidcApplicationId))
                 .fetch(rec -> rec.get(field("grant_type", String.class)));
-        if (values.isEmpty()) return Set.of();
+        if (values.isEmpty()) return null;
         EnumSet<GrantType> result = EnumSet.noneOf(GrantType.class);
         for (String v : values) {
             GrantType.fromString(v).ifPresent(result::add);
+        }
+        return result;
+    }
+
+    /**
+     * Bulk-load grant types for a list of applications (avoids N+1).
+     */
+    private Map<Long, Set<GrantType>> loadGrantTypesForApps(List<Long> appIds) {
+        if (appIds.isEmpty()) return Map.of();
+        var rows = dsl.select(field("oidc_application_id", Long.class), field("grant_type", String.class))
+                .from(table("oidc_application_grant_types"))
+                .where(field("oidc_application_id").in(appIds))
+                .fetch();
+        Map<Long, Set<GrantType>> result = new HashMap<>();
+        for (var rec : rows) {
+            Long appId = rec.get(field("oidc_application_id", Long.class));
+            String gtStr = rec.get(field("grant_type", String.class));
+            GrantType.fromString(gtStr).ifPresent(gt ->
+                    result.computeIfAbsent(appId, k -> EnumSet.noneOf(GrantType.class)).add(gt));
         }
         return result;
     }
@@ -277,13 +298,17 @@ public class OidcApplicationRepository {
                 .fetch(rec -> PERMISSION.decode(rec).getOrThrow());
     }
 
-    private OidcApplication withGrantTypes(OidcApplication app) {
-        if (app == null || app.id() == null) return app;
-        return new OidcApplication(app.id(), app.name(), app.nameLower(),
-                app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUrl(), app.callbackUrl(), app.description(),
-                app.backchannelLogoutUri(), app.frontchannelLogoutUri(),
-                app.permissions(), loadGrantTypes(app.id()));
+    private List<OidcApplication> attachGrantTypes(List<OidcApplication> apps) {
+        List<Long> ids = apps.stream().map(OidcApplication::id).filter(id -> id != null).toList();
+        Map<Long, Set<GrantType>> grantMap = loadGrantTypesForApps(ids);
+        return apps.stream().map(app -> {
+            Set<GrantType> gts = grantMap.get(app.id());
+            return new OidcApplication(app.id(), app.name(), app.nameLower(),
+                    app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
+                    app.homeUrl(), app.callbackUrl(), app.description(),
+                    app.backchannelLogoutUri(), app.frontchannelLogoutUri(),
+                    app.permissions(), gts);
+        }).toList();
     }
 
     private OidcApplication mapOidcApplication(Record rec) {

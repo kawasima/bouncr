@@ -335,7 +335,7 @@ function OidcAppEditForm({
       <div className="flex items-center gap-4">
         <Button
           type="submit"
-          disabled={isSubmitting || selectedGrants.size === 0}
+          disabled={isSubmitting || watchedGrants.length === 0}
           className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
         >
           {isSubmitting ? 'Saving...' : 'Save'}
