@@ -10,6 +10,7 @@ import type { ColumnDef } from '@/components/data-table';
 import type { Role, Permission, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
 
 const config: AdminCrudConfig<Role> = {
   fetchList: api.getRoles,
@@ -131,11 +132,15 @@ function RoleEditForm({
 }
 
 export function RolesAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('any_role:create', 'role:create');
+
   return (
     <AdminCrudPage
       title="Role"
       config={config}
       columns={columns}
+      canCreate={canCreate}
       renderEditForm={(props) => <RoleEditForm {...props} />}
     />
   );

@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client';
 import type { Group, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
 
 const invitationSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -15,6 +16,8 @@ const invitationSchema = z.object({
 type InvitationFormData = z.infer<typeof invitationSchema>;
 
 export function InvitationsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('invitation:create');
   const [problem, setProblem] = useState<Problem | null>(null);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<Set<number>>(new Set());
@@ -51,6 +54,15 @@ export function InvitationsAdminPage() {
     setSelectedGroups(new Set());
     reset({ email: '' });
   };
+
+  if (!canCreate) {
+    return (
+      <div className="space-y-6">
+        <h2 className="mansion-heading text-lg">Invitations</h2>
+        <p className="text-sm text-muted-foreground">You do not have permission to create invitations.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

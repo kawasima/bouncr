@@ -9,6 +9,7 @@ import type { ColumnDef } from '@/components/data-table';
 import type { Application, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
 
 const config: AdminCrudConfig<Application> = {
   fetchList: api.getApplications,
@@ -110,11 +111,15 @@ function AppEditForm({
 }
 
 export function ApplicationsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('any_application:create', 'application:create');
+
   return (
     <AdminCrudPage
       title="Application"
       config={config}
       columns={columns}
+      canCreate={canCreate}
       renderEditForm={(props) => <AppEditForm {...props} />}
     />
   );

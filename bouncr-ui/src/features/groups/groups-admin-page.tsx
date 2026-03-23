@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { X, Trash2 } from 'lucide-react';
+import { usePermissions } from '@/auth/permission-context';
 
 const config: AdminCrudConfig<Group> = {
   fetchList: api.getGroups,
@@ -404,12 +405,19 @@ function GroupEditFormWithUsers(props: {
 }
 
 export function GroupsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('any_group:create', 'group:create');
+  const canDelete = hasPermission('any_group:delete', 'group:delete');
+
   return (
     <AdminCrudPage
       title="Group"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <GroupEditFormWithUsers {...props} />}
+      canCreate={canCreate}
+      renderEditForm={(props) => (
+        <GroupEditFormWithUsers {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
+      )}
     />
   );
 }

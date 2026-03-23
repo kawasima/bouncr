@@ -48,8 +48,6 @@ export function HomePage() {
     return <ProblemAlert problem={problem ?? { status: 0, detail: 'Failed to load user data' }} />;
   }
 
-  const permissions = user.permissions ?? [];
-
   return (
     <div className="grid gap-8 md:grid-cols-[260px_1fr]">
       <aside className="space-y-8">
@@ -69,7 +67,7 @@ export function HomePage() {
             </Button>
           </div>
         </div>
-        <AdminMenu permissions={permissions} />
+        <AdminMenu />
       </aside>
 
       <div className="space-y-8">

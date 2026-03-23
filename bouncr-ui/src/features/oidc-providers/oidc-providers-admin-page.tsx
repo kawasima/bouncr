@@ -8,6 +8,7 @@ import type { ColumnDef } from '@/components/data-table';
 import type { OidcProvider, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
 
 const config: AdminCrudConfig<OidcProvider> = {
   fetchList: api.getOidcProviders,
@@ -110,11 +111,15 @@ function OidcProviderEditForm({
 }
 
 export function OidcProvidersAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('oidc_provider:create');
+
   return (
     <AdminCrudPage
       title="OpenID Connect Provider"
       config={config}
       columns={columns}
+      canCreate={canCreate}
       renderEditForm={(props) => <OidcProviderEditForm {...props} />}
     />
   );

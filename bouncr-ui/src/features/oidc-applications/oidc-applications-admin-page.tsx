@@ -10,6 +10,7 @@ import type { OidcApplication, OidcApplicationCreateRequest, OidcApplicationUpda
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
 
 const GRANT_TYPES = [
   { value: 'authorization_code', label: 'Authorization Code' },
@@ -61,11 +62,13 @@ function OidcAppEditForm({
   onSubmit,
   problem,
   onDeleted,
+  canUpdate = true,
 }: {
   target: OidcApplication | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const isCreate = !target;
   const [createdCredentials, setCreatedCredentials] = useState<{ clientId: string; clientSecret: string } | null>(null);
@@ -206,7 +209,7 @@ function OidcAppEditForm({
               <p className="text-xs text-muted-foreground">New secret generated. Copy it now — it will not be shown again.</p>
               <code className="block font-mono text-sm bg-black/20 p-2 rounded-sm select-all text-gold">{regeneratedSecret}</code>
             </div>
-          ) : (
+          ) : canUpdate ? (
             <Button
               type="button"
               variant="outline"
@@ -222,7 +225,7 @@ function OidcAppEditForm({
             >
               Regenerate Secret
             </Button>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -398,12 +401,24 @@ function OidcAppEditForm({
 }
 
 export function OidcApplicationsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('oidc_application:create');
+  const canDelete = hasPermission('oidc_application:delete');
+  const canUpdate = hasPermission('oidc_application:update');
+
   return (
     <AdminCrudPage
       title="OpenID Connect Application"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <OidcAppEditForm {...props} />}
+      canCreate={canCreate}
+      renderEditForm={(props) => (
+        <OidcAppEditForm
+          {...props}
+          onDeleted={canDelete ? props.onDeleted : undefined}
+          canUpdate={canUpdate}
+        />
+      )}
     />
   );
 }

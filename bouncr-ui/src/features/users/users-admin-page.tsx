@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
+import { usePermissions } from '@/auth/permission-context';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
@@ -313,12 +314,19 @@ function UserEditForm({
 }
 
 export function UsersAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('any_user:create', 'user:create');
+  const canDelete = hasPermission('any_user:delete', 'user:delete');
+
   return (
     <AdminCrudPage
       title="User"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <UserEditForm {...props} />}
+      canCreate={canCreate}
+      renderEditForm={(props) => (
+        <UserEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} />
+      )}
     />
   );
 }
