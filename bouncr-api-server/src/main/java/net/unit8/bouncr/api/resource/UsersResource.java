@@ -8,6 +8,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.UserCreate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -15,22 +17,25 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.User;
-import net.unit8.bouncr.data.UserProfileField;
+import net.unit8.bouncr.data.UserProfile;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
+import static net.unit8.raoh.json.JsonDecoders.combine;
 
 @AllowedMethods({"GET", "POST"})
 public class UsersResource {
-    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^\\w+$");
     static final ContextKey<User> USER = ContextKey.of(User.class);
-    static final ContextKey<String> ACCOUNT = ContextKey.of("account", String.class);
-    static final ContextKey<Map> USER_PROFILES = ContextKey.of("userProfiles", Map.class);
+    static final ContextKey<UserCreate> CREATE_REQ = ContextKey.of(UserCreate.class);
+    static final ContextKey<UserProfile> USER_PROFILE = ContextKey.of(UserProfile.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -40,35 +45,22 @@ public class UsersResource {
         if (body == null) {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
-        JsonNode accountNode = body.get("account");
-        if (accountNode == null || accountNode.asText().isBlank()) {
-            return Problem.valueOf(400, "account is required", BouncrProblem.MALFORMED.problemUri());
-        }
-        String account = accountNode.asText();
-        // Validate format without a decoder — this resource reads JSON nodes directly.
-        // The length guard is explicit here because there is no decoder-level maxLength(100).
-        if (account.length() > 100 || !ACCOUNT_PATTERN.matcher(account).matches()) {
-            return Problem.valueOf(400, "account format is invalid", BouncrProblem.MALFORMED.problemUri());
-        }
-        context.put(ACCOUNT, account);
 
-        // Extract user profile fields dynamically
-        Map<String, Object> userProfiles = new HashMap<>();
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
-        Set<String> knownFields = new HashSet<>(List.of("account", "enable_password_credential", "code"));
-        fieldRepo.findAll().forEach(f -> knownFields.add(f.jsonName()));
+        var result = combine(BouncrJsonDecoders.USER_CREATE, BouncrJsonDecoders.userProfile(fieldRepo))
+                .map(Tuple2::new)
+                .decode(body);
 
-        for (String fieldName : body.propertyNames()) {
-            if (!knownFields.contains(fieldName) || fieldRepo.findByJsonName(fieldName).isPresent()) {
-                if (fieldRepo.findByJsonName(fieldName).isPresent()) {
-                    userProfiles.put(fieldName, body.get(fieldName).asText());
-                }
+        return switch (result) {
+            case Ok(Tuple2(UserCreate createReq, UserProfile profile)) -> {
+                config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, profile.values());
+                context.put(CREATE_REQ, createReq);
+                context.put(USER_PROFILE, profile);
+                yield null;
             }
-        }
-        context.put(USER_PROFILES, userProfiles);
-
-        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, userProfiles);
-        return null;
+            case Ok<?> _ -> throw new IllegalStateException("Unexpected Ok value");
+            case Err(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -91,13 +83,11 @@ public class UsersResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean conflict(RestContext context, DSLContext dsl) {
-        String account = context.get(ACCOUNT).orElseThrow();
+    public boolean conflict(UserCreate createReq, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        return !userRepo.isAccountUnique(account);
+        return !userRepo.isAccountUnique(createReq.account());
     }
 
-    @SuppressWarnings("unchecked")
     @Decision(HANDLE_OK)
     public List<User> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
@@ -109,23 +99,21 @@ public class UsersResource {
         return userRepo.search(q, groupId, principal.getId(), isAdmin, offset, limit);
     }
 
-    @SuppressWarnings("unchecked")
     @Decision(POST)
-    public User doPost(ActionRecord actionRecord,
+    public User doPost(UserCreate createReq,
+                       UserProfile userProfile,
+                       ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
                        RestContext context,
                        DSLContext dsl) {
-        String account = context.get(ACCOUNT).orElseThrow();
-        Map<String, Object> profiles = (Map<String, Object>) context.get(USER_PROFILES).orElse(Map.of());
-
         UserRepository userRepo = new UserRepository(dsl);
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
 
-        User user = userRepo.insert(account);
+        User user = userRepo.insert(createReq.account());
         context.put(USER, user);
-        for (Map.Entry<String, Object> entry : profiles.entrySet()) {
+        for (Map.Entry<String, String> entry : userProfile.values().entrySet()) {
             fieldRepo.findByJsonName(entry.getKey()).ifPresent(field ->
-                    userRepo.setProfileValue(user.id(), field.id(), entry.getValue().toString()));
+                    userRepo.setProfileValue(user.id(), field.id(), entry.getValue()));
         }
 
         config.getHookRepo().runHook(HookPoint.BEFORE_CREATE_USER, context);
@@ -133,7 +121,7 @@ public class UsersResource {
 
         actionRecord.setActionType(ActionType.USER_CREATED);
         actionRecord.setActor(principal.getName());
-        actionRecord.setDescription(account);
+        actionRecord.setDescription(createReq.account());
 
         return userRepo.findByIdFull(user.id(), false, false).orElse(user);
     }

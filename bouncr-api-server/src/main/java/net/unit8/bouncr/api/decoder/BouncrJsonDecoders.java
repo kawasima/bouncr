@@ -1,10 +1,18 @@
 package net.unit8.bouncr.api.decoder;
 
 import kotowari.restful.data.Problem;
+import net.unit8.bouncr.api.repository.AssignmentRepository;
+import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
+import net.unit8.bouncr.data.UserProfile;
+import net.unit8.bouncr.data.UserProfileField;
+import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.Result;
 import net.unit8.raoh.json.JsonDecoder;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static net.unit8.raoh.json.JsonDecoders.*;
@@ -148,6 +156,12 @@ public final class BouncrJsonDecoders {
     public static final JsonDecoder<PasswordReset> PASSWORD_RESET =
             field("code", string()).map(PasswordReset::new)::decode;
 
+    // ===== Token Refresh =====
+    public record TokenRefresh(String sessionId) {}
+    public static final JsonDecoder<TokenRefresh> TOKEN_REFRESH =
+            field("session_id", string().nonBlank())
+                    .map(TokenRefresh::new)::decode;
+
     // ===== Role Permissions =====
     public static final JsonDecoder<List<String>> ROLE_PERMISSIONS = list(string())::decode;
 
@@ -170,6 +184,32 @@ public final class BouncrJsonDecoders {
                     field("realm", ID_OBJECT)
             ).map(AssignmentItem::new)
     )::decode;
+
+    public record ResolvedAssignment(Long groupId, Long roleId, Long realmId) {}
+
+    private static JsonDecoder<Long> resolvedId(AssignmentRepository repo, String tableName, String idColumn) {
+        return (in, path) -> ID_OBJECT.decode(in, path).flatMap(idObj -> {
+            if (idObj.id() != null) {
+                return Result.ok(idObj.id());
+            } else if (idObj.name() != null) {
+                Long resolved = repo.resolveIdByName(tableName, idColumn, idObj.name());
+                return resolved != null
+                        ? Result.ok(resolved)
+                        : Result.fail(path, "not_found", "not found");
+            }
+            return Result.fail(path, "required", "id or name is required");
+        });
+    }
+
+    public static JsonDecoder<List<ResolvedAssignment>> assignments(AssignmentRepository repo) {
+        return list(
+                combine(
+                        field("group", resolvedId(repo, "groups", "group_id")),
+                        field("role", resolvedId(repo, "roles", "role_id")),
+                        field("realm", resolvedId(repo, "realms", "realm_id"))
+                ).map(ResolvedAssignment::new)
+        )::decode;
+    }
 
     // ===== OIDC Provider =====
     public record OidcProviderCreate(String name, String clientId, String clientSecret, String scope,
@@ -231,8 +271,9 @@ public final class BouncrJsonDecoders {
 
     public record OidcApplicationUpdate(String name, String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
-                                        List<String> permissions) {}
-    public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = combine(
+                                        List<String> permissions,
+                                        boolean hasBackchannelLogoutUri, boolean hasFrontchannelLogoutUri) {}
+    public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = (in, path) -> combine(
             field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
             field("home_url", string().nonBlank()),
             field("callback_url", string().nonBlank()),
@@ -240,8 +281,68 @@ public final class BouncrJsonDecoders {
             optionalField("backchannel_logout_uri", string().maxLength(2048)),
             optionalField("frontchannel_logout_uri", string().maxLength(2048)),
             optionalField("permissions", list(string()))
-    ).map((name, hu, cu, desc, bcu, fcu, perms) ->
-            new OidcApplicationUpdate(name, hu, cu, desc, bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of())))::decode;
+    ).map((name, hu, cu, desc, bcu, fcu, perms) -> new OidcApplicationUpdate(
+            name, hu, cu, desc,
+            bcu.orElse(null), fcu.orElse(null), perms.orElse(List.of()),
+            in.has("backchannel_logout_uri"), in.has("frontchannel_logout_uri")))
+    .decode(in, path);
+
+    // ===== Sign Up =====
+    public record SignUp(String account, String code, boolean enablePasswordCredential) {}
+    public static final JsonDecoder<SignUp> SIGN_UP = combine(
+            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            optionalField("code", string()),
+            optionalField("enable_password_credential", bool())
+    ).map((acc, code, enable) -> new SignUp(acc, code.orElse(null), enable.orElse(true)))::decode;
+
+    // ===== User Create (admin) =====
+    public record UserCreate(String account) {}
+    public static final JsonDecoder<UserCreate> USER_CREATE =
+            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN))
+                    .map(UserCreate::new)::decode;
+
+    // ===== User Profile (dynamic) =====
+    public static JsonDecoder<UserProfile> userProfile(UserProfileFieldRepository fieldRepo) {
+        List<UserProfileField> fields = fieldRepo.findAll();
+        return (in, path) -> {
+            var issues = Issues.EMPTY;
+            var values = new LinkedHashMap<String, String>();
+
+            for (UserProfileField f : fields) {
+                var fieldPath = path.append(f.jsonName());
+                var node = in.get(f.jsonName());
+
+                if (node == null || node.isNull() || node.isMissingNode()) {
+                    if (f.isRequired()) {
+                        issues = issues.add(Issue.of(fieldPath, "required", "is required"));
+                    }
+                    continue;
+                }
+                String value = node.asString();
+
+                if (f.minLength() != null && value.length() < f.minLength()) {
+                    issues = issues.add(Issue.of(fieldPath, "min_length",
+                            "must be at least " + f.minLength() + " characters",
+                            Map.of("min", f.minLength())));
+                }
+                if (f.maxLength() != null && value.length() > f.maxLength()) {
+                    issues = issues.add(Issue.of(fieldPath, "max_length",
+                            "must be at most " + f.maxLength() + " characters",
+                            Map.of("max", f.maxLength())));
+                }
+                if (f.regularExpression() != null
+                        && !Pattern.compile(f.regularExpression()).matcher(value).matches()) {
+                    issues = issues.add(Issue.of(fieldPath, "pattern",
+                            "does not match required pattern"));
+                }
+                values.put(f.jsonName(), value);
+            }
+
+            return issues.isEmpty()
+                    ? Result.ok(new UserProfile(Map.copyOf(values)))
+                    : Result.err(issues);
+        };
+    }
 
     // ===== WebAuthn =====
     public record WebAuthnRegister(String registrationResponseJSON, String credentialName) {}

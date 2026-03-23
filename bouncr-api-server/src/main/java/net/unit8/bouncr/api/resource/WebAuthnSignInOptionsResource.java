@@ -7,6 +7,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnSignInOptions;
@@ -105,9 +106,9 @@ public class WebAuthnSignInOptionsResource {
 
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(PostResult result) {
-        String cookieStr = COOKIE_NAME + "=" + result.sessionId()
-                + "; HttpOnly; SameSite=Lax; Max-Age=" + config.getWebAuthnChallengeExpires()
-                + "; Path=/" + (config.isSecureCookie() ? "; Secure" : "");
+        String cookieStr = new BouncrCookies(config)
+                .session(COOKIE_NAME, result.sessionId(), (int) config.getWebAuthnChallengeExpires())
+                .toHttpString();
 
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)

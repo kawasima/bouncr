@@ -12,6 +12,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
@@ -198,12 +199,9 @@ public class WebAuthnSignInResource {
 
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(User user, UserSession userSession) {
-        String tokenCookie = config.getTokenName() + "=" + userSession.token()
-                + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Strict; Max-Age=" + config.getRefreshTokenExpires()
-                + "; Path=/";
-        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
-                + (config.isSecureCookie() ? "; Secure" : "");
+        BouncrCookies cookies = new BouncrCookies(config);
+        String tokenCookie = cookies.token(userSession.token()).toHttpString();
+        String clearSessionCookie = cookies.clearSession(COOKIE_NAME).toHttpString();
 
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)

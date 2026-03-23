@@ -6,8 +6,8 @@ import enkan.collection.Headers;
 import enkan.collection.Parameters;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import enkan.exception.FalteringEnvironmentException;
-import enkan.util.CodecUtils;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
@@ -33,7 +33,7 @@ import net.unit8.bouncr.util.UriInterpolator;
 import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
-import java.io.IOException;
+import tools.jackson.core.JacksonException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -158,7 +158,7 @@ public class OidcSignInResource {
                     if (errorStream != null) {
                         try {
                             return jsonMapper.readValue(errorStream, GENERAL_JSON_REF);
-                        } catch (IOException ignored) {
+                        } catch (JacksonException ignored) {
                             // Fall through to generic error
                         }
                     }
@@ -384,7 +384,8 @@ public class OidcSignInResource {
         if (oidcSessionId != null) {
             storeProvider.getStore(OIDC_SESSION).delete(oidcSessionId);
         }
-        String clearCookie = "OIDC_SESSION_ID=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+        BouncrCookies cookies = new BouncrCookies(config);
+        String clearCookie = cookies.clearSession("OIDC_SESSION_ID").toHttpString();
 
         SignInService signInService = new SignInService(dsl, storeProvider, config);
         String token = signInService.createToken();
@@ -392,10 +393,7 @@ public class OidcSignInResource {
         context.put(SESSION, userSession);
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_IN, context);
 
-        String tokenCookie = config.getTokenName() + "=" + userSession.token()
-                + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Strict; Max-Age=" + config.getRefreshTokenExpires()
-                + "; Path=/";
+        String tokenCookie = cookies.token(userSession.token()).toHttpString();
 
         UriInterpolator uriInterpolator = config.getOidcConfiguration().getUriInterpolator();
         return Optional.ofNullable(config.getOidcConfiguration().getSignInRedirectUrl())

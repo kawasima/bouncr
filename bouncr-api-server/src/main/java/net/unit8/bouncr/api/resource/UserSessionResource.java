@@ -14,6 +14,7 @@ import kotowari.restful.resource.AllowedMethods;
 
 import static enkan.util.BeanBuilder.builder;
 import net.unit8.bouncr.api.boundary.SignOutResponse;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.service.OidcLogoutService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -114,7 +115,7 @@ public class UserSessionResource {
                 List.of(), new SignOutResponse.BackchannelLogoutSummary(0, 0, 0)));
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 200)
-                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", new BouncrCookies(config).clearToken().toHttpString()))
                 .set(ApiResponse::setBody, body)
                 .build();
     }
@@ -126,7 +127,7 @@ public class UserSessionResource {
         Problem body = Problem.valueOf(404, "Session not found");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 404)
-                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", new BouncrCookies(config).clearToken().toHttpString()))
                 .set(ApiResponse::setBody, body)
                 .build();
     }
@@ -138,15 +139,9 @@ public class UserSessionResource {
         Problem body = Problem.valueOf(401, "Unauthorized");
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 401)
-                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", buildClearCookie()))
+                .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", new BouncrCookies(config).clearToken().toHttpString()))
                 .set(ApiResponse::setBody, body)
                 .build();
-    }
-
-    private String buildClearCookie() {
-        return config.getTokenName() + "=; HttpOnly"
-                + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Strict; Max-Age=0; Path=/";
     }
 
     /**

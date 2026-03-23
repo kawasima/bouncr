@@ -1,20 +1,16 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Headers;
-import enkan.data.Cookie;
 import kotowari.restful.Decision;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OidcSession;
 import net.unit8.bouncr.util.RandomUtils;
 
 import jakarta.inject.Inject;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 import static kotowari.restful.DecisionPoint.POST;
@@ -38,15 +34,9 @@ public class PreSignInResource {
         OidcSession oidcSession = new OidcSession(nonce, state, null, null);
         storeProvider.getStore(OIDC_SESSION).write(oidcSessionId, oidcSession);
 
-        Cookie cookie = Cookie.create(COOKIE_NAME, oidcSessionId);
-        ZoneId zone = ZoneId.systemDefault();
-        Date expires = Date.from(
-                ZonedDateTime.of(LocalDateTime.now()
-                        .plusSeconds(config.getOidcSessionExpires()), zone)
-                        .toInstant());
-        cookie.setExpires(expires);
-        cookie.setPath("/");
-        context.setHeaders(Headers.of("Set-Cookie", cookie.toHttpString()));
+        BouncrCookies cookies = new BouncrCookies(config);
+        String cookieHeader = cookies.session(COOKIE_NAME, oidcSessionId, (int) config.getOidcSessionExpires()).toHttpString();
+        context.setHeaders(Headers.of("Set-Cookie", cookieHeader));
 
         return oidcSession;
     }

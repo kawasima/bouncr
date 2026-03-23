@@ -10,6 +10,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -17,6 +18,8 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -26,11 +29,12 @@ import java.util.stream.Collectors;
 
 import static enkan.util.ThreadingUtils.some;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class UserResource {
     static final ContextKey<User> USER = ContextKey.of(User.class);
-    static final ContextKey<Map> USER_PROFILES = ContextKey.of("userProfiles", Map.class);
+    static final ContextKey<UserProfile> USER_PROFILE = ContextKey.of(UserProfile.class);
     static final ContextKey<VerificationTargetSet> VERIFICATIONS = ContextKey.of(VerificationTargetSet.class);
 
     @Inject
@@ -45,50 +49,17 @@ public class UserResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
 
-        // Extract user profile fields dynamically
-        Map<String, Object> userProfiles = new HashMap<>();
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
-        List<UserProfileField> allFields = fieldRepo.findAll();
-        Set<String> profileFieldNames = allFields.stream()
-                .map(UserProfileField::jsonName)
-                .collect(Collectors.toSet());
+        var result = BouncrJsonDecoders.userProfile(fieldRepo).decode(body);
 
-        for (String fieldName : body.propertyNames()) {
-            if (profileFieldNames.contains(fieldName)) {
-                userProfiles.put(fieldName, body.get(fieldName).asText());
+        return switch (result) {
+            case Ok<UserProfile> ok -> {
+                config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, ok.value().values());
+                context.put(USER_PROFILE, ok.value());
+                yield null;
             }
-        }
-
-        config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, userProfiles);
-
-        // Validate profiles
-        List<Problem.Violation> profileViolations = new ArrayList<>();
-        for (UserProfileField f : allFields) {
-            Object value = userProfiles.get(f.jsonName());
-            if (value == null) {
-                if (f.isRequired()) {
-                    profileViolations.add(new Problem.Violation(f.jsonName(), "is required"));
-                }
-                continue;
-            }
-            String strValue = Objects.toString(value);
-            if (f.maxLength() != null && strValue.length() > f.maxLength()) {
-                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.maxLength()));
-            }
-            if (f.minLength() != null && strValue.length() < f.minLength()) {
-                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.minLength()));
-            }
-            if (f.regularExpression() != null && !java.util.regex.Pattern.compile(f.regularExpression()).matcher(strValue).matches()) {
-                profileViolations.add(new Problem.Violation(f.jsonName(), "" + f.regularExpression()));
-            }
-        }
-
-        if (!profileViolations.isEmpty()) {
-            return Problem.valueOf(400);
-        }
-
-        context.put(USER_PROFILES, userProfiles);
-        return null;
+            case Err<UserProfile>(var issues) -> toProblem(issues);
+        };
     }
 
     @Decision(AUTHORIZED)
@@ -139,11 +110,9 @@ public class UserResource {
         if (maybeUser.isEmpty()) return false;
 
         User basicUser = maybeUser.get();
-        // Reload with full profile data and embeds
         User user = userRepo.findByIdFull(basicUser.id(), embedGroups, embedPermissions).orElse(null);
         if (user == null) return false;
 
-        // Load OIDC providers if requested
         UserRepository userRepo2 = new UserRepository(dsl);
         if (embedOidcProviders) {
             List<OidcUser> oidcUsers = userRepo2.loadOidcUsers(user.id());
@@ -153,7 +122,6 @@ public class UserResource {
                     user.permissions(), user.unverifiedProfiles());
         }
 
-        // Load unverified profiles
         List<String> unverifiedProfiles = userRepo2.loadUnverifiedProfiles(user.id());
         if (!unverifiedProfiles.isEmpty()) {
             user = new User(user.id(), user.account(), user.writeProtected(),
@@ -167,25 +135,21 @@ public class UserResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean conflict(User user, Map userProfiles, RestContext context, DSLContext dsl) {
-        if (userProfiles == null || userProfiles.isEmpty()) return false;
+    public boolean conflict(User user, UserProfile userProfile, RestContext context, DSLContext dsl) {
+        if (userProfile.values().isEmpty()) return false;
 
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
         UserRepository userRepo = new UserRepository(dsl);
         List<UserProfileField> identityFields = fieldRepo.findIdentityFields();
-        @SuppressWarnings("unchecked")
-        Map<String, Object> profiles = userProfiles;
 
         for (UserProfileField f : identityFields) {
-            Object value = profiles.get(f.jsonName());
-            if (value == null) continue;
-
-            if (userRepo.isProfileIdentityConflict(f.jsonName(), value, user.id())) {
-                context.setMessage(Problem.valueOf(409));
-                return true;
-            }
+            userProfile.get(f.jsonName()).ifPresent(value -> {
+                if (userRepo.isProfileIdentityConflict(f.jsonName(), value, user.id())) {
+                    context.setMessage(Problem.valueOf(409));
+                }
+            });
         }
-        return false;
+        return context.getMessage().isPresent();
     }
 
     @Decision(HANDLE_OK)
@@ -208,10 +172,9 @@ public class UserResource {
         return user;
     }
 
-    @SuppressWarnings("unchecked")
     @Decision(PUT)
     public User update(User user,
-                       Map userProfiles,
+                       UserProfile userProfile,
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
                        RestContext context,
@@ -221,18 +184,15 @@ public class UserResource {
 
         config.getHookRepo().runHook(HookPoint.BEFORE_UPDATE_USER, context);
 
-        Map<String, Object> profiles = userProfiles != null ? userProfiles : Collections.emptyMap();
         List<UserProfileValue> currentValues = userRepo.loadProfileValues(user.id());
-
-        // Track updated and new profile values for verification
         List<UserProfileField> updatedFields = new ArrayList<>();
 
-        for (Map.Entry<String, Object> entry : ((Map<String, Object>) profiles).entrySet()) {
+        for (Map.Entry<String, String> entry : userProfile.values().entrySet()) {
             Optional<UserProfileField> maybeField = fieldRepo.findByJsonName(entry.getKey());
             if (maybeField.isEmpty()) continue;
             UserProfileField profileField = maybeField.get();
 
-            String newValue = entry.getValue() != null ? entry.getValue().toString() : null;
+            String newValue = entry.getValue();
             Optional<UserProfileValue> existingValue = currentValues.stream()
                     .filter(v -> v.userProfileField().id().equals(profileField.id()))
                     .findAny();
@@ -250,7 +210,6 @@ public class UserResource {
             }
         }
 
-        // Create verifications for updated fields that need verification
         List<UserProfileVerification> newVerifications = updatedFields.stream()
                 .filter(UserProfileField::needsVerification)
                 .map(f -> {

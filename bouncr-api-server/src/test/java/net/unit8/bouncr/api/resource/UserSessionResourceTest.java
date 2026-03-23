@@ -82,7 +82,7 @@ class UserSessionResourceTest {
         assertThat(storeProvider.getStore(REFRESH_TOKEN).read("session-token")).isNull();
         // Cookie clearing header must be present
         assertThat(apiResponse.getHeaders().getList("Set-Cookie"))
-                .anySatisfy(v -> assertThat(v.toString()).contains("Max-Age=0"));
+                .anySatisfy(v -> assertThat(v.toString().toLowerCase()).contains("max-age=0"));
     }
 
     private RestContext restContext() {

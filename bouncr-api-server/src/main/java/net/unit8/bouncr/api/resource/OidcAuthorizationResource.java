@@ -11,6 +11,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OidcProvider;
@@ -89,7 +90,8 @@ public class OidcAuthorizationResource {
 
         String oidcSessionId = storeProvider.getStore(OIDC_SESSION).write(null, oidcSession);
 
-        String cookieHeader = "OIDC_SESSION_ID=" + oidcSessionId + "; HttpOnly; Secure; SameSite=Lax; Path=/";
+        BouncrCookies cookies = new BouncrCookies(config);
+        String cookieHeader = cookies.session("OIDC_SESSION_ID", oidcSessionId, 300).toHttpString();
 
         Headers headers = Headers.of(
                 "Location", authorizationUrl.toString(),

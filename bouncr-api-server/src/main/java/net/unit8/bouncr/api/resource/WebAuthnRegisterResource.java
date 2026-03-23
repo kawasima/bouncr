@@ -16,6 +16,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnRegister;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -149,8 +150,8 @@ public class WebAuthnRegisterResource {
 
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(WebAuthnCredential credential) {
-        String clearSessionCookie = COOKIE_NAME + "=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-                + (config.isSecureCookie() ? "; Secure" : "");
+        BouncrCookies cookies = new BouncrCookies(config);
+        String clearSessionCookie = cookies.clearSession(COOKIE_NAME).toHttpString();
 
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)

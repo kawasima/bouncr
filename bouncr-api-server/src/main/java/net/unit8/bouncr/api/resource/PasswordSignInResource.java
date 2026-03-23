@@ -16,6 +16,7 @@ import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserLockService;
+import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
@@ -155,10 +156,7 @@ public class PasswordSignInResource {
 
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(UserSession userSession) {
-        String cookie = config.getTokenName() + "=" + userSession.token()
-                + "; HttpOnly" + (config.isSecureCookie() ? "; Secure" : "")
-                + "; SameSite=Strict; Max-Age=" + config.getRefreshTokenExpires()
-                + "; Path=/";
+        String cookie = new BouncrCookies(config).token(userSession.token()).toHttpString();
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookie))
