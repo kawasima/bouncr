@@ -208,7 +208,7 @@ function RealmEditForm({
 
   return (
     <div className="space-y-0">
-      <form onSubmit={handleSubmit((d) => { if (isReadOnly) return; onSubmit(d); })} className="max-w-md space-y-6">
+      <form onSubmit={handleSubmit((d) => { if (isReadOnly) return; return onSubmit(d); })} className="max-w-md space-y-6">
         <ProblemAlert problem={problem} />
         <div className="space-y-2">
           <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">

@@ -90,41 +90,44 @@ function GroupUsersSection({ groupName, readOnly = false }: { groupName: string;
       <ProblemAlert problem={problem} />
 
       {/* Add user search */}
-      {!readOnly && <div className="flex gap-2">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-          placeholder="Search users to add..."
-          className="mansion-input flex-1 py-2"
-        />
-        <Button
-          type="button"
-          onClick={handleSearch}
-          disabled={searching}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          Search
-        </Button>
-      </div>
-
-      {searchResults.length > 0 && (
-        <div className="border border-gold/20 rounded-sm p-3 space-y-1">
-          <p className="text-xs text-muted-foreground mb-2">Click to add:</p>
-          {searchResults.map((u) => (
-            <button
-              key={u.account}
-              onClick={() => handleAdd(u.account)}
-              className="block w-full text-left px-3 py-2 text-sm hover:bg-gold/10 rounded-sm transition-colors"
+      {!readOnly && (
+        <>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
+              placeholder="Search users to add..."
+              className="mansion-input flex-1 py-2"
+            />
+            <Button
+              type="button"
+              onClick={handleSearch}
+              disabled={searching}
+              className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
             >
-              <span className="text-gold">{u.account}</span>
-              {u.name && <span className="text-muted-foreground ml-2">{String(u.name)}</span>}
-            </button>
-          ))}
-        </div>
+              Search
+            </Button>
+          </div>
+
+          {searchResults.length > 0 && (
+            <div className="border border-gold/20 rounded-sm p-3 space-y-1">
+              <p className="text-xs text-muted-foreground mb-2">Click to add:</p>
+              {searchResults.map((u) => (
+                <button
+                  key={u.account}
+                  onClick={() => handleAdd(u.account)}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gold/10 rounded-sm transition-colors"
+                >
+                  <span className="text-gold">{u.account}</span>
+                  {u.name && <span className="text-muted-foreground ml-2">{String(u.name)}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
-      }
 
       {/* Current members */}
       {users.length === 0 ? (

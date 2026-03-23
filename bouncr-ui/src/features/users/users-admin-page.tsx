@@ -133,6 +133,7 @@ function UserEditForm({
   canUpdate?: boolean;
 }) {
   const isCreate = !target;
+  const isReadOnly = !isCreate && !canUpdate;
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState('');
   const [credProblem, setCredProblem] = useState<Problem | null>(null);
@@ -149,6 +150,7 @@ function UserEditForm({
   });
 
   const handleFormSubmit = async (d: UserFormData) => {
+    if (isReadOnly) return false;
     const ok = await onSubmit(d);
     if (ok && isCreate && enablePassword && password) {
       try {
@@ -213,21 +215,21 @@ function UserEditForm({
           <label htmlFor="account" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Account
           </label>
-          <input id="account" {...register('account')} disabled={!!target} className="mansion-input w-full py-2" />
+          <input id="account" {...register('account')} disabled={!!target || isReadOnly} className="mansion-input w-full py-2" />
           {errors.account && <p className="text-sm text-destructive">{errors.account.message}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Name
           </label>
-          <input id="name" {...register('name')} className="mansion-input w-full py-2" />
+          <input id="name" {...register('name')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="email" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Email
           </label>
-          <input id="email" type="email" {...register('email')} className="mansion-input w-full py-2" />
+          <input id="email" type="email" {...register('email')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
         </div>
 
