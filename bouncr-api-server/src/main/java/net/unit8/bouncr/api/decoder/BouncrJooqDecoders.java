@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.decoder;
 
 import net.unit8.bouncr.data.*;
 import net.unit8.raoh.Decoder;
+import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.jooq.JooqRecordDecoder;
 import org.jooq.Record;
@@ -169,11 +170,14 @@ public final class BouncrJooqDecoders {
             field("user_action_id", long_()),
             field("action_id", long_()),
             field("actor", string()),
-            optionalField("actor_ip", string()),
-            optionalField("options", string()),
+            optionalNullableField("actor_ip", string()),
+            optionalNullableField("options", string()),
             field("created_at", dateTime())
     ).map((id, actionId, actor, actorIp, options, createdAt) -> new UserAction(
-            id, ActionType.of(actionId), actor, actorIp.orElse(null), options.orElse(null), createdAt));
+            id, ActionType.of(actionId), actor,
+            actorIp instanceof Presence.Present<String> p ? p.value() : null,
+            options instanceof Presence.Present<String> p ? p.value() : null,
+            createdAt));
 
     // --- Invitation ---
 
