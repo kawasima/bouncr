@@ -61,7 +61,7 @@ public class OAuth2DiscoveryResource {
                 Map.entry("grant_types_supported",
                         oidcApplication.grantTypes() != null
                                 ? oidcApplication.grantTypes().stream().map(GrantType::getValue).toList()
-                                : List.of("authorization_code", "refresh_token", "client_credentials")),
+                                : GrantType.DEFAULT_GRANT_TYPES),
                 Map.entry("subject_types_supported", List.of("public")),
                 Map.entry("id_token_signing_alg_values_supported", List.of("RS256")),
                 Map.entry("scopes_supported", List.of("openid", "profile", "email")),

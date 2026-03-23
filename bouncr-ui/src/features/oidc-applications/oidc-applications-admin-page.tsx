@@ -30,14 +30,19 @@ const columns: ColumnDef<OidcApplication>[] = [
   { header: 'Description', accessor: 'description' },
 ];
 
+const httpUrl = z.string().url('Must be a valid URL').refine(
+  (val) => val.startsWith('http://') || val.startsWith('https://'),
+  { message: 'Must be an http or https URL' },
+);
+
 const oidcAppSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   grant_types: z.array(z.string()).min(1, 'At least one grant type is required'),
   description: z.union([z.string(), z.literal('')]).optional(),
-  home_url: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
-  callback_url: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
-  backchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
-  frontchannel_logout_uri: z.union([z.string().url('Must be a valid URL'), z.literal('')]).optional(),
+  home_url: z.union([httpUrl, z.literal('')]).optional(),
+  callback_url: z.union([httpUrl, z.literal('')]).optional(),
+  backchannel_logout_uri: z.union([httpUrl, z.literal('')]).optional(),
+  frontchannel_logout_uri: z.union([httpUrl, z.literal('')]).optional(),
   permissions: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
   if (data.grant_types.includes('authorization_code') && (!data.callback_url || data.callback_url === '')) {
