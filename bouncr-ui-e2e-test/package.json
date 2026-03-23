@@ -1,0 +1,15 @@
+{
+  "name": "bouncr-ui-e2e-test",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "cucumber-js",
+    "test:headed": "HEADED=1 cucumber-js"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.0.0",
+    "@playwright/test": "^1.49.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}

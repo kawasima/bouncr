@@ -11,7 +11,7 @@
         <relativePath>..</relativePath>
     </parent>
     <packaging>jar</packaging>
-    <artifactId>bouncr-e2e-test</artifactId>
+    <artifactId>bouncr-api-e2e-test</artifactId>
     <description>E2E integration tests for Bouncr OIDC IdP using Playwright</description>
 
     <properties>
