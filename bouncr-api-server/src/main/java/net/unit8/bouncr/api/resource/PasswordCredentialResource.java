@@ -99,7 +99,7 @@ public class PasswordCredentialResource {
         };
     }
 
-    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
+    @Decision(value = AUTHORIZED, method = {"POST", "PUT", "DELETE"})
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
     }

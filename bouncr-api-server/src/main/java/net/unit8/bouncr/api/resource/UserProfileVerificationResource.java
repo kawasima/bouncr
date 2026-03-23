@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
@@ -9,12 +10,16 @@ import net.unit8.bouncr.api.repository.UserProfileVerificationRepository;
 import net.unit8.bouncr.data.UserProfileVerification;
 import org.jooq.DSLContext;
 
-import static kotowari.restful.DecisionPoint.DELETE;
-import static kotowari.restful.DecisionPoint.EXISTS;
+import static kotowari.restful.DecisionPoint.*;
 
 @AllowedMethods("DELETE")
 public class UserProfileVerificationResource {
     static final ContextKey<UserProfileVerification> VERIFICATION = ContextKey.of(UserProfileVerification.class);
+
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
 
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, DSLContext dsl) {

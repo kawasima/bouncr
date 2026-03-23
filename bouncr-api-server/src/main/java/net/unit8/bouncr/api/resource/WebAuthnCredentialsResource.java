@@ -29,6 +29,11 @@ public class WebAuthnCredentialsResource {
         return principal != null;
     }
 
+    @Decision(value = ALLOWED, method = "GET")
+    public boolean isGetAllowed(UserPermissionPrincipal principal) {
+        return principal.hasPermission("my:read") || principal.hasPermission("my:update");
+    }
+
     @Decision(value = ALLOWED, method = "DELETE")
     public boolean allowed(UserPermissionPrincipal principal) {
         return principal.hasPermission("my:update");
