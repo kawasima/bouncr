@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
@@ -122,13 +124,16 @@ function UserEditForm({
   onSubmit,
   problem,
   onDeleted,
+  canUpdate = true,
 }: {
   target: User | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const isCreate = !target;
+  const isReadOnly = !isCreate && !canUpdate;
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState('');
   const [credProblem, setCredProblem] = useState<Problem | null>(null);
@@ -145,6 +150,7 @@ function UserEditForm({
   });
 
   const handleFormSubmit = async (d: UserFormData) => {
+    if (isReadOnly) return false;
     const ok = await onSubmit(d);
     if (ok && isCreate && enablePassword && password) {
       try {
@@ -209,21 +215,21 @@ function UserEditForm({
           <label htmlFor="account" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Account
           </label>
-          <input id="account" {...register('account')} disabled={!!target} className="mansion-input w-full py-2" />
+          <input id="account" {...register('account')} disabled={!!target || isReadOnly} className="mansion-input w-full py-2" />
           {errors.account && <p className="text-sm text-destructive">{errors.account.message}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Name
           </label>
-          <input id="name" {...register('name')} className="mansion-input w-full py-2" />
+          <input id="name" {...register('name')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="email" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
             Email
           </label>
-          <input id="email" type="email" {...register('email')} className="mansion-input w-full py-2" />
+          <input id="email" type="email" {...register('email')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
         </div>
 
@@ -258,11 +264,12 @@ function UserEditForm({
           </div>
         )}
 
-        {!isCreate && !credCreated && (
+        {!isCreate && !credCreated && canUpdate && (
           <PasswordCredentialSection account={target.account} onCreated={() => setCredCreated(true)} />
         )}
 
         <div className="flex items-center gap-4">
+          {(isCreate || canUpdate) && (
           <Button
             type="submit"
             disabled={isSubmitting}
@@ -270,7 +277,8 @@ function UserEditForm({
           >
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
-          {!isCreate && (
+          )}
+          {!isCreate && onDeleted && (
             <>
               {confirmDelete ? (
                 <div className="flex items-center gap-2">
@@ -313,12 +321,21 @@ function UserEditForm({
 }
 
 export function UsersAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.user.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.user.update);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.user.delete);
+
   return (
     <AdminCrudPage
       title="User"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <UserEditForm {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => (
+        <UserEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
+      )}
     />
   );
 }

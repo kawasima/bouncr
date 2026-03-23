@@ -10,6 +10,8 @@ import type { OidcApplication, OidcApplicationCreateRequest, OidcApplicationUpda
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const GRANT_TYPES = [
   { value: 'authorization_code', label: 'Authorization Code' },
@@ -61,13 +63,16 @@ function OidcAppEditForm({
   onSubmit,
   problem,
   onDeleted,
+  canUpdate = true,
 }: {
   target: OidcApplication | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const isCreate = !target;
+  const isReadOnly = !!target && !canUpdate;
   const [createdCredentials, setCreatedCredentials] = useState<{ clientId: string; clientSecret: string } | null>(null);
   const [regeneratedSecret, setRegeneratedSecret] = useState<string | null>(null);
   const [createProblem, setCreateProblem] = useState<Problem | null>(null);
@@ -206,7 +211,7 @@ function OidcAppEditForm({
               <p className="text-xs text-muted-foreground">New secret generated. Copy it now — it will not be shown again.</p>
               <code className="block font-mono text-sm bg-black/20 p-2 rounded-sm select-all text-gold">{regeneratedSecret}</code>
             </div>
-          ) : (
+          ) : canUpdate ? (
             <Button
               type="button"
               variant="outline"
@@ -222,7 +227,7 @@ function OidcAppEditForm({
             >
               Regenerate Secret
             </Button>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -247,6 +252,7 @@ function OidcAppEditForm({
                     : current.filter((v) => v !== gt.value);
                   setValue('grant_types', next, { shouldValidate: true });
                 }}
+                disabled={isReadOnly}
                 className="accent-gold"
               />
               <span className="text-sm">{gt.label}</span>
@@ -260,7 +266,7 @@ function OidcAppEditForm({
 
       <div className="space-y-2">
         <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Description</label>
-        <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+        <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
 
@@ -270,22 +276,22 @@ function OidcAppEditForm({
             <label htmlFor="callback_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
               Callback URL <span className="text-destructive">*</span>
             </label>
-            <input id="callback_url" {...register('callback_url')} className="mansion-input w-full py-2" />
+            <input id="callback_url" {...register('callback_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.callback_url && <p className="text-sm text-destructive">{errors.callback_url.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="home_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
-            <input id="home_url" {...register('home_url')} className="mansion-input w-full py-2" />
+            <input id="home_url" {...register('home_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.home_url && <p className="text-sm text-destructive">{errors.home_url.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="backchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Back-channel Logout URI</label>
-            <input id="backchannel_logout_uri" {...register('backchannel_logout_uri')} className="mansion-input w-full py-2" />
+            <input id="backchannel_logout_uri" {...register('backchannel_logout_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.backchannel_logout_uri && <p className="text-sm text-destructive">{errors.backchannel_logout_uri.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="frontchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Front-channel Logout URI</label>
-            <input id="frontchannel_logout_uri" {...register('frontchannel_logout_uri')} className="mansion-input w-full py-2" />
+            <input id="frontchannel_logout_uri" {...register('frontchannel_logout_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
             {errors.frontchannel_logout_uri && <p className="text-sm text-destructive">{errors.frontchannel_logout_uri.message}</p>}
           </div>
         </>
@@ -306,6 +312,7 @@ function OidcAppEditForm({
                   }
                 }}
                 defaultValue=""
+                disabled={isReadOnly}
                 className="mansion-input py-1 text-sm bg-transparent"
               >
                 <option value="">Select a role...</option>
@@ -328,6 +335,7 @@ function OidcAppEditForm({
                     else next.delete(p.name);
                     setSelectedPerms(next);
                   }}
+                  disabled={isReadOnly}
                   className="accent-gold"
                 />
                 <span className="text-sm">{p.name}</span>
@@ -338,14 +346,16 @@ function OidcAppEditForm({
       )}
 
       <div className="flex items-center gap-4">
-        <Button
-          type="submit"
-          disabled={isSubmitting || watchedGrants.length === 0}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
-        {!isCreate && (
+        {(!target || canUpdate) && (
+          <Button
+            type="submit"
+            disabled={isSubmitting || watchedGrants.length === 0}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
+        {!isCreate && onDeleted && (
           <>
             {confirmDelete ? (
               <div className="flex items-center gap-2">
@@ -398,12 +408,25 @@ function OidcAppEditForm({
 }
 
 export function OidcApplicationsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.create);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.delete);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.update);
+
   return (
     <AdminCrudPage
       title="OpenID Connect Application"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <OidcAppEditForm {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => (
+        <OidcAppEditForm
+          {...props}
+          onDeleted={canDelete ? props.onDeleted : undefined}
+          canUpdate={canUpdate}
+        />
+      )}
     />
   );
 }

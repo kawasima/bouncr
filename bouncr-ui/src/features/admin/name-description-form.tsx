@@ -16,15 +16,18 @@ interface NameDescriptionFormProps {
   target: { name: string; description: string } | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }
 
-export function NameDescriptionForm({ target, onSubmit, problem }: NameDescriptionFormProps) {
+export function NameDescriptionForm({ target, onSubmit, problem, canUpdate = true }: NameDescriptionFormProps) {
+  const isReadOnly = !!target && !canUpdate;
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: target ?? { name: '', description: '' },
   });
 
   async function handleFormSubmit(data: FormData) {
+    if (isReadOnly) return;
     await onSubmit(data);
   }
 
@@ -35,23 +38,25 @@ export function NameDescriptionForm({ target, onSubmit, problem }: NameDescripti
         <label htmlFor="name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Name
         </label>
-        <input id="name" {...register('name')} disabled={!!target} className="mansion-input w-full py-2" />
+        <input id="name" {...register('name')} disabled={!!target || isReadOnly} className="mansion-input w-full py-2" />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
       <div className="space-y-2">
         <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Description
         </label>
-        <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+        <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
         {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
       </div>
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-      >
-        {isSubmitting ? 'Saving...' : 'Save'}
-      </Button>
+      {!isReadOnly && (
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+        >
+          {isSubmitting ? 'Saving...' : 'Save'}
+        </Button>
+      )}
     </form>
   );
 }

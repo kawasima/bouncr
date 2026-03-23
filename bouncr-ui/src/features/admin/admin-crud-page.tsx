@@ -14,15 +14,18 @@ interface AdminCrudPageProps<T> {
   title: string;
   config: AdminCrudConfig<T>;
   columns: ColumnDef<T>[];
+  canCreate?: boolean;
+  canUpdate?: boolean;
   renderEditForm: (props: {
     target: T | null;
     onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
     problem: Problem | null;
     onDeleted?: () => void;
+    canUpdate?: boolean;
   }) => ReactNode;
 }
 
-export function AdminCrudPage<T>({ title, config, columns, renderEditForm }: AdminCrudPageProps<T>) {
+export function AdminCrudPage<T>({ title, config, columns, canCreate = true, canUpdate = true, renderEditForm }: AdminCrudPageProps<T>) {
   const crud = useAdminCrud(config);
 
   useEffect(() => {
@@ -46,9 +49,14 @@ export function AdminCrudPage<T>({ title, config, columns, renderEditForm }: Adm
         </div>
         {renderEditForm({
           target: crud.editTarget,
-          onSubmit: crud.save,
+          onSubmit: async (data) => {
+            if (crud.editTarget && !canUpdate) return false;
+            if (!crud.editTarget && !canCreate) return false;
+            return crud.save(data);
+          },
           problem: crud.problem,
           onDeleted: () => { crud.exitEdit(); crud.loadList('', 0, false); },
+          canUpdate,
         })}
       </div>
     );
@@ -58,14 +66,16 @@ export function AdminCrudPage<T>({ title, config, columns, renderEditForm }: Adm
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="mansion-heading text-lg">{title}</h2>
-        <Button
-          size="sm"
-          onClick={() => crud.enterEdit(null)}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          New
-        </Button>
+        {canCreate && (
+          <Button
+            size="sm"
+            onClick={() => crud.enterEdit(null)}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New
+          </Button>
+        )}
       </div>
       <SearchInput onSearch={crud.handleSearch} placeholder={`Search ${title.toLowerCase()}...`} />
       <ProblemAlert problem={crud.problem} />

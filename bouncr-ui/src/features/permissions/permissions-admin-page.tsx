@@ -4,6 +4,8 @@ import { NameDescriptionForm } from '@/features/admin/name-description-form';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
 import type { ColumnDef } from '@/components/data-table';
 import type { Permission } from '@/api/types';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Permission> = {
   fetchList: api.getPermissions,
@@ -19,12 +21,18 @@ const columns: ColumnDef<Permission>[] = [
 ];
 
 export function PermissionsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.permission.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.permission.update);
+
   return (
     <AdminCrudPage
       title="Permission"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <NameDescriptionForm {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <NameDescriptionForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

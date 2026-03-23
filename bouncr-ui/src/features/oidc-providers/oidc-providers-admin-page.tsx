@@ -8,6 +8,8 @@ import type { ColumnDef } from '@/components/data-table';
 import type { OidcProvider, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<OidcProvider> = {
   fetchList: api.getOidcProviders,
@@ -44,11 +46,14 @@ function OidcProviderEditForm({
   target,
   onSubmit,
   problem,
+  canUpdate = true,
 }: {
   target: OidcProvider | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }) {
+  const isReadOnly = !!target && !canUpdate;
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcProviderFormData>({
     resolver: zodResolver(oidcProviderSchema),
     defaultValues: target ?? {
@@ -60,7 +65,7 @@ function OidcProviderEditForm({
   });
 
   const fields: { id: keyof OidcProviderFormData; label: string; type?: string; placeholder?: string; disabled?: boolean }[] = [
-    { id: 'name', label: 'Name', disabled: !!target },
+    { id: 'name', label: 'Name', disabled: !!target || isReadOnly },
     { id: 'clientId', label: 'Client ID' },
     { id: 'clientSecret', label: 'Client Secret', type: 'password' },
     { id: 'scope', label: 'Scope', placeholder: 'openid email profile' },
@@ -85,7 +90,7 @@ function OidcProviderEditForm({
             id={f.id}
             type={f.type ?? 'text'}
             {...register(f.id)}
-            disabled={f.disabled}
+            disabled={f.disabled || isReadOnly}
             placeholder={f.placeholder}
             className="mansion-input w-full py-2"
           />
@@ -93,29 +98,37 @@ function OidcProviderEditForm({
         </div>
       ))}
       <div className="flex items-center gap-3">
-        <input type="checkbox" id="pkceEnabled" {...register('pkceEnabled')} className="accent-gold" />
+        <input type="checkbox" id="pkceEnabled" {...register('pkceEnabled')} disabled={isReadOnly} className="accent-gold" />
         <label htmlFor="pkceEnabled" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           PKCE Enabled
         </label>
       </div>
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-      >
-        {isSubmitting ? 'Saving...' : 'Save'}
-      </Button>
+      {(!target || canUpdate) && (
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+        >
+          {isSubmitting ? 'Saving...' : 'Save'}
+        </Button>
+      )}
     </form>
   );
 }
 
 export function OidcProvidersAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcProvider.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcProvider.update);
+
   return (
     <AdminCrudPage
       title="OpenID Connect Provider"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <OidcProviderEditForm {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <OidcProviderEditForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }

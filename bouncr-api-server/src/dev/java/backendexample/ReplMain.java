@@ -9,7 +9,6 @@ public class ReplMain {
         system.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutting down...");
             system.stop();
         }, "shutdown-hook"));
 

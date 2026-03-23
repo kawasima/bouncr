@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { X, Trash2 } from 'lucide-react';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Group> = {
   fetchList: api.getGroups,
@@ -24,7 +26,7 @@ const columns: ColumnDef<Group>[] = [
   { header: 'Description', accessor: 'description' },
 ];
 
-function GroupUsersSection({ groupName }: { groupName: string }) {
+function GroupUsersSection({ groupName, readOnly = false }: { groupName: string; readOnly?: boolean }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -88,39 +90,43 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
       <ProblemAlert problem={problem} />
 
       {/* Add user search */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-          placeholder="Search users to add..."
-          className="mansion-input flex-1 py-2"
-        />
-        <Button
-          type="button"
-          onClick={handleSearch}
-          disabled={searching}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          Search
-        </Button>
-      </div>
-
-      {searchResults.length > 0 && (
-        <div className="border border-gold/20 rounded-sm p-3 space-y-1">
-          <p className="text-xs text-muted-foreground mb-2">Click to add:</p>
-          {searchResults.map((u) => (
-            <button
-              key={u.account}
-              onClick={() => handleAdd(u.account)}
-              className="block w-full text-left px-3 py-2 text-sm hover:bg-gold/10 rounded-sm transition-colors"
+      {!readOnly && (
+        <>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
+              placeholder="Search users to add..."
+              className="mansion-input flex-1 py-2"
+            />
+            <Button
+              type="button"
+              onClick={handleSearch}
+              disabled={searching}
+              className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
             >
-              <span className="text-gold">{u.account}</span>
-              {u.name && <span className="text-muted-foreground ml-2">{String(u.name)}</span>}
-            </button>
-          ))}
-        </div>
+              Search
+            </Button>
+          </div>
+
+          {searchResults.length > 0 && (
+            <div className="border border-gold/20 rounded-sm p-3 space-y-1">
+              <p className="text-xs text-muted-foreground mb-2">Click to add:</p>
+              {searchResults.map((u) => (
+                <button
+                  key={u.account}
+                  onClick={() => handleAdd(u.account)}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gold/10 rounded-sm transition-colors"
+                >
+                  <span className="text-gold">{u.account}</span>
+                  {u.name && <span className="text-muted-foreground ml-2">{String(u.name)}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Current members */}
@@ -132,7 +138,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
             <tr className="border-b border-gold-muted">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Account</th>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Name</th>
-              <th className="px-3 py-2 w-10"></th>
+              {!readOnly && <th className="px-3 py-2 w-10"></th>}
             </tr>
           </thead>
           <tbody>
@@ -140,6 +146,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
               <tr key={u.account} className="border-b border-gold/10">
                 <td className="px-3 py-2 text-sm">{u.account}</td>
                 <td className="px-3 py-2 text-sm text-muted-foreground">{u.name ? String(u.name) : '-'}</td>
+                {!readOnly && (
                 <td className="px-3 py-2">
                   <button
                     onClick={() => handleRemove(u.account)}
@@ -149,6 +156,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
                     <X className="h-4 w-4" />
                   </button>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -158,7 +166,7 @@ function GroupUsersSection({ groupName }: { groupName: string }) {
   );
 }
 
-function GroupAssignmentsSection({ group }: { group: Group }) {
+function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; readOnly?: boolean }) {
   const [realms, setRealms] = useState<Realm[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [assignments, setAssignments] = useState<{ realm: { id: number; name: string }; role: { id: number; name: string } }[]>([]);
@@ -246,7 +254,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
             <tr className="border-b border-gold-muted">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Realm</th>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.15em] text-gold">Role</th>
-              <th className="px-3 py-2 w-10"></th>
+              {!readOnly && <th className="px-3 py-2 w-10"></th>}
             </tr>
           </thead>
           <tbody>
@@ -254,6 +262,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
               <tr key={`${a.realm.id}-${a.role.id}`} className="border-b border-gold/10">
                 <td className="px-3 py-2 text-sm">{a.realm.name}</td>
                 <td className="px-3 py-2 text-sm">{a.role.name}</td>
+                {!readOnly && (
                 <td className="px-3 py-2">
                   <button
                     onClick={() => handleRemove(a)}
@@ -263,6 +272,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
                     <X className="h-4 w-4" />
                   </button>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -270,7 +280,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
       )}
 
       {/* Add new assignment */}
-      <div className="space-y-4">
+      {!readOnly && <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Realm</label>
           <select
@@ -324,7 +334,7 @@ function GroupAssignmentsSection({ group }: { group: Group }) {
         >
           {submitting ? 'Adding...' : 'Add Assignment'}
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -334,6 +344,7 @@ function GroupEditFormWithUsers(props: {
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
+  canUpdate?: boolean;
 }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -357,10 +368,10 @@ function GroupEditFormWithUsers(props: {
 
   return (
     <div>
-      <NameDescriptionForm {...props} />
+      <NameDescriptionForm target={props.target} onSubmit={props.onSubmit} problem={props.problem} canUpdate={props.canUpdate} />
       <ProblemAlert problem={deleteProblem} />
 
-      {props.target && !isWriteProtected && (
+      {props.target && !isWriteProtected && props.onDeleted && (
         <div className="mt-6">
           {confirmDelete ? (
             <div className="flex items-center gap-2">
@@ -397,19 +408,28 @@ function GroupEditFormWithUsers(props: {
         </div>
       )}
 
-      {props.target && <GroupUsersSection groupName={props.target.name} />}
-      {props.target && <GroupAssignmentsSection group={props.target} />}
+      {props.target && <GroupUsersSection groupName={props.target.name} readOnly={!props.canUpdate} />}
+      {props.target && <GroupAssignmentsSection group={props.target} readOnly={!props.canUpdate} />}
     </div>
   );
 }
 
 export function GroupsAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.group.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.group.update);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.group.delete);
+
   return (
     <AdminCrudPage
       title="Group"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <GroupEditFormWithUsers {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => (
+        <GroupEditFormWithUsers {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
+      )}
     />
   );
 }

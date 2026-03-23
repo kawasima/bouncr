@@ -10,6 +10,8 @@ import type { ColumnDef } from '@/components/data-table';
 import type { Role, Permission, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
+import { usePermissions } from '@/auth/permission-context';
+import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<Role> = {
   fetchList: api.getRoles,
@@ -35,10 +37,12 @@ function RoleEditForm({
   target,
   onSubmit,
   problem,
+  canUpdate = true,
 }: {
   target: Role | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  canUpdate?: boolean;
 }) {
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Set<number>>(
@@ -46,6 +50,7 @@ function RoleEditForm({
   );
   const [permProblem, setPermProblem] = useState<Problem | null>(null);
   const [savingPerms, setSavingPerms] = useState(false);
+  const isReadOnly = !!target && !canUpdate;
 
   useEffect(() => {
     api.getPermissions({ limit: 1000 }).then(setAllPermissions).catch(() => {});
@@ -81,16 +86,18 @@ function RoleEditForm({
         </div>
         <div className="space-y-2">
           <label htmlFor="description" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Description</label>
-          <input id="description" {...register('description')} className="mansion-input w-full py-2" />
+          <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
         </div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
+        {(!target || canUpdate) && (
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
       </form>
 
       {target && allPermissions.length > 0 && (
@@ -110,20 +117,23 @@ function RoleEditForm({
                     else next.delete(p.id);
                     setSelectedPerms(next);
                   }}
+                  disabled={isReadOnly}
                   className="accent-gold"
                 />
                 <span className="text-sm">{p.name}</span>
               </label>
             ))}
           </div>
-          <Button
-            type="button"
-            onClick={handleSavePermissions}
-            disabled={savingPerms}
-            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-          >
-            {savingPerms ? 'Saving...' : 'Save Permissions'}
-          </Button>
+          {!isReadOnly && (
+            <Button
+              type="button"
+              onClick={handleSavePermissions}
+              disabled={savingPerms}
+              className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+            >
+              {savingPerms ? 'Saving...' : 'Save Permissions'}
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -131,12 +141,18 @@ function RoleEditForm({
 }
 
 export function RolesAdminPage() {
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission(...RESOURCE_PERMISSIONS.role.create);
+  const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.role.update);
+
   return (
     <AdminCrudPage
       title="Role"
       config={config}
       columns={columns}
-      renderEditForm={(props) => <RoleEditForm {...props} />}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      renderEditForm={(props) => <RoleEditForm {...props} canUpdate={props.canUpdate} />}
     />
   );
 }
