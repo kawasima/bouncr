@@ -96,8 +96,7 @@ public class OidcApplicationRepository {
     public List<OidcApplication> search(String q, int offset, int limit) {
         var condition = noCondition();
         if (q != null && !q.isEmpty()) {
-            String likeExpr = "%" + q.replace("%", "\\%") + "%";
-            condition = condition.and(field("name", String.class).like(likeExpr));
+            condition = condition.and(LikeQuery.contains(field("name", String.class), q));
         }
 
         return dsl.select(

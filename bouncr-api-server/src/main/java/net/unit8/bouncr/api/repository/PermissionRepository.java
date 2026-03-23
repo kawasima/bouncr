@@ -46,8 +46,7 @@ public class PermissionRepository {
 
         var condition = noCondition();
         if (q != null && !q.isEmpty()) {
-            String likeExpr = "%" + q.replace("%", "\\%") + "%";
-            condition = condition.and(field("p.name", String.class).like(likeExpr));
+            condition = condition.and(LikeQuery.contains(field("p.name", String.class), q));
         }
         if (!isAdmin) {
             condition = condition.and(field("m.user_id").eq(userId));

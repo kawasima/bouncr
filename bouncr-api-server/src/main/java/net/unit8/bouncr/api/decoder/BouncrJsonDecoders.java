@@ -5,10 +5,12 @@ import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.data.UserProfile;
 import net.unit8.bouncr.data.UserProfileField;
+import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.json.JsonDecoder;
+import tools.jackson.databind.JsonNode;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,11 +34,14 @@ public final class BouncrJsonDecoders {
 
     private static final Pattern WORD_PATTERN = Pattern.compile("^\\w+$");
     private static final Pattern PERMISSION_PATTERN = Pattern.compile("^[\\w:]+$");
+    private static final Decoder<JsonNode, String> WORD_NAME = string().nonBlank().maxLength(100).pattern(WORD_PATTERN);
+    private static final Decoder<JsonNode, String> PERMISSION_NAME = string().nonBlank().maxLength(100).pattern(PERMISSION_PATTERN);
+    private static final Decoder<JsonNode, String> PASSWORD = string().nonBlank().maxLength(300);
 
     // ===== Application =====
     public record ApplicationCreate(String name, String description, String virtualPath, String passTo, String topPage) {}
     public static final JsonDecoder<ApplicationCreate> APPLICATION_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("virtual_path", string().nonBlank().maxLength(100)),
             field("pass_to", string().nonBlank().maxLength(100)),
@@ -45,7 +50,7 @@ public final class BouncrJsonDecoders {
 
     public record ApplicationUpdate(String name, String description, String virtualPath, String passTo, String topPage) {}
     public static final JsonDecoder<ApplicationUpdate> APPLICATION_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("virtual_path", string().nonBlank().maxLength(100)),
             field("pass_to", string().nonBlank().maxLength(100)),
@@ -55,13 +60,13 @@ public final class BouncrJsonDecoders {
     // ===== Group =====
     public record GroupCreate(String name, String description) {}
     public static final JsonDecoder<GroupCreate> GROUP_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank())
     ).map(GroupCreate::new)::decode;
 
     public record GroupUpdate(String name, String description, List<String> users) {}
     public static final JsonDecoder<GroupUpdate> GROUP_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank()),
             optionalField("users", list(string()))
     ).map((name, desc, users) -> new GroupUpdate(name, desc, users.orElse(null)))::decode;
@@ -69,40 +74,40 @@ public final class BouncrJsonDecoders {
     // ===== Role =====
     public record RoleCreate(String name, String description) {}
     public static final JsonDecoder<RoleCreate> ROLE_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank())
     ).map(RoleCreate::new)::decode;
 
     public record RoleUpdate(String name, String description) {}
     public static final JsonDecoder<RoleUpdate> ROLE_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank())
     ).map(RoleUpdate::new)::decode;
 
     // ===== Permission =====
     public record PermissionCreate(String name, String description) {}
     public static final JsonDecoder<PermissionCreate> PERMISSION_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(PERMISSION_PATTERN)),
+            field("name", PERMISSION_NAME),
             field("description", string().nonBlank())
     ).map(PermissionCreate::new)::decode;
 
     public record PermissionUpdate(String name, String description) {}
     public static final JsonDecoder<PermissionUpdate> PERMISSION_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(PERMISSION_PATTERN)),
+            field("name", PERMISSION_NAME),
             field("description", string().nonBlank())
     ).map(PermissionUpdate::new)::decode;
 
     // ===== Realm =====
     public record RealmCreate(String name, String description, String url) {}
     public static final JsonDecoder<RealmCreate> REALM_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("url", string().nonBlank())
     ).map(RealmCreate::new)::decode;
 
     public record RealmUpdate(String name, String description) {}
     public static final JsonDecoder<RealmUpdate> REALM_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("description", string().nonBlank())
     ).map(RealmUpdate::new)::decode;
 
@@ -119,36 +124,36 @@ public final class BouncrJsonDecoders {
     // ===== Password Sign In =====
     public record PasswordSignIn(String account, String password, String oneTimePassword) {}
     public static final JsonDecoder<PasswordSignIn> PASSWORD_SIGN_IN = combine(
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
-            field("password", string().nonBlank().maxLength(300)),
+            field("account", WORD_NAME),
+            field("password", PASSWORD),
             optionalField("one_time_password", string().maxLength(100))
     ).map((acc, pwd, otp) -> new PasswordSignIn(acc, pwd, otp.orElse(null)))::decode;
 
     // ===== Password Credential =====
     public record PasswordCredentialCreate(String account, String password, boolean initial) {}
     public static final JsonDecoder<PasswordCredentialCreate> PASSWORD_CREDENTIAL_CREATE = combine(
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
-            field("password", string().nonBlank()),
+            field("account", WORD_NAME),
+            field("password", PASSWORD),
             optionalField("initial", bool())
     ).map((acc, pwd, initial) -> new PasswordCredentialCreate(acc, pwd, initial.orElse(true)))::decode;
 
     public record PasswordCredentialUpdate(String account, String oldPassword, String newPassword) {}
     public static final JsonDecoder<PasswordCredentialUpdate> PASSWORD_CREDENTIAL_UPDATE = combine(
             optionalField("account", string()),
-            field("old_password", string().nonBlank()),
-            field("new_password", string().nonBlank())
+            field("old_password", PASSWORD),
+            field("new_password", PASSWORD)
     ).map((acc, old, new_) -> new PasswordCredentialUpdate(acc.orElse(null), old, new_))::decode;
 
     public record PasswordCredentialDelete(String account, String password) {}
     public static final JsonDecoder<PasswordCredentialDelete> PASSWORD_CREDENTIAL_DELETE = combine(
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
-            field("password", string().nonBlank())
+            field("account", WORD_NAME),
+            field("password", PASSWORD)
     ).map(PasswordCredentialDelete::new)::decode;
 
     // ===== Password Reset Challenge =====
     public record PasswordResetChallengeCreate(String account) {}
     public static final JsonDecoder<PasswordResetChallengeCreate> PASSWORD_RESET_CHALLENGE_CREATE =
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN))
+            field("account", WORD_NAME)
                     .map(PasswordResetChallengeCreate::new)::decode;
 
     // ===== Password Reset =====
@@ -217,7 +222,7 @@ public final class BouncrJsonDecoders {
                                       String tokenEndpointAuthMethod, String redirectUri, String jwksUri,
                                       String issuer, boolean pkceEnabled) {}
     public static final JsonDecoder<OidcProviderCreate> OIDC_PROVIDER_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("client_id", string().nonBlank().maxLength(255)),
             field("client_secret", string().nonBlank().maxLength(255)),
             field("scope", string().nonBlank().maxLength(255)),
@@ -238,7 +243,7 @@ public final class BouncrJsonDecoders {
                                       String tokenEndpointAuthMethod, String redirectUri, String jwksUri,
                                       String issuer, boolean pkceEnabled) {}
     public static final JsonDecoder<OidcProviderUpdate> OIDC_PROVIDER_UPDATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("client_id", string().nonBlank().maxLength(256)),
             field("client_secret", string().nonBlank().maxLength(256)),
             field("scope", string().nonBlank().maxLength(256)),
@@ -259,7 +264,7 @@ public final class BouncrJsonDecoders {
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions) {}
     public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("home_url", string().nonBlank()),
             field("callback_url", string().nonBlank()),
             field("description", string().nonBlank()),
@@ -274,7 +279,7 @@ public final class BouncrJsonDecoders {
                                         List<String> permissions,
                                         boolean hasBackchannelLogoutUri, boolean hasFrontchannelLogoutUri) {}
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = (in, path) -> combine(
-            field("name", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("name", WORD_NAME),
             field("home_url", string().nonBlank()),
             field("callback_url", string().nonBlank()),
             field("description", string().nonBlank()),
@@ -290,7 +295,7 @@ public final class BouncrJsonDecoders {
     // ===== Sign Up =====
     public record SignUp(String account, String code, boolean enablePasswordCredential) {}
     public static final JsonDecoder<SignUp> SIGN_UP = combine(
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN)),
+            field("account", WORD_NAME),
             optionalField("code", string()),
             optionalField("enable_password_credential", bool())
     ).map((acc, code, enable) -> new SignUp(acc, code.orElse(null), enable.orElse(true)))::decode;
@@ -298,7 +303,7 @@ public final class BouncrJsonDecoders {
     // ===== User Create (admin) =====
     public record UserCreate(String account) {}
     public static final JsonDecoder<UserCreate> USER_CREATE =
-            field("account", string().nonBlank().maxLength(100).pattern(WORD_PATTERN))
+            field("account", WORD_NAME)
                     .map(UserCreate::new)::decode;
 
     // ===== User Profile (dynamic) =====

@@ -43,8 +43,7 @@ public class RealmRepository {
             condition = condition.and(field("a.name").eq(appName));
         }
         if (q != null && !q.isEmpty()) {
-            String likeExpr = "%" + q.replace("%", "\\%") + "%";
-            condition = condition.and(field("r.name", String.class).like(likeExpr));
+            condition = condition.and(LikeQuery.contains(field("r.name", String.class), q));
         }
 
         return dsl.select(

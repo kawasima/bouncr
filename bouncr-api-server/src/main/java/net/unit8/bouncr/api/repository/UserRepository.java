@@ -104,8 +104,7 @@ public class UserRepository {
 
         var condition = noCondition();
         if (q != null && !q.isEmpty()) {
-            String likeExpr = "%" + q.replace("%", "\\%") + "%";
-            condition = condition.and(field("u.account", String.class).like(likeExpr));
+            condition = condition.and(LikeQuery.contains(field("u.account", String.class), q));
         }
         if (groupId != null) {
             query = query.join(table("memberships").as("m")).on(field("m.user_id").eq(field("u.user_id")));
