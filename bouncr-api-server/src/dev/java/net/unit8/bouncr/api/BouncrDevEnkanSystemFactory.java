@@ -13,7 +13,7 @@ import enkan.component.metrics.MetricsComponent;
 import enkan.config.EnkanSystemFactory;
 import enkan.system.EnkanSystem;
 import net.unit8.bouncr.api.hook.GrantBouncrUserRole;
-import net.unit8.bouncr.api.service.AuthFailureTracker;
+import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.Flake;
 import net.unit8.bouncr.component.RealmCache;

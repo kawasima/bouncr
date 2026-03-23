@@ -20,7 +20,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
-import net.unit8.bouncr.api.service.AuthFailureTracker;
+import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.WebAuthnService;
 import net.unit8.bouncr.component.BouncrConfiguration;

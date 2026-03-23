@@ -1,4 +1,4 @@
-package net.unit8.bouncr.api.service;
+package net.unit8.bouncr.component;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

@@ -13,7 +13,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
-import net.unit8.bouncr.api.service.AuthFailureTracker;
+import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.UserLockService;
 import net.unit8.bouncr.api.util.BouncrCookies;

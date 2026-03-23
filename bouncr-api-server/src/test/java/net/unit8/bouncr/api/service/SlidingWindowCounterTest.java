@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.service;
 
+import net.unit8.bouncr.component.SlidingWindowCounter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

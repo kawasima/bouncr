@@ -1,8 +1,7 @@
-package net.unit8.bouncr.api.service;
+package net.unit8.bouncr.component;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
-import net.unit8.bouncr.component.BouncrConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

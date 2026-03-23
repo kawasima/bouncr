@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.service;
 
+import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
