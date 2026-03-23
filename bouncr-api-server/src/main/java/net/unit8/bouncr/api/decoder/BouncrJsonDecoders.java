@@ -288,6 +288,7 @@ public final class BouncrJsonDecoders {
                                         String homeUrl, String callbackUrl, String description,
                                         String backchannelLogoutUri, String frontchannelLogoutUri,
                                         List<String> permissions,
+                                        boolean hasHomeUrl, boolean hasCallbackUrl, boolean hasDescription,
                                         boolean hasBackchannelLogoutUri, boolean hasFrontchannelLogoutUri) {}
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = (in, path) -> combine(
             field("name", WORD_NAME),
@@ -304,6 +305,7 @@ public final class BouncrJsonDecoders {
             blankToNull(desc.orElse(null)),
             blankToNull(bcu.orElse(null)), blankToNull(fcu.orElse(null)),
             perms.orElse(List.of()),
+            in.has("home_url"), in.has("callback_url"), in.has("description"),
             in.has("backchannel_logout_uri"), in.has("frontchannel_logout_uri")))
     .<OidcApplicationUpdate>flatMap(app -> validateOidcAppGrantTypes(
             app.grantTypes(), app.callbackUrl(), app.homeUrl()).map(v -> app))

@@ -3,6 +3,7 @@ package net.unit8.bouncr.data;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -25,6 +26,10 @@ public enum GrantType {
     REFRESH_TOKEN("refresh_token"),
     /** Client Credentials Grant (RFC 6749 §4.4). */
     CLIENT_CREDENTIALS("client_credentials");
+
+    /** Default grant types for legacy applications without explicit configuration. */
+    public static final List<String> DEFAULT_GRANT_TYPES = List.of(
+            AUTHORIZATION_CODE.value, REFRESH_TOKEN.value, CLIENT_CREDENTIALS.value);
 
     private final String value;
 

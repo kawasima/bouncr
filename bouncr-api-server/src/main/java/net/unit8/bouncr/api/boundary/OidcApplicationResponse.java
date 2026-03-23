@@ -35,6 +35,6 @@ public record OidcApplicationResponse(
                 app.permissions() != null ? app.permissions() : List.of(),
                 app.grantTypes() != null
                         ? app.grantTypes().stream().map(GrantType::getValue).toList()
-                        : List.of());
+                        : GrantType.DEFAULT_GRANT_TYPES);
     }
 }

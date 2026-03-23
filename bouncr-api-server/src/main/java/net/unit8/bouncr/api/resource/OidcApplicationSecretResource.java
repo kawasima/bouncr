@@ -27,7 +27,7 @@ import static kotowari.restful.DecisionPoint.*;
 @AllowedMethods("POST")
 public class OidcApplicationSecretResource {
     static final ContextKey<OidcApplication> APP = ContextKey.of(OidcApplication.class);
-    static final ContextKey<String> NEW_SECRET = ContextKey.of(String.class);
+    static final ContextKey<String> NEW_SECRET = ContextKey.of("newSecret", String.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -60,10 +60,11 @@ public class OidcApplicationSecretResource {
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.update(app.name(), null, null, hashedSecret,
-                null, null, null, null, null, null, null, false, false);
+                null, null, null, null, null, null, null,
+                false, false, false, false, false);
 
         context.put(NEW_SECRET, plaintextSecret);
-        return null;
+        return true;
     }
 
     @Decision(HANDLE_CREATED)

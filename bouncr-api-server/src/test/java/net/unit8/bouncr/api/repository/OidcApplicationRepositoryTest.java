@@ -78,8 +78,8 @@ class OidcApplicationRepositoryTest {
                 "desc-b-new",
                 "https://client-b.example/backchannel-logout-new",
                 "https://client-b.example/frontchannel-logout-new",
-                true,
-                true
+                true, true, true,
+                true, true
         );
 
         OidcApplication updated = repo.findByName("oidc-app-b").orElseThrow();
@@ -118,8 +118,8 @@ class OidcApplicationRepositoryTest {
                 "desc-c-new",
                 null,
                 null,
-                false,
-                false
+                true, true, true,
+                false, false
         );
 
         OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
@@ -158,8 +158,8 @@ class OidcApplicationRepositoryTest {
                 null,
                 null,
                 null,
-                true,
-                true
+                false, false, false,
+                true, true
         );
 
         OidcApplication updated = repo.findByName("oidc-app-e").orElseThrow();

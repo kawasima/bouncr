@@ -106,7 +106,7 @@ public class OidcApplicationRepository {
             condition = condition.and(LikeQuery.contains(field("name", String.class), q));
         }
 
-        return dsl.select(
+        List<OidcApplication> apps = dsl.select(
                         field("oidc_application_id", Long.class),
                         field("name", String.class),
                         field("name_lower", String.class),
@@ -175,6 +175,7 @@ public class OidcApplicationRepository {
                        byte[] privateKey, byte[] publicKey,
                        String homeUrl, String callbackUrl, String description,
                        String backchannelLogoutUri, String frontchannelLogoutUri,
+                       boolean updateHomeUrl, boolean updateCallbackUrl, boolean updateDescription,
                        boolean updateBackchannelLogoutUri,
                        boolean updateFrontchannelLogoutUri) {
         var updateSet = dsl.update(table("oidc_applications"))
@@ -194,13 +195,13 @@ public class OidcApplicationRepository {
         if (publicKey != null) {
             updateSet = updateSet.set(field("public_key"), (Object) publicKey);
         }
-        if (homeUrl != null) {
+        if (updateHomeUrl) {
             updateSet = updateSet.set(field("home_url"), (Object) homeUrl);
         }
-        if (callbackUrl != null) {
+        if (updateCallbackUrl) {
             updateSet = updateSet.set(field("callback_url"), (Object) callbackUrl);
         }
-        if (description != null) {
+        if (updateDescription) {
             updateSet = updateSet.set(field("description"), (Object) description);
         }
         if (updateBackchannelLogoutUri) {

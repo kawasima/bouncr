@@ -113,6 +113,9 @@ public class OidcApplicationResource {
                 updateRequest.description(),
                 LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri()),
                 LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()),
+                updateRequest.hasHomeUrl(),
+                updateRequest.hasCallbackUrl(),
+                updateRequest.hasDescription(),
                 updateRequest.hasBackchannelLogoutUri(),
                 updateRequest.hasFrontchannelLogoutUri()
         );
