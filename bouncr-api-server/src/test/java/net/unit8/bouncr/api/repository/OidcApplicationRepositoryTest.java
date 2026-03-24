@@ -44,11 +44,11 @@ class OidcApplicationRepositoryTest {
 
         Optional<OidcApplication> found = repo.findByName("oidc-app-a");
         assertThat(found).isPresent();
-        assertThat(found.get().backchannelLogoutUri()).isNotNull();
-        assertThat(found.get().backchannelLogoutUri().toString())
+        assertThat(found.get().metadata().backchannelLogoutUri()).isNotNull();
+        assertThat(found.get().metadata().backchannelLogoutUri().toString())
                 .isEqualTo("https://client-a.example/backchannel-logout");
-        assertThat(found.get().frontchannelLogoutUri()).isNotNull();
-        assertThat(found.get().frontchannelLogoutUri().toString())
+        assertThat(found.get().metadata().frontchannelLogoutUri()).isNotNull();
+        assertThat(found.get().metadata().frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-a.example/frontchannel-logout");
     }
 
@@ -69,11 +69,11 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.of("https://client-b.example/frontchannel-logout-new"));
 
         OidcApplication updated = repo.findByName("oidc-app-b").orElseThrow();
-        assertThat(updated.homeUri().toString()).isEqualTo("https://client-b.example/home-new");
-        assertThat(updated.callbackUri().toString()).isEqualTo("https://client-b.example/callback-new");
-        assertThat(updated.backchannelLogoutUri().toString())
+        assertThat(updated.metadata().homeUri().toString()).isEqualTo("https://client-b.example/home-new");
+        assertThat(updated.metadata().callbackUri().toString()).isEqualTo("https://client-b.example/callback-new");
+        assertThat(updated.metadata().backchannelLogoutUri().toString())
                 .isEqualTo("https://client-b.example/backchannel-logout-new");
-        assertThat(updated.frontchannelLogoutUri().toString())
+        assertThat(updated.metadata().frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-b.example/frontchannel-logout-new");
     }
 
@@ -94,10 +94,10 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.absent());
 
         OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
-        assertThat(updated.homeUri().toString()).isEqualTo("https://client-c.example/home-new");
-        assertThat(updated.backchannelLogoutUri().toString())
+        assertThat(updated.metadata().homeUri().toString()).isEqualTo("https://client-c.example/home-new");
+        assertThat(updated.metadata().backchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/backchannel-logout");
-        assertThat(updated.frontchannelLogoutUri().toString())
+        assertThat(updated.metadata().frontchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/frontchannel-logout");
     }
 
@@ -118,11 +118,11 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.of(null));
 
         OidcApplication updated = repo.findByName("oidc-app-e").orElseThrow();
-        assertThat(updated.homeUri()).isNull();
-        assertThat(updated.callbackUri()).isNull();
+        assertThat(updated.metadata().homeUri()).isNull();
+        assertThat(updated.metadata().callbackUri()).isNull();
         assertThat(updated.description()).isNull();
-        assertThat(updated.backchannelLogoutUri()).isNull();
-        assertThat(updated.frontchannelLogoutUri()).isNull();
+        assertThat(updated.metadata().backchannelLogoutUri()).isNull();
+        assertThat(updated.metadata().frontchannelLogoutUri()).isNull();
     }
 
     @Test
@@ -135,8 +135,8 @@ class OidcApplicationRepositoryTest {
         repo.updateClientSecret("oidc-app-f", "new-secret");
 
         OidcApplication updated = repo.findByName("oidc-app-f").orElseThrow();
-        assertThat(updated.clientSecret()).isEqualTo("new-secret");
-        assertThat(updated.homeUri().toString()).isEqualTo("https://client-f.example");
+        assertThat(updated.credentials().clientSecret()).isEqualTo("new-secret");
+        assertThat(updated.metadata().homeUri().toString()).isEqualTo("https://client-f.example");
     }
 
     @Test
@@ -147,7 +147,7 @@ class OidcApplicationRepositoryTest {
                 "desc-d", "", "   ");
 
         OidcApplication found = repo.findByName("oidc-app-d").orElseThrow();
-        assertThat(found.backchannelLogoutUri()).isNull();
-        assertThat(found.frontchannelLogoutUri()).isNull();
+        assertThat(found.metadata().backchannelLogoutUri()).isNull();
+        assertThat(found.metadata().frontchannelLogoutUri()).isNull();
     }
 }

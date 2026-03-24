@@ -1,8 +1,11 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.data.ClientCredentials;
 import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.data.OidcClientMetadata;
 import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.SigningKeyPair;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.slf4j.Logger;
@@ -51,10 +54,7 @@ public class OidcApplicationRepository {
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
         Set<GrantType> grantTypes = loadGrantTypes(appId);
-        return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
-                app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUri(), app.callbackUri(), app.description(),
-                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
+        return Optional.of(withPermissionsAndGrantTypes(app, permissions, grantTypes));
     }
 
     /**
@@ -92,10 +92,7 @@ public class OidcApplicationRepository {
         Long appId = app.id();
         List<Permission> permissions = findPermissionsByOidcApplicationId(appId);
         Set<GrantType> grantTypes = loadGrantTypes(appId);
-        return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
-                app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUri(), app.callbackUri(), app.description(),
-                app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
+        return Optional.of(withPermissionsAndGrantTypes(app, permissions, grantTypes));
     }
 
     public List<OidcApplication> search(String q, int offset, int limit) {
@@ -311,15 +308,23 @@ public class OidcApplicationRepository {
         Map<Long, Set<GrantType>> grantMap = loadGrantTypesForApps(ids);
         return apps.stream().map(app -> {
             Set<GrantType> gts = grantMap.get(app.id());
-            return new OidcApplication(app.id(), app.name(), app.nameLower(),
-                    app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                    app.homeUri(), app.callbackUri(), app.description(),
-                    app.backchannelLogoutUri(), app.frontchannelLogoutUri(),
-                    app.permissions(), gts);
+            return withPermissionsAndGrantTypes(app, app.permissions(), gts);
         }).toList();
     }
 
     private OidcApplication mapOidcApplication(Record rec) {
         return OIDC_APPLICATION.decode(rec).getOrThrow();
+    }
+
+    private static OidcApplication withPermissionsAndGrantTypes(OidcApplication app,
+                                                                 List<Permission> permissions,
+                                                                 Set<GrantType> grantTypes) {
+        var oldMeta = app.metadata();
+        var newMeta = oldMeta != null
+                ? new OidcClientMetadata(oldMeta.homeUri(), oldMeta.callbackUri(),
+                        oldMeta.backchannelLogoutUri(), oldMeta.frontchannelLogoutUri(), grantTypes)
+                : new OidcClientMetadata(null, null, null, null, grantTypes);
+        return new OidcApplication(app.id(), app.name(), app.nameLower(),
+                app.credentials(), app.signingKeys(), newMeta, app.description(), permissions);
     }
 }

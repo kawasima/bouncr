@@ -9,11 +9,13 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.boundary.PermissionCreate;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.PermissionName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -25,7 +27,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class PermissionsResource {
-    static final ContextKey<PermissionCreate> CREATE_REQ = ContextKey.of(PermissionCreate.class);
+    static final ContextKey<Tuple2<PermissionName, String>> CREATE_REQ =
+            ContextKeys.of(Tuple2.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {
@@ -33,8 +36,11 @@ public class PermissionsResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.PERMISSION_CREATE.decode(body)) {
-            case Ok<PermissionCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
-            case Err<PermissionCreate>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var name, var desc)) -> {
+                context.put(CREATE_REQ, new Tuple2<>((PermissionName) name, (String) desc));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -58,9 +64,9 @@ public class PermissionsResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(PermissionCreate createRequest, DSLContext dsl) {
+    public boolean isConflict(Tuple2<PermissionName, String> createRequest, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
-        return !repo.isNameUnique(createRequest.name());
+        return !repo.isNameUnique(createRequest._1().value());
     }
 
     @Decision(HANDLE_OK)
@@ -74,8 +80,8 @@ public class PermissionsResource {
     }
 
     @Decision(POST)
-    public Permission create(PermissionCreate createRequest, DSLContext dsl) {
+    public Permission create(Tuple2<PermissionName, String> createRequest, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
-        return repo.insert(createRequest.name(), createRequest.description());
+        return repo.insert(createRequest._1().value(), createRequest._2());
     }
 }

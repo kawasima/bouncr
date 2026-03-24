@@ -10,7 +10,6 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.UserCreate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -19,6 +18,7 @@ import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.UserProfile;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -35,7 +35,7 @@ import static net.unit8.raoh.json.JsonDecoders.combine;
 @AllowedMethods({"GET", "POST"})
 public class UsersResource {
     static final ContextKey<User> USER = ContextKey.of(User.class);
-    static final ContextKey<UserCreate> CREATE_REQ = ContextKey.of(UserCreate.class);
+    static final ContextKey<WordName> CREATE_REQ = ContextKey.of(WordName.class);
     static final ContextKey<UserProfile> USER_PROFILE = ContextKey.of(UserProfile.class);
 
     @Inject
@@ -53,13 +53,12 @@ public class UsersResource {
                 .decode(body);
 
         return switch (result) {
-            case Ok(Tuple2(UserCreate createReq, UserProfile profile)) -> {
+            case Ok(Tuple2(WordName createReq, UserProfile profile)) -> {
                 config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, profile.values());
                 context.put(CREATE_REQ, createReq);
                 context.put(USER_PROFILE, profile);
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException("Unexpected Ok value");
             case Err(var issues) -> toProblem(issues);
         };
     }
@@ -84,9 +83,9 @@ public class UsersResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean conflict(UserCreate createReq, DSLContext dsl) {
+    public boolean conflict(WordName createReq, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        return !userRepo.isAccountUnique(createReq.account());
+        return !userRepo.isAccountUnique(createReq.value());
     }
 
     @Decision(HANDLE_OK)
@@ -101,7 +100,7 @@ public class UsersResource {
     }
 
     @Decision(POST)
-    public User doPost(UserCreate createReq,
+    public User doPost(WordName createReq,
                        UserProfile userProfile,
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
@@ -110,7 +109,7 @@ public class UsersResource {
         UserRepository userRepo = new UserRepository(dsl);
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
 
-        User user = userRepo.insert(createReq.account());
+        User user = userRepo.insert(createReq.value());
         context.put(USER, user);
         for (Map.Entry<String, String> entry : userProfile.values().entrySet()) {
             fieldRepo.findByJsonName(entry.getKey()).ifPresent(field ->
@@ -122,7 +121,7 @@ public class UsersResource {
 
         actionRecord.setActionType(ActionType.USER_CREATED);
         actionRecord.setActor(principal.getName());
-        actionRecord.setDescription(createReq.account());
+        actionRecord.setDescription(createReq.value());
 
         return userRepo.findByIdFull(user.id(), false, false).orElse(user);
     }

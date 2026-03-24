@@ -8,19 +8,20 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.PasswordCredentialCreate;
-import net.unit8.bouncr.api.boundary.PasswordCredentialDelete;
-import net.unit8.bouncr.api.boundary.PasswordCredentialUpdate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.PasswordCredential;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -37,9 +38,15 @@ import static net.unit8.bouncr.component.config.HookPoint.*;
 
 @AllowedMethods({"POST", "PUT", "DELETE"})
 public class PasswordCredentialResource {
-    static final ContextKey<PasswordCredentialCreate> CREATE_REQ = ContextKey.of(PasswordCredentialCreate.class);
-    static final ContextKey<PasswordCredentialUpdate> UPDATE_REQ = ContextKey.of(PasswordCredentialUpdate.class);
-    static final ContextKey<PasswordCredentialDelete> DELETE_REQ = ContextKey.of(PasswordCredentialDelete.class);
+    // POST: Tuple3<WordName, String, Boolean> (account, password, initial)
+    static final ContextKey<Tuple3<WordName, String, Boolean>> CREATE_REQ =
+            ContextKeys.of("createReq", Tuple3.class);
+    // PUT: Tuple3<String, String, String> (account, oldPassword, newPassword)
+    static final ContextKey<Tuple3<String, String, String>> UPDATE_REQ =
+            ContextKeys.of("updateReq", Tuple3.class);
+    // DELETE: Tuple2<WordName, String> (account, password)
+    static final ContextKey<Tuple2<WordName, String>> DELETE_REQ =
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<PasswordCredential> CREDENTIAL = ContextKey.of(PasswordCredential.class);
 
@@ -52,16 +59,16 @@ public class PasswordCredentialResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.PASSWORD_CREDENTIAL_CREATE.decode(body)) {
-            case Ok<PasswordCredentialCreate> ok -> {
+            case Ok(Tuple3(var account, var password, var initial)) -> {
                 // Validate password policy
-                Problem.Violation policyViolation = conformPolicy(ok.value().password());
+                Problem.Violation policyViolation = conformPolicy((String) password);
                 if (policyViolation != null) {
                     yield Problem.fromViolationList(java.util.List.of(policyViolation));
                 }
-                context.put(CREATE_REQ, ok.value());
+                context.put(CREATE_REQ, new Tuple3<>((WordName) account, (String) password, (Boolean) initial));
                 yield null;
             }
-            case Err<PasswordCredentialCreate>(var issues) -> toProblem(issues);
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -71,20 +78,20 @@ public class PasswordCredentialResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.PASSWORD_CREDENTIAL_UPDATE.decode(body)) {
-            case Ok<PasswordCredentialUpdate> ok -> {
-                PasswordCredentialUpdate req = ok.value();
-                if (Objects.equals(req.newPassword(), req.oldPassword())) {
+            case Ok(Tuple3(var account, var oldPassword, var newPassword)) -> {
+                if (Objects.equals(newPassword, oldPassword)) {
                     yield Problem.fromViolationList(java.util.List.of(
                             new Problem.Violation("new_password", "is the same as the old password")));
                 }
-                Problem.Violation policyViolation = conformPolicy(req.newPassword());
+                Problem.Violation policyViolation = conformPolicy(newPassword);
                 if (policyViolation != null) {
                     yield Problem.fromViolationList(java.util.List.of(policyViolation));
                 }
-                context.put(UPDATE_REQ, req);
+                String accountStr = account instanceof WordName wn ? wn.value() : null;
+                context.put(UPDATE_REQ, new Tuple3<>(accountStr, oldPassword, newPassword));
                 yield null;
             }
-            case Err<PasswordCredentialUpdate>(var issues) -> toProblem(issues);
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -94,8 +101,11 @@ public class PasswordCredentialResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.PASSWORD_CREDENTIAL_DELETE.decode(body)) {
-            case Ok<PasswordCredentialDelete> ok -> { context.put(DELETE_REQ, ok.value()); yield null; }
-            case Err<PasswordCredentialDelete>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var account, var password)) -> {
+                context.put(DELETE_REQ, new Tuple2<>((WordName) account, (String) password));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -105,11 +115,11 @@ public class PasswordCredentialResource {
     }
 
     @Decision(value = ALLOWED, method = "POST")
-    public boolean isPostAllowed(UserPermissionPrincipal principal, PasswordCredentialCreate createRequest) {
+    public boolean isPostAllowed(UserPermissionPrincipal principal, Tuple3<WordName, String, Boolean> createRequest) {
         if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
             return true;
         }
-        return principal.getName().equals(createRequest.account());
+        return principal.getName().equals(createRequest._1().value());
     }
 
     /**
@@ -119,29 +129,29 @@ public class PasswordCredentialResource {
      * The actual old-password verification happens in the PUT handler.
      */
     @Decision(value = ALLOWED, method = "PUT")
-    public boolean isPutAllowed(UserPermissionPrincipal principal, PasswordCredentialUpdate updateRequest) {
+    public boolean isPutAllowed(UserPermissionPrincipal principal, Tuple3<String, String, String> updateRequest) {
         if (principal == null) {
             // Unauthenticated: allowed only for self-service password change (old password verified in handler)
-            return updateRequest.account() != null;
+            return updateRequest._1() != null;
         }
         if (principal.hasPermission("any_user:update") || principal.hasPermission("user:update")) {
             return true;
         }
-        return updateRequest.account() == null || principal.getName().equals(updateRequest.account());
+        return updateRequest._1() == null || principal.getName().equals(updateRequest._1());
     }
 
     @Decision(value = ALLOWED, method = "DELETE")
-    public boolean isDeleteAllowed(UserPermissionPrincipal principal, PasswordCredentialDelete deleteRequest) {
+    public boolean isDeleteAllowed(UserPermissionPrincipal principal, Tuple2<WordName, String> deleteRequest) {
         if (principal.hasPermission("any_user:delete") || principal.hasPermission("user:delete")) {
             return true;
         }
-        return principal.getName().equals(deleteRequest.account());
+        return principal.getName().equals(deleteRequest._1().value());
     }
 
     @Decision(value = PROCESSABLE, method = "POST")
-    public boolean userProcessableInPost(PasswordCredentialCreate createRequest, RestContext context, DSLContext dsl) {
+    public boolean userProcessableInPost(Tuple3<WordName, String, Boolean> createRequest, RestContext context, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        return userRepo.findByAccount(createRequest.account())
+        return userRepo.findByAccount(createRequest._1().value())
                 .map(user -> {
                     context.put(USER, user);
                     return user;
@@ -149,12 +159,12 @@ public class PasswordCredentialResource {
     }
 
     @Decision(value = PROCESSABLE, method = "PUT")
-    public boolean userProcessableInPut(PasswordCredentialUpdate updateRequest,
+    public boolean userProcessableInPut(Tuple3<String, String, String> updateRequest,
                                         UserPermissionPrincipal principal,
                                         RestContext context,
                                         DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        String account = updateRequest.account() != null ? updateRequest.account() :
+        String account = updateRequest._1() != null ? updateRequest._1() :
                 (principal != null ? principal.getName() : null);
         if (account == null) return false;
 
@@ -162,7 +172,7 @@ public class PasswordCredentialResource {
                 .filter(creds -> creds.passwordCredential() != null)
                 .filter(creds ->
                         Arrays.equals(creds.passwordCredential().password(),
-                                PasswordUtils.pbkdf2(updateRequest.oldPassword(), creds.passwordCredential().salt(), config.getPbkdf2Iterations()))
+                                PasswordUtils.pbkdf2(updateRequest._2(), creds.passwordCredential().salt(), config.getPbkdf2Iterations()))
                 )
                 .flatMap(creds -> userRepo.findById(creds.id()))
                 .map(user -> {
@@ -173,7 +183,7 @@ public class PasswordCredentialResource {
     }
 
     @Decision(POST)
-    public PasswordCredential create(PasswordCredentialCreate createRequest,
+    public PasswordCredential create(Tuple3<WordName, String, Boolean> createRequest,
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
@@ -181,11 +191,11 @@ public class PasswordCredentialResource {
                                      DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(createRequest.password(), salt, config.getPbkdf2Iterations());
+        byte[] hash = PasswordUtils.pbkdf2(createRequest._2(), salt, config.getPbkdf2Iterations());
 
-        userRepo.insertPasswordCredential(user.id(), hash, salt, createRequest.initial());
+        userRepo.insertPasswordCredential(user.id(), hash, salt, createRequest._3());
 
-        PasswordCredential passwordCredential = new PasswordCredential(null, hash, salt, createRequest.initial(), LocalDateTime.now());
+        PasswordCredential passwordCredential = new PasswordCredential(null, hash, salt, createRequest._3(), LocalDateTime.now());
         context.put(CREDENTIAL, passwordCredential);
         config.getHookRepo().runHook(AFTER_CREATE_PASSWORD_CREDENTIAL, context);
 
@@ -197,7 +207,7 @@ public class PasswordCredentialResource {
     }
 
     @Decision(PUT)
-    public PasswordCredential update(PasswordCredentialUpdate updateRequest,
+    public PasswordCredential update(Tuple3<String, String, String> updateRequest,
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
@@ -205,7 +215,7 @@ public class PasswordCredentialResource {
                                      DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String salt = RandomUtils.generateRandomString(16, config.getSecureRandom());
-        byte[] hash = PasswordUtils.pbkdf2(updateRequest.newPassword(), salt, config.getPbkdf2Iterations());
+        byte[] hash = PasswordUtils.pbkdf2(updateRequest._3(), salt, config.getPbkdf2Iterations());
 
         userRepo.deletePasswordCredential(user.id());
         userRepo.insertPasswordCredential(user.id(), hash, salt, false);

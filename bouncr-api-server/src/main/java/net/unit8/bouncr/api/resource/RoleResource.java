@@ -8,11 +8,13 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.RoleUpdate;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Role;
+import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -24,7 +26,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class RoleResource {
-    static final ContextKey<RoleUpdate> UPDATE_REQ = ContextKey.of(RoleUpdate.class);
+    static final ContextKey<Tuple2<WordName, String>> UPDATE_REQ =
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -33,8 +36,11 @@ public class RoleResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.ROLE_UPDATE.decode(body)) {
-            case Ok<RoleUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
-            case Err<RoleUpdate>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var name, var desc)) -> {
+                context.put(UPDATE_REQ, new Tuple2<>((WordName) name, (String) desc));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -65,12 +71,12 @@ public class RoleResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(RoleUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name(), params.get("name"))) {
+    public boolean isConflict(Tuple2<WordName, String> updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
             return false;
         }
         RoleRepository repo = new RoleRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name());
+        return !repo.isNameUnique(updateRequest._1().value());
     }
 
     @Decision(EXISTS)
@@ -87,10 +93,10 @@ public class RoleResource {
     }
 
     @Decision(PUT)
-    public Role update(RoleUpdate updateRequest, Role role, DSLContext dsl) {
+    public Role update(Tuple2<WordName, String> updateRequest, Role role, DSLContext dsl) {
         RoleRepository repo = new RoleRepository(dsl);
-        repo.update(role.name(), updateRequest.name(), updateRequest.description());
-        return repo.findByName(updateRequest.name(), false).orElseThrow();
+        repo.update(role.name(), updateRequest._1().value(), updateRequest._2());
+        return repo.findByName(updateRequest._1().value(), false).orElseThrow();
     }
 
     @Decision(DELETE)

@@ -8,13 +8,15 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.boundary.IdObject;
-import net.unit8.bouncr.api.boundary.InvitationCreate;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.data.Email;
 import net.unit8.bouncr.data.Invitation;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -31,7 +33,8 @@ public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
 
-    static final ContextKey<InvitationCreate> CREATE_REQ = ContextKey.of(InvitationCreate.class);
+    static final ContextKey<Tuple2<Email, List<IdObject>>> CREATE_REQ =
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<Invitation> CREATED = ContextKey.of(Invitation.class);
 
     @Decision(value = MALFORMED, method = "POST")
@@ -40,8 +43,13 @@ public class InvitationsResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.INVITATION_CREATE.decode(body)) {
-            case Ok<InvitationCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
-            case Err<InvitationCreate>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var email, var groups)) -> {
+                @SuppressWarnings("unchecked")
+                var typedGroups = (List<IdObject>) groups;
+                context.put(CREATE_REQ, new Tuple2<>((Email) email, typedGroups));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -65,15 +73,15 @@ public class InvitationsResource {
     }
 
     @Decision(POST)
-    public boolean create(InvitationCreate createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple2<Email, List<IdObject>> createRequest, RestContext context, DSLContext dsl) {
         InvitationRepository repo = new InvitationRepository(dsl);
         String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
-        List<Long> groupIds = createRequest.groups() != null
-                ? createRequest.groups().stream()
+        List<Long> groupIds = createRequest._2() != null
+                ? createRequest._2().stream()
                     .map(IdObject::id)
                     .toList()
                 : List.of();
-        Invitation invitation = repo.insert(createRequest.email(), code, LocalDateTime.now(), groupIds);
+        Invitation invitation = repo.insert(createRequest._1().value(), code, LocalDateTime.now(), groupIds);
         context.put(CREATED, invitation);
         return true;
     }

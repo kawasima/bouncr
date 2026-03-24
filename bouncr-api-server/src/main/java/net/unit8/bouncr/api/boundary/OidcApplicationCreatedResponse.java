@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.boundary;
 
 import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.data.OidcClientMetadata;
 
 import java.util.List;
 
@@ -22,18 +23,20 @@ public record OidcApplicationCreatedResponse(
         List<String> grant_types
 ) {
     public static OidcApplicationCreatedResponse of(OidcApplication app, String plaintextSecret) {
+        OidcClientMetadata meta = app.metadata();
+        var grantTypes = meta != null && meta.grantTypes() != null
+                ? meta.grantTypes().stream().map(GrantType::getValue).toList()
+                : GrantType.DEFAULT_GRANT_TYPES;
         return new OidcApplicationCreatedResponse(
                 app.id(),
                 app.name(),
-                app.clientId(),
+                app.credentials().clientId(),
                 plaintextSecret,
-                app.homeUri() != null ? app.homeUri().toString() : null,
-                app.callbackUri() != null ? app.callbackUri().toString() : null,
+                meta != null ? meta.homeUriString() : null,
+                meta != null ? meta.callbackUriString() : null,
                 app.description(),
-                app.backchannelLogoutUri() != null ? app.backchannelLogoutUri().toString() : null,
-                app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null,
-                app.grantTypes() != null
-                        ? app.grantTypes().stream().map(GrantType::getValue).toList()
-                        : GrantType.DEFAULT_GRANT_TYPES);
+                meta != null ? meta.backchannelLogoutUriString() : null,
+                meta != null ? meta.frontchannelLogoutUriString() : null,
+                grantTypes);
     }
 }

@@ -95,7 +95,7 @@ class OAuth2FlowTest {
 
         // Step 1: Authorization endpoint validates the request
         AuthorizeRequest authorizeReq = new AuthorizeRequest(
-                "code", app.clientId(), "https://webapp.example/callback",
+                "code", app.credentials().clientId(), "https://webapp.example/callback",
                 Scope.parse("openid"), "state123", "nonce456", null);
 
         RestContext authCtx = restContext();
@@ -107,7 +107,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(1L, "testuser");
         String code = "test-auth-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 "nonce456", null, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -116,7 +116,7 @@ class OAuth2FlowTest {
                 "grant_type", "authorization_code",
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext tokenCtx = restContext();
@@ -145,21 +145,21 @@ class OAuth2FlowTest {
 
         // Step 4: Verify access_token is a valid JWT with correct claims
         String accessToken = (String) body.get("access_token");
-        Map<String, Object> accessClaims = RsaJwtSigner.verify(accessToken, app.publicKey());
+        Map<String, Object> accessClaims = RsaJwtSigner.verify(accessToken, app.signingKeys().publicKey());
         assertThat(accessClaims).isNotNull();
-        assertThat(accessClaims.get("iss")).isEqualTo("https://issuer.example/oauth2/openid/" + app.clientId());
+        assertThat(accessClaims.get("iss")).isEqualTo("https://issuer.example/oauth2/openid/" + app.credentials().clientId());
         assertThat(accessClaims.get("sub")).isEqualTo("testuser");
-        assertThat(accessClaims.get("aud")).isEqualTo(app.clientId());
+        assertThat(accessClaims.get("aud")).isEqualTo(app.credentials().clientId());
         assertThat(accessClaims).containsKey("exp");
         assertThat(accessClaims.get("scope")).isEqualTo("openid");
 
         // Step 5: Verify id_token is a valid JWT with correct claims
         String idToken = (String) body.get("id_token");
-        Map<String, Object> idClaims = RsaJwtSigner.verify(idToken, app.publicKey());
+        Map<String, Object> idClaims = RsaJwtSigner.verify(idToken, app.signingKeys().publicKey());
         assertThat(idClaims).isNotNull();
-        assertThat(idClaims.get("iss")).isEqualTo("https://issuer.example/oauth2/openid/" + app.clientId());
+        assertThat(idClaims.get("iss")).isEqualTo("https://issuer.example/oauth2/openid/" + app.credentials().clientId());
         assertThat(idClaims.get("sub")).isEqualTo("testuser");
-        assertThat(idClaims.get("aud")).isEqualTo(app.clientId());
+        assertThat(idClaims.get("aud")).isEqualTo(app.credentials().clientId());
         assertThat(idClaims.get("nonce")).isEqualTo("nonce456");
 
         // Step 6: Verify authorization code is consumed (single-use)
@@ -178,7 +178,7 @@ class OAuth2FlowTest {
         Parameters params = Parameters.of(
                 "grant_type", "client_credentials",
                 "scope", "openid",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext ctx = restContext();
@@ -204,10 +204,10 @@ class OAuth2FlowTest {
 
         // Verify access_token JWT has client_id as sub
         String accessToken = (String) body.get("access_token");
-        Map<String, Object> claims = RsaJwtSigner.verify(accessToken, app.publicKey());
+        Map<String, Object> claims = RsaJwtSigner.verify(accessToken, app.signingKeys().publicKey());
         assertThat(claims).isNotNull();
-        assertThat(claims.get("sub")).isEqualTo(app.clientId());
-        assertThat(claims.get("client_id")).isEqualTo(app.clientId());
+        assertThat(claims.get("sub")).isEqualTo(app.credentials().clientId());
+        assertThat(claims.get("client_id")).isEqualTo(app.credentials().clientId());
     }
 
     // ==================== Test 3: refresh_token flow ====================
@@ -225,7 +225,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(2L, "refreshuser");
         String code = "refresh-auth-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 null, null, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -234,7 +234,7 @@ class OAuth2FlowTest {
                 "grant_type", "authorization_code",
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext codeCtx = restContext();
@@ -255,7 +255,7 @@ class OAuth2FlowTest {
         Parameters refreshParams = Parameters.of(
                 "grant_type", "refresh_token",
                 "refresh_token", refreshToken,
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext refreshCtx = restContext();
@@ -281,7 +281,7 @@ class OAuth2FlowTest {
 
         // Verify new access_token is valid
         String newAccessToken = (String) refreshBody.get("access_token");
-        Map<String, Object> claims = RsaJwtSigner.verify(newAccessToken, app.publicKey());
+        Map<String, Object> claims = RsaJwtSigner.verify(newAccessToken, app.signingKeys().publicKey());
         assertThat(claims).isNotNull();
         assertThat(claims.get("sub")).isEqualTo("refreshuser");
     }
@@ -306,7 +306,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(3L, "pkceuser");
         String code = "pkce-auth-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 null, pkce, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -316,7 +316,7 @@ class OAuth2FlowTest {
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
                 "code_verifier", codeVerifier,
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext ctx = restContext();
@@ -335,7 +335,7 @@ class OAuth2FlowTest {
         assertThat(body).containsKey("access_token");
 
         // Verify the JWT is valid
-        Map<String, Object> claims = RsaJwtSigner.verify((String) body.get("access_token"), app.publicKey());
+        Map<String, Object> claims = RsaJwtSigner.verify((String) body.get("access_token"), app.signingKeys().publicKey());
         assertThat(claims).isNotNull();
         assertThat(claims.get("sub")).isEqualTo("pkceuser");
     }
@@ -356,7 +356,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(4L, "pkceuser2");
         String code = "pkce-fail-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 null, pkce, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -366,7 +366,7 @@ class OAuth2FlowTest {
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
                 "code_verifier", "wrong-verifier-value",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext ctx = restContext();
@@ -392,7 +392,7 @@ class OAuth2FlowTest {
                 EnumSet.of(GrantType.CLIENT_CREDENTIALS), null);
 
         AuthorizeRequest authorizeReq = new AuthorizeRequest(
-                "code", app.clientId(), "https://attacker.example/callback",
+                "code", app.credentials().clientId(), "https://attacker.example/callback",
                 Scope.parse("openid"), null, null, null);
 
         RestContext ctx = restContext();
@@ -417,7 +417,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(5L, "baduser");
         String code = "unauthorized-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 null, null, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -425,7 +425,7 @@ class OAuth2FlowTest {
                 "grant_type", "authorization_code",
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext ctx = restContext();
@@ -455,7 +455,7 @@ class OAuth2FlowTest {
         UserIdentity user = new UserIdentity(6L, "norefreshuser");
         String code = "norefresh-code-123";
         AuthorizationCode authCode = new AuthorizationCode(
-                app.clientId(), user, Scope.parse("openid"),
+                app.credentials().clientId(), user, Scope.parse("openid"),
                 null, null, "https://webapp.example/callback", now);
         storeProvider.getStore(AUTHORIZATION_CODE).write(code, authCode);
 
@@ -464,7 +464,7 @@ class OAuth2FlowTest {
                 "grant_type", "authorization_code",
                 "code", code,
                 "redirect_uri", "https://webapp.example/callback",
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext codeCtx = restContext();
@@ -485,7 +485,7 @@ class OAuth2FlowTest {
         Parameters refreshParams = Parameters.of(
                 "grant_type", "refresh_token",
                 "refresh_token", refreshToken,
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", clientSecret);
 
         RestContext refreshCtx = restContext();
@@ -525,14 +525,14 @@ class OAuth2FlowTest {
         repo.setGrantTypes(app.id(), EnumSet.copyOf(grantTypes));
 
         // Re-fetch to include grant types
-        return repo.findByClientId(app.clientId()).orElseThrow();
+        return repo.findByClientId(app.credentials().clientId()).orElseThrow();
     }
 
     /**
      * Sets the client secret for an OIDC application (hashed with PBKDF2).
      */
     private void setClientSecret(OidcApplication app, String rawSecret) {
-        byte[] hash = PasswordUtils.pbkdf2(rawSecret, app.clientId(), config.getPbkdf2Iterations());
+        byte[] hash = PasswordUtils.pbkdf2(rawSecret, app.credentials().clientId(), config.getPbkdf2Iterations());
         String encoded = Base64.getEncoder().encodeToString(hash);
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.updateClientSecret(app.name(), encoded);

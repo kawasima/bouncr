@@ -55,7 +55,7 @@ public class OidcApplicationSecretResource {
     @Decision(POST)
     public Object regenerate(OidcApplication app, RestContext context, DSLContext dsl) {
         String plaintextSecret = RandomUtils.generateRandomString(32, config.getSecureRandom());
-        byte[] secretHash = PasswordUtils.pbkdf2(plaintextSecret, app.clientId(), config.getPbkdf2Iterations());
+        byte[] secretHash = PasswordUtils.pbkdf2(plaintextSecret, app.credentials().clientId(), config.getPbkdf2Iterations());
         String hashedSecret = Base64.getEncoder().encodeToString(secretHash);
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
@@ -68,7 +68,7 @@ public class OidcApplicationSecretResource {
     @Decision(HANDLE_CREATED)
     public Map<String, String> handleCreated(String newSecret, OidcApplication app) {
         return Map.of(
-                "client_id", app.clientId(),
+                "client_id", app.credentials().clientId(),
                 "client_secret", newSecret);
     }
 }

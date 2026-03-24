@@ -99,9 +99,9 @@ class OidcApplicationResourceTest {
         // Verify round-trip through DB
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         OidcApplication loaded = repo.findByName("batch_job").orElseThrow();
-        assertThat(loaded.grantTypes()).containsExactly(GrantType.CLIENT_CREDENTIALS);
-        assertThat(loaded.callbackUri()).isNull();
-        assertThat(loaded.homeUri()).isNull();
+        assertThat(loaded.metadata().grantTypes()).containsExactly(GrantType.CLIENT_CREDENTIALS);
+        assertThat(loaded.metadata().callbackUri()).isNull();
+        assertThat(loaded.metadata().homeUri()).isNull();
     }
 
     // ==================== Scenario 2: Web application ====================
@@ -231,13 +231,13 @@ class OidcApplicationResourceTest {
         assertThat(newSecret).isNotEqualTo(originalSecret);
 
         // Verify the new secret matches the stored hash
-        OidcApplication updated = repo.findByClientId(app.clientId()).orElseThrow();
-        byte[] newHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(newSecret, app.clientId(), 1);
-        byte[] storedHash = java.util.Base64.getDecoder().decode(updated.clientSecret());
+        OidcApplication updated = repo.findByClientId(app.credentials().clientId()).orElseThrow();
+        byte[] newHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(newSecret, app.credentials().clientId(), 1);
+        byte[] storedHash = java.util.Base64.getDecoder().decode(updated.credentials().clientSecret());
         assertThat(java.security.MessageDigest.isEqual(newHash, storedHash)).isTrue();
 
         // Verify old secret no longer matches
-        byte[] oldHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(originalSecret, app.clientId(), 1);
+        byte[] oldHash = net.unit8.bouncr.util.PasswordUtils.pbkdf2(originalSecret, app.credentials().clientId(), 1);
         assertThat(java.security.MessageDigest.isEqual(oldHash, storedHash)).isFalse();
     }
 

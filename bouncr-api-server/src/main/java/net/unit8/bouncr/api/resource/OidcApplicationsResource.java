@@ -9,29 +9,29 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.boundary.OidcApplicationCreate;
 import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
-import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
+import net.unit8.bouncr.data.OidcClientMetadata;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple4;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.security.KeyPair;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -39,7 +39,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class OidcApplicationsResource {
-    static final ContextKey<OidcApplicationCreate> CREATE_REQ = ContextKey.of(OidcApplicationCreate.class);
+    static final ContextKey<Tuple4<WordName, OidcClientMetadata, String, List<String>>> CREATE_REQ =
+            ContextKeys.of(Tuple4.class);
     static final ContextKey<OidcApplicationCreatedResponse> RESPONSE = ContextKey.of(OidcApplicationCreatedResponse.class);
 
     @Inject
@@ -51,17 +52,22 @@ public class OidcApplicationsResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_CREATE.decode(body)) {
-            case Ok<OidcApplicationCreate> ok -> {
+            case Ok(Tuple4(var name, var clientMeta, var desc, var perms)) -> {
                 try {
-                    LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
-                    LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
-                    context.put(CREATE_REQ, ok.value());
+                    var meta = (OidcClientMetadata) clientMeta;
+                    LogoutUriPolicy.normalizeBackchannelLogoutUri(
+                            meta.backchannelLogoutUri() != null ? meta.backchannelLogoutUri().toString() : null);
+                    LogoutUriPolicy.normalizeLogoutUri(
+                            meta.frontchannelLogoutUri() != null ? meta.frontchannelLogoutUri().toString() : null);
+                    @SuppressWarnings("unchecked")
+                    var typedPerms = (List<String>) perms;
+                    context.put(CREATE_REQ, new Tuple4<>((WordName) name, meta, (String) desc, typedPerms));
                     yield null;
                 } catch (IllegalArgumentException e) {
                     yield Problem.valueOf(400, e.getMessage());
                 }
             }
-            case Err<OidcApplicationCreate>(var issues) -> toProblem(issues);
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -85,9 +91,9 @@ public class OidcApplicationsResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(OidcApplicationCreate createRequest, DSLContext dsl) {
+    public boolean isConflict(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        return !repo.isNameUnique(createRequest.name());
+        return !repo.isNameUnique(createRequest._1().value());
     }
 
     @Decision(HANDLE_OK)
@@ -102,7 +108,7 @@ public class OidcApplicationsResource {
     }
 
     @Decision(POST)
-    public boolean create(OidcApplicationCreate createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
 
         String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
@@ -120,27 +126,30 @@ public class OidcApplicationsResource {
         KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
         byte[] privateKey = encryptor.encrypt(privateKeyRaw);
 
+        var meta = createRequest._2();
         OidcApplication app = repo.insert(
-                createRequest.name(),
+                createRequest._1().value(),
                 clientId,
                 hashedSecret,
                 privateKey,
                 publicKey,
-                createRequest.homeUri(),
-                createRequest.callbackUri(),
-                createRequest.description(),
-                LogoutUriPolicy.normalizeBackchannelLogoutUri(createRequest.backchannelLogoutUri()),
-                LogoutUriPolicy.normalizeLogoutUri(createRequest.frontchannelLogoutUri())
+                meta.homeUri() != null ? meta.homeUri().toString() : null,
+                meta.callbackUri() != null ? meta.callbackUri().toString() : null,
+                createRequest._3(),
+                LogoutUriPolicy.normalizeBackchannelLogoutUri(
+                        meta.backchannelLogoutUri() != null ? meta.backchannelLogoutUri().toString() : null),
+                LogoutUriPolicy.normalizeLogoutUri(
+                        meta.frontchannelLogoutUri() != null ? meta.frontchannelLogoutUri().toString() : null)
         );
 
-        if (createRequest.permissions() != null && !createRequest.permissions().isEmpty()) {
-            repo.setPermissions(app.id(), createRequest.permissions());
+        if (createRequest._4() != null && !createRequest._4().isEmpty()) {
+            repo.setPermissions(app.id(), createRequest._4());
         }
 
-        repo.setGrantTypes(app.id(), GrantType.parseAll(createRequest.grantTypes()));
+        repo.setGrantTypes(app.id(), meta.grantTypes());
 
         // Return plaintext client_secret once (never stored or retrievable again)
-        OidcApplication saved = repo.findByName(createRequest.name()).orElse(app);
+        OidcApplication saved = repo.findByName(createRequest._1().value()).orElse(app);
         context.put(RESPONSE, OidcApplicationCreatedResponse.of(saved, plaintextSecret));
         return true;
     }

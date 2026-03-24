@@ -80,11 +80,11 @@ public class OidcApplicationResource {
 
     @Decision(value = CONFLICT, method = "PUT")
     public boolean isConflict(OidcApplicationUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name(), params.get("name"))) {
+        if (Objects.equals(updateRequest.name().value(), params.get("name"))) {
             return false;
         }
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name());
+        return !repo.isNameUnique(updateRequest.name().value());
     }
 
     @Decision(EXISTS)
@@ -105,7 +105,7 @@ public class OidcApplicationResource {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.updateProfile(
                 oidcApplication.name(),
-                updateRequest.name(),
+                updateRequest.name().value(),
                 toNullableUpdate(updateRequest.homeUri()),
                 toNullableUpdate(updateRequest.callbackUri()),
                 toNullableUpdate(updateRequest.description()),
@@ -114,12 +114,12 @@ public class OidcApplicationResource {
                 toNullableUpdate(updateRequest.frontchannelLogoutUri(),
                         LogoutUriPolicy::normalizeLogoutUri)
         );
-        Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
+        Long appId = repo.findByName(updateRequest.name().value()).map(OidcApplication::id).orElse(oidcApplication.id());
         if (updateRequest.permissions() != null) {
             repo.setPermissions(appId, updateRequest.permissions());
         }
         repo.setGrantTypes(appId, GrantType.parseAll(updateRequest.grantTypes()));
-        return OidcApplicationResponse.of(repo.findByName(updateRequest.name()).orElseThrow());
+        return OidcApplicationResponse.of(repo.findByName(updateRequest.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)

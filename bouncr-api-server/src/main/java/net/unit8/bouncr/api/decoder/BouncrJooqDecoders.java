@@ -286,11 +286,14 @@ public final class BouncrJooqDecoders {
             withDefault(field("pkce_enabled", bool()), false)
     ).map((id, name, nameLower, clientId, clientSecret, scope, responseType,
            tokenEndpoint, authorizationEndpoint, authMethod, redirectUri, jwksUri, issuer, pkceEnabled) ->
-            new OidcProvider(id, name, nameLower, clientId, clientSecret, scope,
-                    responseType.map(ResponseType::of).orElse(null),
-                    tokenEndpoint, authorizationEndpoint,
-                    authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
-                    redirectUri, jwksUri, issuer, pkceEnabled));
+            new OidcProvider(id, name, nameLower,
+                    new OidcProviderMetadata(authorizationEndpoint, tokenEndpoint, jwksUri, issuer),
+                    new OidcProviderClientConfig(
+                            new ClientCredentials(clientId, clientSecret),
+                            scope,
+                            responseType.map(ResponseType::of).orElse(ResponseType.CODE),
+                            authMethod.map(TokenEndpointAuthMethod::of).orElse(TokenEndpointAuthMethod.CLIENT_SECRET_BASIC),
+                            redirectUri, pkceEnabled)));
 
     // --- OidcApplication ---
 
@@ -309,9 +312,10 @@ public final class BouncrJooqDecoders {
             field("frontchannel_logout_uri", nullableUri())
     ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey,
             homeUri, callbackUri, desc, backchannelLogoutUri, frontchannelLogoutUri) ->
-            new OidcApplication(id, name, nameLower, clientId, clientSecret,
-                    privateKey, publicKey, homeUri, callbackUri, desc,
-                    backchannelLogoutUri, frontchannelLogoutUri,
-                    null, null));
+            new OidcApplication(id, name, nameLower,
+                    new ClientCredentials(clientId, clientSecret),
+                    (privateKey != null || publicKey != null) ? new SigningKeyPair(privateKey, publicKey) : null,
+                    new OidcClientMetadata(homeUri, callbackUri, backchannelLogoutUri, frontchannelLogoutUri, null),
+                    desc, null));
 
 }

@@ -8,11 +8,15 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.OidcProviderUpdate;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
 import net.unit8.bouncr.data.OidcProvider;
+import net.unit8.bouncr.data.OidcProviderClientConfig;
+import net.unit8.bouncr.data.OidcProviderMetadata;
+import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -24,7 +28,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class OidcProviderResource {
-    static final ContextKey<OidcProviderUpdate> UPDATE_REQ = ContextKey.of(OidcProviderUpdate.class);
+    static final ContextKey<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> UPDATE_REQ =
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<OidcProvider> OIDC_PROVIDER = ContextKey.of(OidcProvider.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -33,8 +38,11 @@ public class OidcProviderResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_PROVIDER_UPDATE.decode(body)) {
-            case Ok<OidcProviderUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
-            case Err<OidcProviderUpdate>(var issues) -> toProblem(issues);
+            case Ok(Tuple3(var name, var meta, var clientCfg)) -> {
+                context.put(UPDATE_REQ, new Tuple3<>((WordName) name, (OidcProviderMetadata) meta, (OidcProviderClientConfig) clientCfg));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -65,12 +73,12 @@ public class OidcProviderResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(OidcProviderUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name(), params.get("name"))) {
+    public boolean isConflict(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
             return false;
         }
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name());
+        return !repo.isNameUnique(updateRequest._1().value());
     }
 
     @Decision(EXISTS)
@@ -87,24 +95,26 @@ public class OidcProviderResource {
     }
 
     @Decision(PUT)
-    public OidcProvider update(OidcProviderUpdate updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
+    public OidcProvider update(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        var meta = updateRequest._2();
+        var clientCfg = updateRequest._3();
         repo.update(
                 oidcProvider.name(),
-                updateRequest.name(),
-                updateRequest.clientId(),
-                updateRequest.clientSecret(),
-                updateRequest.scope(),
-                updateRequest.responseType(),
-                updateRequest.tokenEndpoint(),
-                updateRequest.authorizationEndpoint(),
-                updateRequest.tokenEndpointAuthMethod(),
-                updateRequest.redirectUri(),
-                updateRequest.jwksUri(),
-                updateRequest.issuer(),
-                updateRequest.pkceEnabled()
+                updateRequest._1().value(),
+                clientCfg.credentials().clientId(),
+                clientCfg.credentials().clientSecret(),
+                clientCfg.scope(),
+                clientCfg.responseType() != null ? clientCfg.responseType().getName() : null,
+                meta.tokenEndpoint(),
+                meta.authorizationEndpoint(),
+                clientCfg.tokenEndpointAuthMethod() != null ? clientCfg.tokenEndpointAuthMethod().getValue() : null,
+                clientCfg.redirectUri() != null ? clientCfg.redirectUri().toString() : null,
+                meta.jwksUri() != null ? meta.jwksUri().toString() : null,
+                meta.issuer(),
+                clientCfg.pkceEnabled()
         );
-        return repo.findByName(updateRequest.name()).orElseThrow();
+        return repo.findByName(updateRequest._1().value()).orElseThrow();
     }
 
     @Decision(DELETE)

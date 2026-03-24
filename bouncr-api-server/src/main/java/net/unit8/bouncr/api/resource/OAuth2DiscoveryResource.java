@@ -47,7 +47,8 @@ public class OAuth2DiscoveryResource {
     @Decision(HANDLE_OK)
     public Map<String, Object> handleOk(OidcApplication oidcApplication) {
         String baseUrl = config.getIssuerBaseUrl();
-        String issuer = baseUrl + "/oauth2/openid/" + oidcApplication.clientId();
+        String issuer = baseUrl + "/oauth2/openid/" + oidcApplication.credentials().clientId();
+        var grantTypes = oidcApplication.metadata() != null ? oidcApplication.metadata().grantTypes() : null;
 
         return Map.ofEntries(
                 Map.entry("issuer", issuer),
@@ -59,8 +60,8 @@ public class OAuth2DiscoveryResource {
                 Map.entry("jwks_uri", issuer + "/certs"),
                 Map.entry("response_types_supported", List.of("code")),
                 Map.entry("grant_types_supported",
-                        oidcApplication.grantTypes() != null
-                                ? oidcApplication.grantTypes().stream().map(GrantType::getValue).toList()
+                        grantTypes != null
+                                ? grantTypes.stream().map(GrantType::getValue).toList()
                                 : GrantType.DEFAULT_GRANT_TYPES),
                 Map.entry("subject_types_supported", List.of("public")),
                 Map.entry("id_token_signing_alg_values_supported", List.of("RS256")),

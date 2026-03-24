@@ -315,6 +315,17 @@ public abstract class E2ETestBase {
     }
 
     private static EnkanSystem createTestSystem() {
+        // Set enkan.env first — cors.origins default depends on it
+        setPropertyIfAbsent("enkan.env", "development");
+
+        String env = System.getProperty("enkan.env", "development");
+        if ("development".equals(env)) {
+            setPropertyIfAbsent("cors.origins", "*");
+        } else {
+            setPropertyIfAbsent("cors.origins", "http://localhost:13005");
+        }
+        setPropertyIfAbsent("internal.signing.key", "e2e-test-internal-signing-key!");
+
         String jdbcUrl = "jdbc:h2:mem:e2e_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
         BouncrConfiguration config = builder(new BouncrConfiguration())
@@ -358,5 +369,14 @@ public abstract class E2ETestBase {
                 component("flyway").using("datasource"),
                 component("jwt").using("config")
         );
+    }
+
+    private static void setPropertyIfAbsent(String key, String value) {
+        String prop = System.getProperty(key);
+        String envKey = key.replace('.', '_').toUpperCase();
+        String env = System.getenv(envKey);
+        if ((prop == null || prop.isBlank()) && (env == null || env.isBlank())) {
+            System.setProperty(key, value);
+        }
     }
 }

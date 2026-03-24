@@ -3,8 +3,9 @@ package net.unit8.bouncr.api.resource;
 import enkan.data.DefaultHttpRequest;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.WordName;
+import net.unit8.raoh.combinator.Tuple3;
 import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -116,7 +117,7 @@ public class PasswordSignInResourceTest {
         setField(resource, "storeProvider", new StoreProvider());
         setField(resource, "authFailureTracker", tracker);
 
-        PasswordSignIn req = new PasswordSignIn("no-such-user", "anypassword", null);
+        var req = new Tuple3<>(new WordName("no_such_user"), "anypassword", (String) null);
         DefaultHttpRequest httpReq = new DefaultHttpRequest();
         httpReq.setRemoteAddr("127.0.0.1");
         RestContext context = restContext();
@@ -151,7 +152,7 @@ public class PasswordSignInResourceTest {
         setField(resource, "storeProvider", new StoreProvider());
         setField(resource, "authFailureTracker", tracker);
 
-        PasswordSignIn req = new PasswordSignIn("alice", "anypassword", null);
+        var req = new Tuple3<>(new WordName("alice"), "anypassword", (String) null);
         DefaultHttpRequest httpReq = new DefaultHttpRequest();
         httpReq.setRemoteAddr("10.0.0.1");
         RestContext context = restContext();

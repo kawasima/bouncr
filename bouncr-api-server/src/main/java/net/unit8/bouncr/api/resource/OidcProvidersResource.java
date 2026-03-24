@@ -9,11 +9,15 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.boundary.OidcProviderCreate;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
 import net.unit8.bouncr.data.OidcProvider;
+import net.unit8.bouncr.data.OidcProviderClientConfig;
+import net.unit8.bouncr.data.OidcProviderMetadata;
+import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -25,7 +29,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class OidcProvidersResource {
-    static final ContextKey<OidcProviderCreate> CREATE_REQ = ContextKey.of(OidcProviderCreate.class);
+    static final ContextKey<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> CREATE_REQ =
+            ContextKeys.of(Tuple3.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {
@@ -33,8 +38,11 @@ public class OidcProvidersResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_PROVIDER_CREATE.decode(body)) {
-            case Ok<OidcProviderCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
-            case Err<OidcProviderCreate>(var issues) -> toProblem(issues);
+            case Ok(Tuple3(var name, var meta, var clientCfg)) -> {
+                context.put(CREATE_REQ, new Tuple3<>((WordName) name, (OidcProviderMetadata) meta, (OidcProviderClientConfig) clientCfg));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -58,9 +66,9 @@ public class OidcProvidersResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(OidcProviderCreate createRequest, DSLContext dsl) {
+    public boolean isConflict(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
-        return !repo.isNameUnique(createRequest.name());
+        return !repo.isNameUnique(createRequest._1().value());
     }
 
     @Decision(HANDLE_OK)
@@ -73,21 +81,23 @@ public class OidcProvidersResource {
     }
 
     @Decision(POST)
-    public OidcProvider create(OidcProviderCreate createRequest, DSLContext dsl) {
+    public OidcProvider create(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
+        var meta = createRequest._2();
+        var clientCfg = createRequest._3();
         return repo.insert(
-                createRequest.name(),
-                createRequest.clientId(),
-                createRequest.clientSecret(),
-                createRequest.scope(),
-                createRequest.responseType(),
-                createRequest.tokenEndpoint(),
-                createRequest.authorizationEndpoint(),
-                createRequest.tokenEndpointAuthMethod(),
-                createRequest.redirectUri(),
-                createRequest.jwksUri(),
-                createRequest.issuer(),
-                createRequest.pkceEnabled()
+                createRequest._1().value(),
+                clientCfg.credentials().clientId(),
+                clientCfg.credentials().clientSecret(),
+                clientCfg.scope(),
+                clientCfg.responseType() != null ? clientCfg.responseType().getName() : null,
+                meta.tokenEndpoint(),
+                meta.authorizationEndpoint(),
+                clientCfg.tokenEndpointAuthMethod() != null ? clientCfg.tokenEndpointAuthMethod().getValue() : null,
+                clientCfg.redirectUri() != null ? clientCfg.redirectUri().toString() : null,
+                meta.jwksUri() != null ? meta.jwksUri().toString() : null,
+                meta.issuer(),
+                clientCfg.pkceEnabled()
         );
     }
 }

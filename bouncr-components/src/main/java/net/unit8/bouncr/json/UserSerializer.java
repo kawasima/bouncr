@@ -51,8 +51,8 @@ public class UserSerializer extends StdSerializer<User> {
             gen.writeName("oidc_providers");
             gen.writeStartArray();
             for (var ou : user.oidcUsers()) {
-                if (ou.oidcProvider() != null) {
-                    gen.writeString(ou.oidcProvider().name());
+                if (ou.providerName() != null) {
+                    gen.writeString(ou.providerName());
                 }
             }
             gen.writeEndArray();

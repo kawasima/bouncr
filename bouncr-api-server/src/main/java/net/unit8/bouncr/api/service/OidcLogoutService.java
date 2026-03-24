@@ -79,8 +79,8 @@ public class OidcLogoutService {
     private List<String> collectFrontchannelUrls(List<OidcApplication> apps) {
         List<String> frontchannelUrls = new ArrayList<>();
         for (OidcApplication app : apps) {
-            if (app.frontchannelLogoutUri() != null) {
-                frontchannelUrls.add(app.frontchannelLogoutUri().toString());
+            if (app.metadata() != null && app.metadata().frontchannelLogoutUri() != null) {
+                frontchannelUrls.add(app.metadata().frontchannelLogoutUri().toString());
             }
         }
         return frontchannelUrls;
@@ -88,10 +88,10 @@ public class OidcLogoutService {
 
     private List<OidcApplication> collectBackchannelTargets(List<OidcApplication> apps) {
         List<OidcApplication> targets = apps.stream()
-                .filter(app -> app.backchannelLogoutUri() != null)
+                .filter(app -> app.metadata() != null && app.metadata().backchannelLogoutUri() != null)
                 .limit(MAX_BACKCHANNEL_TARGETS)
                 .toList();
-        long allBackchannelTargets = apps.stream().filter(app -> app.backchannelLogoutUri() != null).count();
+        long allBackchannelTargets = apps.stream().filter(app -> app.metadata() != null && app.metadata().backchannelLogoutUri() != null).count();
         if (allBackchannelTargets > targets.size()) {
             LOG.warn("Back-channel logout targets are limited to {} out of {} applications",
                     targets.size(), allBackchannelTargets);
@@ -144,15 +144,16 @@ public class OidcLogoutService {
     }
 
     private CompletableFuture<Boolean> sendBackchannelLogoutAsync(OidcApplication app, String subject) {
-        if (app.clientId() == null || app.privateKey() == null || app.publicKey() == null) {
+        if (app.credentials().clientId() == null || app.signingKeys() == null
+                || app.signingKeys().privateKey() == null || app.signingKeys().publicKey() == null) {
             LOG.warn("Skip back-channel logout for app {} due to missing key/client data", app.name());
             return CompletableFuture.completedFuture(false);
         }
-        if (app.backchannelLogoutUri() == null) {
+        if (app.metadata() == null || app.metadata().backchannelLogoutUri() == null) {
             return CompletableFuture.completedFuture(false);
         }
 
-        var targetUri = app.backchannelLogoutUri();
+        var targetUri = app.metadata().backchannelLogoutUri();
         if (!LogoutUriPolicy.isAllowedBackchannelTarget(targetUri)) {
             LOG.warn("Skip back-channel logout for app {} due to disallowed target URI", app.name());
             return CompletableFuture.completedFuture(false);
@@ -202,14 +203,14 @@ public class OidcLogoutService {
 
     String createLogoutToken(OidcApplication app, String subject) {
         KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
-        byte[] privateKeyBytes = encryptor.decrypt(app.privateKey());
+        byte[] privateKeyBytes = encryptor.decrypt(app.signingKeys().privateKey());
         try {
             long now = config.getClock().instant().getEpochSecond();
-            String kid = RsaJwtSigner.deriveKid(app.publicKey());
+            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
 
             Map<String, Object> claims = new LinkedHashMap<>();
             claims.put("iss", config.getIssuerBaseUrl());
-            claims.put("aud", app.clientId());
+            claims.put("aud", app.credentials().clientId());
             claims.put("iat", now);
             claims.put("jti", UUID.randomUUID().toString());
             claims.put("sub", subject);

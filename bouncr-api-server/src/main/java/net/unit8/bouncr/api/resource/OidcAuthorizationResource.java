@@ -60,19 +60,21 @@ public class OidcAuthorizationResource {
 
         String redirectUriBase = request.getScheme() + "://" + request.getServerName()
                 + ":" + request.getServerPort() + "/bouncr/api";
-        String redirectUri = Optional.ofNullable(oidcProvider.redirectUri())
+        String redirectUri = Optional.ofNullable(oidcProvider.clientConfig())
+                .map(cc -> cc.redirectUri())
                 .map(Object::toString)
                 .orElse(redirectUriBase + "/sign_in/oidc/" + oidcProvider.name());
 
-        StringBuilder authorizationUrl = new StringBuilder(oidcProvider.authorizationEndpoint())
-                .append("?response_type=").append(CodecUtils.urlEncode(oidcProvider.responseType().getName()))
-                .append("&client_id=").append(CodecUtils.urlEncode(oidcProvider.clientId()))
+        // providerMetadata and clientConfig are guaranteed non-null by the OIDC_PROVIDER decoder
+        StringBuilder authorizationUrl = new StringBuilder(oidcProvider.providerMetadata().authorizationEndpoint())
+                .append("?response_type=").append(CodecUtils.urlEncode(oidcProvider.clientConfig().responseType().getName()))
+                .append("&client_id=").append(CodecUtils.urlEncode(oidcProvider.clientConfig().credentials().clientId()))
                 .append("&redirect_uri=").append(CodecUtils.urlEncode(redirectUri))
                 .append("&state=").append(oidcSession.state())
-                .append("&scope=").append(CodecUtils.urlEncode(oidcProvider.scope()))
+                .append("&scope=").append(CodecUtils.urlEncode(oidcProvider.clientConfig().scope()))
                 .append("&nonce=").append(oidcSession.nonce());
 
-        if (oidcProvider.pkceEnabled()) {
+        if (oidcProvider.clientConfig().pkceEnabled()) {
             byte[] verifierBytes = new byte[32];
             config.getSecureRandom().nextBytes(verifierBytes);
             String codeVerifier = Base64.getUrlEncoder().withoutPadding().encodeToString(verifierBytes);

@@ -9,7 +9,6 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.SignUp;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -20,9 +19,11 @@ import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -38,7 +39,8 @@ import static net.unit8.raoh.json.JsonDecoders.combine;
 
 @AllowedMethods({"POST"})
 public class SignUpResource {
-    static final ContextKey<SignUp> SIGN_UP_REQ = ContextKey.of(SignUp.class);
+    static final ContextKey<Tuple3<WordName, String, Boolean>> SIGN_UP_REQ =
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<UserProfile> USER_PROFILE = ContextKey.of(UserProfile.class);
     static final ContextKey<User> USER_KEY = ContextKey.of(User.class);
     static final ContextKey<VerificationTargetSet> VERIFICATION_TARGET_SET = ContextKey.of(VerificationTargetSet.class);
@@ -62,13 +64,12 @@ public class SignUpResource {
                 .decode(body);
 
         return switch (result) {
-            case Ok(Tuple2(SignUp signUp, UserProfile profile)) -> {
+            case Ok(Tuple2(Tuple3(var account, var code, var enablePwCred), UserProfile profile)) -> {
                 config.getHookRepo().runHook(HookPoint.BEFORE_VALIDATE_USER_PROFILES, profile.values());
-                context.put(SIGN_UP_REQ, signUp);
+                context.put(SIGN_UP_REQ, new Tuple3<>((WordName) account, (String) code, (Boolean) enablePwCred));
                 context.put(USER_PROFILE, profile);
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException("Unexpected Ok value");
             case Err(var issues) -> toProblem(issues);
         };
     }
@@ -84,11 +85,11 @@ public class SignUpResource {
     }
 
     @Decision(CONFLICT)
-    public boolean conflict(SignUp signUp, UserProfile userProfile, RestContext context, DSLContext dsl) {
+    public boolean conflict(Tuple3<WordName, String, Boolean> signUp, UserProfile userProfile, RestContext context, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         List<Problem.Violation> violations = new ArrayList<>();
 
-        if (!userRepo.isAccountUnique(signUp.account())) {
+        if (!userRepo.isAccountUnique(signUp._1().value())) {
             violations.add(new Problem.Violation("account", "conflicts"));
         }
 
@@ -111,7 +112,7 @@ public class SignUpResource {
     }
 
     @Decision(POST)
-    public SignUpResponse create(SignUp signUp,
+    public SignUpResponse create(Tuple3<WordName, String, Boolean> signUp,
                                 UserProfile userProfile,
                                 RestContext context,
                                 DSLContext dsl) {
@@ -119,7 +120,7 @@ public class SignUpResource {
         UserProfileFieldRepository fieldRepo = new UserProfileFieldRepository(dsl);
         InvitationRepository invitationRepo = new InvitationRepository(dsl);
 
-        User user = userRepo.insert(signUp.account());
+        User user = userRepo.insert(signUp._1().value());
         context.put(USER_KEY, user);
 
         List<UserProfileField> verificationFields = new ArrayList<>();
@@ -150,7 +151,7 @@ public class SignUpResource {
 
         config.getHookRepo().runHook(HookPoint.BEFORE_SIGN_UP, context);
 
-        Optional<Invitation> invitation = Optional.ofNullable(signUp.code())
+        Optional<Invitation> invitation = Optional.ofNullable(signUp._2())
                 .flatMap(invitationRepo::findByCode);
 
         invitation.ifPresent(invi -> {
@@ -171,7 +172,7 @@ public class SignUpResource {
         });
 
         InitialPassword initialPassword = null;
-        if (signUp.enablePasswordCredential()) {
+        if (signUp._3()) {
             PasswordCredentialService passwordCredentialService = new PasswordCredentialService(dsl, config);
             initialPassword = passwordCredentialService.initializePassword(user);
             context.put(INITIAL_PASSWORD, initialPassword);

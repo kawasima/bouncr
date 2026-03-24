@@ -18,7 +18,6 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.WebAuthnRegister;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;
@@ -27,8 +26,10 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.WebAuthnChallenge;
 import net.unit8.bouncr.data.WebAuthnCredential;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLE
 public class WebAuthnRegisterResource {
     private static final Logger LOG = LoggerFactory.getLogger(WebAuthnRegisterResource.class);
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
-    static final ContextKey<WebAuthnRegister> REQ = ContextKey.of(WebAuthnRegister.class);
+    static final ContextKey<Tuple2<String, String>> REQ =
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<WebAuthnCredential> CREDENTIAL = ContextKey.of(WebAuthnCredential.class);
 
     @Inject
@@ -73,13 +75,16 @@ public class WebAuthnRegisterResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.WEBAUTHN_REGISTER.decode(body)) {
-            case Ok<WebAuthnRegister> ok -> { context.put(REQ, ok.value()); yield null; }
-            case Err<WebAuthnRegister>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var regJson, var credName)) -> {
+                context.put(REQ, new Tuple2<>((String) regJson, (String) credName));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
     @Decision(POST)
-    public Object doPost(WebAuthnRegister request,
+    public Object doPost(Tuple2<String, String> request,
                          UserPermissionPrincipal principal,
                          HttpRequest httpRequest,
                          RestContext context,
@@ -117,7 +122,7 @@ public class WebAuthnRegisterResource {
         RegistrationData registrationData;
         try {
             registrationData = webAuthnService.verifyRegistration(
-                    request.registrationResponseJSON(), challengeData.challenge());
+                    request._1(), challengeData.challenge());
         } catch (DataConversionException | VerificationException e) {
             LOG.warn("WebAuthn registration verification failed", e);
             return Problem.valueOf(400, "Verification failed",
@@ -141,7 +146,7 @@ public class WebAuthnRegisterResource {
 
         WebAuthnCredential credential = credRepo.insert(user.id(), credentialId, credentialPublicKey, signCount,
                 String.join(",", transports), format,
-                request.credentialName(), true);
+                request._2(), true);
         context.put(CREDENTIAL, credential);
         return true;
     }

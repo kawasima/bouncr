@@ -6,7 +6,6 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.PasswordReset;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.PasswordResetChallengeRepository;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
@@ -30,7 +29,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"PUT"})
 public class PasswordResetResource {
     static final ContextKey<InitialPassword> INITIAL_PASSWORD = ContextKey.of(InitialPassword.class);
-    static final ContextKey<PasswordReset> PASSWORD_RESET_REQUEST = ContextKey.of(PasswordReset.class);
+    static final ContextKey<String> PASSWORD_RESET_REQUEST = ContextKey.of("passwordResetCode", String.class);
     static final ContextKey<PasswordResetChallenge> RESET_CHALLENGE = ContextKey.of(PasswordResetChallenge.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
 
@@ -43,17 +42,17 @@ public class PasswordResetResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.PASSWORD_RESET.decode(body)) {
-            case Ok<PasswordReset> ok -> { context.put(PASSWORD_RESET_REQUEST, ok.value()); yield null; }
-            case Err<PasswordReset>(var issues) -> toProblem(issues);
+            case Ok(String code) -> { context.put(PASSWORD_RESET_REQUEST, code); yield null; }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
     @Decision(PROCESSABLE)
-    public boolean existsCode(PasswordReset resetRequest,
+    public boolean existsCode(String resetRequest,
                               RestContext context,
                               DSLContext dsl) {
         PasswordResetChallengeRepository repo = new PasswordResetChallengeRepository(dsl);
-        var challenge = repo.findActiveByCode(resetRequest.code());
+        var challenge = repo.findActiveByCode(resetRequest);
         challenge.ifPresent(c -> {
             context.put(RESET_CHALLENGE, c);
             context.put(USER, c.user());

@@ -54,7 +54,7 @@ public class OAuth2ClientAuthenticator {
         byte[] inputHash = PasswordUtils.pbkdf2(clientSecret, clientId, config.getPbkdf2Iterations());
         byte[] storedHash;
         try {
-            storedHash = Base64.getDecoder().decode(app.clientSecret());
+            storedHash = Base64.getDecoder().decode(app.credentials().clientSecret());
         } catch (IllegalArgumentException e) {
             return null;
         }

@@ -6,13 +6,13 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.PasswordResetChallengeCreate;
 import net.unit8.bouncr.api.repository.PasswordResetChallengeRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.PasswordResetChallenge;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -34,7 +34,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
  */
 @AllowedMethods({"GET", "POST"})
 public class PasswordResetChallengeResource {
-    static final ContextKey<PasswordResetChallengeCreate> CREATE_REQ = ContextKey.of(PasswordResetChallengeCreate.class);
+    static final ContextKey<WordName> CREATE_REQ = ContextKey.of(WordName.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<PasswordResetChallenge> CHALLENGE = ContextKey.of(PasswordResetChallenge.class);
 
@@ -47,12 +47,12 @@ public class PasswordResetChallengeResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.PASSWORD_RESET_CHALLENGE_CREATE.decode(body)) {
-            case Ok<PasswordResetChallengeCreate> ok -> {
-                context.put(CREATE_REQ, ok.value());
+            case Ok(WordName account) -> {
+                context.put(CREATE_REQ, account);
                 config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
                 yield null;
             }
-            case Err<PasswordResetChallengeCreate>(var issues) -> toProblem(issues);
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -68,17 +68,17 @@ public class PasswordResetChallengeResource {
      * response-timing difference remains (no DB write / AFTER hook for unknown accounts). Callers
      * should apply rate-limiting to mitigate timing-based enumeration.
      *
-     * @param createRequest a creation request for the password reset challenge
+     * @param createRequest a WordName with the account
      * @param context a REST context
      * @param dsl a jOOQ DSL context
      * @return null
      */
     @Decision(POST)
-    public Void create(PasswordResetChallengeCreate createRequest,
+    public Void create(WordName createRequest,
                        RestContext context,
                        DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
-        Optional<User> userOpt = userRepo.findByAccount(createRequest.account());
+        Optional<User> userOpt = userRepo.findByAccount(createRequest.value());
         if (userOpt.isEmpty()) {
             return null;
         }

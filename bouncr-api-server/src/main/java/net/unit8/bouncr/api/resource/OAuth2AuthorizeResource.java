@@ -81,21 +81,21 @@ public class OAuth2AuthorizeResource {
             return false;
         }
 
-        if (app.grantTypes() != null && !app.grantTypes().contains(GrantType.AUTHORIZATION_CODE)) {
+        if (app.metadata() != null && app.metadata().grantTypes() != null && !app.metadata().grantTypes().contains(GrantType.AUTHORIZATION_CODE)) {
             context.put(NOT_FOUND_RESPONSE,
                     oauthError(OAuth2Error.UNAUTHORIZED_CLIENT,
                             "This client is not authorized for authorization_code grant"));
             return false;
         }
 
-        if (app.callbackUri() == null) {
+        if (app.metadata() == null || app.metadata().callbackUri() == null) {
             context.put(NOT_FOUND_RESPONSE,
                     oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URI"));
             return false;
         }
 
         String redirectUri = authorizeRequest.redirectUri();
-        String registeredCallback = app.callbackUri().toString();
+        String registeredCallback = app.metadata().callbackUri().toString();
         if (!Objects.equals(redirectUri, registeredCallback)) {
             context.put(NOT_FOUND_RESPONSE,
                     oauthError(OAuth2Error.INVALID_REQUEST,

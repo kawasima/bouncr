@@ -66,7 +66,7 @@ public class JwksVerifier {
      * @return true if the signature is valid, false otherwise
      */
     public boolean verify(String encodedJwt, OidcProvider provider) {
-        if (provider.jwksUri() == null) {
+        if (provider.providerMetadata() == null || provider.providerMetadata().jwksUri() == null) {
             // No JWKS URI configured — cannot verify signature (OpenID Connect Core §3.1.3.3)
             return false;
         }
@@ -129,7 +129,7 @@ public class JwksVerifier {
         }
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(provider.jwksUri())
+                .uri(provider.providerMetadata().jwksUri())
                 .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();

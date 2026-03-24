@@ -144,7 +144,7 @@ public class OAuth2TokenResource {
     @Decision(POST)
     public boolean doPost(TokenRequest tokenRequest, OidcApplication oidcApplication,
                           RestContext context, DSLContext dsl) {
-        String clientId = oidcApplication.clientId();
+        String clientId = oidcApplication.credentials().clientId();
 
         // Check if the requested grant type is allowed for this application
         GrantType requestedGrant = switch (tokenRequest) {
@@ -152,7 +152,8 @@ public class OAuth2TokenResource {
             case RefreshTokenGrant ignored -> GrantType.REFRESH_TOKEN;
             case ClientCredentialsGrant ignored -> GrantType.CLIENT_CREDENTIALS;
         };
-        if (oidcApplication.grantTypes() != null && !oidcApplication.grantTypes().contains(requestedGrant)) {
+        var grantTypes = oidcApplication.metadata() != null ? oidcApplication.metadata().grantTypes() : null;
+        if (grantTypes != null && !grantTypes.contains(requestedGrant)) {
             context.put(TOKEN_RESPONSE, tokenError(OAuth2Error.UNAUTHORIZED_CLIENT,
                     "This client is not authorized for " + requestedGrant.getValue() + " grant"));
             return true;
@@ -203,7 +204,7 @@ public class OAuth2TokenResource {
         byte[] privateKeyBytes = decryptPrivateKey(app);
         try {
             String issuer = issuer(clientId);
-            String kid = RsaJwtSigner.deriveKid(app.publicKey());
+            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
             String scopeStr = authCode.scope().toString();
 
             String accessToken = signAccessToken(issuer, authCode.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
@@ -255,7 +256,7 @@ public class OAuth2TokenResource {
         byte[] privateKeyBytes = decryptPrivateKey(app);
         try {
             String issuer = issuer(clientId);
-            String kid = RsaJwtSigner.deriveKid(app.publicKey());
+            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
             String scopeStr = scope.toString();
 
             String accessToken = signAccessToken(issuer, refreshData.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
@@ -295,7 +296,7 @@ public class OAuth2TokenResource {
         byte[] privateKeyBytes = decryptPrivateKey(app);
         try {
             String issuer = issuer(clientId);
-            String kid = RsaJwtSigner.deriveKid(app.publicKey());
+            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
             String scopeStr = scope.toString();
 
             String accessToken = signAccessToken(issuer, clientId, clientId, scopeStr, kid, privateKeyBytes, now);
@@ -318,8 +319,11 @@ public class OAuth2TokenResource {
     }
 
     private byte[] decryptPrivateKey(OidcApplication app) {
+        if (app.signingKeys() == null) {
+            throw new IllegalStateException("Signing keys are not configured for OIDC application: " + app.name());
+        }
         KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
-        return encryptor.decrypt(app.privateKey());
+        return encryptor.decrypt(app.signingKeys().privateKey());
     }
 
     private String signAccessToken(String issuer, String sub, String clientId, String scope,

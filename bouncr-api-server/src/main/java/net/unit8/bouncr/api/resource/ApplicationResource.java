@@ -8,11 +8,13 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.ApplicationUpdate;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
+import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple5;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -24,7 +26,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class ApplicationResource {
-    static final ContextKey<ApplicationUpdate> UPDATE_REQ = ContextKey.of(ApplicationUpdate.class);
+    static final ContextKey<Tuple5<WordName, String, String, String, String>> UPDATE_REQ =
+            ContextKeys.of(Tuple5.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -33,8 +36,11 @@ public class ApplicationResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.APPLICATION_UPDATE.decode(body)) {
-            case Ok<ApplicationUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
-            case Err<ApplicationUpdate>(var issues) -> toProblem(issues);
+            case Ok(Tuple5(var name, var desc, var vp, var pt, var tp)) -> {
+                context.put(UPDATE_REQ, new Tuple5<>((WordName) name, (String) desc, (String) vp, (String) pt, (String) tp));
+                yield null;
+            }
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -65,12 +71,12 @@ public class ApplicationResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(ApplicationUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name(), params.get("name"))) {
+    public boolean isConflict(Tuple5<WordName, String, String, String, String> updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
             return false;
         }
         ApplicationRepository repo = new ApplicationRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name());
+        return !repo.isNameUnique(updateRequest._1().value());
     }
 
     @Decision(EXISTS)
@@ -88,11 +94,11 @@ public class ApplicationResource {
     }
 
     @Decision(PUT)
-    public Application update(ApplicationUpdate updateRequest, Application application, DSLContext dsl) {
+    public Application update(Tuple5<WordName, String, String, String, String> updateRequest, Application application, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
-        repo.update(application.name(), updateRequest.name(), updateRequest.description(),
-                updateRequest.virtualPath(), updateRequest.passTo(), updateRequest.topPage());
-        return repo.findByName(updateRequest.name(), false).orElseThrow();
+        repo.update(application.name(), updateRequest._1().value(), updateRequest._2(),
+                updateRequest._3(), updateRequest._4(), updateRequest._5());
+        return repo.findByName(updateRequest._1().value(), false).orElseThrow();
     }
 
     @Decision(DELETE)
