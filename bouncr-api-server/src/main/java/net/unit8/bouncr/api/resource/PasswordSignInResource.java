@@ -10,7 +10,6 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.AuthFailureTracker;
@@ -23,9 +22,11 @@ import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.data.UserSession;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,9 @@ import static net.unit8.bouncr.data.ActionType.USER_SIGNIN;
 @AllowedMethods("POST")
 public class PasswordSignInResource {
     private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResource.class);
-    static final ContextKey<PasswordSignIn> SIGN_IN_REQ = ContextKey.of(PasswordSignIn.class);
+    @SuppressWarnings("unchecked")
+    static final ContextKey<Tuple3<WordName, String, String>> SIGN_IN_REQ =
+            (ContextKey<Tuple3<WordName, String, String>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 
@@ -65,19 +68,23 @@ public class PasswordSignInResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.PASSWORD_SIGN_IN.decode(body)) {
-            case Ok<PasswordSignIn> ok -> { context.put(SIGN_IN_REQ, ok.value()); yield null; }
-            case Err<PasswordSignIn>(var issues) -> toProblem(issues);
+            case Ok(Tuple3(var account, var password, var otp)) -> {
+                context.put(SIGN_IN_REQ, new Tuple3<>((WordName) account, (String) password, (String) otp));
+                yield null;
+            }
+            case Ok<?> _ -> throw new IllegalStateException();
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
     @Decision(AUTHORIZED)
-    public boolean authenticate(PasswordSignIn signInRequest,
+    public boolean authenticate(Tuple3<WordName, String, String> signInRequest,
                                 HttpRequest request,
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
         String ip = request.getRemoteAddr();
-        String account = signInRequest.account();
+        String account = signInRequest._1().value();
         if (authFailureTracker.isBlocked(ip, account)) {
             context.setMessage(Problem.valueOf(429, "Too many failed attempts",
                     BouncrProblem.TOO_MANY_REQUESTS.problemUri()));
@@ -92,7 +99,7 @@ public class PasswordSignInResource {
         UserLockService userLockService = new UserLockService(dsl, config);
         UserRepository userRepo = new UserRepository(dsl);
 
-        UserCredentials creds = userRepo.findByAccountForSignIn(signInRequest.account()).orElse(null);
+        UserCredentials creds = userRepo.findByAccountForSignIn(account).orElse(null);
 
         // Always perform the hash before any branching to equalize response timing,
         // preventing "account not found" and "account locked" timing-based enumeration.
@@ -101,7 +108,7 @@ public class PasswordSignInResource {
         String salt = (creds != null && creds.passwordCredential() != null)
                 ? creds.passwordCredential().salt()
                 : config.getDummySalt();
-        byte[] computedHash = PasswordUtils.pbkdf2(signInRequest.password(), salt, config.getPbkdf2Iterations());
+        byte[] computedHash = PasswordUtils.pbkdf2(signInRequest._2(), salt, config.getPbkdf2Iterations());
 
         if (creds == null) {
             authFailureTracker.recordFailure(ip, account);
@@ -128,7 +135,7 @@ public class PasswordSignInResource {
                 return false;
             }
 
-            if (!signInService.validateOtpKey(creds.otpKey(), signInRequest.oneTimePassword())) {
+            if (!signInService.validateOtpKey(creds.otpKey(), signInRequest._3())) {
                 context.setMessage(Problem.valueOf(401, "One time password is needed", BouncrProblem.ONE_TIME_PASSWORD_IS_NEEDED.problemUri()));
                 return false;
             }

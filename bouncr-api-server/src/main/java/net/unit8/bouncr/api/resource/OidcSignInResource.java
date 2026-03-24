@@ -114,8 +114,8 @@ public class OidcSignInResource {
         }
 
         String redirectUriBase = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/bouncr/api";
-        String redirectUri = oidcProvider != null && oidcProvider.redirectUri() != null
-                ? oidcProvider.redirectUri().toString()
+        String redirectUri = oidcProvider != null && oidcProvider.clientConfig() != null && oidcProvider.clientConfig().redirectUri() != null
+                ? oidcProvider.clientConfig().redirectUri().toString()
                 : redirectUriBase + "/sign_in/oidc/" + (oidcProvider != null ? oidcProvider.name() : params.get("name"));
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
@@ -125,20 +125,20 @@ public class OidcSignInResource {
             form.put("redirect_uri", redirectUri);
 
             java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(oidcProvider.tokenEndpoint()))
+                    .uri(java.net.URI.create(oidcProvider.providerMetadata().tokenEndpoint()))
                     .timeout(Duration.ofSeconds(10))
                     .header("content-type", "application/x-www-form-urlencoded");
 
-            if (oidcProvider.tokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
-                form.put("client_id", oidcProvider.clientId());
-                form.put("client_secret", oidcProvider.clientSecret());
+            if (oidcProvider.clientConfig().tokenEndpointAuthMethod() == CLIENT_SECRET_POST) {
+                form.put("client_id", oidcProvider.clientConfig().credentials().clientId());
+                form.put("client_secret", oidcProvider.clientConfig().credentials().clientSecret());
             } else {
                 requestBuilder.header("Authorization", "Basic " +
                         Base64.getEncoder().encodeToString(
-                                (oidcProvider.clientId() + ":" + oidcProvider.clientSecret()).getBytes(StandardCharsets.UTF_8)));
+                                (oidcProvider.clientConfig().credentials().clientId() + ":" + oidcProvider.clientConfig().credentials().clientSecret()).getBytes(StandardCharsets.UTF_8)));
             }
 
-            if (oidcProvider.pkceEnabled() && oidcSession.codeVerifier() != null) {
+            if (oidcProvider.clientConfig().pkceEnabled() && oidcSession.codeVerifier() != null) {
                 form.put("code_verifier", oidcSession.codeVerifier());
             }
 
@@ -200,11 +200,11 @@ public class OidcSignInResource {
         }
 
         // Verify iss claim (OpenID Connect Core §3.1.3.3)
-        if (oidcProvider.issuer() == null) {
+        if (oidcProvider.providerMetadata() == null || oidcProvider.providerMetadata().issuer() == null) {
             context.setMessage(Problem.valueOf(401, "OIDC provider issuer not configured", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
-        if (!oidcProvider.issuer().equals(claim.getIss())) {
+        if (!oidcProvider.providerMetadata().issuer().equals(claim.getIss())) {
             context.setMessage(Problem.valueOf(401, "ID token issuer doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }
@@ -218,9 +218,9 @@ public class OidcSignInResource {
         boolean audValid;
         Object aud = claim.getAud();
         if (aud instanceof String audStr) {
-            audValid = oidcProvider.clientId().equals(audStr);
+            audValid = oidcProvider.clientConfig().credentials().clientId().equals(audStr);
         } else if (aud instanceof List<?> audList) {
-            audValid = audList.contains(oidcProvider.clientId());
+            audValid = audList.contains(oidcProvider.clientConfig().credentials().clientId());
         } else {
             audValid = false;
         }
@@ -232,13 +232,13 @@ public class OidcSignInResource {
         // Verify azp claim (OpenID Connect Core §3.1.3.3)
         if (aud instanceof List<?> audList && audList.size() > 1) {
             // When aud is multi-valued, azp MUST be present and match client_id
-            if (claim.getAzp() == null || !oidcProvider.clientId().equals(claim.getAzp())) {
+            if (claim.getAzp() == null || !oidcProvider.clientConfig().credentials().clientId().equals(claim.getAzp())) {
                 context.setMessage(Problem.valueOf(401, "ID token authorized party doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
                 return false;
             }
         }
         // If azp is present in any case, it must match client_id
-        if (claim.getAzp() != null && !oidcProvider.clientId().equals(claim.getAzp())) {
+        if (claim.getAzp() != null && !oidcProvider.clientConfig().credentials().clientId().equals(claim.getAzp())) {
             context.setMessage(Problem.valueOf(401, "ID token authorized party doesn't match", BouncrProblem.INVALID_ID_TOKEN_CLAIMS.problemUri()));
             return false;
         }

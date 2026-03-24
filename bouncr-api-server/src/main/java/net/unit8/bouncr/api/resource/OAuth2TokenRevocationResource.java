@@ -108,7 +108,7 @@ public class OAuth2TokenRevocationResource {
     public ApiResponse handleCreated(RevocationRequest revocationRequest,
                                      OidcApplication oidcApplication) {
         String token = revocationRequest.token();
-        String authenticatedClientId = oidcApplication.clientId();
+        String authenticatedClientId = oidcApplication.credentials().clientId();
 
         // Revoke with ownership check (RFC 7009 §2.1)
         var authCodeData = storeProvider.getStore(AUTHORIZATION_CODE).read(token);

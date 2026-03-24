@@ -9,11 +9,12 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.boundary.GroupCreate;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -25,7 +26,9 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class GroupsResource {
-    static final ContextKey<GroupCreate> CREATE_REQ = ContextKey.of(GroupCreate.class);
+    @SuppressWarnings("unchecked")
+    static final ContextKey<Tuple2<WordName, String>> CREATE_REQ =
+            (ContextKey<Tuple2<WordName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {
@@ -33,8 +36,12 @@ public class GroupsResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.GROUP_CREATE.decode(body)) {
-            case Ok<GroupCreate> ok -> { context.put(CREATE_REQ, ok.value()); yield null; }
-            case Err<GroupCreate>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var name, var desc)) -> {
+                context.put(CREATE_REQ, new Tuple2<>((WordName) name, (String) desc));
+                yield null;
+            }
+            case Ok<?> _ -> throw new IllegalStateException();
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -58,9 +65,9 @@ public class GroupsResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(GroupCreate createRequest, DSLContext dsl) {
+    public boolean isConflict(Tuple2<WordName, String> createRequest, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
-        return !repo.isNameUnique(createRequest.name());
+        return !repo.isNameUnique(createRequest._1().value());
     }
 
     @Decision(HANDLE_OK)
@@ -74,8 +81,8 @@ public class GroupsResource {
     }
 
     @Decision(POST)
-    public Group create(GroupCreate createRequest, DSLContext dsl) {
+    public Group create(Tuple2<WordName, String> createRequest, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
-        return repo.insert(createRequest.name(), createRequest.description());
+        return repo.insert(createRequest._1().value(), createRequest._2());
     }
 }

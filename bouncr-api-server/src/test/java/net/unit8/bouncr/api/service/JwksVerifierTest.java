@@ -1,7 +1,10 @@
 package net.unit8.bouncr.api.service;
 
 import com.sun.net.httpserver.HttpServer;
+import net.unit8.bouncr.data.ClientCredentials;
 import net.unit8.bouncr.data.OidcProvider;
+import net.unit8.bouncr.data.OidcProviderClientConfig;
+import net.unit8.bouncr.data.OidcProviderMetadata;
 import net.unit8.bouncr.data.ResponseType;
 import net.unit8.bouncr.data.TokenEndpointAuthMethod;
 import org.junit.jupiter.api.Assumptions;
@@ -51,11 +54,14 @@ class JwksVerifierTest {
 
         try {
             OidcProvider provider = new OidcProvider(
-                    1L, "p", "p", "cid", "sec", "openid",
-                    ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
-                    null,
-                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
-                    "issuer", false
+                    1L, "p", "p",
+                    new OidcProviderMetadata(null, null,
+                            java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                            "issuer"),
+                    new OidcProviderClientConfig(
+                            new ClientCredentials("cid", "sec"),
+                            "openid", ResponseType.CODE, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+                            null, false)
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
 
@@ -95,11 +101,14 @@ class JwksVerifierTest {
 
         try {
             OidcProvider provider = new OidcProvider(
-                    2L, "p", "p", "cid", "sec", "openid",
-                    ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
-                    null,
-                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
-                    "issuer", false
+                    2L, "p", "p",
+                    new OidcProviderMetadata(null, null,
+                            java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                            "issuer"),
+                    new OidcProviderClientConfig(
+                            new ClientCredentials("cid", "sec"),
+                            "openid", ResponseType.CODE, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+                            null, false)
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
 
@@ -136,11 +145,14 @@ class JwksVerifierTest {
 
         try {
             OidcProvider provider = new OidcProvider(
-                    3L, "p", "p", "cid", "sec", "openid",
-                    ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
-                    null,
-                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
-                    "issuer", false
+                    3L, "p", "p",
+                    new OidcProviderMetadata(null, null,
+                            java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                            "issuer"),
+                    new OidcProviderClientConfig(
+                            new ClientCredentials("cid", "sec"),
+                            "openid", ResponseType.CODE, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+                            null, false)
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
 

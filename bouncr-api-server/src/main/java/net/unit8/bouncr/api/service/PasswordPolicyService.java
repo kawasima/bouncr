@@ -1,17 +1,14 @@
 package net.unit8.bouncr.api.service;
 
 import kotowari.restful.data.Problem;
-import net.unit8.bouncr.api.boundary.PasswordCredentialUpdate;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.util.PasswordUtils;
+import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
 
-import static enkan.util.ThreadingUtils.some;
 import static org.jooq.impl.DSL.*;
 
 public class PasswordPolicyService {
@@ -32,14 +29,19 @@ public class PasswordPolicyService {
         return null;
     }
 
-    public Problem.Violation verifyPasswordChange(PasswordCredentialUpdate updateRequest) {
+    /**
+     * Verifies a password change request.
+     *
+     * @param updateRequest Tuple3(account, oldPassword, newPassword)
+     */
+    public Problem.Violation verifyPasswordChange(Tuple3<String, String, String> updateRequest) {
         var rec = dsl.select(
                         field("pc.password", byte[].class),
                         field("pc.salt", String.class),
                         field("pc.created_at", LocalDateTime.class))
                 .from(table("password_credentials").as("pc"))
                 .join(table("users").as("u")).on(field("u.user_id").eq(field("pc.user_id")))
-                .where(field("u.account").eq(updateRequest.account()))
+                .where(field("u.account").eq(updateRequest._1()))
                 .fetchOne();
 
         if (rec == null) {
@@ -47,10 +49,10 @@ public class PasswordPolicyService {
         }
 
         byte[] currentPassword = rec.get(field("password", byte[].class));
-        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest.oldPassword(), rec.get(field("salt", String.class)), pbkdf2Iterations);
+        byte[] oldPassword = PasswordUtils.pbkdf2(updateRequest._2(), rec.get(field("salt", String.class)), pbkdf2Iterations);
         if (!Arrays.equals(currentPassword, oldPassword)) {
             return new Problem.Violation("old_password", "does not match current password");
         }
-        return conformPolicy(updateRequest.newPassword());
+        return conformPolicy(updateRequest._3());
     }
 }

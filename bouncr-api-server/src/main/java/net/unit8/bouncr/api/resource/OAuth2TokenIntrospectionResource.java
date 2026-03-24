@@ -107,7 +107,7 @@ public class OAuth2TokenIntrospectionResource {
 
         Object clientIdObj = unverifiedPayload.get("client_id");
         if (!(clientIdObj instanceof String tokenClientId)) return inactiveResponse();
-        if (!tokenClientId.equals(oidcApplication.clientId())) return inactiveResponse();
+        if (!tokenClientId.equals(oidcApplication.credentials().clientId())) return inactiveResponse();
 
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         byte[] publicKey = repo.findPublicKeyByClientId(tokenClientId).orElse(null);

@@ -3,8 +3,8 @@ package net.unit8.bouncr.api.resource;
 import enkan.data.DefaultHttpRequest;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.PasswordResetChallengeCreate;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +31,7 @@ class PasswordResetChallengeResourceTest {
         setField(resource, "config", new BouncrConfiguration());
 
         RestContext context = restContext();
-        PasswordResetChallengeCreate req = new PasswordResetChallengeCreate("admin");
+        WordName req = new WordName("admin");
         context.put(PasswordResetChallengeResource.CREATE_REQ, req);
 
         resource.create(req, context, dsl);
@@ -45,7 +45,7 @@ class PasswordResetChallengeResourceTest {
         setField(resource, "config", new BouncrConfiguration());
 
         RestContext context = restContext();
-        PasswordResetChallengeCreate req = new PasswordResetChallengeCreate("no-such-user");
+        WordName req = new WordName("no-such-user");
         context.put(PasswordResetChallengeResource.CREATE_REQ, req);
 
         resource.create(req, context, dsl);

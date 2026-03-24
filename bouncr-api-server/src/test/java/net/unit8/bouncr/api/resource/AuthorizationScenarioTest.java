@@ -2,8 +2,8 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import net.unit8.bouncr.api.boundary.PasswordCredentialUpdate;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.raoh.combinator.Tuple3;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -53,31 +53,31 @@ class AuthorizationScenarioTest {
         void putAllowed_nullPrincipal_withAccount_allowedForSelfService() {
             // Unauthenticated password change is allowed when account is specified
             // (old password verification happens in the handler, not here)
-            var req = new PasswordCredentialUpdate("alice", "old", "new");
+            var req = new Tuple3<>("alice", "old", "new");
             assertThat(resource.isPutAllowed(null, req)).isTrue();
         }
 
         @Test
         void putAllowed_nullPrincipal_withoutAccount_rejected() {
-            var req = new PasswordCredentialUpdate(null, "old", "new");
+            var req = new Tuple3<>((String) null, "old", "new");
             assertThat(resource.isPutAllowed(null, req)).isFalse();
         }
 
         @Test
         void putAllowed_sameAccount_accepted() {
-            var req = new PasswordCredentialUpdate("alice", "old", "new");
+            var req = new Tuple3<>("alice", "old", "new");
             assertThat(resource.isPutAllowed(principal("alice"), req)).isTrue();
         }
 
         @Test
         void putAllowed_differentAccount_noPermission_rejected() {
-            var req = new PasswordCredentialUpdate("bob", "old", "new");
+            var req = new Tuple3<>("bob", "old", "new");
             assertThat(resource.isPutAllowed(principal("alice"), req)).isFalse();
         }
 
         @Test
         void putAllowed_differentAccount_withAdminPermission_accepted() {
-            var req = new PasswordCredentialUpdate("bob", "old", "new");
+            var req = new Tuple3<>("bob", "old", "new");
             assertThat(resource.isPutAllowed(principal("alice", "any_user:update"), req)).isTrue();
         }
     }

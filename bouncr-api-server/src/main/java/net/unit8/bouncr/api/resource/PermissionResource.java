@@ -9,11 +9,12 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.PermissionUpdate;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.PermissionName;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -25,7 +26,9 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class PermissionResource {
-    static final ContextKey<PermissionUpdate> UPDATE_REQ = ContextKey.of(PermissionUpdate.class);
+    @SuppressWarnings("unchecked")
+    static final ContextKey<Tuple2<PermissionName, String>> UPDATE_REQ =
+            (ContextKey<Tuple2<PermissionName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
     static final ContextKey<Permission> PERMISSION = ContextKey.of(Permission.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -34,8 +37,12 @@ public class PermissionResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.PERMISSION_UPDATE.decode(body)) {
-            case Ok<PermissionUpdate> ok -> { context.put(UPDATE_REQ, ok.value()); yield null; }
-            case Err<PermissionUpdate>(var issues) -> toProblem(issues);
+            case Ok(Tuple2(var name, var desc)) -> {
+                context.put(UPDATE_REQ, new Tuple2<>((PermissionName) name, (String) desc));
+                yield null;
+            }
+            case Ok<?> _ -> throw new IllegalStateException();
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
@@ -66,12 +73,12 @@ public class PermissionResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(PermissionUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name(), params.get("name"))) {
+    public boolean isConflict(Tuple2<PermissionName, String> updateRequest, Parameters params, DSLContext dsl) {
+        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
             return false;
         }
         PermissionRepository repo = new PermissionRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name());
+        return !repo.isNameUnique(updateRequest._1().value());
     }
 
     @Decision(EXISTS)
@@ -88,10 +95,10 @@ public class PermissionResource {
     }
 
     @Decision(PUT)
-    public Permission update(PermissionUpdate updateRequest, Permission permission, DSLContext dsl) {
+    public Permission update(Tuple2<PermissionName, String> updateRequest, Permission permission, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
-        repo.update(permission.name(), updateRequest.name(), updateRequest.description());
-        return repo.findByName(updateRequest.name()).orElseThrow();
+        repo.update(permission.name(), updateRequest._1().value(), updateRequest._2());
+        return repo.findByName(updateRequest._1().value()).orElseThrow();
     }
 
     @Decision(DELETE)

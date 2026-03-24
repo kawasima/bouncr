@@ -16,7 +16,6 @@ import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
@@ -51,7 +50,7 @@ public class WebAuthnSignInResource {
     private static final Logger LOG = LoggerFactory.getLogger(WebAuthnSignInResource.class);
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
 
-    static final ContextKey<WebAuthnAuthenticate> AUTH_REQ = ContextKey.of(WebAuthnAuthenticate.class);
+    static final ContextKey<String> AUTH_REQ = ContextKey.of(String.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 
@@ -70,13 +69,14 @@ public class WebAuthnSignInResource {
             return Problem.valueOf(400, "request is empty", BouncrProblem.MALFORMED.problemUri());
         }
         return switch (BouncrJsonDecoders.WEBAUTHN_AUTHENTICATE.decode(body)) {
-            case Ok<WebAuthnAuthenticate> ok -> { context.put(AUTH_REQ, ok.value()); yield null; }
-            case Err<WebAuthnAuthenticate>(var issues) -> toProblem(issues);
+            case Ok(String authJson) -> { context.put(AUTH_REQ, authJson); yield null; }
+            case Ok<?> _ -> throw new IllegalStateException();
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
     @Decision(AUTHORIZED)
-    public boolean authenticate(WebAuthnAuthenticate authRequest,
+    public boolean authenticate(String authRequest,
                                 HttpRequest request,
                                 ActionRecord actionRecord,
                                 RestContext context,
@@ -121,7 +121,7 @@ public class WebAuthnSignInResource {
         AuthenticationData authData;
         try {
             authData = webAuthnService.getWebAuthnManager()
-                    .parseAuthenticationResponseJSON(authRequest.authenticationResponseJSON());
+                    .parseAuthenticationResponseJSON(authRequest);
         } catch (DataConversionException e) {
             LOG.warn("Failed to parse WebAuthn authentication response", e);
             authFailureTracker.recordFailure(ip, null);

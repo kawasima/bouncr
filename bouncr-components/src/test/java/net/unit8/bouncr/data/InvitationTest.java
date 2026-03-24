@@ -50,13 +50,15 @@ class InvitationTest {
 
         OidcProvider provider = new OidcProvider(
                 20L, "Google", "google",
-                "client-id", "client-secret",
-                "openid profile", ResponseType.CODE,
-                "https://oauth2.googleapis.com/token",
-                "https://accounts.google.com/o/oauth2/v2/auth",
-                TokenEndpointAuthMethod.CLIENT_SECRET_BASIC,
-                java.net.URI.create("https://example.com/callback"),
-                null, "https://accounts.google.com", true);
+                new OidcProviderMetadata(
+                        "https://accounts.google.com/o/oauth2/v2/auth",
+                        "https://oauth2.googleapis.com/token",
+                        null, "https://accounts.google.com"),
+                new OidcProviderClientConfig(
+                        new ClientCredentials("client-id", "client-secret"),
+                        "openid profile", ResponseType.CODE,
+                        TokenEndpointAuthMethod.CLIENT_SECRET_BASIC,
+                        java.net.URI.create("https://example.com/callback"), true));
 
         OidcInvitation oi = new OidcInvitation(200L, invitation, provider, "{\"sub\":\"12345\"}");
 

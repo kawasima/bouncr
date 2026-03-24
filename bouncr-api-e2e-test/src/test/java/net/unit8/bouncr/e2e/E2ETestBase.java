@@ -315,6 +315,12 @@ public abstract class E2ETestBase {
     }
 
     private static EnkanSystem createTestSystem() {
+        // Ensure required configuration is available for E2E tests
+        // (Env.getString reads both env vars and system properties)
+        System.setProperty("cors.origins", "*");
+        System.setProperty("enkan.env", "development");
+        System.setProperty("internal.signing.key", "e2e-test-internal-signing-key!");
+
         String jdbcUrl = "jdbc:h2:mem:e2e_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
         BouncrConfiguration config = builder(new BouncrConfiguration())

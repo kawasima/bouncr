@@ -10,7 +10,6 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.WebAuthnSignInOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;
@@ -37,7 +36,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLE
 @AllowedMethods("POST")
 public class WebAuthnSignInOptionsResource {
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
-    static final ContextKey<WebAuthnSignInOptions> REQ = ContextKey.of(WebAuthnSignInOptions.class);
+    static final ContextKey<String> REQ = ContextKey.of(String.class);
 
     record PostResult(WebAuthnAuthenticationOptions options, String sessionId) {}
     static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
@@ -51,17 +50,18 @@ public class WebAuthnSignInOptionsResource {
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(JsonNode body, RestContext context) {
         if (body == null) {
-            context.put(REQ, new WebAuthnSignInOptions(null));
+            context.put(REQ, (String) null);
             return null;
         }
         return switch (BouncrJsonDecoders.WEBAUTHN_SIGN_IN_OPTIONS.decode(body)) {
-            case Ok<WebAuthnSignInOptions> ok -> { context.put(REQ, ok.value()); yield null; }
-            case Err<WebAuthnSignInOptions>(var issues) -> toProblem(issues);
+            case Ok(String account) -> { context.put(REQ, account); yield null; }
+            case Ok<?> _ -> throw new IllegalStateException();
+            case Err(var issues) -> toProblem(issues);
         };
     }
 
     @Decision(POST)
-    public boolean doPost(WebAuthnSignInOptions request,
+    public boolean doPost(String request,
                           RestContext context,
                           DSLContext dsl) {
         WebAuthnService webAuthnService = new WebAuthnService(config);
@@ -71,9 +71,9 @@ public class WebAuthnSignInOptionsResource {
         List<WebAuthnAuthenticationOptions.AllowCredential> allowCredentials = List.of();
         Long userId = null;
 
-        if (request.account() != null) {
+        if (request != null) {
             UserRepository userRepo = new UserRepository(dsl);
-            Optional<User> userOpt = userRepo.findByAccount(request.account());
+            Optional<User> userOpt = userRepo.findByAccount(request);
             if (userOpt.isPresent()) {
                 userId = userOpt.get().id();
                 WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);

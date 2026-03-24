@@ -4,14 +4,14 @@ import kotowari.restful.data.Problem;
 import net.unit8.bouncr.api.boundary.*;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
-import net.unit8.bouncr.data.UserProfile;
-import net.unit8.bouncr.data.UserProfileField;
+import net.unit8.bouncr.data.*;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
+import net.unit8.raoh.combinator.*;
 import net.unit8.raoh.json.JsonDecoder;
 import tools.jackson.databind.JsonNode;
 
@@ -40,8 +40,8 @@ public final class BouncrJsonDecoders {
 
     private static final Pattern WORD_PATTERN = Pattern.compile("^\\w+$");
     private static final Pattern PERMISSION_PATTERN = Pattern.compile("^[\\w:]+$");
-    private static final Decoder<JsonNode, String> WORD_NAME = string().nonBlank().maxLength(100).pattern(WORD_PATTERN);
-    private static final Decoder<JsonNode, String> PERMISSION_NAME = string().nonBlank().maxLength(100).pattern(PERMISSION_PATTERN);
+    private static final Decoder<JsonNode, WordName> WORD_NAME = string().nonBlank().maxLength(100).pattern(WORD_PATTERN).map(WordName::new);
+    private static final Decoder<JsonNode, PermissionName> PERMISSION_NAME = string().nonBlank().maxLength(100).pattern(PERMISSION_PATTERN).map(PermissionName::new);
     private static final Decoder<JsonNode, String> PASSWORD = string().nonBlank().maxLength(300);
 
     private static Decoder<JsonNode, String> httpUrl(int maxLength) {
@@ -59,124 +59,137 @@ public final class BouncrJsonDecoders {
         });
     }
 
+    private static Decoder<JsonNode, URI> httpUri(int maxLength) {
+        return string().maxLength(maxLength).flatMap(url -> {
+            if (url.isBlank()) return Result.ok((URI) null);
+            try {
+                URI uri = URI.create(url.trim());
+                if (!uri.isAbsolute() || (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme()))) {
+                    return Result.fail("invalid", "must be an absolute http or https URL");
+                }
+                return Result.ok(uri);
+            } catch (IllegalArgumentException e) {
+                return Result.fail("invalid", "not a valid URI");
+            }
+        });
+    }
+
     // ===== Application =====
 
-    public static final JsonDecoder<ApplicationCreate> APPLICATION_CREATE = combine(
+    public static final JsonDecoder<Tuple5<WordName, String, String, String, String>> APPLICATION_CREATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("virtual_path", string().nonBlank().maxLength(100)),
             field("pass_to", string().nonBlank().maxLength(100)),
             withDefault(field("top_page", string().maxLength(100)), (String) null)
-    ).map(ApplicationCreate::new)::decode;
+    ).map(Tuple5::new)::decode;
 
-    public static final JsonDecoder<ApplicationUpdate> APPLICATION_UPDATE = combine(
+    public static final JsonDecoder<Tuple5<WordName, String, String, String, String>> APPLICATION_UPDATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("virtual_path", string().nonBlank().maxLength(100)),
             field("pass_to", string().nonBlank().maxLength(100)),
             withDefault(field("top_page", string().maxLength(100)), (String) null)
-    ).map(ApplicationUpdate::new)::decode;
+    ).map(Tuple5::new)::decode;
 
     // ===== Group =====
 
-    public static final JsonDecoder<GroupCreate> GROUP_CREATE = combine(
+    public static final JsonDecoder<Tuple2<WordName, String>> GROUP_CREATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank())
-    ).map(GroupCreate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
-    public static final JsonDecoder<GroupUpdate> GROUP_UPDATE = combine(
+    public static final JsonDecoder<Tuple3<WordName, String, List<String>>> GROUP_UPDATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank()),
             withDefault(field("users", list(string())), (List<String>) null)
-    ).map(GroupUpdate::new)::decode;
+    ).map(Tuple3::new)::decode;
 
     // ===== Role =====
 
-    public static final JsonDecoder<RoleCreate> ROLE_CREATE = combine(
+    public static final JsonDecoder<Tuple2<WordName, String>> ROLE_CREATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank())
-    ).map(RoleCreate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
-    public static final JsonDecoder<RoleUpdate> ROLE_UPDATE = combine(
+    public static final JsonDecoder<Tuple2<WordName, String>> ROLE_UPDATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank())
-    ).map(RoleUpdate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
     // ===== Permission =====
 
-    public static final JsonDecoder<PermissionCreate> PERMISSION_CREATE = combine(
+    public static final JsonDecoder<Tuple2<PermissionName, String>> PERMISSION_CREATE = combine(
             field("name", PERMISSION_NAME),
             field("description", string().nonBlank())
-    ).map(PermissionCreate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
-    public static final JsonDecoder<PermissionUpdate> PERMISSION_UPDATE = combine(
+    public static final JsonDecoder<Tuple2<PermissionName, String>> PERMISSION_UPDATE = combine(
             field("name", PERMISSION_NAME),
             field("description", string().nonBlank())
-    ).map(PermissionUpdate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
     // ===== Realm =====
 
-    public static final JsonDecoder<RealmCreate> REALM_CREATE = combine(
+    public static final JsonDecoder<Tuple3<WordName, String, String>> REALM_CREATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank()),
             field("url", string().nonBlank())
-    ).map(RealmCreate::new)::decode;
+    ).map(Tuple3::new)::decode;
 
-    public static final JsonDecoder<RealmUpdate> REALM_UPDATE = combine(
+    public static final JsonDecoder<Tuple2<WordName, String>> REALM_UPDATE = combine(
             field("name", WORD_NAME),
             field("description", string().nonBlank())
-    ).map(RealmUpdate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
     // ===== Invitation =====
 
-    public static final JsonDecoder<InvitationCreate> INVITATION_CREATE = combine(
-            field("email", string().email()),
+    public static final JsonDecoder<Tuple2<Email, List<IdObject>>> INVITATION_CREATE = combine(
+            field("email", string().email().map(Email::new)),
             withDefault(field("groups", list(field("id", long_()).map(IdObject::new))), List.of())
-    ).map(InvitationCreate::new)::decode;
+    ).map(Tuple2::new)::decode;
 
     // ===== Password Sign In =====
 
-    public static final JsonDecoder<PasswordSignIn> PASSWORD_SIGN_IN = combine(
+    public static final JsonDecoder<Tuple3<WordName, String, String>> PASSWORD_SIGN_IN = combine(
             field("account", WORD_NAME),
             field("password", PASSWORD),
             withDefault(field("one_time_password", string().maxLength(100)), (String) null)
-    ).map(PasswordSignIn::new)::decode;
+    ).map(Tuple3::new)::decode;
 
     // ===== Password Credential =====
 
-    public static final JsonDecoder<PasswordCredentialCreate> PASSWORD_CREDENTIAL_CREATE = combine(
+    public static final JsonDecoder<Tuple3<WordName, String, Boolean>> PASSWORD_CREDENTIAL_CREATE = combine(
             field("account", WORD_NAME),
             field("password", PASSWORD),
             withDefault(field("initial", bool()), true)
-    ).map(PasswordCredentialCreate::new)::decode;
+    ).map(Tuple3::new)::decode;
 
-    public static final JsonDecoder<PasswordCredentialUpdate> PASSWORD_CREDENTIAL_UPDATE = combine(
+    public static final JsonDecoder<Tuple3<String, String, String>> PASSWORD_CREDENTIAL_UPDATE = combine(
             withDefault(field("account", string()), (String) null),
             field("old_password", PASSWORD),
             field("new_password", PASSWORD)
-    ).map(PasswordCredentialUpdate::new)::decode;
+    ).map(Tuple3::new)::decode;
 
-    public static final JsonDecoder<PasswordCredentialDelete> PASSWORD_CREDENTIAL_DELETE = combine(
+    public static final JsonDecoder<Tuple2<WordName, String>> PASSWORD_CREDENTIAL_DELETE = combine(
             field("account", WORD_NAME),
             field("password", PASSWORD)
-    ).map(PasswordCredentialDelete::new)::decode;
+    ).map(Tuple2::new)::decode;
 
     // ===== Password Reset Challenge =====
 
-    public static final JsonDecoder<PasswordResetChallengeCreate> PASSWORD_RESET_CHALLENGE_CREATE =
-            field("account", WORD_NAME)
-                    .map(PasswordResetChallengeCreate::new)::decode;
+    public static final JsonDecoder<WordName> PASSWORD_RESET_CHALLENGE_CREATE =
+            field("account", WORD_NAME)::decode;
 
     // ===== Password Reset =====
 
-    public static final JsonDecoder<PasswordReset> PASSWORD_RESET =
-            field("code", string()).map(PasswordReset::new)::decode;
+    public static final JsonDecoder<String> PASSWORD_RESET =
+            field("code", string())::decode;
 
     // ===== Token Refresh =====
 
-    public static final JsonDecoder<TokenRefresh> TOKEN_REFRESH =
-            field("session_id", string().nonBlank())
-                    .map(TokenRefresh::new)::decode;
+    public static final JsonDecoder<String> TOKEN_REFRESH =
+            field("session_id", string().nonBlank())::decode;
 
     // ===== Role Permissions =====
     public static final JsonDecoder<List<String>> ROLE_PERMISSIONS = list(string())::decode;
@@ -225,50 +238,44 @@ public final class BouncrJsonDecoders {
 
     // ===== OIDC Provider =====
 
-    private record OidcProviderBody(String name, String clientId, String clientSecret, String scope,
-                                     String responseType, String authorizationEndpoint, String tokenEndpoint,
-                                     String tokenEndpointAuthMethod, String redirectUri, String jwksUri,
-                                     String issuer, boolean pkceEnabled) {}
-
-    private static final Decoder<JsonNode, OidcProviderBody> OIDC_PROVIDER_BODY = combine(
+    public static final JsonDecoder<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> OIDC_PROVIDER_CREATE = combine(
             field("name", WORD_NAME),
+            field("authorization_endpoint", string().nonBlank().maxLength(255)),
+            withDefault(field("token_endpoint", string().maxLength(255)), (String) null),
+            withDefault(field("jwks_uri", string().maxLength(512).flatMap(s ->
+                    s != null && !s.isBlank() ? Result.ok(URI.create(s)) : Result.ok((URI) null))), (URI) null),
+            withDefault(field("issuer", string().maxLength(512)), (String) null),
             field("client_id", string().nonBlank().maxLength(255)),
             field("client_secret", string().nonBlank().maxLength(255)),
             field("scope", string().nonBlank().maxLength(255)),
             field("response_type", string().nonBlank().maxLength(16)),
-            field("authorization_endpoint", string().nonBlank().maxLength(255)),
-            withDefault(field("token_endpoint", string().maxLength(255)), (String) null),
             field("token_endpoint_auth_method", string().nonBlank()),
-            field("redirect_uri", string().nonBlank().maxLength(255)),
-            withDefault(field("jwks_uri", string().maxLength(512)), (String) null),
-            withDefault(field("issuer", string().maxLength(512)), (String) null),
+            field("redirect_uri", string().nonBlank().maxLength(255).map(URI::create)),
             withDefault(field("pkce_enabled", bool()), false)
-    ).map(OidcProviderBody::new);
+    ).map((name, ae, te, jwks, iss, cid, cs, scope, rt, team, ru, pkce) ->
+            new Tuple3<>(name,
+                    new OidcProviderMetadata(ae, te, jwks, iss),
+                    new OidcProviderClientConfig(new ClientCredentials(cid, cs), scope,
+                            ResponseType.of(rt), TokenEndpointAuthMethod.of(team), ru, pkce)))::decode;
 
-    public static final JsonDecoder<OidcProviderCreate> OIDC_PROVIDER_CREATE =
-            OIDC_PROVIDER_BODY.map(b -> new OidcProviderCreate(b.name(), b.clientId(), b.clientSecret(),
-                    b.scope(), b.responseType(), b.authorizationEndpoint(), b.tokenEndpoint(),
-                    b.tokenEndpointAuthMethod(), b.redirectUri(), b.jwksUri(), b.issuer(), b.pkceEnabled()))::decode;
-
-    public static final JsonDecoder<OidcProviderUpdate> OIDC_PROVIDER_UPDATE =
-            OIDC_PROVIDER_BODY.map(b -> new OidcProviderUpdate(b.name(), b.clientId(), b.clientSecret(),
-                    b.scope(), b.responseType(), b.authorizationEndpoint(), b.tokenEndpoint(),
-                    b.tokenEndpointAuthMethod(), b.redirectUri(), b.jwksUri(), b.issuer(), b.pkceEnabled()))::decode;
+    public static final JsonDecoder<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> OIDC_PROVIDER_UPDATE = OIDC_PROVIDER_CREATE;
 
     // ===== OIDC Application =====
 
-    public static final JsonDecoder<OidcApplicationCreate> OIDC_APPLICATION_CREATE = combine(
+    public static final JsonDecoder<Tuple4<WordName, OidcClientMetadata, String, List<String>>> OIDC_APPLICATION_CREATE = combine(
             field("name", WORD_NAME),
             field("grant_types", list(string())),
-            withDefault(field("home_uri", httpUrl(2048)), (String) null),
-            withDefault(field("callback_uri", httpUrl(2048)), (String) null),
+            withDefault(field("home_uri", httpUri(2048)), (URI) null),
+            withDefault(field("callback_uri", httpUri(2048)), (URI) null),
             withDefault(field("description", string().maxLength(255)), (String) null),
-            withDefault(field("backchannel_logout_uri", httpUrl(2048)), (String) null),
-            withDefault(field("frontchannel_logout_uri", httpUrl(2048)), (String) null),
+            withDefault(field("backchannel_logout_uri", httpUri(2048)), (URI) null),
+            withDefault(field("frontchannel_logout_uri", httpUri(2048)), (URI) null),
             withDefault(field("permissions", list(string())), List.of())
-    ).<OidcApplicationCreate>flatMap((name, gt, hu, cu, desc, bcu, fcu, perms) ->
-            validateOidcAppGrantTypes(gt, cu, hu).map(v ->
-                    new OidcApplicationCreate(name, gt, hu, cu, desc, bcu, fcu, perms)))::decode;
+    ).<Tuple4<WordName, OidcClientMetadata, String, List<String>>>flatMap((name, gt, hu, cu, desc, bcu, fcu, perms) ->
+            validateOidcAppGrantTypes(gt, cu != null ? cu.toString() : null, hu != null ? hu.toString() : null).map(v ->
+                    new Tuple4<>(name,
+                            new OidcClientMetadata(hu, cu, bcu, fcu, GrantType.parseAll(gt)),
+                            desc, perms)))::decode;
 
     public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = combine(
             field("name", WORD_NAME),
@@ -285,17 +292,16 @@ public final class BouncrJsonDecoders {
 
     // ===== Sign Up =====
 
-    public static final JsonDecoder<SignUp> SIGN_UP = combine(
+    public static final JsonDecoder<Tuple3<WordName, String, Boolean>> SIGN_UP = combine(
             field("account", WORD_NAME),
             withDefault(field("code", string()), (String) null),
             withDefault(field("enable_password_credential", bool()), true)
-    ).map(SignUp::new)::decode;
+    ).map(Tuple3::new)::decode;
 
     // ===== User Create (admin) =====
 
-    public static final JsonDecoder<UserCreate> USER_CREATE =
-            field("account", WORD_NAME)
-                    .map(UserCreate::new)::decode;
+    public static final JsonDecoder<WordName> USER_CREATE =
+            field("account", WORD_NAME)::decode;
 
     // ===== User Profile (dynamic) =====
 
@@ -343,18 +349,16 @@ public final class BouncrJsonDecoders {
 
     // ===== WebAuthn =====
 
-    public static final JsonDecoder<WebAuthnRegister> WEBAUTHN_REGISTER = combine(
+    public static final JsonDecoder<Tuple2<String, String>> WEBAUTHN_REGISTER = combine(
             field("registration_response_json", string().nonBlank()),
             withDefault(field("credential_name", string().maxLength(100)), (String) null)
-    ).map(WebAuthnRegister::new)::decode;
+    ).map(Tuple2::new)::decode;
 
-    public static final JsonDecoder<WebAuthnAuthenticate> WEBAUTHN_AUTHENTICATE =
-            field("authentication_response_json", string().nonBlank())
-                    .map(WebAuthnAuthenticate::new)::decode;
+    public static final JsonDecoder<String> WEBAUTHN_AUTHENTICATE =
+            field("authentication_response_json", string().nonBlank())::decode;
 
-    public static final JsonDecoder<WebAuthnSignInOptions> WEBAUTHN_SIGN_IN_OPTIONS =
-            withDefault(field("account", string().maxLength(100)), (String) null)
-                    .map(WebAuthnSignInOptions::new)::decode;
+    public static final JsonDecoder<String> WEBAUTHN_SIGN_IN_OPTIONS =
+            withDefault(field("account", string().maxLength(100)), (String) null)::decode;
 
     // ===== Helpers =====
 

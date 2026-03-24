@@ -22,18 +22,20 @@ public record OidcApplicationCreatedResponse(
         List<String> grant_types
 ) {
     public static OidcApplicationCreatedResponse of(OidcApplication app, String plaintextSecret) {
+        var meta = app.metadata();
+        var grantTypes = meta != null && meta.grantTypes() != null
+                ? meta.grantTypes().stream().map(GrantType::getValue).toList()
+                : GrantType.DEFAULT_GRANT_TYPES;
         return new OidcApplicationCreatedResponse(
                 app.id(),
                 app.name(),
-                app.clientId(),
+                app.credentials().clientId(),
                 plaintextSecret,
-                app.homeUri() != null ? app.homeUri().toString() : null,
-                app.callbackUri() != null ? app.callbackUri().toString() : null,
+                meta != null && meta.homeUri() != null ? meta.homeUri().toString() : null,
+                meta != null && meta.callbackUri() != null ? meta.callbackUri().toString() : null,
                 app.description(),
-                app.backchannelLogoutUri() != null ? app.backchannelLogoutUri().toString() : null,
-                app.frontchannelLogoutUri() != null ? app.frontchannelLogoutUri().toString() : null,
-                app.grantTypes() != null
-                        ? app.grantTypes().stream().map(GrantType::getValue).toList()
-                        : GrantType.DEFAULT_GRANT_TYPES);
+                meta != null && meta.backchannelLogoutUri() != null ? meta.backchannelLogoutUri().toString() : null,
+                meta != null && meta.frontchannelLogoutUri() != null ? meta.frontchannelLogoutUri().toString() : null,
+                grantTypes);
     }
 }

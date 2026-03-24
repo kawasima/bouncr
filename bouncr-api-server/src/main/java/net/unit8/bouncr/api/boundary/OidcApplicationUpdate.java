@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.boundary;
 
 import java.util.List;
+import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Presence;
 
 /**
@@ -16,7 +17,7 @@ import net.unit8.raoh.Presence;
  * @param frontchannelLogoutUri URI for frontchannel logout redirects (tri-state)
  * @param permissions list of permission names granted to the application
  */
-public record OidcApplicationUpdate(String name, List<String> grantTypes, Presence<String> homeUri,
+public record OidcApplicationUpdate(WordName name, List<String> grantTypes, Presence<String> homeUri,
                                      Presence<String> callbackUri, Presence<String> description,
                                      Presence<String> backchannelLogoutUri, Presence<String> frontchannelLogoutUri,
                                      List<String> permissions) {}
