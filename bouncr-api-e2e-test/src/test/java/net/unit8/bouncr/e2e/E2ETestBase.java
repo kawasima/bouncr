@@ -130,6 +130,7 @@ public abstract class E2ETestBase {
         String callbackUri = "http://localhost:9999/callback/" + name;
         String payload = JSON.writeValueAsString(Map.of(
                 "name", name,
+                "grant_types", List.of("authorization_code"),
                 "home_uri", "http://localhost:9999/" + name,
                 "callback_uri", callbackUri,
                 "description", "E2E test application: " + name));

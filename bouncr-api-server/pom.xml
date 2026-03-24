@@ -35,12 +35,6 @@
                     </container>
                     <from>
                         <image>eclipse-temurin:25-jre</image>
-                        <platforms>
-                            <platform>
-                                <os>linux</os>
-                                <architecture>arm64</architecture>
-                            </platform>
-                        </platforms>
                     </from>
                     <to>
                         <image>bouncr/bouncr-api-server</image>
