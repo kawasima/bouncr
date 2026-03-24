@@ -5,7 +5,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o bouncr-proxy ./cmd/bouncr-proxy/
 
-FROM gcr.io/distroless/static-debian12
+FROM alpine:3
+RUN apk add --no-cache wget
 COPY --from=builder /app/bouncr-proxy /
 ENTRYPOINT ["/bouncr-proxy"]
-

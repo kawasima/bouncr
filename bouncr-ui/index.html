@@ -9,8 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <title>Bouncr</title>
   </head>
-  <body>
+  <body class="opacity-0">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Prevent FOUC: show body after fonts are ready or 300ms timeout
+      Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 300))])
+        .then(() => document.body.classList.remove('opacity-0'));
+    </script>
   </body>
 </html>
