@@ -105,7 +105,7 @@ jobs:
           java-version: 25
           cache: maven
       - name: Build api-server image
-        run: mvn compile -pl bouncr-api-server -am -B && mvn jib:dockerBuild -pl bouncr-api-server -B
+        run: mvn install -pl bouncr-api-server -am -B -DskipTests && mvn jib:dockerBuild -pl bouncr-api-server -B
       - name: Build proxy image
         run: docker build -t bouncr/bouncr-proxy bouncr-proxy
       - name: Build ui image
