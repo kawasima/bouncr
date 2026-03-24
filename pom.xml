@@ -51,7 +51,7 @@
         <enkan.version>0.14.0</enkan.version>
         <kotowari-restful.version>0.14.0</kotowari-restful.version>
         <raoh.version>0.4.1</raoh.version>
-        <enkan-bouncr.version>0.13.0</enkan-bouncr.version>
+        <enkan-bouncr.version>0.14.0</enkan-bouncr.version>
         <jackson-jakarta-rs-json-provider.version>3.1.0</jackson-jakarta-rs-json-provider.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <failsafe.version>3.3.2</failsafe.version>

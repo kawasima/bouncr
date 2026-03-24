@@ -1,6 +1,6 @@
 # Bouncr
 
-[![License](https://img.shields.io/badge/License-EPL%201.0-blue.svg)](https://opensource.org/licenses/EPL-1.0)
+[![License](https://img.shields.io/badge/License-EPL%202.0-blue.svg)](https://www.eclipse.org/legal/epl-2.0/)
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev/)
 [![enkan](https://img.shields.io/badge/enkan-0.14.0-green.svg)](https://github.com/kawasima/enkan)
@@ -81,26 +81,19 @@ Browser / RP
 | `bouncr-proxy` | Go | Envoy ext_proc sidecar for auth + routing |
 | `bouncr-components` | Java | Domain types, migrations, shared components |
 | `bouncr-ui` | TypeScript | React SPA (Vite) |
-| `bouncr-e2e-test` | Java | E2E integration tests (Playwright) |
+| `bouncr-api-e2e-test` | Java | API E2E tests (Playwright, in-process H2) |
+| `bouncr-ui-e2e-test` | TypeScript | UI E2E tests (Cucumber + Playwright) |
 | `envoy/` | YAML | Envoy proxy configuration |
 
 ## Quick Start
 
-### Docker Compose
-
-```bash
-docker compose up
-```
-
-Starts Redis, PostgreSQL, bouncr-proxy (ext_proc), and Envoy. The proxy listens on port 3000.
-
 ### Local Development
 
 ```bash
-# 1. Start dependencies
-docker compose up redis db
+# 1. Start infrastructure (Redis + PostgreSQL)
+docker compose -f docker-compose.dev.yml up redis db
 
-# 2. Start the API server (H2 in-memory, MemoryStore)
+# 2. Start the API server (H2 in-memory, auto-reset on startup)
 cd bouncr-api-server
 mvn compile exec:java -Pdev
 
@@ -108,15 +101,26 @@ mvn compile exec:java -Pdev
 cd bouncr-proxy
 export DB_DSN="postgres://bouncr:bouncr@localhost:5432/bouncr?sslmode=disable"
 export JWT_SECRET="your-secret-key"
+export INTERNAL_SIGNING_KEY="your-signing-key"
 go run ./cmd/bouncr-proxy/
 
 # 4. Start Envoy
 envoy -c envoy/envoy.yaml
 
-# 5. Start the UI
+# 5. Start the UI (Vite dev server with auth plugin — no proxy/Envoy needed for UI dev)
 cd bouncr-ui
 npm run dev
 ```
+
+### Full-stack with Docker Compose
+
+`docker-compose.dev.yml` starts the entire stack (api-server, proxy, Envoy, UI) with development defaults for E2E testing:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+The UI is at `http://localhost:8080`, Envoy at port 3000. This configuration uses hardcoded credentials and is **not intended for production**.
 
 ## Build
 
@@ -134,14 +138,21 @@ cd bouncr-ui && npm run build
 ## Testing
 
 ```bash
-# Unit tests
+# Java unit tests (api-server + components)
 mvn test -pl bouncr-api-server -am
 
-# E2E tests (starts full API server in-process with Playwright)
-mvn test -pl bouncr-e2e-test -am
-
-# Go tests
+# Go unit tests
 cd bouncr-proxy && go test ./...
+
+# UI unit tests
+cd bouncr-ui && npm test
+
+# API E2E tests (starts API server in-process with H2, no external deps)
+mvn test -pl bouncr-api-e2e-test -am            # smoke tests
+mvn test -pl bouncr-api-e2e-test -am -De2e.full=true  # full suite
+
+# UI E2E tests (requires running services — see bouncr-ui-e2e-test/README.md)
+cd bouncr-ui-e2e-test && npm test
 ```
 
 ## Configuration & Production Deployment
@@ -192,18 +203,14 @@ cd bouncr-proxy && go test ./...
    bouncr-proxy gen-envoy-config > envoy.yaml
    ```
 
-6. **Docker image build order**:
+6. **Docker Compose (production)**:
+
    ```bash
-   # 1. Build api-server image (requires Maven + JDK 25)
-   cd bouncr-api-server && mvn compile jib:dockerBuild
-
-   # 2. Build proxy and UI images
-   docker build -t bouncr/bouncr-proxy bouncr-proxy
-   docker build -t bouncr/bouncr-ui bouncr-ui
-
-   # 3. Start all services
-   docker compose up
+   cp .env.example .env   # edit .env with real credentials
+   docker compose up -d --build
    ```
+
+   The default `docker-compose.yml` requires all secrets via environment variables (no defaults for credentials). See `.env.example` for the full list. For local dev / E2E testing, use `docker-compose.dev.yml` instead.
 
 ## Migration Upgrade Note
 
@@ -221,4 +228,4 @@ Fresh databases are created from `B28__BouncrV0_3_0`.
 
 Copyright © 2017-2026 kawasima
 
-Distributed under the [Eclipse Public License 1.0](https://opensource.org/licenses/EPL-1.0).
+Distributed under the [Eclipse Public License 2.0](https://www.eclipse.org/legal/epl-2.0/).

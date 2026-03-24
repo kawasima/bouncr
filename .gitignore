@@ -51,5 +51,8 @@ bouncr-proxy/bouncr-proxy
 /.vscode
 /.circleci
 
+# Environment secrets
+.env
+
 # Project TODO
 TODO.md

@@ -2,7 +2,7 @@
 
 ## Development Docker Services
 
-`docker-compose.yml` provides the infrastructure for local development. The `bouncr-api-server` runs on the host (via `mvn exec:java -Pdev`), not inside Docker.
+`docker-compose.dev.yml` provides the infrastructure for local development and E2E testing. `docker-compose.yml` (default) is for production and requires `.env` with real credentials. For local dev, the `bouncr-api-server` typically runs on the host (via `mvn exec:java -Pdev`), not inside Docker.
 
 - `redis` (`redis:7-alpine`, port 6379) — Token store (msgpack) shared between api-server and bouncr-proxy
 - `db` (`postgres:16-alpine`, port 5432) — Primary database (user: `bouncr`, password: `bouncr`)
@@ -11,7 +11,7 @@
 
 **Typical local dev setup:**
 
-1. `docker-compose up` — starts redis, db, proxy, envoy
+1. `docker compose -f docker-compose.dev.yml up redis db` — starts redis, db
 2. `cd bouncr-api-server && mvn exec:java -Pdev` — starts api-server on port 3005 (host)
 3. `cd bouncr-ui && npm run dev` — starts UI on port 3001, proxies `/bouncr` → Envoy (port 3000)
 

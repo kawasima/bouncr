@@ -1,50 +1,44 @@
+# Production Docker Compose (default)
+#
+# Usage:
+#   cp .env.example .env    # then edit .env with real values
+#   docker compose up -d
+#
+# For development / E2E testing, use docker-compose.dev.yml instead:
+#   docker compose -f docker-compose.dev.yml up
+#
+# All variables marked ${VAR?error} are required — compose will refuse to start
+# if they are not set in the environment or .env file.
+
 services:
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: postgres:16-alpine
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: bouncr
-      POSTGRES_USER: bouncr
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?POSTGRES_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bouncr"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  proxy:
-    build: ./bouncr-proxy
-    depends_on:
-      api-server:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      GRPC_PORT: "50051"
-      REDIS_URL: redis://redis:6379
-      DB_DSN: postgres://bouncr:bouncr@db:5432/bouncr?sslmode=disable
-      JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
-      TOKEN_COOKIE_NAME: BOUNCR_TOKEN
-      BACKEND_HEADER_NAME: X-Bouncr-Credential
-      INTERNAL_SIGNING_KEY: CHANGE-ME
-    ports:
-      - "50051:50051"
-      - "8081:8081"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/_healthcheck || exit 1"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
       timeout: 5s
       retries: 10
 
   api-server:
-    # Build with: cd bouncr-api-server && mvn compile jib:dockerBuild
-    image: bouncr/bouncr-api-server
+    build:
+      context: .
+      dockerfile: bouncr-api-server/Dockerfile
+    restart: unless-stopped
     networks:
       default:
         aliases:
@@ -53,37 +47,50 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
-      JDBC_URL: jdbc:postgresql://db:5432/bouncr
-      JDBC_USER: bouncr
-      JDBC_PASSWORD: bouncr
+      JDBC_URL: jdbc:postgresql://db:5432/${POSTGRES_USER}
+      JDBC_USER: ${POSTGRES_USER}
+      JDBC_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
-      INTERNAL_SIGNING_KEY: CHANGE-ME
-      CORS_ORIGINS: "*"
+      JWT_SECRET: ${JWT_SECRET?JWT_SECRET is required (32+ characters)}
+      INTERNAL_SIGNING_KEY: ${INTERNAL_SIGNING_KEY?INTERNAL_SIGNING_KEY is required}
+      CORS_ORIGINS: ${CORS_ORIGINS?CORS_ORIGINS is required (e.g. https://your-domain.com)}
       PORT: "3005"
-      ADMIN_PASSWORD: "admin"
-      ORG_SLF4J_SIMPLELOGGER_DEFAULT_LOG_LEVEL: "DEBUG"
-    ports:
-      - "3005:3005"
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD?ADMIN_PASSWORD is required}
+      OIDC_KEY_ENCRYPTION_KEY: ${OIDC_KEY_ENCRYPTION_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3005/bouncr/api/sign_in; [ $? -ne 4 ]"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 30
       start_period: 30s
 
-  ui:
-    build: ./bouncr-ui
+  proxy:
+    build: ./bouncr-proxy
+    restart: unless-stopped
     depends_on:
-      - envoy
-    ports:
-      - "8080:80"
+      api-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_DSN: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_USER}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGNING_KEY: ${INTERNAL_SIGNING_KEY}
+      API_SERVER_URL: http://api:3005
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/_healthcheck || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   envoy:
     image: envoyproxy/envoy:v1.31-latest
-    command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_proc:debug,http:debug,router:debug"]
+    restart: unless-stopped
+    command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml"]
     depends_on:
       proxy:
         condition: service_healthy
@@ -92,5 +99,15 @@ services:
     volumes:
       - ./envoy/envoy-docker.yaml:/etc/envoy/envoy.yaml:ro
     ports:
-      - "3000:3000"
-      - "9901:9901"
+      - "${LISTEN_PORT:-3000}:3000"
+
+  ui:
+    build: ./bouncr-ui
+    restart: unless-stopped
+    depends_on:
+      - envoy
+    ports:
+      - "${UI_PORT:-8080}:80"
+
+volumes:
+  pgdata:

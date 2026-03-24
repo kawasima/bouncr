@@ -21,8 +21,10 @@ echo "Reactor version updated -> $VERSION"
 sed -i '' "s|<version>[^<]*</version>|<version>$VERSION</version>|g" "$README_FILE"
 echo "README.md updated -> $VERSION"
 
-# 3. Update <waitt.version> in examples/*/pom.xml
-for example_pom in "$ROOT_DIR"/examples/*/pom.xml; do
-  sed -i '' "s|<waitt\.version>[^<]*</waitt\.version>|<waitt.version>$VERSION</waitt.version>|g" "$example_pom"
-  echo "$(dirname "$example_pom" | xargs basename)/pom.xml updated -> $VERSION"
+# 3. Update version in package.json files
+for pkg in "$ROOT_DIR"/bouncr-ui/package.json "$ROOT_DIR"/bouncr-ui-e2e-test/package.json; do
+  if [[ -f "$pkg" ]]; then
+    sed -i '' "s|\"version\": \"[^\"]*\"|\"version\": \"$VERSION\"|" "$pkg"
+    echo "$(basename "$(dirname "$pkg")")/package.json updated -> $VERSION"
+  fi
 done

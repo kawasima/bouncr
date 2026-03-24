@@ -1,0 +1,97 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: bouncr
+      POSTGRES_USER: bouncr
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bouncr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  proxy:
+    build: ./bouncr-proxy
+    depends_on:
+      api-server:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      GRPC_PORT: "50051"
+      REDIS_URL: redis://redis:6379
+      DB_DSN: postgres://bouncr:bouncr@db:5432/bouncr?sslmode=disable
+      JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
+      TOKEN_COOKIE_NAME: BOUNCR_TOKEN
+      BACKEND_HEADER_NAME: X-Bouncr-Credential
+      INTERNAL_SIGNING_KEY: CHANGE-ME
+    ports:
+      - "50051:50051"
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/_healthcheck || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-server:
+    build:
+      context: .
+      dockerfile: bouncr-api-server/Dockerfile
+    networks:
+      default:
+        aliases:
+          - api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      JDBC_URL: jdbc:postgresql://db:5432/bouncr
+      JDBC_USER: bouncr
+      JDBC_PASSWORD: bouncr
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
+      INTERNAL_SIGNING_KEY: CHANGE-ME
+      CORS_ORIGINS: "*"
+      PORT: "3005"
+      ADMIN_PASSWORD: "admin"
+      ORG_SLF4J_SIMPLELOGGER_DEFAULT_LOG_LEVEL: "DEBUG"
+    ports:
+      - "3005:3005"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3005/bouncr/api/sign_in; [ $? -ne 4 ]"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  ui:
+    build: ./bouncr-ui
+    depends_on:
+      - envoy
+    ports:
+      - "8080:80"
+
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_proc:debug,http:debug,router:debug"]
+    depends_on:
+      proxy:
+        condition: service_healthy
+      api-server:
+        condition: service_healthy
+    volumes:
+      - ./envoy/envoy-docker.yaml:/etc/envoy/envoy.yaml:ro
+    ports:
+      - "3000:3000"
+      - "9901:9901"

@@ -1,0 +1,22 @@
+# Docker context = project root (for api-server multi-stage build)
+.git
+.github
+.idea
+.vscode
+*.iml
+
+# Modules not needed for api-server build — exclude source but keep pom.xml
+bouncr-proxy/
+bouncr-ui/
+bouncr-ui-e2e-test/
+bouncr-api-e2e-test/src/
+bouncr-hook-email/src/
+bouncr-hook-license/src/
+envoy/
+examples/
+scripts/
+
+# Build artifacts
+**/target/
+**/node_modules/
+**/*.class
