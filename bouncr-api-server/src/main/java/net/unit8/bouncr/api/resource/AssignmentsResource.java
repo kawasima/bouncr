@@ -9,6 +9,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.boundary.ResolvedAssignment;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
@@ -33,8 +34,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
  */
 @AllowedMethods({"POST", "DELETE"})
 public class AssignmentsResource {
-    @SuppressWarnings("unchecked")
-    static final ContextKey<List<ResolvedAssignment>> RESOLVED = (ContextKey<List<ResolvedAssignment>>) (ContextKey<?>) ContextKey.of(List.class);
+    static final ContextKey<List<ResolvedAssignment>> RESOLVED = ContextKeys.of(List.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateForPost(JsonNode body, RestContext context, DSLContext dsl) {

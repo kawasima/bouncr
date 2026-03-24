@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -26,9 +27,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class GroupsResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<WordName, String>> CREATE_REQ =
-            (ContextKey<Tuple2<WordName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {

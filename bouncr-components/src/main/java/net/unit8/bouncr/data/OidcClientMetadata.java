@@ -18,4 +18,9 @@ public record OidcClientMetadata(
     URI backchannelLogoutUri,
     URI frontchannelLogoutUri,
     Set<GrantType> grantTypes
-) {}
+) {
+    public String homeUriString() { return homeUri != null ? homeUri.toString() : null; }
+    public String callbackUriString() { return callbackUri != null ? callbackUri.toString() : null; }
+    public String backchannelLogoutUriString() { return backchannelLogoutUri != null ? backchannelLogoutUri.toString() : null; }
+    public String frontchannelLogoutUriString() { return frontchannelLogoutUri != null ? frontchannelLogoutUri.toString() : null; }
+}

@@ -13,6 +13,7 @@ import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -27,9 +28,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class RealmResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<WordName, String>> UPDATE_REQ =
-            (ContextKey<Tuple2<WordName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
     static final ContextKey<Realm> REALM = ContextKey.of(Realm.class);
 

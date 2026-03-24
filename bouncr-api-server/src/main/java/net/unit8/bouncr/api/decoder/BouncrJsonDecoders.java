@@ -257,6 +257,8 @@ public final class BouncrJsonDecoders {
                     new OidcProviderClientConfig(new ClientCredentials(cid, cs), scope,
                             ResponseType.of(rt), TokenEndpointAuthMethod.of(team), ru, pkce)))::decode;
 
+    // Update uses the same decoder as create — all fields are required for full replacement.
+    // If partial update is needed in the future, define a separate decoder here.
     public static final JsonDecoder<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> OIDC_PROVIDER_UPDATE = OIDC_PROVIDER_CREATE;
 
     // ===== OIDC Application =====

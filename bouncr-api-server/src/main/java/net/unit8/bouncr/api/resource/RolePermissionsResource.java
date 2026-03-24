@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.repository.RolePermissionRepository;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.Role;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
@@ -27,9 +28,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST", "DELETE"})
 public class RolePermissionsResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<List<String>> PERMISSION_NAMES =
-            (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of("permissionNames", List.class);
+            ContextKeys.of("permissionNames", List.class);
     static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
     @Decision(value = MALFORMED, method = {"POST", "DELETE"})

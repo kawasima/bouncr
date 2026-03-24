@@ -20,15 +20,15 @@ import java.util.List;
 import java.util.Optional;
 
 import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.util.ContextKeys;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST", "DELETE"})
 public class GroupUsersResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<List<String>> USER_ACCOUNTS =
-            (ContextKey<List<String>>) (ContextKey<?>) ContextKey.of("userAccounts", List.class);
+            ContextKeys.of("userAccounts", List.class);
     static final ContextKey<Group> GROUP = ContextKey.of(Group.class);
 
     @Decision(value = MALFORMED, method = {"POST", "DELETE"})

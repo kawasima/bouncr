@@ -24,6 +24,7 @@ import net.unit8.bouncr.data.UserCredentials;
 import net.unit8.bouncr.data.UserSession;
 import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.PasswordUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple3;
@@ -47,9 +48,8 @@ import static net.unit8.bouncr.data.ActionType.USER_SIGNIN;
 @AllowedMethods("POST")
 public class PasswordSignInResource {
     private static final Logger LOG = LoggerFactory.getLogger(PasswordSignInResource.class);
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, String, String>> SIGN_IN_REQ =
-            (ContextKey<Tuple3<WordName, String, String>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 

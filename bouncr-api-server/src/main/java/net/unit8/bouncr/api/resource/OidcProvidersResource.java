@@ -14,6 +14,7 @@ import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.OidcProviderClientConfig;
 import net.unit8.bouncr.data.OidcProviderMetadata;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple3;
@@ -28,9 +29,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class OidcProvidersResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> CREATE_REQ =
-            (ContextKey<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
+            ContextKeys.of(Tuple3.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {

@@ -17,6 +17,7 @@ import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -38,17 +39,14 @@ import static net.unit8.bouncr.component.config.HookPoint.*;
 @AllowedMethods({"POST", "PUT", "DELETE"})
 public class PasswordCredentialResource {
     // POST: Tuple3<WordName, String, Boolean> (account, password, initial)
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, String, Boolean>> CREATE_REQ =
-            (ContextKey<Tuple3<WordName, String, Boolean>>) (ContextKey<?>) ContextKey.of("createReq", Tuple3.class);
+            ContextKeys.of("createReq", Tuple3.class);
     // PUT: Tuple3<String, String, String> (account, oldPassword, newPassword)
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<String, String, String>> UPDATE_REQ =
-            (ContextKey<Tuple3<String, String, String>>) (ContextKey<?>) ContextKey.of("updateReq", Tuple3.class);
+            ContextKeys.of("updateReq", Tuple3.class);
     // DELETE: Tuple2<WordName, String> (account, password)
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<WordName, String>> DELETE_REQ =
-            (ContextKey<Tuple2<WordName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<PasswordCredential> CREDENTIAL = ContextKey.of(PasswordCredential.class);
 

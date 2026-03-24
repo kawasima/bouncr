@@ -26,6 +26,7 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.User;
 import net.unit8.bouncr.data.WebAuthnChallenge;
 import net.unit8.bouncr.data.WebAuthnCredential;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -48,9 +49,8 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLE
 public class WebAuthnRegisterResource {
     private static final Logger LOG = LoggerFactory.getLogger(WebAuthnRegisterResource.class);
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<String, String>> REQ =
-            (ContextKey<Tuple2<String, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<WebAuthnCredential> CREDENTIAL = ContextKey.of(WebAuthnCredential.class);
 
     @Inject

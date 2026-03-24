@@ -19,6 +19,7 @@ import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
 import net.unit8.bouncr.sign.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -38,9 +39,8 @@ import static net.unit8.raoh.json.JsonDecoders.combine;
 
 @AllowedMethods({"POST"})
 public class SignUpResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, String, Boolean>> SIGN_UP_REQ =
-            (ContextKey<Tuple3<WordName, String, Boolean>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<UserProfile> USER_PROFILE = ContextKey.of(UserProfile.class);
     static final ContextKey<User> USER_KEY = ContextKey.of(User.class);
     static final ContextKey<VerificationTargetSet> VERIFICATION_TARGET_SET = ContextKey.of(VerificationTargetSet.class);

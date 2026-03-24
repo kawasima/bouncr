@@ -12,6 +12,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple3;
@@ -27,9 +28,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class GroupResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, String, List<String>>> UPDATE_REQ =
-            (ContextKey<Tuple3<WordName, String, List<String>>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<Group> GROUP = ContextKey.of(Group.class);
 
     @Decision(value = MALFORMED, method = "PUT")

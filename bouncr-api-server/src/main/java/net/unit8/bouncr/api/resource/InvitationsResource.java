@@ -13,6 +13,7 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.Email;
 import net.unit8.bouncr.data.Invitation;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -32,9 +33,8 @@ public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
 
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<Email, List<IdObject>>> CREATE_REQ =
-            (ContextKey<Tuple2<Email, List<IdObject>>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<Invitation> CREATED = ContextKey.of(Invitation.class);
 
     @Decision(value = MALFORMED, method = "POST")

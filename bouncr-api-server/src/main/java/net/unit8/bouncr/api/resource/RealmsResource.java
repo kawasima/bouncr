@@ -14,6 +14,7 @@ import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple3;
@@ -28,9 +29,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class RealmsResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple3<WordName, String, String>> CREATE_REQ =
-            (ContextKey<Tuple3<WordName, String, String>>) (ContextKey<?>) ContextKey.of(Tuple3.class);
+            ContextKeys.of(Tuple3.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "POST")

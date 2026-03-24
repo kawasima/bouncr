@@ -11,6 +11,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple5;
@@ -25,9 +26,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class ApplicationResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple5<WordName, String, String, String, String>> UPDATE_REQ =
-            (ContextKey<Tuple5<WordName, String, String, String, String>>) (ContextKey<?>) ContextKey.of(Tuple5.class);
+            ContextKeys.of(Tuple5.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "PUT")

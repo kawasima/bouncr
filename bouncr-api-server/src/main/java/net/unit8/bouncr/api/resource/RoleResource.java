@@ -11,6 +11,7 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.WordName;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple2;
@@ -25,9 +26,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class RoleResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple2<WordName, String>> UPDATE_REQ =
-            (ContextKey<Tuple2<WordName, String>>) (ContextKey<?>) ContextKey.of(Tuple2.class);
+            ContextKeys.of(Tuple2.class);
     static final ContextKey<Role> ROLE = ContextKey.of(Role.class);
 
     @Decision(value = MALFORMED, method = "PUT")

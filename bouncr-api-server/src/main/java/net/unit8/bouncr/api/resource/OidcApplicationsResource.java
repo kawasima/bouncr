@@ -21,6 +21,7 @@ import net.unit8.bouncr.util.KeyEncryptor;
 import net.unit8.bouncr.util.KeyUtils;
 import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.util.RandomUtils;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.combinator.Tuple4;
@@ -38,9 +39,8 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class OidcApplicationsResource {
-    @SuppressWarnings("unchecked")
     static final ContextKey<Tuple4<WordName, OidcClientMetadata, String, List<String>>> CREATE_REQ =
-            (ContextKey<Tuple4<WordName, OidcClientMetadata, String, List<String>>>) (ContextKey<?>) ContextKey.of(Tuple4.class);
+            ContextKeys.of(Tuple4.class);
     static final ContextKey<OidcApplicationCreatedResponse> RESPONSE = ContextKey.of(OidcApplicationCreatedResponse.class);
 
     @Inject
