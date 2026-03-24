@@ -50,3 +50,6 @@ bouncr-proxy/bouncr-proxy
 
 /.vscode
 /.circleci
+
+# Project TODO
+TODO.md
