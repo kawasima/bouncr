@@ -43,6 +43,7 @@ jobs:
           JWT_SECRET: ci-test-secret-key-32-characters
           CORS_ORIGINS: '*'
           ENKAN_ENV: development
+          INTERNAL_SIGNING_KEY: ci-internal-signing-key-32chars!
 
   go:
     runs-on: ubuntu-latest

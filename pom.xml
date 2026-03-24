@@ -61,7 +61,7 @@
         <h2.version>2.4.240</h2.version>
         <slf4j.version>2.1.0-alpha1</slf4j.version>
         <junit-jupiter.version>5.12.0</junit-jupiter.version>
-        <assertj.version>3.27.3</assertj.version>
+        <assertj.version>3.27.7</assertj.version>
     </properties>
 
     <modules>
