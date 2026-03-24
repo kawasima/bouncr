@@ -119,10 +119,11 @@ public class OidcSignInResource {
                 ? oidcProvider.clientConfig().redirectUri().toString()
                 : redirectUriBase + "/sign_in/oidc/" + (oidcProvider != null ? oidcProvider.name() : params.get("name"));
 
-        if (oidcProvider == null || oidcProvider.providerMetadata() == null || oidcProvider.clientConfig() == null) {
-            context.setMessage(Problem.valueOf(500, "OIDC provider is not configured: " + params.get("name")));
+        if (oidcProvider == null) {
+            context.setMessage(Problem.valueOf(404, "OIDC provider not found: " + params.get("name")));
             return false;
         }
+        // providerMetadata and clientConfig are guaranteed non-null by the OIDC_PROVIDER decoder
 
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             Map<String, String> form = new LinkedHashMap<>();
@@ -377,7 +378,7 @@ public class OidcSignInResource {
     private OidcUser findOidcUser(DSLContext dsl, OidcProvider oidcProvider, String sub) {
         UserRepository userRepo = new UserRepository(dsl);
         return userRepo.findOidcUser(oidcProvider.id(), sub)
-                .map(ou -> new OidcUser(oidcProvider, ou.user(), ou.oidcSub()))
+                .map(ou -> new OidcUser(oidcProvider.name(), ou.user(), ou.oidcSub()))
                 .orElse(null);
     }
 

@@ -320,10 +320,7 @@ public class UserRepository {
                 .join(table("oidc_providers").as("op")).on(field("op.oidc_provider_id").eq(field("ou.oidc_provider_id")))
                 .where(field("ou.user_id").eq(userId))
                 .fetch(rec -> new OidcUser(
-                        OidcProvider.ofSummary(
-                                rec.get(field("oidc_provider_id", Long.class)),
-                                rec.get(field("name", String.class)),
-                                rec.get(field("name_lower", String.class))),
+                        rec.get(field("name", String.class)),
                         null,
                         rec.get(field("oidc_sub", String.class))));
     }

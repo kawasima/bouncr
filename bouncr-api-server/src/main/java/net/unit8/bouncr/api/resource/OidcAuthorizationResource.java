@@ -65,13 +65,7 @@ public class OidcAuthorizationResource {
                 .map(Object::toString)
                 .orElse(redirectUriBase + "/sign_in/oidc/" + oidcProvider.name());
 
-        var meta = oidcProvider.providerMetadata();
-        var cc = oidcProvider.clientConfig();
-        if (meta == null || cc == null || cc.credentials() == null
-                || meta.authorizationEndpoint() == null || cc.responseType() == null) {
-            throw new enkan.exception.MisconfigurationException("bouncr.OIDC_PROVIDER_NOT_CONFIGURED",
-                    "OIDC provider is not fully configured: " + oidcProvider.name());
-        }
+        // providerMetadata and clientConfig are guaranteed non-null by the OIDC_PROVIDER decoder
         StringBuilder authorizationUrl = new StringBuilder(oidcProvider.providerMetadata().authorizationEndpoint())
                 .append("?response_type=").append(CodecUtils.urlEncode(oidcProvider.clientConfig().responseType().getName()))
                 .append("&client_id=").append(CodecUtils.urlEncode(oidcProvider.clientConfig().credentials().clientId()))

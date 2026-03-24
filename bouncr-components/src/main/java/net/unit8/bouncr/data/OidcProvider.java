@@ -3,6 +3,10 @@ package net.unit8.bouncr.data;
 /**
  * External OpenID Connect identity provider configuration.
  *
+ * <p>All fields are non-null when loaded from the database. For contexts
+ * where only the provider identity is needed (e.g., listing linked
+ * providers for a user), use {@code providerName} directly.
+ *
  * @param id               persistent identifier
  * @param name             display name
  * @param nameLower        normalized lowercase name for lookup
@@ -15,9 +19,4 @@ public record OidcProvider(
     String nameLower,
     OidcProviderMetadata providerMetadata,
     OidcProviderClientConfig clientConfig
-) {
-    /** Factory for summary use — creates an OidcProvider with only identity fields. */
-    public static OidcProvider ofSummary(Long id, String name, String nameLower) {
-        return new OidcProvider(id, name, nameLower, null, null);
-    }
-}
+) {}
