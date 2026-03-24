@@ -291,8 +291,8 @@ public final class BouncrJooqDecoders {
                     new OidcProviderClientConfig(
                             new ClientCredentials(clientId, clientSecret),
                             scope,
-                            responseType.map(ResponseType::of).orElse(null),
-                            authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
+                            responseType.map(ResponseType::of).orElse(ResponseType.CODE),
+                            authMethod.map(TokenEndpointAuthMethod::of).orElse(TokenEndpointAuthMethod.CLIENT_SECRET_BASIC),
                             redirectUri, pkceEnabled)));
 
     // --- OidcApplication ---

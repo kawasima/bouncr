@@ -332,7 +332,7 @@ public class OidcSignInResource {
                 .map(Problem::getType)
                 .orElse(null);
         return Optional.ofNullable(config.getOidcConfiguration().getUnauthenticateRedirectUrl())
-                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType.toString()))
+                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType != null ? problemType.toString() : "unknown"))
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
@@ -361,7 +361,7 @@ public class OidcSignInResource {
                 .map(Problem::getType)
                 .orElse(null);
         return Optional.ofNullable(config.getOidcConfiguration().getUnauthorizeRedirectUrl())
-                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType.toString()))
+                .map(uri -> uriInterpolator.interpolate(uri, "problem", problemType != null ? problemType.toString() : "unknown"))
                 .map(uri -> builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 302)
                         .set(ApiResponse::setHeaders, Headers.of(
