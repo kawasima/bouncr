@@ -115,15 +115,48 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 	// Extract permissionsByRealm and filter to matched realm
 	var permissions []interface{}
 	if pbr, ok := profileMap["permissionsByRealm"]; ok {
+		log.Printf("auth: permissionsByRealm type=%T", pbr)
 		if pbrMap, ok := pbr.(map[string]interface{}); ok {
 			realmKey := strconv.FormatInt(matchedRealm.ID, 10)
+			log.Printf("auth: permissionsByRealm map keys=%v, looking for %q", func() []string {
+				keys := make([]string, 0, len(pbrMap))
+				for k := range pbrMap {
+					keys = append(keys, k)
+				}
+				return keys
+			}(), realmKey)
 			if perms, ok := pbrMap[realmKey]; ok {
 				if permList, ok := perms.([]interface{}); ok {
 					permissions = permList
 				}
 			}
+		} else {
+			log.Printf("auth: permissionsByRealm is not map[string]interface{}, trying map[interface{}]interface{}")
+			if pbrMap, ok := pbr.(map[interface{}]interface{}); ok {
+				realmKey := matchedRealm.ID
+				if perms, ok := pbrMap[realmKey]; ok {
+					if permList, ok := perms.([]interface{}); ok {
+						permissions = permList
+					}
+				}
+				// Also try string key
+				realmKeyStr := strconv.FormatInt(matchedRealm.ID, 10)
+				if perms, ok := pbrMap[realmKeyStr]; ok {
+					if permList, ok := perms.([]interface{}); ok {
+						permissions = permList
+					}
+				}
+			}
 		}
 		delete(profileMap, "permissionsByRealm")
+	} else {
+		log.Printf("auth: no permissionsByRealm in profileMap, keys=%v", func() []string {
+			keys := make([]string, 0, len(profileMap))
+			for k := range profileMap {
+				keys = append(keys, k)
+			}
+			return keys
+		}())
 	}
 
 	if permissions == nil {

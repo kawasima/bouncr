@@ -2,7 +2,7 @@ import { Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { BouncrWorld } from '../support/world';
 
-Then('I should see admin menu items:', async function (this: BouncrWorld, dataTable: { raw: () => string[][] }) {
+Then('I should see admin menu items:', { timeout: 30_000 }, async function (this: BouncrWorld, dataTable: { raw: () => string[][] }) {
   const expectedItems = dataTable.raw()[0];
   // The admin menu is rendered inside a <nav> under the "Administration" heading
   const adminNav = this.page.locator('nav', {

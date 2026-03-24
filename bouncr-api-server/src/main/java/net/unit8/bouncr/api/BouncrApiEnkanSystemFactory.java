@@ -23,6 +23,7 @@ import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.sign.JsonWebToken;
 import org.jooq.SQLDialect;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -34,6 +35,15 @@ import static enkan.util.BeanBuilder.builder;
  * Redis-backed stores with TTLs sourced from BouncrConfiguration.
  */
 public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
+
+    private static JedisProvider configureJedis(String redisUrl) {
+        URI uri = URI.create(redisUrl);
+        return builder(new JedisProvider())
+                .set(JedisProvider::setHost, uri.getHost())
+                .set(JedisProvider::setPort, uri.getPort() > 0 ? uri.getPort() : 6379)
+                .build();
+    }
+
     @Override
     public EnkanSystem create() {
         String jdbcUrl = Env.getString("JDBC_URL", "jdbc:postgresql://localhost:5432/bouncr");
@@ -70,7 +80,7 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "jooq", builder(new JooqProvider())
                         .set(JooqProvider::setDialect, sqlDialect)
                         .build(),
-                "redis", new JedisProvider(),
+                "redis", configureJedis(Env.getString("REDIS_URL", "redis://localhost:6379")),
                 "storeprovider", new RedisStoreProvider(),
                 "flake", new Flake(),
                 "jwt", new JsonWebToken(),

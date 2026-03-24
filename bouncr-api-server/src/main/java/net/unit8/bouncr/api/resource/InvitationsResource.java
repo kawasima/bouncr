@@ -31,6 +31,7 @@ public class InvitationsResource {
     private BouncrConfiguration config;
 
     static final ContextKey<InvitationCreate> CREATE_REQ = ContextKey.of(InvitationCreate.class);
+    static final ContextKey<Invitation> CREATED = ContextKey.of(Invitation.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {
@@ -63,7 +64,7 @@ public class InvitationsResource {
     }
 
     @Decision(POST)
-    public Invitation create(InvitationCreate createRequest, DSLContext dsl) {
+    public boolean create(InvitationCreate createRequest, RestContext context, DSLContext dsl) {
         InvitationRepository repo = new InvitationRepository(dsl);
         String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
         List<Long> groupIds = createRequest.groups() != null
@@ -71,6 +72,13 @@ public class InvitationsResource {
                     .map(BouncrJsonDecoders.IdObject::id)
                     .toList()
                 : List.of();
-        return repo.insert(createRequest.email(), code, LocalDateTime.now(), groupIds);
+        Invitation invitation = repo.insert(createRequest.email(), code, LocalDateTime.now(), groupIds);
+        context.put(CREATED, invitation);
+        return true;
+    }
+
+    @Decision(HANDLE_CREATED)
+    public Invitation handleCreated(Invitation invitation) {
+        return invitation;
     }
 }

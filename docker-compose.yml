@@ -12,12 +12,19 @@ services:
       POSTGRES_USER: bouncr
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bouncr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   proxy:
     build: ./bouncr-proxy
     depends_on:
-      - redis
-      - db
+      api-server:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       GRPC_PORT: "50051"
       REDIS_URL: redis://redis:6379
@@ -30,12 +37,50 @@ services:
       - "50051:50051"
       - "8081:8081"
 
+  api-server:
+    image: bouncr/bouncr-api-server
+    networks:
+      default:
+        aliases:
+          - api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      JDBC_URL: jdbc:postgresql://db:5432/bouncr
+      JDBC_USER: bouncr
+      JDBC_PASSWORD: bouncr
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: abcdefghijklmnopqrstuvwxyzabcdef
+      INTERNAL_SIGNING_KEY: CHANGE-ME
+      CORS_ORIGINS: "*"
+      PORT: "3005"
+      ADMIN_PASSWORD: "admin"
+      ORG_SLF4J_SIMPLELOGGER_DEFAULT_LOG_LEVEL: "DEBUG"
+    ports:
+      - "3005:3005"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3005/bouncr/api/sign_in; [ $? -ne 4 ]"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  ui:
+    build: ./bouncr-ui
+    depends_on:
+      - envoy
+    ports:
+      - "8080:80"
+
   envoy:
     image: envoyproxy/envoy:v1.31-latest
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_proc:debug,http:debug,router:debug"]
     depends_on:
       - proxy
+      - api-server
     volumes:
       - ./envoy/envoy-docker.yaml:/etc/envoy/envoy.yaml:ro
     ports:

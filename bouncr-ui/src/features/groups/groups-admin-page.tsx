@@ -166,10 +166,12 @@ function GroupUsersSection({ groupName, readOnly = false }: { groupName: string;
   );
 }
 
+type AssignmentRow = { realm: { id: number; name: string }; role: { id: number; name: string } };
+
 function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; readOnly?: boolean }) {
   const [realms, setRealms] = useState<Realm[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [assignments, setAssignments] = useState<{ realm: { id: number; name: string }; role: { id: number; name: string } }[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRealm, setSelectedRealm] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<Set<number>>(new Set());
@@ -179,11 +181,13 @@ function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; re
   const loadAssignments = useCallback(async () => {
     setLoading(true);
     try {
-      const [realmList, roleList, assignmentList] = await Promise.all([
-        api.getRealms({ limit: 1000 }),
+      const [apps, roleList, assignmentList] = await Promise.all([
+        api.getApplications({ limit: 1000 }),
         api.getRoles({ limit: 1000 }),
         api.getGroupAssignments(group.name),
       ]);
+      const realmLists = await Promise.all(apps.map((a) => api.getRealms(a.name)));
+      const realmList = realmLists.flat();
       setRealms(realmList);
       setRoles(roleList);
       setAssignments(assignmentList.map((a) => ({

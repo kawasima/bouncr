@@ -98,7 +98,8 @@ export async function createUser(
     const text = await response.text();
     throw new Error(`Create user ${account} failed: ${response.status()} ${text}`);
   }
-  return response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
 }
 
 /**

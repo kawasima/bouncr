@@ -35,6 +35,12 @@
                     </container>
                     <from>
                         <image>eclipse-temurin:25-jre</image>
+                        <platforms>
+                            <platform>
+                                <os>linux</os>
+                                <architecture>arm64</architecture>
+                            </platform>
+                        </platforms>
                     </from>
                     <to>
                         <image>bouncr/bouncr-api-server</image>
@@ -194,12 +200,26 @@
             <artifactId>bouncr-components</artifactId>
         </dependency>
 
-        <!-- Test -->
+        <!-- Runtime: PostgreSQL driver and Flyway PostgreSQL support -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>11.20.3</version>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
+
+        <!-- Test -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>

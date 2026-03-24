@@ -1,5 +1,5 @@
-export const BASE_URL = 'http://localhost:3001';
-export const API_URL = 'http://localhost:3001/bouncr/api';
+export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8080';
+export const API_URL = `${BASE_URL}/bouncr/api`;
 export const ADMIN_ACCOUNT = 'admin';
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'admin';
 

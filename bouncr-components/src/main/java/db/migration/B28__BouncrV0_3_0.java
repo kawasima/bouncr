@@ -556,18 +556,24 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
             stmtInsUserProfileValue.executeUpdate();
 
             SecureRandom random = new SecureRandom();
-            String adminPassword = net.unit8.bouncr.util.RandomUtils.generateRandomString(20, random);
+            String adminPassword = Env.getString("ADMIN_PASSWORD", null);
+            if (adminPassword == null) {
+                adminPassword = net.unit8.bouncr.util.RandomUtils.generateRandomString(20, random);
+            }
             String adminSalt = net.unit8.bouncr.util.RandomUtils.generateRandomString(16, random);
             int iterations = Env.getInt("pbkdf2.iterations", 10000);
 
+            boolean isInitial = Env.getString("ADMIN_PASSWORD", null) == null;
             stmtInsPasswdCred.setLong(1, userId);
             stmtInsPasswdCred.setBytes(2, PasswordUtils.pbkdf2(adminPassword, adminSalt, iterations));
             stmtInsPasswdCred.setString(3, adminSalt);
-            stmtInsPasswdCred.setBoolean(4, true);
+            stmtInsPasswdCred.setBoolean(4, isInitial);
             stmtInsPasswdCred.setTimestamp(5, Timestamp.from(Instant.now()));
             stmtInsPasswdCred.executeUpdate();
 
-            LOG.warn("Initial admin password: {} (change immediately after first login)", adminPassword);
+            if (isInitial) {
+                LOG.warn("Initial admin password: {} (change immediately after first login)", adminPassword);
+            }
 
             stmtInsGroup.setString(1, "BOUNCR_ADMIN");
             stmtInsGroup.setString(2, "Bouncr administrators");

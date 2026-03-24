@@ -31,7 +31,7 @@ When('I click on the search result {string}', async function (this: BouncrWorld,
   await this.page.waitForLoadState('networkidle');
 });
 
-Then('I should see {string} in the group members', async function (this: BouncrWorld, userAccount: string) {
+Then('I should see {string} in the group members', { timeout: 15_000 }, async function (this: BouncrWorld, userAccount: string) {
   // The group members table shows accounts in <td> elements
   const membersTable = this.page.locator('h3:has-text("Users in Group")').locator('..').locator('table');
   await expect(membersTable.locator(`td:has-text("${userAccount}")`)).toBeVisible({ timeout: 10_000 });

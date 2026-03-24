@@ -53,10 +53,13 @@ func (s *Server) Process(stream extprocpb.ExternalProcessor_ProcessServer) error
 			}
 		}
 
+		mutation := resp.GetRequestHeaders().GetResponse().GetHeaderMutation()
+		log.Printf("ext_proc: ctx done? %v, sending response set=%d remove=%v", ctx.Err(), len(mutation.GetSetHeaders()), mutation.GetRemoveHeaders())
 		if err := stream.Send(resp); err != nil {
 			log.Printf("ext_proc: send error: %v", err)
 			return status.Errorf(codes.Internal, "send error: %v", err)
 		}
+		log.Printf("ext_proc: response sent")
 	}
 }
 
@@ -104,9 +107,10 @@ func (s *Server) handleRequestHeaders(
 		log.Printf("ext_proc: rewriting path %q -> %q", path, result.RewritePath)
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
-				Key:      ":path",
-				RawValue: []byte(result.RewritePath),
+				Key:   ":path",
+				Value: result.RewritePath,
 			},
+			AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
 		})
 	}
 
@@ -115,33 +119,44 @@ func (s *Server) handleRequestHeaders(
 		log.Printf("ext_proc: routing to cluster %q", result.ClusterName)
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
-				Key:      "x-bouncr-cluster",
-				RawValue: []byte(result.ClusterName),
+				Key:   "x-bouncr-cluster",
+				Value: result.ClusterName,
 			},
+			AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
 		})
 	}
 
 	// 3. Add JWT credential header (if authenticated)
 	if result.HeaderName != "" && result.HeaderValue != "" {
-		log.Printf("ext_proc: adding credential header %s", result.HeaderName)
+		preview := result.HeaderValue
+		if len(preview) > 30 {
+			preview = preview[:30] + "..."
+		}
+		log.Printf("ext_proc: adding credential header %s (len=%d, preview=%s)", result.HeaderName, len(result.HeaderValue), preview)
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:      result.HeaderName,
 				RawValue: []byte(result.HeaderValue),
 			},
+			AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
 		})
 	}
 
 	// Always strip client-supplied trusted headers to prevent header injection attacks.
 	// A client could forge these headers and reach the backend if ext_proc does not
 	// set them for the request (e.g. unauthenticated but realm-matched request).
-	// The credential header name is configurable via BACKEND_HEADER_NAME, so we derive
-	// it from the Authenticator rather than hard-coding it.
-	trustedHeaders := []string{
-		strings.ToLower(s.authenticator.CredentialHeaderName()),
-		"x-bouncr-cluster",
-		"x-bouncr-signature",
+	//
+	// IMPORTANT: Only remove the credential header if we did NOT just set it.
+	// Envoy processes RemoveHeaders before SetHeaders within the same HeaderMutation,
+	// so including a header in both SetHeaders and RemoveHeaders causes the header to
+	// be removed (the set is effectively a no-op).
+	var trustedHeaders []string
+	credHeader := strings.ToLower(s.authenticator.CredentialHeaderName())
+	if result.HeaderName == "" {
+		// Unauthenticated: strip any client-injected credential header
+		trustedHeaders = append(trustedHeaders, credHeader)
 	}
+	trustedHeaders = append(trustedHeaders, "x-bouncr-signature")
 	return continueResponse(headers, trustedHeaders)
 }
 
@@ -159,6 +174,7 @@ func continueResponse(headers []*corev3.HeaderValueOption, removeHeaders []strin
 	headersResp := &extprocpb.HeadersResponse{}
 	if len(headers) > 0 || len(removeHeaders) > 0 {
 		headersResp.Response = &extprocpb.CommonResponse{
+			ClearRouteCache: true,
 			HeaderMutation: &extprocpb.HeaderMutation{
 				SetHeaders:    headers,
 				RemoveHeaders: removeHeaders,

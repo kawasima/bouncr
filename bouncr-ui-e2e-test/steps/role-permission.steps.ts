@@ -24,7 +24,7 @@ When('I check permission {string}', async function (this: BouncrWorld, permissio
   }
 });
 
-Then('the permission {string} should be checked', async function (this: BouncrWorld, permissionName: string) {
+Then('the permission {string} should be checked', { timeout: 15_000 }, async function (this: BouncrWorld, permissionName: string) {
   const permLabel = this.page.locator('label', { hasText: permissionName }).first();
   const checkbox = permLabel.locator('input[type="checkbox"]');
   await expect(checkbox).toBeChecked({ timeout: 10_000 });

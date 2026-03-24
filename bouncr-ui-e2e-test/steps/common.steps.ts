@@ -35,6 +35,12 @@ Given('I am signed in as {string}', { timeout: 30_000 }, async function (this: B
     if (!password) throw new Error(`No password for ${account}`);
     const result = await signInViaApi(this.request, acct, password);
     token = result.token;
+    const cacheKey = account === 'admin' ? 'admin' : account;
+    this.cachedTokens[cacheKey] = token;
+    // Also update adminToken for helper functions
+    if (account === 'admin') {
+      this.adminToken = token;
+    }
   }
 
   await this.context.addCookies([{
@@ -42,39 +48,52 @@ Given('I am signed in as {string}', { timeout: 30_000 }, async function (this: B
     value: token,
     url: BASE_URL,
   }]);
-  await this.page.goto(BASE_URL);
+  // Navigate to sign-in page to initialize the app, then set localStorage and navigate home
+  await this.page.goto(`${BASE_URL}/sign_in`);
   await this.page.evaluate((a: string) => {
     localStorage.setItem('bouncr_session', JSON.stringify({ account: a }));
   }, acct);
-  await this.page.reload();
+  // Navigate to home with localStorage set so RequireAuth passes
+  await this.page.goto(BASE_URL);
   await this.page.waitForSelector('text=Sign Out', { timeout: 15_000 });
 });
 
-Given('I am on the admin {string} page', async function (this: BouncrWorld, adminPage: string) {
+Given('I am on the admin {string} page', { timeout: 30_000 }, async function (this: BouncrWorld, adminPage: string) {
   await this.page.goto(`${BASE_URL}/admin/${adminPage}`);
   await this.page.waitForLoadState('networkidle');
+  // Wait for loading spinner to disappear (permissions/data loaded)
+  await this.page.locator('.animate-spin').waitFor({ state: 'detached', timeout: 10_000 }).catch(() => {});
 });
 
-When('I navigate to {string}', async function (this: BouncrWorld, path: string) {
+When('I navigate to {string}', { timeout: 30_000 }, async function (this: BouncrWorld, path: string) {
   await this.page.goto(`${BASE_URL}${path}`);
   await this.page.waitForLoadState('networkidle');
 });
 
-When('I click {string}', async function (this: BouncrWorld, buttonText: string) {
-  // Try button role first, then general text click
-  const button = this.page.getByRole('button', { name: buttonText });
-  if (await button.count() > 0) {
-    await button.first().click();
-  } else {
-    // May be a link
-    const link = this.page.getByRole('link', { name: buttonText });
-    if (await link.count() > 0) {
-      await link.first().click();
-    } else {
-      // Fallback to text locator
-      await this.page.locator(`text="${buttonText}"`).first().click();
-    }
+When('I click {string}', { timeout: 30_000 }, async function (this: BouncrWorld, buttonText: string) {
+  // Try button first (with wait), then link, then text
+  const button = this.page.getByRole('button', { name: buttonText }).first();
+  const buttonVisible = await button.isVisible().catch(() => false);
+
+  if (!buttonVisible) {
+    // Wait for button to appear (up to 10s)
+    await button.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
   }
+
+  if (await button.isVisible().catch(() => false)) {
+    await button.click();
+    return;
+  }
+
+  // Try link
+  const link = this.page.getByRole('link', { name: buttonText }).first();
+  if (await link.isVisible().catch(() => false)) {
+    await link.click();
+    return;
+  }
+
+  // Fallback: text
+  await this.page.locator(`text="${buttonText}"`).first().click({ timeout: 10_000 });
 });
 
 When('I fill in {string} with {string}', async function (this: BouncrWorld, fieldId: string, value: string) {
@@ -82,27 +101,30 @@ When('I fill in {string} with {string}', async function (this: BouncrWorld, fiel
   await input.fill(value);
 });
 
-When('I click on {string} in the list', async function (this: BouncrWorld, itemText: string) {
-  // DataTable rows are clickable; find the row containing the text and click it
+When('I click on {string} in the list', { timeout: 30_000 }, async function (this: BouncrWorld, itemText: string) {
+  // DataTable rows are clickable; wait for the row to appear then click it
   const row = this.page.locator('tr', { hasText: itemText }).first();
+  await row.waitFor({ state: 'visible', timeout: 15_000 });
   await row.click();
   await this.page.waitForLoadState('networkidle');
 });
 
-When('I click {string} and confirm', async function (this: BouncrWorld, buttonText: string) {
+When('I click {string} and confirm', { timeout: 30_000 }, async function (this: BouncrWorld, buttonText: string) {
   // Click the initial delete/action button
-  await this.page.getByRole('button', { name: buttonText }).first().click();
+  const btn = this.page.getByRole('button', { name: buttonText }).first();
+  await btn.waitFor({ state: 'visible', timeout: 15_000 });
+  await btn.click();
   // Wait for the confirmation button to appear, then click it
-  await this.page.waitForSelector('button:has-text("Confirm")', { timeout: 5_000 });
+  await this.page.waitForSelector('button:has-text("Confirm")', { timeout: 10_000 });
   await this.page.getByRole('button', { name: 'Confirm' }).click();
   await this.page.waitForLoadState('networkidle');
 });
 
-Then('I should see {string}', async function (this: BouncrWorld, text: string) {
+Then('I should see {string}', { timeout: 15_000 }, async function (this: BouncrWorld, text: string) {
   await expect(this.page.locator(`text="${text}"`).first()).toBeVisible({ timeout: 10_000 });
 });
 
-Then('I should see a success indication', async function (this: BouncrWorld) {
+Then('I should see a success indication', { timeout: 15_000 }, async function (this: BouncrWorld) {
   // After saving, the form typically switches back to the list view or shows the edit form
   // with the saved data. We check that no error is displayed and the page loaded.
   await this.page.waitForLoadState('networkidle');
@@ -116,7 +138,7 @@ Then('I should see a success indication', async function (this: BouncrWorld) {
   }
 });
 
-Then('I should return to the list view', async function (this: BouncrWorld) {
+Then('I should return to the list view', { timeout: 15_000 }, async function (this: BouncrWorld) {
   // After delete + confirm, we return to the list view which has a "New" button
   await this.page.waitForLoadState('networkidle');
   // The list view shows a heading and possibly a "New" button

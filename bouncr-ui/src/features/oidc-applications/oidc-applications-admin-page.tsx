@@ -22,8 +22,8 @@ const GRANT_TYPES = [
 const config: AdminCrudConfig<OidcApplication> = {
   fetchList: api.getOidcApplications,
   fetchOne: api.getOidcApplication,
-  create: (data) => api.createOidcApplication(data as OidcApplicationCreateRequest),
-  update: (name, data) => api.updateOidcApplication(name, data as OidcApplicationUpdateRequest),
+  create: (data) => api.createOidcApplication(data as unknown as OidcApplicationCreateRequest),
+  update: (name, data) => api.updateOidcApplication(name, data as unknown as OidcApplicationUpdateRequest),
   getIdentifier: (a) => a.name,
 };
 
@@ -131,8 +131,8 @@ function OidcAppEditForm({
   const watchedGrants = watch('grant_types') ?? [];
   const hasAuthCode = watchedGrants.includes('authorization_code');
 
-  const buildPayload = (d: OidcAppFormData): Record<string, unknown> => {
-    const payload: Record<string, unknown> = {
+  const buildPayload = (d: OidcAppFormData): OidcApplicationCreateRequest => {
+    const payload: OidcApplicationCreateRequest = {
       name: d.name,
       grant_types: d.grant_types,
       permissions: Array.from(selectedPerms),
@@ -151,8 +151,7 @@ function OidcAppEditForm({
     if (isCreate) {
       setCreateProblem(null);
       try {
-        const result = await api.createOidcApplication(
-            buildPayload(d) as OidcApplicationCreateRequest);
+        const result = await api.createOidcApplication(buildPayload(d));
         setCreatedCredentials({
           clientId: result.client_id ?? '',
           clientSecret: result.client_secret ?? '',
@@ -163,7 +162,7 @@ function OidcAppEditForm({
         return false;
       }
     }
-    return onSubmit(buildPayload(d));
+    return onSubmit(buildPayload(d) as unknown as Record<string, unknown>);
   };
 
   if (createdCredentials) {

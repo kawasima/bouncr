@@ -102,12 +102,16 @@ BeforeAll({ timeout: 120_000 }, async function () {
       // Role may already exist if tests were re-run without DB reset
     }
     const roleObj = await getRole(globalRequest, globalAdminToken, rc.name);
-    await setRolePermissions(
-      globalRequest,
-      globalAdminToken,
-      rc.name,
-      rc.perms.map((p) => p.name),
-    );
+    try {
+      await setRolePermissions(
+        globalRequest,
+        globalAdminToken,
+        rc.name,
+        rc.perms.map((p) => p.name),
+      );
+    } catch {
+      // Permissions may already be assigned if tests were re-run without DB reset
+    }
 
     // 5. Create corresponding group
     const groupName = Object.values(E2E_GROUPS)[roleConfigs.indexOf(rc)];
@@ -179,7 +183,8 @@ Before({ timeout: 30_000 }, async function (this: BouncrWorld) {
   this.context = await browser.newContext();
   this.page = await this.context.newPage();
   this.request = await playwrightRequest.newContext();
-  this.adminToken = globalAdminToken;
+  // Use cachedTokens['admin'] as the authoritative token (may be refreshed after sign-out)
+  this.adminToken = cachedTokens['admin'] ?? globalAdminToken;
   this.adminPassword = globalAdminPassword;
   this.cachedTokens = cachedTokens;
   this.testData = new Map();

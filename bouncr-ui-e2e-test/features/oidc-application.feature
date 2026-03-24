@@ -1,7 +1,8 @@
 Feature: OIDC Application
 
   Scenario: Create client_credentials application
-    Given I am signed in as "admin"
+    Given no OIDC application "e2e_cli_app" exists
+    And I am signed in as "admin"
     And I am on the admin "oidc_applications" page
     When I click "New"
     And I fill in "name" with "e2e_cli_app"
