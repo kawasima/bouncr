@@ -144,21 +144,7 @@ mvn test -pl bouncr-e2e-test -am
 cd bouncr-proxy && go test ./...
 ```
 
-## Configuration
-
-### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `JDBC_URL` | (required for production) | PostgreSQL connection URL |
-| `REDIS_URL` | (required for production) | Redis connection URL |
-| `JWT_SECRET` | `abcdefghijklmnopqrstuvwxyzabcdef` | HS256 shared secret for proxy↔API JWT |
-| `PORT` | `3005` | API server HTTP port |
-| `OIDC_KEY_ENCRYPTION_KEY` | (optional) | 32-byte Base64 AES-256 key for private key encryption at rest |
-| `DB_DSN` | (required for proxy) | PostgreSQL DSN for bouncr-proxy |
-| `API_SERVER_URL` | `http://localhost:3005` | API server URL for proxy token refresh |
-
-## Production Deployment
+## Configuration & Production Deployment
 
 ### Prerequisites
 
@@ -188,6 +174,7 @@ cd bouncr-proxy && go test ./...
 | `JWT_EXPIRATION` | proxy | `300` | JWT expiration in seconds |
 | `REALM_REFRESH_INTERVAL` | proxy | `30s` | How often the proxy refreshes realm/application cache from DB |
 | `API_SERVER_URL` | proxy | `http://localhost:3005` | API server URL for token refresh |
+| `LOG_LEVEL` | proxy | `info` | Log level: `debug`, `info`, `warn`, `error` |
 
 ### Critical Notes
 

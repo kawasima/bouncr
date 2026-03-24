@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	extprocpb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/admin"
@@ -19,6 +21,8 @@ import (
 )
 
 func main() {
+	initLogger()
+
 	// Check for subcommands
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
@@ -29,6 +33,21 @@ func main() {
 	}
 
 	runServer()
+}
+
+// initLogger sets the default slog level from the LOG_LEVEL environment variable.
+// Supported values: debug, info, warn, error (default: info).
+func initLogger() {
+	level := slog.LevelInfo
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 }
 
 func runServer() {
@@ -75,7 +94,7 @@ func runServer() {
 	adminHandler := admin.NewHandler(realmCache, cfg.InternalSigningKey)
 	go func() {
 		addr := fmt.Sprintf(":%s", cfg.AdminPort)
-		log.Printf("admin HTTP server listening on %s", addr)
+		slog.Info("admin HTTP server listening", "addr", addr)
 		if err := http.ListenAndServe(addr, adminHandler.ServeMux()); err != nil {
 			log.Fatalf("admin HTTP server failed: %v", err)
 		}
@@ -90,7 +109,7 @@ func runServer() {
 	grpcServer := grpc.NewServer()
 	extprocpb.RegisterExternalProcessorServer(grpcServer, extproc.NewServer(authenticator))
 
-	log.Printf("bouncr-proxy ext_proc server listening on :%s", cfg.GRPCPort)
+	slog.Info("bouncr-proxy ext_proc server listening", "port", cfg.GRPCPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("gRPC server failed: %v", err)
 	}
@@ -117,12 +136,12 @@ func runGenEnvoyConfig() {
 
 	grpcPort := 50051
 	if _, err := fmt.Sscanf(cfg.GRPCPort, "%d", &grpcPort); err != nil {
-		log.Printf("WARNING: invalid GRPC_PORT %q, using default %d: %v", cfg.GRPCPort, grpcPort, err)
+		slog.Warn("invalid GRPC_PORT, using default", "value", cfg.GRPCPort, "default", grpcPort, "error", err)
 	}
 
 	listenPort := 3000
 	if _, err := fmt.Sscanf(cfg.ListenPort, "%d", &listenPort); err != nil {
-		log.Printf("WARNING: invalid LISTEN_PORT %q, using default %d: %v", cfg.ListenPort, listenPort, err)
+		slog.Warn("invalid LISTEN_PORT, using default", "value", cfg.ListenPort, "default", listenPort, "error", err)
 	}
 
 	if err := envoyconf.GenerateFullConfig(os.Stdout, apps, grpcPort, listenPort); err != nil {

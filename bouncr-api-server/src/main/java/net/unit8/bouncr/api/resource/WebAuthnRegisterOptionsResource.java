@@ -9,7 +9,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
-import java.net.URI;
+import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnRegistrationOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
@@ -61,7 +61,7 @@ public class WebAuthnRegisterOptionsResource {
         UserRepository userRepo = new UserRepository(dsl);
         User user = userRepo.findByAccount(principal.getName()).orElse(null);
         if (user == null) {
-            return Problem.valueOf(404, "User not found", URI.create("about:blank"));
+            return Problem.valueOf(404, "User not found", BouncrProblem.UNPROCESSABLE.problemUri());
         }
 
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);

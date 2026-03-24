@@ -3,7 +3,7 @@ package extproc
 import (
 	"context"
 	"io"
-	"log"
+	"log/slog"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -24,16 +24,16 @@ func NewServer(authenticator *auth.Authenticator) *Server {
 }
 
 func (s *Server) Process(stream extprocpb.ExternalProcessor_ProcessServer) error {
-	log.Printf("ext_proc: new stream started")
+	slog.Debug("new stream started")
 	ctx := stream.Context()
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			log.Printf("ext_proc: stream EOF")
+			slog.Debug("stream EOF")
 			return nil
 		}
 		if err != nil {
-			log.Printf("ext_proc: recv error: %v", err)
+			slog.Error("recv error", "error", err)
 			return status.Errorf(codes.Internal, "recv error: %v", err)
 		}
 
@@ -41,10 +41,9 @@ func (s *Server) Process(stream extprocpb.ExternalProcessor_ProcessServer) error
 
 		switch v := req.Request.(type) {
 		case *extprocpb.ProcessingRequest_RequestHeaders:
-			log.Printf("ext_proc: received request_headers")
 			resp = s.handleRequestHeaders(ctx, v)
 		default:
-			log.Printf("ext_proc: received non-header request type: %T", req.Request)
+			slog.Debug("received non-header request type", "type", req.Request)
 			// For any other phase (body, trailers, response), just continue
 			resp = &extprocpb.ProcessingResponse{
 				Response: &extprocpb.ProcessingResponse_RequestHeaders{
@@ -53,13 +52,10 @@ func (s *Server) Process(stream extprocpb.ExternalProcessor_ProcessServer) error
 			}
 		}
 
-		mutation := resp.GetRequestHeaders().GetResponse().GetHeaderMutation()
-		log.Printf("ext_proc: ctx done? %v, sending response set=%d remove=%v", ctx.Err(), len(mutation.GetSetHeaders()), mutation.GetRemoveHeaders())
 		if err := stream.Send(resp); err != nil {
-			log.Printf("ext_proc: send error: %v", err)
+			slog.Error("send error", "error", err)
 			return status.Errorf(codes.Internal, "send error: %v", err)
 		}
-		log.Printf("ext_proc: response sent")
 	}
 }
 
@@ -81,21 +77,20 @@ func (s *Server) handleRequestHeaders(
 			path = string(h.GetRawValue())
 		}
 	}
-	log.Printf("ext_proc: path=%q", path)
 
 	if path == "" {
-		log.Printf("ext_proc: no :path header, rejecting")
+		slog.Warn("no :path header, rejecting request")
 		return immediateResponse(typev3.StatusCode_BadRequest)
 	}
 
 	result, err := s.authenticator.Authenticate(ctx, headerMap, path)
 	if err != nil {
-		log.Printf("ext_proc: authentication error: %v", err)
+		slog.Error("authentication error", "path", path, "error", err)
 		return immediateResponse(typev3.StatusCode_ServiceUnavailable)
 	}
 
 	if result == nil {
-		log.Printf("ext_proc: no realm match for path %q, rejecting", path)
+		slog.Debug("no realm match", "path", path)
 		return immediateResponse(typev3.StatusCode_NotFound)
 	}
 
@@ -104,7 +99,7 @@ func (s *Server) handleRequestHeaders(
 
 	// 1. Path rewrite: set :path to the backend-facing path
 	if result.RewritePath != "" && result.RewritePath != path {
-		log.Printf("ext_proc: rewriting path %q -> %q", path, result.RewritePath)
+		slog.Debug("rewriting path", "from", path, "to", result.RewritePath)
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:   ":path",
@@ -116,7 +111,7 @@ func (s *Server) handleRequestHeaders(
 
 	// 2. Set cluster routing header (used by Envoy cluster_header)
 	if result.ClusterName != "" {
-		log.Printf("ext_proc: routing to cluster %q", result.ClusterName)
+		slog.Debug("routing to cluster", "cluster", result.ClusterName)
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:   "x-bouncr-cluster",
@@ -128,11 +123,7 @@ func (s *Server) handleRequestHeaders(
 
 	// 3. Add JWT credential header (if authenticated)
 	if result.HeaderName != "" && result.HeaderValue != "" {
-		preview := result.HeaderValue
-		if len(preview) > 30 {
-			preview = preview[:30] + "..."
-		}
-		log.Printf("ext_proc: adding credential header %s (len=%d, preview=%s)", result.HeaderName, len(result.HeaderValue), preview)
+		slog.Debug("adding credential header", "header", result.HeaderName, "len", len(result.HeaderValue))
 		headers = append(headers, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:      result.HeaderName,

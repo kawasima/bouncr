@@ -3,7 +3,7 @@ package realm
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
@@ -43,7 +43,7 @@ func (c *Cache) StartPeriodicRefresh(interval time.Duration) {
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := c.Refresh(); err != nil {
-				log.Printf("realm cache refresh error: %v", err)
+				slog.Error("realm cache refresh failed", "error", err)
 			}
 		}
 	}()
@@ -129,7 +129,7 @@ func (c *Cache) Refresh() error {
 	for _, rs := range realmsByPath {
 		realmCount += len(rs)
 	}
-	log.Printf("realm cache refreshed: %d realm(s), %d application(s)", realmCount, len(apps))
+	slog.Info("realm cache refreshed", "realms", realmCount, "applications", len(apps))
 	return nil
 }
 

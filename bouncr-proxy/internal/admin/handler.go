@@ -2,7 +2,7 @@ package admin
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/kawasima/bouncr/bouncr-proxy/internal/auth"
@@ -47,11 +47,11 @@ func (h *Handler) requireSignature(next http.HandlerFunc) http.HandlerFunc {
 // handleRefresh triggers an immediate realm cache refresh.
 func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	if err := h.realmCache.Refresh(); err != nil {
-		log.Printf("admin: refresh error: %v", err)
+		slog.Error("realm cache refresh failed", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("admin: realm cache refreshed on demand")
+	slog.Info("realm cache refreshed on demand")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -72,7 +72,7 @@ func (h *Handler) handleClusters(w http.ResponseWriter, r *http.Request) {
 	for _, app := range apps {
 		host, port, err := app.BackendAddress()
 		if err != nil {
-			log.Printf("admin: failed to parse pass_to for app %d: %v", app.ID, err)
+			slog.Warn("failed to parse pass_to", "app_id", app.ID, "error", err)
 			continue
 		}
 		clusters = append(clusters, clusterInfo{

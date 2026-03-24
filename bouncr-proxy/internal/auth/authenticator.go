@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -106,35 +106,27 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 		// Access token cache expired — try refresh via API server
 		profileMap, err = a.refreshFromAPIServer(ctx, token)
 		if err != nil {
-			log.Printf("refresh failed for token %s: %v", truncateToken(token), err)
+			slog.Warn("refresh failed", "token", truncateToken(token), "error", err)
 		}
 		if profileMap == nil {
 			// Both expired — no credential header
 			return result, nil
 		}
-		log.Printf("refreshed access token for session %s", truncateToken(token))
+		slog.Info("refreshed access token", "session", truncateToken(token))
 	}
 
 	// Extract permissionsByRealm and filter to matched realm
 	var permissions []interface{}
 	if pbr, ok := profileMap["permissionsByRealm"]; ok {
-		log.Printf("auth: permissionsByRealm type=%T", pbr)
 		if pbrMap, ok := pbr.(map[string]interface{}); ok {
 			realmKey := strconv.FormatInt(matchedRealm.ID, 10)
-			log.Printf("auth: permissionsByRealm map keys=%v, looking for %q", func() []string {
-				keys := make([]string, 0, len(pbrMap))
-				for k := range pbrMap {
-					keys = append(keys, k)
-				}
-				return keys
-			}(), realmKey)
 			if perms, ok := pbrMap[realmKey]; ok {
 				if permList, ok := perms.([]interface{}); ok {
 					permissions = permList
 				}
 			}
 		} else {
-			log.Printf("auth: permissionsByRealm is not map[string]interface{}, trying map[interface{}]interface{}")
+			slog.Debug("permissionsByRealm fallback to map[interface{}]interface{}")
 			if pbrMap, ok := pbr.(map[interface{}]interface{}); ok {
 				realmKey := matchedRealm.ID
 				if perms, ok := pbrMap[realmKey]; ok {
@@ -152,14 +144,6 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 			}
 		}
 		delete(profileMap, "permissionsByRealm")
-	} else {
-		log.Printf("auth: no permissionsByRealm in profileMap, keys=%v", func() []string {
-			keys := make([]string, 0, len(profileMap))
-			for k := range profileMap {
-				keys = append(keys, k)
-			}
-			return keys
-		}())
 	}
 
 	if permissions == nil {
@@ -178,7 +162,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 		return nil, fmt.Errorf("jwt sign: %w", err)
 	}
 
-	log.Printf("authenticated user %v for realm %d", claims["sub"], matchedRealm.ID)
+	slog.Debug("authenticated", "sub", claims["sub"], "realm", matchedRealm.ID)
 
 	result.HeaderName = a.backendHeaderName
 	result.HeaderValue = jwtToken
