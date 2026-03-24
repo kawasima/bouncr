@@ -37,9 +37,9 @@ function AssignmentSection({ realm, appName, readOnly = false }: { realm: Realm;
         api.getRoles({ limit: 1000 }),
         api.getRealmAssignments(appName, realm.name),
       ]);
-      setGroups(g);
-      setRoles(r);
-      setAssignments(a.map((x) => ({ group: x.group, role: x.role })));
+      setGroups(g ?? []);
+      setRoles(r ?? []);
+      setAssignments((a ?? []).map((x) => ({ group: x.group, role: x.role })));
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     }
@@ -270,8 +270,8 @@ export function RealmsAdminPage() {
         api.getApplication(appName),
         api.getRealms(appName),
       ]);
-      setApp(appData);
-      setRealms(realmData);
+      setApp(appData ?? null);
+      setRealms(realmData ?? []);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     } finally {

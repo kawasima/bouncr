@@ -53,7 +53,7 @@ function RoleEditForm({
   const isReadOnly = !!target && !canUpdate;
 
   useEffect(() => {
-    api.getPermissions({ limit: 1000 }).then(setAllPermissions).catch(() => {});
+    api.getPermissions({ limit: 1000 }).then((r) => setAllPermissions(r ?? [])).catch(() => {});
   }, []);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RoleFormData>({

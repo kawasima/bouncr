@@ -38,7 +38,7 @@ function GroupUsersSection({ groupName, readOnly = false }: { groupName: string;
     setLoading(true);
     try {
       const data = await api.getGroupUsers(groupName);
-      setUsers(data);
+      setUsers(data ?? []);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     } finally {
@@ -52,7 +52,7 @@ function GroupUsersSection({ groupName, readOnly = false }: { groupName: string;
     if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      const results = await api.getUsers({ q: searchQuery, limit: 20 });
+      const results = await api.getUsers({ q: searchQuery, limit: 20 }) ?? [];
       const memberAccounts = new Set(users.map((u) => u.account));
       setSearchResults(results.filter((u) => !memberAccounts.has(u.account)));
     } catch { /* ignore */ } finally {
@@ -186,11 +186,11 @@ function GroupAssignmentsSection({ group, readOnly = false }: { group: Group; re
         api.getRoles({ limit: 1000 }),
         api.getGroupAssignments(group.name),
       ]);
-      const realmLists = await Promise.all(apps.map((a) => api.getRealms(a.name)));
-      const realmList = realmLists.flat();
+      const realmLists = await Promise.all((apps ?? []).map((a) => api.getRealms(a.name)));
+      const realmList = realmLists.flat().filter((r): r is Realm => r !== undefined);
       setRealms(realmList);
-      setRoles(roleList);
-      setAssignments(assignmentList.map((a) => ({
+      setRoles(roleList ?? []);
+      setAssignments((assignmentList ?? []).map((a) => ({
         realm: { id: a.realm.id, name: a.realm.name },
         role: { id: a.role.id, name: a.role.name },
       })));

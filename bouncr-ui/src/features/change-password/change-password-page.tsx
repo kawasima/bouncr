@@ -50,7 +50,7 @@ export function ChangePasswordPage() {
       await api.updatePassword(
         { account: overrideAccount, old_password: data.old_password, new_password: data.new_password },
       );
-      navigate(ROUTES.HOME, { replace: true });
+      navigate(ROUTES.SIGN_IN, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
       else setProblem({ status: 0, detail: 'An unexpected error occurred' });

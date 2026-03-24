@@ -32,6 +32,7 @@ export function ChangeProfilePage() {
   useEffect(() => {
     if (!account) return;
     api.getUser(account).then((user) => {
+      if (!user) return;
       reset({ name: String(user.name ?? ''), email: String(user.email ?? '') });
       setLoading(false);
     }).catch((err) => {

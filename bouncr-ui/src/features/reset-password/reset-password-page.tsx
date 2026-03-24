@@ -23,7 +23,7 @@ export function ResetPasswordPage() {
     }
     api.resetPassword({ code })
       .then((result) => {
-        setInitialPassword(result.password);
+        setInitialPassword(result?.password ?? null);
         setLoading(false);
       })
       .catch((err) => {

@@ -38,7 +38,7 @@ function toQueryString(params: QueryParams): string {
 export async function apiRequest<T>(
   path: string,
   options: RequestInit & { params?: QueryParams } = {},
-): Promise<T> {
+): Promise<T | undefined> {
   const { params, ...fetchOptions } = options;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ export async function apiRequest<T>(
   }
 
   if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined as T;
+    return undefined;
   }
 
   return response.json() as Promise<T>;

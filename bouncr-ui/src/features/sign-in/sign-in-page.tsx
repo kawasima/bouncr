@@ -50,8 +50,10 @@ export function SignInPage() {
     try {
       const enteredAccount = getValues('account') || undefined;
       const options = await api.getWebAuthnSignInOptions(enteredAccount);
+      if (!options) throw new Error('Failed to get sign-in options from server');
       const authJSON = await getAssertion(options);
       const session = await api.signInWithWebAuthn(authJSON);
+      if (!session) throw new Error('No session returned from server');
       login(session.account);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.HOME;
       navigate(from, { replace: true });

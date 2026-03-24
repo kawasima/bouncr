@@ -28,9 +28,9 @@ export function HomePage() {
         api.getOtpKey().catch(() => ({ key: null }) as OtpKey),
         api.getActions({ actor: account, limit: 10 }).catch(() => [] as UserAction[]),
       ]);
-      setUser(userData);
-      setOtpKey(otpData);
-      setActions(actionsData);
+      setUser(userData ?? null);
+      setOtpKey(otpData ?? null);
+      setActions(actionsData ?? []);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
     } finally {

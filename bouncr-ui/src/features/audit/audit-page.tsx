@@ -46,7 +46,7 @@ export function AuditPage() {
           offset: newOffset,
           actor: actor || '*',
         };
-        const result = await api.getActions(params);
+        const result = await api.getActions(params) ?? [];
         if (append) {
           setActions((prev) => [...prev, ...result]);
         } else {

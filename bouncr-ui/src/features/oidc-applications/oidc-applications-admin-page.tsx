@@ -89,8 +89,8 @@ function OidcAppEditForm({
       api.getPermissions({ limit: 1000 }),
       api.getRoles({ limit: 1000 }),
     ]).then(([perms, roles]) => {
-      setAllPermissions(perms);
-      setAllRoles(roles);
+      setAllPermissions(perms ?? []);
+      setAllRoles(roles ?? []);
     }).catch(() => {});
   }, []);
 
@@ -99,7 +99,7 @@ function OidcAppEditForm({
       const perms = await api.getRolePermissions(roleName);
       setSelectedPerms((prev) => {
         const next = new Set(prev);
-        perms.forEach((p) => next.add(p.name));
+        (perms ?? []).forEach((p) => next.add(p.name));
         return next;
       });
     } catch { /* ignore */ }
@@ -152,6 +152,7 @@ function OidcAppEditForm({
       setCreateProblem(null);
       try {
         const result = await api.createOidcApplication(buildPayload(d));
+        if (!result) throw new Error('No response from server when creating OIDC application');
         setCreatedCredentials({
           clientId: result.client_id ?? '',
           clientSecret: result.client_secret ?? '',
@@ -218,7 +219,7 @@ function OidcAppEditForm({
               onClick={async () => {
                 try {
                   const result = await api.regenerateOidcApplicationSecret(target.name);
-                  setRegeneratedSecret(result.client_secret);
+                  setRegeneratedSecret(result?.client_secret ?? null);
                 } catch (err) {
                   if (err instanceof ApiError) setCreateProblem(err.problem);
                 }

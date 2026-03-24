@@ -41,7 +41,7 @@ export function SignUpPage() {
           code: code ?? undefined,
           enable_password_credential: true,
         });
-        setInitialPassword(result.password);
+        setInitialPassword(result?.password ?? null);
       } else {
         await api.signUp({
           account: data.account,

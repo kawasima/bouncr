@@ -31,7 +31,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     api.getUser(account, '(permissions)')
       .then((user) => {
         if (cancelled) return;
-        setPermissions(user.permissions ?? []);
+        setPermissions(user?.permissions ?? []);
       })
       .catch(() => {
         if (cancelled) return;

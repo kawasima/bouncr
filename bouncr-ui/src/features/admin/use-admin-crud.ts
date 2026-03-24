@@ -4,10 +4,10 @@ import type { Problem, PaginationParams } from '@/api/types';
 import { PAGE_SIZE } from '@/lib/constants';
 
 export interface AdminCrudConfig<T> {
-  fetchList: (params: PaginationParams & { q?: string }) => Promise<T[]>;
-  fetchOne: (name: string) => Promise<T>;
-  create: (data: Record<string, unknown>) => Promise<T>;
-  update: (name: string, data: Record<string, unknown>) => Promise<T>;
+  fetchList: (params: PaginationParams & { q?: string }) => Promise<T[] | undefined>;
+  fetchOne: (name: string) => Promise<T | undefined>;
+  create: (data: Record<string, unknown>) => Promise<T | undefined>;
+  update: (name: string, data: Record<string, unknown>) => Promise<T | undefined>;
   getIdentifier: (item: T) => string;
 }
 
@@ -35,7 +35,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
           offset: newOffset,
         };
         if (keyword) params.q = keyword;
-        const result = await config.fetchList(params);
+        const result = await config.fetchList(params) ?? [];
         if (append) {
           setItems((prev) => [...prev, ...result]);
         } else {
@@ -71,7 +71,7 @@ export function useAdminCrud<T>(config: AdminCrudConfig<T>) {
       if (item) {
         try {
           const detail = await config.fetchOne(config.getIdentifier(item));
-          setEditTarget(detail);
+          setEditTarget(detail ?? null);
         } catch (err) {
           if (err instanceof ApiError) setProblem(err.problem);
           return;

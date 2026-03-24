@@ -13,7 +13,7 @@ export function PasskeySection({ onRefresh }: { onRefresh: () => void }) {
 
   useEffect(() => {
     api.getWebAuthnCredentials()
-      .then(setCredentials)
+      .then((r) => setCredentials(r ?? []))
       .catch(() => setCredentials([]));
   }, []);
 
@@ -22,11 +22,12 @@ export function PasskeySection({ onRefresh }: { onRefresh: () => void }) {
     setProblem(null);
     try {
       const options = await api.getWebAuthnRegisterOptions();
+      if (!options) throw new Error('Failed to get registration options from server');
       const registrationResponseJSON = await createCredential(options);
       const name = prompt('Name this passkey (optional):') || null;
       await api.registerWebAuthn(registrationResponseJSON, name);
       const updated = await api.getWebAuthnCredentials();
-      setCredentials(updated);
+      setCredentials(updated ?? []);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError) {

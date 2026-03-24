@@ -23,7 +23,7 @@ export function InvitationsAdminPage() {
   const loadGroups = useCallback(async () => {
     try {
       const groups = await api.getGroups({ limit: 1000 });
-      setAllGroups(groups);
+      setAllGroups(groups ?? []);
     } catch { /* ignore */ }
   }, []);
 
@@ -39,9 +39,10 @@ export function InvitationsAdminPage() {
     try {
       const groupIds = Array.from(selectedGroups).map((id) => ({ id }));
       const result = await api.createInvitation({ email: data.email, groups: groupIds });
-      setCreatedCode(result.code);
+      setCreatedCode(result?.code ?? null);
     } catch (err) {
       if (err instanceof ApiError) setProblem(err.problem);
+      else setProblem({ status: 0, detail: 'An unexpected error occurred' });
     }
   };
 
