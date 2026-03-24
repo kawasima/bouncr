@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -50,6 +51,7 @@ func envOrDefault(key, defaultValue string) string {
 func parseDuration(s string) time.Duration {
 	d, err := time.ParseDuration(s)
 	if err != nil {
+		log.Printf("WARNING: invalid REALM_REFRESH_INTERVAL %q, using default 30s: %v", s, err)
 		return 30 * time.Second
 	}
 	return d

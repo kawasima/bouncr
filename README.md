@@ -156,6 +156,66 @@ cd bouncr-proxy && go test ./...
 | `DB_DSN` | (required for proxy) | PostgreSQL DSN for bouncr-proxy |
 | `API_SERVER_URL` | `http://localhost:3005` | API server URL for proxy token refresh |
 
+## Production Deployment
+
+### Prerequisites
+
+- PostgreSQL 16+
+- Redis 7+
+- Envoy 1.31+ (or compatible version with ext_proc support)
+
+### Important Configuration
+
+| Variable | Component | Default | Description |
+|---|---|---|---|
+| `JDBC_URL` | api-server | (required) | PostgreSQL JDBC connection URL |
+| `JDBC_USER` | api-server | (required) | Database user |
+| `JDBC_PASSWORD` | api-server | (required) | Database password |
+| `REDIS_URL` | api-server, proxy | (required) | Redis connection URL |
+| `JWT_SECRET` | api-server, proxy | (required) | HS256 shared secret — **must be identical** between api-server and proxy |
+| `INTERNAL_SIGNING_KEY` | api-server, proxy | (required) | HMAC key for internal API calls — **must be identical** |
+| `PORT` | api-server | `3005` | API server HTTP listen port |
+| `CORS_ORIGINS` | api-server | (none) | Allowed CORS origins (restrict in production) |
+| `ADMIN_PASSWORD` | api-server | (random) | Initial admin user password (only used on first startup) |
+| `OIDC_KEY_ENCRYPTION_KEY` | api-server | (optional) | 32-byte Base64 AES-256 key for private key encryption at rest |
+| `DB_DSN` | proxy | (required) | PostgreSQL DSN for bouncr-proxy |
+| `GRPC_PORT` | proxy | `50051` | gRPC listen port for ext_proc |
+| `ADMIN_PORT` | proxy | `8081` | Admin HTTP port (`/_healthcheck`, `/_refresh`, `/_clusters`) |
+| `TOKEN_COOKIE_NAME` | proxy | `BOUNCR_TOKEN` | Cookie name for session token |
+| `BACKEND_HEADER_NAME` | proxy | `x-bouncr-credential` | Header name for JWT passed to backends |
+| `JWT_EXPIRATION` | proxy | `300` | JWT expiration in seconds |
+| `REALM_REFRESH_INTERVAL` | proxy | `30s` | How often the proxy refreshes realm/application cache from DB |
+| `API_SERVER_URL` | proxy | `http://localhost:3005` | API server URL for token refresh |
+
+### Critical Notes
+
+1. **`CLEAR_SCHEMA` must be `false` (default) in production.** The `dev` profile sets `CLEAR_SCHEMA=true`, which **drops and recreates the entire database on every startup**. Never use `-Pdev` in production.
+
+2. **`JWT_SECRET` and `INTERNAL_SIGNING_KEY` must match** between api-server and proxy. Use strong random values (32+ characters).
+
+3. **TLS termination**: Configure TLS at the Envoy layer or a load balancer in front of Envoy. Bouncr services communicate over plaintext internally.
+
+4. **Backend must verify `x-bouncr-credential`**: Requests that match a realm but have no valid token are still routed to the backend — without the credential header. Backends **must** check for the presence and validity of this header before granting access. Do not assume that a routed request is authenticated.
+
+5. **Envoy configuration**: Use `bouncr-proxy gen-envoy-config` to generate Envoy cluster configuration from the database:
+   ```bash
+   export DB_DSN="postgres://..."
+   bouncr-proxy gen-envoy-config > envoy.yaml
+   ```
+
+6. **Docker image build order**:
+   ```bash
+   # 1. Build api-server image (requires Maven + JDK 25)
+   cd bouncr-api-server && mvn compile jib:dockerBuild
+
+   # 2. Build proxy and UI images
+   docker build -t bouncr/bouncr-proxy bouncr-proxy
+   docker build -t bouncr/bouncr-ui bouncr-ui
+
+   # 3. Start all services
+   docker compose up
+   ```
+
 ## Migration Upgrade Note
 
 From v0.3.0 onward, historical Java migrations `V1` through `V28` are consolidated into a single baseline migration `B28__BouncrV0_3_0`.

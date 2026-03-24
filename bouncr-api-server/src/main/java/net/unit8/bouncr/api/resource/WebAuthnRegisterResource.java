@@ -105,7 +105,7 @@ public class WebAuthnRegisterResource {
         UserRepository userRepo = new UserRepository(dsl);
         User user = userRepo.findByAccount(principal.getName()).orElse(null);
         if (user == null) {
-            return Problem.valueOf(404, "User not found", java.net.URI.create("about:blank"));
+            return Problem.valueOf(404, "User not found", BouncrProblem.UNPROCESSABLE.problemUri());
         }
 
         if (challengeData.userId() != null && !challengeData.userId().equals(user.id())) {
