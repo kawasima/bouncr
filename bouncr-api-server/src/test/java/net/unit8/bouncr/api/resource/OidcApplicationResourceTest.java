@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OidcApplicationResourceTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private DSLContext dsl;
-    private OidcApplicationsResoruce createResource;
+    private OidcApplicationsResource createResource;
     private OAuth2AuthorizeResource authorizeResource;
 
     @BeforeEach
@@ -40,7 +40,7 @@ class OidcApplicationResourceTest {
 
         BouncrConfiguration config = createConfig();
 
-        createResource = new OidcApplicationsResoruce();
+        createResource = new OidcApplicationsResource();
         setField(createResource, "config", config);
 
         authorizeResource = new OAuth2AuthorizeResource();
@@ -70,11 +70,11 @@ class OidcApplicationResourceTest {
         assertThat(problem).isNull();
 
         boolean created = createResource.create(
-                context.get(OidcApplicationsResoruce.CREATE_REQ).orElseThrow(),
+                context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 context, dsl);
         assertThat(created).isTrue();
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResoruce.RESPONSE).orElseThrow();
+        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
         assertThat(response.client_id()).isNotBlank();
         assertThat(response.client_secret()).isNotBlank();
         assertThat(response.grant_types()).containsExactly("client_credentials");
@@ -93,7 +93,7 @@ class OidcApplicationResourceTest {
         RestContext context = restContext();
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
-                context.get(OidcApplicationsResoruce.CREATE_REQ).orElseThrow(),
+                context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 context, dsl);
 
         // Verify round-trip through DB
@@ -122,10 +122,10 @@ class OidcApplicationResourceTest {
         RestContext context = restContext();
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
-                context.get(OidcApplicationsResoruce.CREATE_REQ).orElseThrow(),
+                context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 context, dsl);
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResoruce.RESPONSE).orElseThrow();
+        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
         assertThat(response.grant_types()).containsExactlyInAnyOrder("authorization_code", "refresh_token");
         assertThat(response.callback_url()).isEqualTo("https://webapp.example/callback");
     }
@@ -211,9 +211,9 @@ class OidcApplicationResourceTest {
         RestContext createCtx = restContext();
         createResource.validateCreate(body, createCtx);
         createResource.create(
-                createCtx.get(OidcApplicationsResoruce.CREATE_REQ).orElseThrow(),
+                createCtx.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 createCtx, dsl);
-        OidcApplicationCreatedResponse created = createCtx.get(OidcApplicationsResoruce.RESPONSE).orElseThrow();
+        OidcApplicationCreatedResponse created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
         String originalSecret = created.client_secret();
 
         // Regenerate secret

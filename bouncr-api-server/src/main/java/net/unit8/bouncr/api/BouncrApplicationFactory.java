@@ -88,7 +88,7 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
                 ar.all("/permission/:name").to(PermissionResource.class);
                 ar.all("/oidc_providers").to(OidcProvidersResource.class);
                 ar.all("/oidc_provider/:name").to(OidcProviderResource.class);
-                ar.all("/oidc_applications").to(OidcApplicationsResoruce.class);
+                ar.all("/oidc_applications").to(OidcApplicationsResource.class);
                 ar.all("/oidc_application/:name").to(OidcApplicationResource.class);
                 ar.all("/oidc_application/:name/secret").to(OidcApplicationSecretResource.class);
 

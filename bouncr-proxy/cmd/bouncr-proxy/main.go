@@ -64,6 +64,7 @@ func runServer() {
 		redisStore,
 		realmCache,
 		cfg.JWTSecret,
+		cfg.JWTExpiration,
 		cfg.TokenCookieName,
 		cfg.BackendHeaderName,
 		cfg.APIServerURL,

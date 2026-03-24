@@ -20,6 +20,7 @@ type Authenticator struct {
 	store              *store.RedisStore
 	realmCache         *realm.Cache
 	jwtSecret          []byte
+	jwtExpiration      int64
 	cookieName         string
 	backendHeaderName  string
 	apiServerURL       string
@@ -30,6 +31,7 @@ func NewAuthenticator(
 	store *store.RedisStore,
 	realmCache *realm.Cache,
 	jwtSecret string,
+	jwtExpiration int64,
 	cookieName string,
 	backendHeaderName string,
 	apiServerURL string,
@@ -39,6 +41,7 @@ func NewAuthenticator(
 		store:              store,
 		realmCache:         realmCache,
 		jwtSecret:          []byte(jwtSecret),
+		jwtExpiration:      jwtExpiration,
 		cookieName:         cookieName,
 		backendHeaderName:  backendHeaderName,
 		apiServerURL:       apiServerURL,
@@ -170,7 +173,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 	}
 	claims["permissions"] = permissions
 
-	jwtToken, err := jwt.Sign(claims, a.jwtSecret)
+	jwtToken, err := jwt.Sign(claims, a.jwtSecret, a.jwtExpiration)
 	if err != nil {
 		return nil, fmt.Errorf("jwt sign: %w", err)
 	}

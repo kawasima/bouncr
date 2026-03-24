@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type Config struct {
 	RedisKeyPrefix       string
 	DBDSN                string
 	JWTSecret            string
+	JWTExpiration        int64
 	TokenCookieName      string
 	BackendHeaderName    string
 	RealmRefreshInterval time.Duration
@@ -29,6 +31,7 @@ func Load() *Config {
 		RedisKeyPrefix:       envOrDefault("REDIS_KEY_PREFIX", "BOUNCR_TOKEN:"),
 		DBDSN:                envOrDefault("DB_DSN", ""),
 		JWTSecret:            envOrDefault("JWT_SECRET", ""),
+		JWTExpiration:        parseIntOrDefault(envOrDefault("JWT_EXPIRATION", "300"), 300),
 		TokenCookieName:      envOrDefault("TOKEN_COOKIE_NAME", "BOUNCR_TOKEN"),
 		BackendHeaderName:    envOrDefault("BACKEND_HEADER_NAME", "x-bouncr-credential"),
 		RealmRefreshInterval: parseDuration(envOrDefault("REALM_REFRESH_INTERVAL", "30s")),
@@ -50,4 +53,12 @@ func parseDuration(s string) time.Duration {
 		return 30 * time.Second
 	}
 	return d
+}
+
+func parseIntOrDefault(s string, defaultValue int64) int64 {
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+	return v
 }

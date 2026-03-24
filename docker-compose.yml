@@ -36,8 +36,14 @@ services:
     ports:
       - "50051:50051"
       - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/_healthcheck || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api-server:
+    # Build with: cd bouncr-api-server && mvn compile jib:dockerBuild
     image: bouncr/bouncr-api-server
     networks:
       default:
@@ -79,8 +85,10 @@ services:
     image: envoyproxy/envoy:v1.31-latest
     command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_proc:debug,http:debug,router:debug"]
     depends_on:
-      - proxy
-      - api-server
+      proxy:
+        condition: service_healthy
+      api-server:
+        condition: service_healthy
     volumes:
       - ./envoy/envoy-docker.yaml:/etc/envoy/envoy.yaml:ro
     ports:

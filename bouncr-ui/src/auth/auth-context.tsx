@@ -1,5 +1,7 @@
-import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { STORAGE_KEY } from '@/lib/constants';
+import { ApiError } from '@/api/client';
+import * as api from '@/api/endpoints';
 
 interface GuestState {
   status: 'guest';
@@ -89,6 +91,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     dispatch({ type: 'LOGOUT' });
   }, []);
+
+  // Periodic session validation: check every 5 minutes if the session is still valid
+  const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
+
+  useEffect(() => {
+    if (state.status !== 'logged_in') return;
+
+    const account = state.account;
+    const checkSession = async () => {
+      try {
+        await api.getUser(account);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          logoutRef.current();
+        }
+      }
+    };
+
+    const id = setInterval(checkSession, SESSION_CHECK_INTERVAL);
+    return () => clearInterval(id);
+  }, [state]);
 
   const value: AuthContextValue = {
     state,
