@@ -119,6 +119,11 @@ public class OidcSignInResource {
                 ? oidcProvider.clientConfig().redirectUri().toString()
                 : redirectUriBase + "/sign_in/oidc/" + (oidcProvider != null ? oidcProvider.name() : params.get("name"));
 
+        if (oidcProvider == null || oidcProvider.providerMetadata() == null || oidcProvider.clientConfig() == null) {
+            context.setMessage(Problem.valueOf(500, "OIDC provider is not configured: " + params.get("name")));
+            return false;
+        }
+
         HashMap<String, Object> res = Failsafe.with(config.getHttpClientRetryPolicy()).get(() -> {
             Map<String, String> form = new LinkedHashMap<>();
             form.put("grant_type", "authorization_code");

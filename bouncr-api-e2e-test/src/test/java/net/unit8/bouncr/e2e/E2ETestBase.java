@@ -315,9 +315,15 @@ public abstract class E2ETestBase {
     }
 
     private static EnkanSystem createTestSystem() {
-        // Set defaults only if not already configured (env var or system property)
-        setPropertyIfAbsent("cors.origins", "*");
+        // Set enkan.env first — cors.origins default depends on it
         setPropertyIfAbsent("enkan.env", "development");
+
+        String env = System.getProperty("enkan.env", "development");
+        if ("development".equals(env)) {
+            setPropertyIfAbsent("cors.origins", "*");
+        } else {
+            setPropertyIfAbsent("cors.origins", "http://localhost:13005");
+        }
         setPropertyIfAbsent("internal.signing.key", "e2e-test-internal-signing-key!");
 
         String jdbcUrl = "jdbc:h2:mem:e2e_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
@@ -366,7 +372,10 @@ public abstract class E2ETestBase {
     }
 
     private static void setPropertyIfAbsent(String key, String value) {
-        if (System.getProperty(key) == null && System.getenv(key.replace('.', '_').toUpperCase()) == null) {
+        String prop = System.getProperty(key);
+        String envKey = key.replace('.', '_').toUpperCase();
+        String env = System.getenv(envKey);
+        if ((prop == null || prop.isBlank()) && (env == null || env.isBlank())) {
             System.setProperty(key, value);
         }
     }
