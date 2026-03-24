@@ -45,7 +45,7 @@ class PasswordResetChallengeResourceTest {
         setField(resource, "config", new BouncrConfiguration());
 
         RestContext context = restContext();
-        WordName req = new WordName("no-such-user");
+        WordName req = new WordName("no_such_user");
         context.put(PasswordResetChallengeResource.CREATE_REQ, req);
 
         resource.create(req, context, dsl);

@@ -8,6 +8,7 @@ import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import enkan.exception.FalteringEnvironmentException;
+import enkan.exception.MisconfigurationException;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
@@ -124,8 +125,13 @@ public class OidcSignInResource {
             form.put("code", params.get("code"));
             form.put("redirect_uri", redirectUri);
 
+            String tokenEndpoint = oidcProvider.providerMetadata().tokenEndpoint();
+            if (tokenEndpoint == null || tokenEndpoint.isBlank()) {
+                throw new MisconfigurationException("bouncr.OIDC_PROVIDER_TOKEN_ENDPOINT_MISSING",
+                        "token_endpoint is not configured for provider: " + oidcProvider.name());
+            }
             java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(oidcProvider.providerMetadata().tokenEndpoint()))
+                    .uri(java.net.URI.create(tokenEndpoint))
                     .timeout(Duration.ofSeconds(10))
                     .header("content-type", "application/x-www-form-urlencoded");
 

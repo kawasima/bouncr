@@ -86,11 +86,12 @@ public class PasswordCredentialResource {
                     yield Problem.fromViolationList(java.util.List.of(
                             new Problem.Violation("new_password", "is the same as the old password")));
                 }
-                Problem.Violation policyViolation = conformPolicy((String) newPassword);
+                Problem.Violation policyViolation = conformPolicy(newPassword);
                 if (policyViolation != null) {
                     yield Problem.fromViolationList(java.util.List.of(policyViolation));
                 }
-                context.put(UPDATE_REQ, new Tuple3<>((String) account, (String) oldPassword, (String) newPassword));
+                String accountStr = account instanceof WordName wn ? wn.value() : null;
+                context.put(UPDATE_REQ, new Tuple3<>(accountStr, oldPassword, newPassword));
                 yield null;
             }
             case Ok<?> _ -> throw new IllegalStateException();

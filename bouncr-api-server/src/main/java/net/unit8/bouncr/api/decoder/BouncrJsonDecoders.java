@@ -165,8 +165,8 @@ public final class BouncrJsonDecoders {
             withDefault(field("initial", bool()), true)
     ).map(Tuple3::new)::decode;
 
-    public static final JsonDecoder<Tuple3<String, String, String>> PASSWORD_CREDENTIAL_UPDATE = combine(
-            withDefault(field("account", string()), (String) null),
+    public static final JsonDecoder<Tuple3<WordName, String, String>> PASSWORD_CREDENTIAL_UPDATE = combine(
+            withDefault(field("account", WORD_NAME), (WordName) null),
             field("old_password", PASSWORD),
             field("new_password", PASSWORD)
     ).map(Tuple3::new)::decode;
@@ -241,16 +241,15 @@ public final class BouncrJsonDecoders {
     public static final JsonDecoder<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>> OIDC_PROVIDER_CREATE = combine(
             field("name", WORD_NAME),
             field("authorization_endpoint", string().nonBlank().maxLength(255)),
-            withDefault(field("token_endpoint", string().maxLength(255)), (String) null),
-            withDefault(field("jwks_uri", string().maxLength(512).flatMap(s ->
-                    s != null && !s.isBlank() ? Result.ok(URI.create(s)) : Result.ok((URI) null))), (URI) null),
+            field("token_endpoint", string().nonBlank().maxLength(255)),
+            withDefault(field("jwks_uri", httpUri(512)), (URI) null),
             withDefault(field("issuer", string().maxLength(512)), (String) null),
             field("client_id", string().nonBlank().maxLength(255)),
             field("client_secret", string().nonBlank().maxLength(255)),
             field("scope", string().nonBlank().maxLength(255)),
             field("response_type", string().nonBlank().maxLength(16)),
             field("token_endpoint_auth_method", string().nonBlank()),
-            field("redirect_uri", string().nonBlank().maxLength(255).map(URI::create)),
+            field("redirect_uri", string().nonBlank().maxLength(255).uri()),
             withDefault(field("pkce_enabled", bool()), false)
     ).map((name, ae, te, jwks, iss, cid, cs, scope, rt, team, ru, pkce) ->
             new Tuple3<>(name,
