@@ -1,7 +1,7 @@
 {
   "name": "bouncr-ui",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.0-RC1",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -7,7 +7,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/redis/go-redis/v9 v9.18.0
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.3
 )
 
 require (
