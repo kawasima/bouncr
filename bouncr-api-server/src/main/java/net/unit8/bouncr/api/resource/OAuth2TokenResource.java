@@ -319,6 +319,9 @@ public class OAuth2TokenResource {
     }
 
     private byte[] decryptPrivateKey(OidcApplication app) {
+        if (app.signingKeys() == null) {
+            throw new IllegalStateException("Signing keys are not configured for OIDC application: " + app.name());
+        }
         KeyEncryptor encryptor = new KeyEncryptor(config.getKeyEncryptionKey(), config.getSecureRandom());
         return encryptor.decrypt(app.signingKeys().privateKey());
     }
