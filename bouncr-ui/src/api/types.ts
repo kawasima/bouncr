@@ -268,7 +268,7 @@ export interface OidcProviderCreateRequest {
   pkceEnabled?: boolean;
 }
 
-export interface OidcProviderUpdateRequest extends OidcProviderCreateRequest {}
+export type OidcProviderUpdateRequest = OidcProviderCreateRequest;
 
 export interface OidcApplicationCreateRequest {
   name: string;
@@ -281,7 +281,7 @@ export interface OidcApplicationCreateRequest {
   permissions?: string[];
 }
 
-export interface OidcApplicationUpdateRequest extends OidcApplicationCreateRequest {}
+export type OidcApplicationUpdateRequest = OidcApplicationCreateRequest;
 
 export interface InvitationCreateRequest {
   email: string;

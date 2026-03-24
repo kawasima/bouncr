@@ -10,7 +10,7 @@ import type { OidcApplication, OidcApplicationCreateRequest, OidcApplicationUpda
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const GRANT_TYPES = [

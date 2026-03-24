@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { usePermissions } from './permission-context';
+import { usePermissions } from './use-permissions';
 import { LoadingSpinner } from '@/components/loading-spinner';
 
 interface RequirePermissionProps {

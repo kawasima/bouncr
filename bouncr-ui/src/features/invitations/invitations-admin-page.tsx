@@ -27,6 +27,7 @@ export function InvitationsAdminPage() {
     } catch { /* ignore */ }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadGroups(); }, [loadGroups]);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<InvitationFormData>({

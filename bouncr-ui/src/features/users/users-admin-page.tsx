@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as api from '@/api/endpoints';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';

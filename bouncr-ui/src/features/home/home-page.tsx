@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth/use-auth';
 import * as api from '@/api/endpoints';
 import type { User, UserAction, OtpKey, Problem } from '@/api/types';
 import { ApiError } from '@/api/client';

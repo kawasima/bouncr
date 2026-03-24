@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/routes/route-paths';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const menuItems = [

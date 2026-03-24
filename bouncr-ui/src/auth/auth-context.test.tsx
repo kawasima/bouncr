@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from './auth-context';
+import { AuthProvider } from './auth-context';
+import { useAuth } from './use-auth';
 
 // Mock the api endpoints module so periodic session check doesn't make real calls
 vi.mock('@/api/endpoints', () => ({

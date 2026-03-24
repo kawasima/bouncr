@@ -1,46 +1,53 @@
-import { createContext, useContext, useState, useMemo, useEffect, useCallback, type ReactNode } from 'react';
-import { useAuth } from './auth-context';
+import { createContext, useReducer, useMemo, useEffect, useCallback, type ReactNode } from 'react';
+import { useAuth } from './use-auth';
 import * as api from '@/api/endpoints';
 
-interface PermissionContextValue {
+export interface PermissionContextValue {
   permissions: string[];
   loading: boolean;
   error: boolean;
   hasPermission: (...names: string[]) => boolean;
 }
 
-const PermissionContext = createContext<PermissionContextValue | null>(null);
+// eslint-disable-next-line react-refresh/only-export-components
+export const PermissionContext = createContext<PermissionContextValue | null>(null);
+
+type PermState = { permissions: string[]; loading: boolean; error: boolean };
+type PermAction =
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; permissions: string[] }
+  | { type: 'FETCH_ERROR' };
+
+function permReducer(_state: PermState, action: PermAction): PermState {
+  switch (action.type) {
+    case 'FETCH_START': return { permissions: [], loading: true, error: false };
+    case 'FETCH_SUCCESS': return { permissions: action.permissions, loading: false, error: false };
+    case 'FETCH_ERROR': return { permissions: [], loading: false, error: true };
+  }
+}
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { account, isAuthenticated } = useAuth();
-  const [permissions, setPermissions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [{ permissions, loading, error }, dispatch] = useReducer(permReducer, {
+    permissions: [],
+    loading: true,
+    error: false,
+  });
 
   useEffect(() => {
-    let cancelled = false;
-
     if (!isAuthenticated || !account) {
-      setPermissions([]);
-      setLoading(false);
-      setError(false);
       return;
     }
-    setLoading(true);
-    setError(false);
+    let cancelled = false;
+    dispatch({ type: 'FETCH_START' });
     api.getUser(account, '(permissions)')
       .then((user) => {
         if (cancelled) return;
-        setPermissions(user?.permissions ?? []);
+        dispatch({ type: 'FETCH_SUCCESS', permissions: user?.permissions ?? [] });
       })
       .catch(() => {
         if (cancelled) return;
-        setPermissions([]);
-        setError(true);
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoading(false);
+        dispatch({ type: 'FETCH_ERROR' });
       });
 
     return () => { cancelled = true; };
@@ -53,15 +60,16 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     [permissionSet],
   );
 
+  const value = useMemo(() => {
+    if (!isAuthenticated) {
+      return { permissions: [], loading: false, error: false, hasPermission: () => false };
+    }
+    return { permissions, loading, error, hasPermission };
+  }, [isAuthenticated, permissions, loading, error, hasPermission]);
+
   return (
-    <PermissionContext.Provider value={{ permissions, loading, error, hasPermission }}>
+    <PermissionContext.Provider value={value}>
       {children}
     </PermissionContext.Provider>
   );
-}
-
-export function usePermissions(): PermissionContextValue {
-  const ctx = useContext(PermissionContext);
-  if (!ctx) throw new Error('usePermissions must be used within PermissionProvider');
-  return ctx;
 }

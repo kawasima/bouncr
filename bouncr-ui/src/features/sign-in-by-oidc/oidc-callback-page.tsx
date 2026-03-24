@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth/use-auth';
 import { ROUTES } from '@/routes/route-paths';
 import { LoadingSpinner } from '@/components/loading-spinner';
 
@@ -8,21 +8,19 @@ export function OidcCallbackPage() {
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
+
+  const account = searchParams.get('account');
+  const code = searchParams.get('code');
+  const error = (account || code) ? null : 'Invalid OIDC callback. Missing account or code.';
 
   useEffect(() => {
-    const account = searchParams.get('account');
-    const code = searchParams.get('code');
-
     if (account) {
       login(account);
       navigate(ROUTES.HOME, { replace: true });
     } else if (code) {
       navigate(`${ROUTES.SIGN_UP}?code=${encodeURIComponent(code)}`, { replace: true });
-    } else {
-      setError('Invalid OIDC callback. Missing account or code.');
     }
-  }, [searchParams, login, navigate]);
+  }, [account, code, login, navigate]);
 
   if (error) {
     return (

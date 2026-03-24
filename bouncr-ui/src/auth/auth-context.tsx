@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
 import { STORAGE_KEY } from '@/lib/constants';
 import { ApiError } from '@/api/client';
 import * as api from '@/api/endpoints';
@@ -28,7 +28,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 function authReducer(_state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
@@ -124,8 +125,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext value={value}>{children}</AuthContext>;
 }
 
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-}

@@ -11,16 +11,14 @@ import { ROUTES } from '@/routes/route-paths';
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
-  const [problem, setProblem] = useState<Problem | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(
+    code ? null : { status: 400, detail: 'Missing reset code' },
+  );
   const [initialPassword, setInitialPassword] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!code);
 
   useEffect(() => {
-    if (!code) {
-      setProblem({ status: 400, detail: 'Missing reset code' });
-      setLoading(false);
-      return;
-    }
+    if (!code) return;
     api.resetPassword({ code })
       .then((result) => {
         setInitialPassword(result?.password ?? null);

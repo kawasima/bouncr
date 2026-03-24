@@ -8,7 +8,7 @@ import type { ColumnDef } from '@/components/data-table';
 import type { OidcProvider, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const config: AdminCrudConfig<OidcProvider> = {

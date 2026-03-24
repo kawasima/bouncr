@@ -11,16 +11,14 @@ import { ROUTES } from '@/routes/route-paths';
 export function EmailVerificationPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
-  const [problem, setProblem] = useState<Problem | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(
+    code ? null : { status: 400, detail: 'Missing verification code' },
+  );
   const [verified, setVerified] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!code);
 
   useEffect(() => {
-    if (!code) {
-      setProblem({ status: 400, detail: 'Missing verification code' });
-      setLoading(false);
-      return;
-    }
+    if (!code) return;
     api.verifyEmail(code)
       .then(() => {
         setVerified(true);

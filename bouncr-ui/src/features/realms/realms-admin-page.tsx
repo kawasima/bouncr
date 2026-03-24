@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { ArrowLeft, Plus, X } from 'lucide-react';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 
 const realmSchema = z.object({

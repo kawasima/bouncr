@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth/use-auth';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/routes/route-paths';
 import * as api from '@/api/endpoints';

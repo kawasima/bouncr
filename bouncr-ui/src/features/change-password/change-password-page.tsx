@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth/use-auth';
 import { ApiError } from '@/api/client';
 import * as api from '@/api/endpoints';
 import type { Problem } from '@/api/types';

@@ -10,7 +10,7 @@ import type { ColumnDef } from '@/components/data-table';
 import type { Permission, Problem } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
-import { usePermissions } from '@/auth/permission-context';
+import { usePermissions } from '@/auth/use-permissions';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 import { Trash2 } from 'lucide-react';
 
