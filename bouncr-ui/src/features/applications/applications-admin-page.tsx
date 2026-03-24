@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import * as api from '@/api/endpoints';
+import { ApiError } from '@/api/client';
 import { AdminCrudPage } from '@/features/admin/admin-crud-page';
 import type { AdminCrudConfig } from '@/features/admin/use-admin-crud';
 import type { ColumnDef } from '@/components/data-table';
@@ -11,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
+import { Trash2 } from 'lucide-react';
 
 const config: AdminCrudConfig<Application> = {
   fetchList: api.getApplications,
@@ -52,14 +55,19 @@ function AppEditForm({
   target,
   onSubmit,
   problem,
+  onDeleted,
   canUpdate = true,
 }: {
   target: Application | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  onDeleted?: () => void;
   canUpdate?: boolean;
 }) {
   const isReadOnly = !!target && !canUpdate;
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteProblem, setDeleteProblem] = useState<Problem | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<AppFormData>({
     resolver: zodResolver(appSchema),
     defaultValues: target ?? { name: '', description: '', pass_to: '', virtual_path: '', top_page: '' },
@@ -103,15 +111,60 @@ function AppEditForm({
         <input id="top_page" {...register('top_page')} disabled={isReadOnly} placeholder="/app/" className="mansion-input w-full py-2" />
         {errors.top_page && <p className="text-sm text-destructive">{errors.top_page.message}</p>}
       </div>
-      {(!target || canUpdate) && (
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-        >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
-      )}
+      <ProblemAlert problem={deleteProblem} />
+      <div className="flex items-center gap-4">
+        {(!target || canUpdate) && (
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        )}
+        {target && onDeleted && (
+          <>
+            {confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-destructive">Delete this application?</span>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await api.deleteApplication(target.name);
+                      onDeleted();
+                    } catch (err) {
+                      if (err instanceof ApiError) setDeleteProblem(err.problem);
+                    } finally {
+                      setDeleting(false);
+                      setConfirmDelete(false);
+                    }
+                  }}
+                  disabled={deleting}
+                  variant="outline"
+                  className="text-xs text-destructive border-destructive hover:bg-destructive/10"
+                >
+                  {deleting ? 'Deleting...' : 'Confirm'}
+                </Button>
+                <Button type="button" onClick={() => setConfirmDelete(false)} variant="outline" className="text-xs">
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                variant="outline"
+                className="text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+              >
+                <Trash2 className="mr-1 h-3 w-3" />
+                Delete
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </form>
   );
 }
@@ -120,6 +173,7 @@ export function ApplicationsAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.application.create);
   const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.application.update);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.application.delete);
 
   return (
     <AdminCrudPage
@@ -128,7 +182,9 @@ export function ApplicationsAdminPage() {
       columns={columns}
       canCreate={canCreate}
       canUpdate={canUpdate}
-      renderEditForm={(props) => <AppEditForm {...props} canUpdate={props.canUpdate} />}
+      renderEditForm={(props) => (
+        <AppEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
+      )}
     />
   );
 }

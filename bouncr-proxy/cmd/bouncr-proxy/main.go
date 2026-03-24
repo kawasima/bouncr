@@ -116,10 +116,14 @@ func runGenEnvoyConfig() {
 	}
 
 	grpcPort := 50051
-	fmt.Sscanf(cfg.GRPCPort, "%d", &grpcPort)
+	if _, err := fmt.Sscanf(cfg.GRPCPort, "%d", &grpcPort); err != nil {
+		log.Printf("WARNING: invalid GRPC_PORT %q, using default %d: %v", cfg.GRPCPort, grpcPort, err)
+	}
 
 	listenPort := 3000
-	fmt.Sscanf(cfg.ListenPort, "%d", &listenPort)
+	if _, err := fmt.Sscanf(cfg.ListenPort, "%d", &listenPort); err != nil {
+		log.Printf("WARNING: invalid LISTEN_PORT %q, using default %d: %v", cfg.ListenPort, listenPort, err)
+	}
 
 	if err := envoyconf.GenerateFullConfig(os.Stdout, apps, grpcPort, listenPort); err != nil {
 		log.Fatalf("failed to generate config: %v", err)

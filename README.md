@@ -71,6 +71,8 @@ Browser / RP
                       └─ bouncr-api-server (Java, enkan/kotowari-restful)
 ```
 
+> **Backend contract:** Requests that match a realm but carry no valid session token are still routed to the backend — without the `x-bouncr-credential` header. Backends **must** verify the presence and validity of this header before granting access to protected resources.
+
 ## Modules
 
 | Module | Language | Description |

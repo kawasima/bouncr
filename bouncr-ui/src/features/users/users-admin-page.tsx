@@ -16,11 +16,22 @@ import { Lock, Trash2 } from 'lucide-react';
 import { gravatarUrl } from '@/lib/gravatar';
 
 function useGravatar(email: string | undefined, size: number = 160) {
-  const [url, setUrl] = useState(`https://www.gravatar.com/avatar/?s=${size}&d=identicon`);
+  const placeholder = `https://www.gravatar.com/avatar/?s=${size}&d=identicon`;
+  const [state, setState] = useState({ url: placeholder, loaded: false });
   useEffect(() => {
-    gravatarUrl(email, size).then(setUrl);
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset loaded state on email change
+    setState((prev) => ({ ...prev, loaded: false }));
+    gravatarUrl(email, size).then((u) => {
+      if (cancelled) return;
+      const img = document.createElement('img');
+      img.onload = () => { if (!cancelled) setState({ url: u, loaded: true }); };
+      img.onerror = () => { if (!cancelled) setState({ url: u, loaded: true }); };
+      img.src = u;
+    });
+    return () => { cancelled = true; };
   }, [email, size]);
-  return url;
+  return state;
 }
 
 const config: AdminCrudConfig<User> = {
@@ -140,7 +151,7 @@ function UserEditForm({
   const [credCreated, setCredCreated] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const avatarUrl = useGravatar(target?.email ? String(target.email) : undefined);
+  const { url: avatarUrl, loaded: avatarLoaded } = useGravatar(target?.email ? String(target.email) : undefined);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -181,11 +192,13 @@ function UserEditForm({
     <div className="space-y-8">
       {target && (
         <div className="flex gap-6 items-start">
-          <img
-            src={avatarUrl}
-            alt=""
-            className="w-20 h-20 rounded-sm border border-gold/20"
-          />
+          <div className="w-20 h-20 rounded-sm border border-gold/20 overflow-hidden bg-muted">
+            <img
+              src={avatarUrl}
+              alt=""
+              className={`w-full h-full object-cover transition-opacity duration-200 ${avatarLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+          </div>
           <div className="space-y-2">
             <p className="font-[var(--font-serif-display)] text-lg text-gold">{target.account}</p>
             {target.name && <p className="text-sm">{String(target.name)}</p>}

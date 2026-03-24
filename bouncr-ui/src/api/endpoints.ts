@@ -152,6 +152,12 @@ export function updateRole(name: string, data: NameDescriptionRequest) {
   });
 }
 
+export function deleteRole(name: string) {
+  return apiRequest<void>(`/role/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+}
+
 export function getRolePermissions(roleName: string) {
   return apiRequest<Permission[]>(`/role/${encodeURIComponent(roleName)}/permissions`, {});
 }
@@ -187,6 +193,12 @@ export function updatePermission(name: string, data: NameDescriptionRequest) {
   });
 }
 
+export function deletePermission(name: string) {
+  return apiRequest<void>(`/permission/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+}
+
 // === Applications ===
 
 export function getApplications(params: PaginationParams & { q?: string }) {
@@ -208,6 +220,12 @@ export function updateApplication(name: string, data: ApplicationUpdateRequest) 
   return apiRequest<Application>(`/application/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  });
+}
+
+export function deleteApplication(name: string) {
+  return apiRequest<void>(`/application/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
   });
 }
 

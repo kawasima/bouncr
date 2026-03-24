@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ProblemAlert } from '@/components/problem-alert';
 import { usePermissions } from '@/auth/permission-context';
 import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
+import { Trash2 } from 'lucide-react';
 
 const config: AdminCrudConfig<Role> = {
   fetchList: api.getRoles,
@@ -37,14 +38,18 @@ function RoleEditForm({
   target,
   onSubmit,
   problem,
+  onDeleted,
   canUpdate = true,
 }: {
   target: Role | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
+  onDeleted?: () => void;
   canUpdate?: boolean;
 }) {
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedPerms, setSelectedPerms] = useState<Set<number>>(
     new Set(target?.permissions?.map((p) => p.id) ?? []),
   );
@@ -89,15 +94,57 @@ function RoleEditForm({
           <input id="description" {...register('description')} disabled={isReadOnly} className="mansion-input w-full py-2" />
           {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
         </div>
-        {(!target || canUpdate) && (
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
-          >
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {(!target || canUpdate) && (
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-gold text-primary-foreground uppercase tracking-[0.15em] text-xs font-semibold hover:bg-gold/90"
+            >
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          )}
+          {target && onDeleted && (
+            <>
+              {confirmDelete ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-destructive">Delete this role?</span>
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      setDeleting(true);
+                      try {
+                        await api.deleteRole(target.name);
+                        onDeleted();
+                      } catch { /* handled by parent */ } finally {
+                        setDeleting(false);
+                        setConfirmDelete(false);
+                      }
+                    }}
+                    disabled={deleting}
+                    variant="outline"
+                    className="text-xs text-destructive border-destructive hover:bg-destructive/10"
+                  >
+                    {deleting ? 'Deleting...' : 'Confirm'}
+                  </Button>
+                  <Button type="button" onClick={() => setConfirmDelete(false)} variant="outline" className="text-xs">
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  variant="outline"
+                  className="text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  Delete
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </form>
 
       {target && allPermissions.length > 0 && (
@@ -144,6 +191,7 @@ export function RolesAdminPage() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.role.create);
   const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.role.update);
+  const canDelete = hasPermission(...RESOURCE_PERMISSIONS.role.delete);
 
   return (
     <AdminCrudPage
@@ -152,7 +200,9 @@ export function RolesAdminPage() {
       columns={columns}
       canCreate={canCreate}
       canUpdate={canUpdate}
-      renderEditForm={(props) => <RoleEditForm {...props} canUpdate={props.canUpdate} />}
+      renderEditForm={(props) => (
+        <RoleEditForm {...props} onDeleted={canDelete ? props.onDeleted : undefined} canUpdate={props.canUpdate} />
+      )}
     />
   );
 }
