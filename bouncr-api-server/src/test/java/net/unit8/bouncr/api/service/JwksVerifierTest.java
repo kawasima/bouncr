@@ -178,10 +178,14 @@ class JwksVerifierTest {
     }
 
     private static String base64Url(byte[] bytes) {
-        // JWK n/e must be unsigned big-endian integers
-        if (bytes.length > 1 && bytes[0] == 0) {
-            byte[] trimmed = new byte[bytes.length - 1];
-            System.arraycopy(bytes, 1, trimmed, 0, trimmed.length);
+        // JWK n/e must be unsigned big-endian integers — strip all leading zero bytes
+        int start = 0;
+        while (start < bytes.length - 1 && bytes[start] == 0) {
+            start++;
+        }
+        if (start > 0) {
+            byte[] trimmed = new byte[bytes.length - start];
+            System.arraycopy(bytes, start, trimmed, 0, trimmed.length);
             bytes = trimmed;
         }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
