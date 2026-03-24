@@ -29,7 +29,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 @AllowedMethods({"PUT"})
 public class PasswordResetResource {
     static final ContextKey<InitialPassword> INITIAL_PASSWORD = ContextKey.of(InitialPassword.class);
-    static final ContextKey<String> PASSWORD_RESET_REQUEST = ContextKey.of(String.class);
+    static final ContextKey<String> PASSWORD_RESET_REQUEST = ContextKey.of("passwordResetCode", String.class);
     static final ContextKey<PasswordResetChallenge> RESET_CHALLENGE = ContextKey.of(PasswordResetChallenge.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
 
@@ -43,7 +43,6 @@ public class PasswordResetResource {
         }
         return switch (BouncrJsonDecoders.PASSWORD_RESET.decode(body)) {
             case Ok(String code) -> { context.put(PASSWORD_RESET_REQUEST, code); yield null; }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

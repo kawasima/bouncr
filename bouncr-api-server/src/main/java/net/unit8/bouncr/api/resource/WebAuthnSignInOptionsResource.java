@@ -36,7 +36,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.WEBAUTHN_CHALLE
 @AllowedMethods("POST")
 public class WebAuthnSignInOptionsResource {
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
-    static final ContextKey<String> REQ = ContextKey.of(String.class);
+    static final ContextKey<String> REQ = ContextKey.of("webauthnSignInOptionsReq", String.class);
 
     record PostResult(WebAuthnAuthenticationOptions options, String sessionId) {}
     static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
@@ -55,7 +55,6 @@ public class WebAuthnSignInOptionsResource {
         }
         return switch (BouncrJsonDecoders.WEBAUTHN_SIGN_IN_OPTIONS.decode(body)) {
             case Ok(String account) -> { context.put(REQ, account); yield null; }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

@@ -43,7 +43,6 @@ public class RealmsResource {
                 context.put(CREATE_REQ, new Tuple3<>((WordName) name, (String) desc, (String) url));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

@@ -72,7 +72,6 @@ public class PasswordSignInResource {
                 context.put(SIGN_IN_REQ, new Tuple3<>((WordName) account, (String) password, (String) otp));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

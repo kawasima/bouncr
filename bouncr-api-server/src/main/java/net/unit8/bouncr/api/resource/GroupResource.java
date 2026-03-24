@@ -44,7 +44,6 @@ public class GroupResource {
                 context.put(UPDATE_REQ, new Tuple3<>((WordName) name, (String) desc, typedUsers));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

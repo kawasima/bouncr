@@ -40,7 +40,6 @@ public class ApplicationResource {
                 context.put(UPDATE_REQ, new Tuple5<>((WordName) name, (String) desc, (String) vp, (String) pt, (String) tp));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

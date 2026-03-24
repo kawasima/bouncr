@@ -40,7 +40,6 @@ public class PermissionsResource {
                 context.put(CREATE_REQ, new Tuple2<>((PermissionName) name, (String) desc));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

@@ -49,7 +49,6 @@ public class InvitationsResource {
                 context.put(CREATE_REQ, new Tuple2<>((Email) email, typedGroups));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

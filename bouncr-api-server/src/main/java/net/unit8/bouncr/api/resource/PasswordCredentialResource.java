@@ -70,7 +70,6 @@ public class PasswordCredentialResource {
                 context.put(CREATE_REQ, new Tuple3<>((WordName) account, (String) password, (Boolean) initial));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }
@@ -94,7 +93,6 @@ public class PasswordCredentialResource {
                 context.put(UPDATE_REQ, new Tuple3<>(accountStr, oldPassword, newPassword));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }
@@ -109,7 +107,6 @@ public class PasswordCredentialResource {
                 context.put(DELETE_REQ, new Tuple2<>((WordName) account, (String) password));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

@@ -37,7 +37,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
  */
 @AllowedMethods("POST")
 public class TokenRefreshResource {
-    static final ContextKey<String> REFRESH_REQ = ContextKey.of(String.class);
+    static final ContextKey<String> REFRESH_REQ = ContextKey.of("refreshReq", String.class);
     static final ContextKey<HashMap> PROFILE = ContextKey.of("profile", HashMap.class);
 
     @Inject
@@ -53,7 +53,6 @@ public class TokenRefreshResource {
         }
         return switch (BouncrJsonDecoders.TOKEN_REFRESH.decode(body)) {
             case Ok(String sessionId) -> { context.put(REFRESH_REQ, sessionId); yield null; }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

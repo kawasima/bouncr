@@ -67,7 +67,6 @@ public class OidcApplicationsResource {
                     yield Problem.valueOf(400, e.getMessage());
                 }
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

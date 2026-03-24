@@ -40,7 +40,6 @@ public class RolesResource {
                 context.put(CREATE_REQ, new Tuple2<>((WordName) name, (String) desc));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

@@ -42,7 +42,6 @@ public class OidcProvidersResource {
                 context.put(CREATE_REQ, new Tuple3<>((WordName) name, (OidcProviderMetadata) meta, (OidcProviderClientConfig) clientCfg));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

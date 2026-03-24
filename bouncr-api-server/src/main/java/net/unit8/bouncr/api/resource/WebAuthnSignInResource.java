@@ -50,7 +50,7 @@ public class WebAuthnSignInResource {
     private static final Logger LOG = LoggerFactory.getLogger(WebAuthnSignInResource.class);
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
 
-    static final ContextKey<String> AUTH_REQ = ContextKey.of(String.class);
+    static final ContextKey<String> AUTH_REQ = ContextKey.of("webauthnAuthReq", String.class);
     static final ContextKey<User> USER = ContextKey.of(User.class);
     static final ContextKey<UserSession> SESSION = ContextKey.of(UserSession.class);
 
@@ -70,7 +70,6 @@ public class WebAuthnSignInResource {
         }
         return switch (BouncrJsonDecoders.WEBAUTHN_AUTHENTICATE.decode(body)) {
             case Ok(String authJson) -> { context.put(AUTH_REQ, authJson); yield null; }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

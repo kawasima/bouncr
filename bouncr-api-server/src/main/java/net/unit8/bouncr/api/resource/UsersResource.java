@@ -59,7 +59,6 @@ public class UsersResource {
                 context.put(USER_PROFILE, profile);
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException("Unexpected Ok value");
             case Err(var issues) -> toProblem(issues);
         };
     }

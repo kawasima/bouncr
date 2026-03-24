@@ -79,7 +79,6 @@ public class WebAuthnRegisterResource {
                 context.put(REQ, new Tuple2<>((String) regJson, (String) credName));
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }

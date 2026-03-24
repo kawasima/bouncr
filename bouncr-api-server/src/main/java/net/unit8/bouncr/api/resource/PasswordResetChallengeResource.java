@@ -52,7 +52,6 @@ public class PasswordResetChallengeResource {
                 config.getHookRepo().runHook(HookPoint.BEFORE_PASSWORD_RESET_CHALLENGE, context);
                 yield null;
             }
-            case Ok<?> _ -> throw new IllegalStateException();
             case Err(var issues) -> toProblem(issues);
         };
     }
