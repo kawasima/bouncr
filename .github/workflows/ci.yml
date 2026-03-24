@@ -41,6 +41,8 @@ jobs:
           JDBC_PASSWORD: bouncr
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: ci-test-secret-key-32-characters
+          CORS_ORIGINS: '*'
+          ENKAN_ENV: development
 
   go:
     runs-on: ubuntu-latest
@@ -68,8 +70,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: bouncr-ui/package-lock.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('bouncr-ui/package-lock.json') }}
+          restore-keys: npm-
       - run: npm ci
       - run: npm run lint
       - run: npm run build
