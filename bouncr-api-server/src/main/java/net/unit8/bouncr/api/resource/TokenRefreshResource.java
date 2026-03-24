@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.TokenRefresh;
+import net.unit8.bouncr.api.boundary.TokenRefresh;
 import net.unit8.bouncr.api.service.SignInService;
 import net.unit8.bouncr.api.service.SignatureVerifier;
 import net.unit8.bouncr.component.BouncrConfiguration;

@@ -9,7 +9,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.SignUp;
+import net.unit8.bouncr.api.boundary.SignUp;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;

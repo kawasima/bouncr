@@ -1,12 +1,12 @@
 package net.unit8.bouncr.api.decoder;
 
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.IntrospectionRequest;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.RevocationRequest;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.TokenRequest;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.TokenRequest.AuthorizationCodeGrant;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.TokenRequest.ClientCredentialsGrant;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.TokenRequest.RefreshTokenGrant;
+import net.unit8.bouncr.data.AuthorizeRequest;
+import net.unit8.bouncr.data.IntrospectionRequest;
+import net.unit8.bouncr.data.RevocationRequest;
+import net.unit8.bouncr.data.TokenRequest;
+import net.unit8.bouncr.data.TokenRequest.AuthorizationCodeGrant;
+import net.unit8.bouncr.data.TokenRequest.ClientCredentialsGrant;
+import net.unit8.bouncr.data.TokenRequest.RefreshTokenGrant;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.junit.jupiter.api.Test;

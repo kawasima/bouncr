@@ -2,11 +2,11 @@ package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.UserProfileField;
 import org.jooq.DSLContext;
-import org.jooq.Record;
 
 import java.util.List;
 import java.util.Optional;
 
+import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.USER_PROFILE_FIELD;
 import static org.jooq.impl.DSL.*;
 
 public class UserProfileFieldRepository {
@@ -30,7 +30,7 @@ public class UserProfileFieldRepository {
                         field("position", Integer.class))
                 .from(table("user_profile_fields"))
                 .orderBy(field("position").asc())
-                .fetch(this::toUserProfileField);
+                .fetch(rec -> USER_PROFILE_FIELD.decode(rec).getOrThrow());
     }
 
     public Optional<UserProfileField> findByJsonName(String jsonName) {
@@ -50,7 +50,7 @@ public class UserProfileFieldRepository {
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        return Optional.of(toUserProfileField(rec));
+        return Optional.of(USER_PROFILE_FIELD.decode(rec).getOrThrow());
     }
 
     public List<UserProfileField> findIdentityFields() {
@@ -68,21 +68,6 @@ public class UserProfileFieldRepository {
                 .from(table("user_profile_fields"))
                 .where(field("is_identity").eq(true))
                 .orderBy(field("position").asc())
-                .fetch(this::toUserProfileField);
-    }
-
-    private UserProfileField toUserProfileField(Record rec) {
-        return new UserProfileField(
-                rec.get(field("user_profile_field_id", Long.class)),
-                rec.get(field("name", String.class)),
-                rec.get(field("json_name", String.class)),
-                Boolean.TRUE.equals(rec.get(field("is_required", Boolean.class))),
-                Boolean.TRUE.equals(rec.get(field("is_identity", Boolean.class))),
-                rec.get(field("regular_expression", String.class)),
-                rec.get(field("max_length", Integer.class)),
-                rec.get(field("min_length", Integer.class)),
-                Boolean.TRUE.equals(rec.get(field("needs_verification", Boolean.class))),
-                rec.get(field("position", Integer.class))
-        );
+                .fetch(rec -> USER_PROFILE_FIELD.decode(rec).getOrThrow());
     }
 }

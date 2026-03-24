@@ -21,7 +21,11 @@ public record Realm(
     String url,
     String description,
     Application application,
-    Boolean writeProtected,
+    boolean writeProtected,
     List<Assignment> assignments
 ) {
+    /** Factory for decoder use — creates a Realm without loaded relations. */
+    public static Realm of(Long id, String name, String nameLower, String url, String description, boolean writeProtected) {
+        return new Realm(id, name, nameLower, url, description, null, writeProtected, null);
+    }
 }

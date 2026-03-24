@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.GroupUpdate;
+import net.unit8.bouncr.api.boundary.GroupUpdate;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
 import net.unit8.raoh.Err;

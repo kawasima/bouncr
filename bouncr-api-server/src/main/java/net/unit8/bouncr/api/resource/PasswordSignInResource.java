@@ -10,7 +10,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordSignIn;
+import net.unit8.bouncr.api.boundary.PasswordSignIn;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.AuthFailureTracker;

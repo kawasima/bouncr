@@ -15,7 +15,11 @@ public record Permission(
     Long id,
     String name,
     String description,
-    Boolean writeProtected,
+    boolean writeProtected,
     List<Role> roles
 ) {
+    /** Factory for decoder use — creates a Permission without loaded relations. */
+    public static Permission of(Long id, String name, String description, boolean writeProtected) {
+        return new Permission(id, name, description, writeProtected, null);
+    }
 }

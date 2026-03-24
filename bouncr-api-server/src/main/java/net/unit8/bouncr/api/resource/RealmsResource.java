@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RealmCreate;
+import net.unit8.bouncr.api.boundary.RealmCreate;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;

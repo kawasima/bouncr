@@ -7,7 +7,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.ResolvedAssignment;
+import net.unit8.bouncr.api.boundary.ResolvedAssignment;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;

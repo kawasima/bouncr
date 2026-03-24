@@ -43,27 +43,6 @@ public final class BouncrFormDecoders {
     // ==================== OAuth2 Authorize Request ====================
 
     /**
-     * Decoded authorization request parameters.
-     *
-     * @param responseType      must be "code"
-     * @param clientId          the requesting client's ID
-     * @param redirectUri       must match registered callback URL
-     * @param scope             requested scopes (parsed into {@link Scope})
-     * @param state             opaque state for CSRF protection
-     * @param nonce             for ID token replay protection
-     * @param pkce              PKCE challenge (null if not using PKCE)
-     */
-    public record AuthorizeRequest(
-            String responseType,
-            String clientId,
-            String redirectUri,
-            Scope scope,
-            String state,
-            String nonce,
-            PkceChallenge pkce
-    ) {}
-
-    /**
      * Decoder for {@code GET /oauth2/authorize} query parameters.
      */
     public static final Decoder<Map<String, Object>, AuthorizeRequest> AUTHORIZE_REQUEST = combine(
@@ -89,37 +68,6 @@ public final class BouncrFormDecoders {
     });
 
     // ==================== OAuth2 Token Requests ====================
-
-    /**
-     * Sealed interface for token request grant types.
-     * Each variant carries only the parameters relevant to that grant type.
-     */
-    public sealed interface TokenRequest {
-        /**
-         * Authorization Code Grant — exchanges an authorization code for tokens.
-         *
-         * @param code         the authorization code from the authorize endpoint
-         * @param redirectUri  must match the original authorization request
-         * @param codeVerifier PKCE proof (null if PKCE not used)
-         */
-        record AuthorizationCodeGrant(String code, String redirectUri, String codeVerifier)
-                implements TokenRequest {}
-
-        /**
-         * Refresh Token Grant — exchanges a refresh token for new tokens.
-         *
-         * @param refreshToken the opaque refresh token
-         * @param scope        requested scope restriction (null = use original)
-         */
-        record RefreshTokenGrant(String refreshToken, Scope scope) implements TokenRequest {}
-
-        /**
-         * Client Credentials Grant — server-to-server, no user involved.
-         *
-         * @param scope requested scopes
-         */
-        record ClientCredentialsGrant(Scope scope) implements TokenRequest {}
-    }
 
     private static final Decoder<Map<String, Object>, TokenRequest> AUTH_CODE_GRANT = combine(
             field("code", string().nonBlank()),
@@ -171,13 +119,6 @@ public final class BouncrFormDecoders {
     // ==================== Token Introspection ====================
 
     /**
-     * Decoded introspection request.
-     *
-     * @param token the token to introspect
-     */
-    public record IntrospectionRequest(String token) {}
-
-    /**
      * Decoder for {@code POST /oauth2/token/introspect} form parameters.
      */
     public static final Decoder<Map<String, Object>, IntrospectionRequest> INTROSPECTION_REQUEST =
@@ -185,14 +126,6 @@ public final class BouncrFormDecoders {
                     .map(IntrospectionRequest::new);
 
     // ==================== Token Revocation ====================
-
-    /**
-     * Decoded revocation request.
-     *
-     * @param token         the token to revoke
-     * @param tokenTypeHint optional hint about the token type
-     */
-    public record RevocationRequest(String token, String tokenTypeHint) {}
 
     /**
      * Decoder for {@code POST /oauth2/token/revoke} form parameters.

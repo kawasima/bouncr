@@ -11,5 +11,10 @@ import java.util.*;
  * @param writeProtected whether mutation is restricted
  * @param users users currently in the group
  */
-public record Group(Long id, String name, String description, Boolean writeProtected, List<User> users) {
+public record Group(Long id, String name, String description, boolean writeProtected, List<User> users) {
+
+    /** Factory for decoder use — creates a Group without loaded relations. */
+    public static Group of(Long id, String name, String description, boolean writeProtected) {
+        return new Group(id, name, description, writeProtected, null);
+    }
 }

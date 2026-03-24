@@ -7,7 +7,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.InvitationCreate;
+import net.unit8.bouncr.api.boundary.IdObject;
+import net.unit8.bouncr.api.boundary.InvitationCreate;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.Invitation;
@@ -69,7 +70,7 @@ public class InvitationsResource {
         String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
         List<Long> groupIds = createRequest.groups() != null
                 ? createRequest.groups().stream()
-                    .map(BouncrJsonDecoders.IdObject::id)
+                    .map(IdObject::id)
                     .toList()
                 : List.of();
         Invitation invitation = repo.insert(createRequest.email(), code, LocalDateTime.now(), groupIds);

@@ -17,4 +17,9 @@ public record PasswordCredential(
      String salt,
      boolean initial,
      LocalDateTime createdAt) {
+
+    /** Factory for decoder use — creates a PasswordCredential without user reference. */
+    public static PasswordCredential of(byte[] password, String salt, boolean initial, LocalDateTime createdAt) {
+        return new PasswordCredential(null, password, salt, initial, createdAt);
+    }
 }

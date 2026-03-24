@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
+import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.data.User;
@@ -121,7 +122,7 @@ class UsersResourceTest {
         var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
         var node = mapper.readTree("{}");
         // account field is missing - should fail
-        var result = net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PASSWORD_SIGN_IN.decode(node);
+        var result = BouncrJsonDecoders.PASSWORD_SIGN_IN.decode(node);
         assertThat(result).isInstanceOf(net.unit8.raoh.Err.class);
     }
 }

@@ -8,7 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RealmUpdate;
+import net.unit8.bouncr.api.boundary.RealmUpdate;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;

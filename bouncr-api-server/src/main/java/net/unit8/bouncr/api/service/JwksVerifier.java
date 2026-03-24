@@ -129,7 +129,7 @@ public class JwksVerifier {
         }
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(provider.jwksUri().toURI())
+                .uri(provider.jwksUri())
                 .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();

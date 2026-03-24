@@ -15,6 +15,11 @@ public record Role(
     Long id,
     String name,
     String description,
-    Boolean writeProtected,
+    boolean writeProtected,
     List<Permission> permissions
-) {}
+) {
+    /** Factory for decoder use — creates a Role without loaded relations. */
+    public static Role of(Long id, String name, String description, boolean writeProtected) {
+        return new Role(id, name, description, writeProtected, null);
+    }
+}

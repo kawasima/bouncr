@@ -69,8 +69,8 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.of("https://client-b.example/frontchannel-logout-new"));
 
         OidcApplication updated = repo.findByName("oidc-app-b").orElseThrow();
-        assertThat(updated.homeUrl().toString()).isEqualTo("https://client-b.example/home-new");
-        assertThat(updated.callbackUrl().toString()).isEqualTo("https://client-b.example/callback-new");
+        assertThat(updated.homeUri().toString()).isEqualTo("https://client-b.example/home-new");
+        assertThat(updated.callbackUri().toString()).isEqualTo("https://client-b.example/callback-new");
         assertThat(updated.backchannelLogoutUri().toString())
                 .isEqualTo("https://client-b.example/backchannel-logout-new");
         assertThat(updated.frontchannelLogoutUri().toString())
@@ -94,7 +94,7 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.absent());
 
         OidcApplication updated = repo.findByName("oidc-app-c").orElseThrow();
-        assertThat(updated.homeUrl().toString()).isEqualTo("https://client-c.example/home-new");
+        assertThat(updated.homeUri().toString()).isEqualTo("https://client-c.example/home-new");
         assertThat(updated.backchannelLogoutUri().toString())
                 .isEqualTo("https://client-c.example/backchannel-logout");
         assertThat(updated.frontchannelLogoutUri().toString())
@@ -118,8 +118,8 @@ class OidcApplicationRepositoryTest {
                 NullableUpdate.of(null));
 
         OidcApplication updated = repo.findByName("oidc-app-e").orElseThrow();
-        assertThat(updated.homeUrl()).isNull();
-        assertThat(updated.callbackUrl()).isNull();
+        assertThat(updated.homeUri()).isNull();
+        assertThat(updated.callbackUri()).isNull();
         assertThat(updated.description()).isNull();
         assertThat(updated.backchannelLogoutUri()).isNull();
         assertThat(updated.frontchannelLogoutUri()).isNull();
@@ -136,7 +136,7 @@ class OidcApplicationRepositoryTest {
 
         OidcApplication updated = repo.findByName("oidc-app-f").orElseThrow();
         assertThat(updated.clientSecret()).isEqualTo("new-secret");
-        assertThat(updated.homeUrl().toString()).isEqualTo("https://client-f.example");
+        assertThat(updated.homeUri().toString()).isEqualTo("https://client-f.example");
     }
 
     @Test

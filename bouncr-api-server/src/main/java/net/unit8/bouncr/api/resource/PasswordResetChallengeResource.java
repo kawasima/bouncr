@@ -6,7 +6,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordResetChallengeCreate;
+import net.unit8.bouncr.api.boundary.PasswordResetChallengeCreate;
 import net.unit8.bouncr.api.repository.PasswordResetChallengeRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;

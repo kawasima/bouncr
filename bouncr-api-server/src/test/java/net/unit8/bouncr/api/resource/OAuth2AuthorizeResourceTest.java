@@ -6,7 +6,7 @@ import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest;
+import net.unit8.bouncr.data.AuthorizeRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.OidcApplication;

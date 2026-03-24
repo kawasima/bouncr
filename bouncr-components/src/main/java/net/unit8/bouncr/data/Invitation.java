@@ -14,4 +14,9 @@ import java.util.List;
  * @param oidcInvitations linked OIDC invitations
  */
 public record Invitation(Long id, String code, String email, LocalDateTime invitedAt, List<GroupInvitation> groupInvitations, List<OidcInvitation> oidcInvitations) {
+
+    /** Factory for decoder use — creates an Invitation without loaded relations. */
+    public static Invitation of(Long id, String code, String email, LocalDateTime invitedAt) {
+        return new Invitation(id, code, email, invitedAt, null, null);
+    }
 }

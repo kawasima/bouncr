@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationCreate;
+import net.unit8.bouncr.api.boundary.OidcApplicationCreate;
 import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
@@ -126,8 +126,8 @@ public class OidcApplicationsResource {
                 hashedSecret,
                 privateKey,
                 publicKey,
-                createRequest.homeUrl(),
-                createRequest.callbackUrl(),
+                createRequest.homeUri(),
+                createRequest.callbackUri(),
                 createRequest.description(),
                 LogoutUriPolicy.normalizeBackchannelLogoutUri(createRequest.backchannelLogoutUri()),
                 LogoutUriPolicy.normalizeLogoutUri(createRequest.frontchannelLogoutUri())

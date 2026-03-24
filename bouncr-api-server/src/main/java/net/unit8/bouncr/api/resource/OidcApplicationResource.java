@@ -8,7 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.OidcApplicationUpdate;
+import net.unit8.bouncr.api.boundary.OidcApplicationUpdate;
 import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
@@ -16,6 +16,7 @@ import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.Presence;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -23,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.presenceToNullable;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
@@ -38,8 +40,8 @@ public class OidcApplicationResource {
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_UPDATE.decode(body)) {
             case Ok<OidcApplicationUpdate> ok -> {
                 try {
-                    LogoutUriPolicy.normalizeBackchannelLogoutUri(ok.value().backchannelLogoutUri());
-                    LogoutUriPolicy.normalizeLogoutUri(ok.value().frontchannelLogoutUri());
+                    LogoutUriPolicy.normalizeBackchannelLogoutUri(presenceToNullable(ok.value().backchannelLogoutUri()));
+                    LogoutUriPolicy.normalizeLogoutUri(presenceToNullable(ok.value().frontchannelLogoutUri()));
                     context.put(UPDATE_REQ, ok.value());
                     yield null;
                 } catch (IllegalArgumentException e) {
@@ -104,13 +106,13 @@ public class OidcApplicationResource {
         repo.updateProfile(
                 oidcApplication.name(),
                 updateRequest.name(),
-                nullable(updateRequest.hasHomeUrl(), updateRequest.homeUrl()),
-                nullable(updateRequest.hasCallbackUrl(), updateRequest.callbackUrl()),
-                nullable(updateRequest.hasDescription(), updateRequest.description()),
-                nullable(updateRequest.hasBackchannelLogoutUri(),
-                        LogoutUriPolicy.normalizeBackchannelLogoutUri(updateRequest.backchannelLogoutUri())),
-                nullable(updateRequest.hasFrontchannelLogoutUri(),
-                        LogoutUriPolicy.normalizeLogoutUri(updateRequest.frontchannelLogoutUri()))
+                toNullableUpdate(updateRequest.homeUri()),
+                toNullableUpdate(updateRequest.callbackUri()),
+                toNullableUpdate(updateRequest.description()),
+                toNullableUpdate(updateRequest.backchannelLogoutUri(),
+                        LogoutUriPolicy::normalizeBackchannelLogoutUri),
+                toNullableUpdate(updateRequest.frontchannelLogoutUri(),
+                        LogoutUriPolicy::normalizeLogoutUri)
         );
         Long appId = repo.findByName(updateRequest.name()).map(OidcApplication::id).orElse(oidcApplication.id());
         if (updateRequest.permissions() != null) {
@@ -127,7 +129,20 @@ public class OidcApplicationResource {
         return null;
     }
 
-    private static <T> OidcApplicationRepository.NullableUpdate<T> nullable(boolean present, T value) {
-        return present ? OidcApplicationRepository.NullableUpdate.of(value) : OidcApplicationRepository.NullableUpdate.absent();
+    private static <T> OidcApplicationRepository.NullableUpdate<T> toNullableUpdate(Presence<T> p) {
+        return switch (p) {
+            case Presence.Present<T>(var v) -> OidcApplicationRepository.NullableUpdate.of(v);
+            case Presence.PresentNull<?> ignored -> OidcApplicationRepository.NullableUpdate.of(null);
+            case Presence.Absent<?> ignored -> OidcApplicationRepository.NullableUpdate.absent();
+        };
+    }
+
+    private static <T, R> OidcApplicationRepository.NullableUpdate<R> toNullableUpdate(
+            Presence<T> p, java.util.function.Function<T, R> transform) {
+        return switch (p) {
+            case Presence.Present<T>(var v) -> OidcApplicationRepository.NullableUpdate.of(transform.apply(v));
+            case Presence.PresentNull<?> ignored -> OidcApplicationRepository.NullableUpdate.of(null);
+            case Presence.Absent<?> ignored -> OidcApplicationRepository.NullableUpdate.absent();
+        };
     }
 }

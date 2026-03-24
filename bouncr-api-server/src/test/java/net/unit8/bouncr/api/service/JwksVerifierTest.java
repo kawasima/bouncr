@@ -54,7 +54,7 @@ class JwksVerifierTest {
                     1L, "p", "p", "cid", "sec", "openid",
                     ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
                     null,
-                    new java.net.URL("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
                     "issuer", false
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
@@ -98,7 +98,7 @@ class JwksVerifierTest {
                     2L, "p", "p", "cid", "sec", "openid",
                     ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
                     null,
-                    new java.net.URL("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
                     "issuer", false
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());
@@ -139,7 +139,7 @@ class JwksVerifierTest {
                     3L, "p", "p", "cid", "sec", "openid",
                     ResponseType.CODE, null, null, TokenEndpointAuthMethod.CLIENT_SECRET_POST,
                     null,
-                    new java.net.URL("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
+                    java.net.URI.create("http://localhost:%d/jwks".formatted(server.getAddress().getPort())),
                     "issuer", false
             );
             JwksVerifier verifier = new JwksVerifier(HttpClient.newHttpClient());

@@ -8,9 +8,7 @@ import org.jooq.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
+import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.OIDC_APPLICATION;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -39,8 +37,8 @@ public class OidcApplicationRepository {
                         field("client_secret", String.class),
                         field("private_key", byte[].class),
                         field("public_key", byte[].class),
-                        field("home_url", String.class),
-                        field("callback_url", String.class),
+                        field("home_uri", String.class),
+                        field("callback_uri", String.class),
                         field("description", String.class),
                         field("backchannel_logout_uri", String.class),
                         field("frontchannel_logout_uri", String.class))
@@ -55,7 +53,7 @@ public class OidcApplicationRepository {
         Set<GrantType> grantTypes = loadGrantTypes(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUrl(), app.callbackUrl(), app.description(),
+                app.homeUri(), app.callbackUri(), app.description(),
                 app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
     }
 
@@ -80,8 +78,8 @@ public class OidcApplicationRepository {
                         field("client_secret", String.class),
                         field("private_key", byte[].class),
                         field("public_key", byte[].class),
-                        field("home_url", String.class),
-                        field("callback_url", String.class),
+                        field("home_uri", String.class),
+                        field("callback_uri", String.class),
                         field("description", String.class),
                         field("backchannel_logout_uri", String.class),
                         field("frontchannel_logout_uri", String.class))
@@ -96,7 +94,7 @@ public class OidcApplicationRepository {
         Set<GrantType> grantTypes = loadGrantTypes(appId);
         return Optional.of(new OidcApplication(app.id(), app.name(), app.nameLower(),
                 app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                app.homeUrl(), app.callbackUrl(), app.description(),
+                app.homeUri(), app.callbackUri(), app.description(),
                 app.backchannelLogoutUri(), app.frontchannelLogoutUri(), permissions, grantTypes));
     }
 
@@ -114,8 +112,8 @@ public class OidcApplicationRepository {
                         field("client_secret", String.class),
                         field("private_key", byte[].class),
                         field("public_key", byte[].class),
-                        field("home_url", String.class),
-                        field("callback_url", String.class),
+                        field("home_uri", String.class),
+                        field("callback_uri", String.class),
                         field("description", String.class),
                         field("backchannel_logout_uri", String.class),
                         field("frontchannel_logout_uri", String.class))
@@ -137,8 +135,8 @@ public class OidcApplicationRepository {
                         field("client_secret", String.class),
                         field("private_key", byte[].class),
                         field("public_key", byte[].class),
-                        field("home_url", String.class),
-                        field("callback_url", String.class),
+                        field("home_uri", String.class),
+                        field("callback_uri", String.class),
                         field("description", String.class),
                         field("backchannel_logout_uri", String.class),
                         field("frontchannel_logout_uri", String.class))
@@ -157,15 +155,15 @@ public class OidcApplicationRepository {
 
     public OidcApplication insert(String name, String clientId, String clientSecret,
                                   byte[] privateKey, byte[] publicKey,
-                                  String homeUrl, String callbackUrl, String description,
+                                  String homeUri, String callbackUri, String description,
                                   String backchannelLogoutUri, String frontchannelLogoutUri) {
         dsl.insertInto(table("oidc_applications"),
                         field("name"), field("name_lower"), field("client_id"), field("client_secret"),
                         field("private_key"), field("public_key"),
-                        field("home_url"), field("callback_url"), field("description"),
+                        field("home_uri"), field("callback_uri"), field("description"),
                         field("backchannel_logout_uri"), field("frontchannel_logout_uri"))
                 .values(name, name.toLowerCase(Locale.US), clientId, clientSecret,
-                        privateKey, publicKey, homeUrl, callbackUrl, description,
+                        privateKey, publicKey, homeUri, callbackUri, description,
                         backchannelLogoutUri, frontchannelLogoutUri)
                 .execute();
         return findByName(name).orElseThrow();
@@ -184,8 +182,8 @@ public class OidcApplicationRepository {
      * Nullable fields use {@link NullableUpdate} to distinguish "set to null" from "leave unchanged".
      */
     public void updateProfile(String currentName, String newName,
-                              NullableUpdate<String> homeUrl,
-                              NullableUpdate<String> callbackUrl,
+                              NullableUpdate<String> homeUri,
+                              NullableUpdate<String> callbackUri,
                               NullableUpdate<String> description,
                               NullableUpdate<String> backchannelLogoutUri,
                               NullableUpdate<String> frontchannelLogoutUri) {
@@ -194,11 +192,11 @@ public class OidcApplicationRepository {
         if (newName != null) {
             updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
         }
-        if (homeUrl.present()) {
-            updateSet = updateSet.set(field("home_url"), (Object) homeUrl.value());
+        if (homeUri.present()) {
+            updateSet = updateSet.set(field("home_uri"), (Object) homeUri.value());
         }
-        if (callbackUrl.present()) {
-            updateSet = updateSet.set(field("callback_url"), (Object) callbackUrl.value());
+        if (callbackUri.present()) {
+            updateSet = updateSet.set(field("callback_uri"), (Object) callbackUri.value());
         }
         if (description.present()) {
             updateSet = updateSet.set(field("description"), (Object) description.value());
@@ -315,49 +313,13 @@ public class OidcApplicationRepository {
             Set<GrantType> gts = grantMap.get(app.id());
             return new OidcApplication(app.id(), app.name(), app.nameLower(),
                     app.clientId(), app.clientSecret(), app.privateKey(), app.publicKey(),
-                    app.homeUrl(), app.callbackUrl(), app.description(),
+                    app.homeUri(), app.callbackUri(), app.description(),
                     app.backchannelLogoutUri(), app.frontchannelLogoutUri(),
                     app.permissions(), gts);
         }).toList();
     }
 
     private OidcApplication mapOidcApplication(Record rec) {
-        try {
-            String homeUrl = rec.get(field("home_url", String.class));
-            String callbackUrl = rec.get(field("callback_url", String.class));
-            String backchannelLogoutUri = rec.get(field("backchannel_logout_uri", String.class));
-            String frontchannelLogoutUri = rec.get(field("frontchannel_logout_uri", String.class));
-            String appName = rec.get(field("name", String.class));
-
-            return new OidcApplication(
-                    rec.get(field("oidc_application_id", Long.class)),
-                    appName,
-                    rec.get(field("name_lower", String.class)),
-                    rec.get(field("client_id", String.class)),
-                    rec.get(field("client_secret", String.class)),
-                    rec.get(field("private_key", byte[].class)),
-                    rec.get(field("public_key", byte[].class)),
-                    homeUrl != null ? URI.create(homeUrl).toURL() : null,
-                    callbackUrl != null ? URI.create(callbackUrl).toURL() : null,
-                    rec.get(field("description", String.class)),
-                    toOptionalUrl(backchannelLogoutUri, "backchannel_logout_uri", appName),
-                    toOptionalUrl(frontchannelLogoutUri, "frontchannel_logout_uri", appName),
-                    null, null
-            );
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to map OidcApplication record", e);
-        }
-    }
-
-    private URL toOptionalUrl(String raw, String fieldName, String appName) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        try {
-            return URI.create(raw.trim()).toURL();
-        } catch (IllegalArgumentException | MalformedURLException e) {
-            LOG.warn("Ignore invalid {} for OIDC application {}: {}", fieldName, appName, raw);
-            return null;
-        }
+        return OIDC_APPLICATION.decode(rec).getOrThrow();
     }
 }

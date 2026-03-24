@@ -127,11 +127,11 @@ public abstract class E2ETestBase {
     }
 
     protected OidcClient createOidcApplication(APIRequestContext adminApi, String name) throws Exception {
-        String callbackUrl = "http://localhost:9999/callback/" + name;
+        String callbackUri = "http://localhost:9999/callback/" + name;
         String payload = JSON.writeValueAsString(Map.of(
                 "name", name,
-                "home_url", "http://localhost:9999/" + name,
-                "callback_url", callbackUrl,
+                "home_uri", "http://localhost:9999/" + name,
+                "callback_uri", callbackUri,
                 "description", "E2E test application: " + name));
 
         APIResponse response = adminApi.post("/bouncr/api/oidc_applications",
@@ -146,16 +146,16 @@ public abstract class E2ETestBase {
         String clientSecret = (String) app.get("client_secret");
         assertThat(clientId).isNotNull().isNotBlank();
         assertThat(clientSecret).isNotNull().isNotBlank();
-        return new OidcClient(clientId, clientSecret, callbackUrl);
+        return new OidcClient(clientId, clientSecret, callbackUri);
     }
 
     protected OidcClient createOidcApplication(APIRequestContext adminApi, String name,
                                                String backchannelLogoutUri, String frontchannelLogoutUri) throws Exception {
-        String callbackUrl = "http://localhost:9999/callback/" + name;
+        String callbackUri = "http://localhost:9999/callback/" + name;
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("name", name);
-        payload.put("home_url", "http://localhost:9999/" + name);
-        payload.put("callback_url", callbackUrl);
+        payload.put("home_uri", "http://localhost:9999/" + name);
+        payload.put("callback_uri", callbackUri);
         payload.put("description", "E2E test application: " + name);
         if (backchannelLogoutUri != null) {
             payload.put("backchannel_logout_uri", backchannelLogoutUri);
@@ -176,7 +176,7 @@ public abstract class E2ETestBase {
         String clientSecret = (String) app.get("client_secret");
         assertThat(clientId).isNotNull().isNotBlank();
         assertThat(clientSecret).isNotNull().isNotBlank();
-        return new OidcClient(clientId, clientSecret, callbackUrl);
+        return new OidcClient(clientId, clientSecret, callbackUri);
     }
 
     protected String codeChallengeS256(String verifier) throws Exception {
@@ -191,7 +191,7 @@ public abstract class E2ETestBase {
         String authorizeUrl = "/oauth2/authorize"
                 + "?response_type=code"
                 + "&client_id=" + urlEncode(client.clientId())
-                + "&redirect_uri=" + urlEncode(client.callbackUrl())
+                + "&redirect_uri=" + urlEncode(client.callbackUri())
                 + "&scope=" + urlEncode(scope)
                 + "&state=" + urlEncode(state)
                 + "&nonce=" + urlEncode(nonce)
@@ -203,7 +203,7 @@ public abstract class E2ETestBase {
         assertThat(authResponse.status()).isEqualTo(302);
 
         String location = authResponse.headers().get("location");
-        assertThat(location).startsWith(client.callbackUrl());
+        assertThat(location).startsWith(client.callbackUri());
         Map<String, String> queryParams = parseQueryParams(URI.create(location).getQuery());
         assertThat(queryParams.get("state")).isEqualTo(state);
 
@@ -220,7 +220,7 @@ public abstract class E2ETestBase {
                         .setData(formBody(
                                 "grant_type", "authorization_code",
                                 "code", code,
-                                "redirect_uri", client.callbackUrl(),
+                                "redirect_uri", client.callbackUri(),
                                 "code_verifier", codeVerifier
                         )));
     }
@@ -310,7 +310,7 @@ public abstract class E2ETestBase {
         return params;
     }
 
-    protected record OidcClient(String clientId, String clientSecret, String callbackUrl) {
+    protected record OidcClient(String clientId, String clientSecret, String callbackUri) {
     }
 
     private static EnkanSystem createTestSystem() {

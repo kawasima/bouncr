@@ -75,7 +75,7 @@ class AuthorizationCodeFlowE2ETest extends E2ETestBase {
         String authorizeUrl = "/oauth2/authorize"
                 + "?response_type=" + urlEncode("token")
                 + "&client_id=" + urlEncode(client.clientId())
-                + "&redirect_uri=" + urlEncode(client.callbackUrl())
+                + "&redirect_uri=" + urlEncode(client.callbackUri())
                 + "&scope=" + urlEncode("openid")
                 + "&state=st2";
 
@@ -92,7 +92,7 @@ class AuthorizationCodeFlowE2ETest extends E2ETestBase {
     void authorize_missingRequiredQuery_returnsProblem() throws Exception {
         String authorizeUrl = "/oauth2/authorize"
                 + "?client_id=" + urlEncode(client.clientId())
-                + "&redirect_uri=" + urlEncode(client.callbackUrl())
+                + "&redirect_uri=" + urlEncode(client.callbackUri())
                 + "&scope=" + urlEncode("openid")
                 + "&state=st-missing";
 
@@ -150,7 +150,7 @@ class AuthorizationCodeFlowE2ETest extends E2ETestBase {
         String authorizeUrl = "/oauth2/authorize"
                 + "?response_type=code"
                 + "&client_id=" + urlEncode(client.clientId())
-                + "&redirect_uri=" + urlEncode(client.callbackUrl())
+                + "&redirect_uri=" + urlEncode(client.callbackUri())
                 + "&scope=" + urlEncode("openid profile")
                 + "&state=" + urlEncode(state)
                 + "&nonce=nx"

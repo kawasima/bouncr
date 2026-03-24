@@ -11,7 +11,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrFormDecoders;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest;
+import net.unit8.bouncr.data.AuthorizeRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -88,14 +88,14 @@ public class OAuth2AuthorizeResource {
             return false;
         }
 
-        if (app.callbackUrl() == null) {
+        if (app.callbackUri() == null) {
             context.put(NOT_FOUND_RESPONSE,
-                    oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URL"));
+                    oauthError(OAuth2Error.INVALID_REQUEST, "Client has no registered callback URI"));
             return false;
         }
 
         String redirectUri = authorizeRequest.redirectUri();
-        String registeredCallback = app.callbackUrl().toString();
+        String registeredCallback = app.callbackUri().toString();
         if (!Objects.equals(redirectUri, registeredCallback)) {
             context.put(NOT_FOUND_RESPONSE,
                     oauthError(OAuth2Error.INVALID_REQUEST,

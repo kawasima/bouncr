@@ -1,6 +1,6 @@
 package net.unit8.bouncr.data;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
@@ -14,8 +14,8 @@ import java.util.Set;
  * @param clientSecret OAuth2 client secret
  * @param privateKey private key for JWT signing when applicable
  * @param publicKey public key paired with {@code privateKey}
- * @param homeUrl home page URL
- * @param callbackUrl redirect/callback URL
+ * @param homeUri home page URI
+ * @param callbackUri redirect/callback URI
  * @param description optional description
  * @param backchannelLogoutUri OIDC back-channel logout endpoint
  * @param frontchannelLogoutUri OIDC front-channel logout endpoint
@@ -30,11 +30,11 @@ public record OidcApplication(
     String clientSecret,
     byte[] privateKey,
     byte[] publicKey,
-    URL homeUrl,
-    URL callbackUrl,
+    URI homeUri,
+    URI callbackUri,
     String description,
-    URL backchannelLogoutUri,
-    URL frontchannelLogoutUri,
+    URI backchannelLogoutUri,
+    URI frontchannelLogoutUri,
     List<Permission> permissions,
     Set<GrantType> grantTypes
 ) {}

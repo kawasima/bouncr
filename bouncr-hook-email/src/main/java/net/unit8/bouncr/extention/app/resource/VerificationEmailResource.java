@@ -115,7 +115,7 @@ public class VerificationEmailResource {
                 });
 
         return new User(userId, userAccount, writeProtected,
-                null, profileValues, null, null, null, null, null, null);
+                null, profileValues, null, null, null, null);
     }
 
     @Decision(PROCESSABLE)

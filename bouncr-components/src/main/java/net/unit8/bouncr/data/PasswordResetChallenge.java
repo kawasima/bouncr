@@ -15,4 +15,9 @@ public record PasswordResetChallenge(
     User user,
     String code,
     LocalDateTime expiresAt
-) {}
+) {
+    /** Factory for decoder use — creates a PasswordResetChallenge without user reference. */
+    public static PasswordResetChallenge of(Long id, String code, LocalDateTime expiresAt) {
+        return new PasswordResetChallenge(id, null, code, expiresAt);
+    }
+}

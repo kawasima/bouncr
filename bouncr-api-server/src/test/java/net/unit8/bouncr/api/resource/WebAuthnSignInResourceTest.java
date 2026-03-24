@@ -4,7 +4,7 @@ import enkan.data.DefaultHttpRequest;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnAuthenticate;
+import net.unit8.bouncr.api.boundary.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.component.BouncrConfiguration;

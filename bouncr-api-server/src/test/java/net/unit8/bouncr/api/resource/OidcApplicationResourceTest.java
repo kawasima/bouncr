@@ -53,7 +53,7 @@ class OidcApplicationResourceTest {
     }
 
     // ==================== Scenario 1: CLI / M2M application ====================
-    // client_credentials only, no callback_url needed
+    // client_credentials only, no callback_uri needed
 
     @Test
     void create_clientCredentialsOnly_succeeds() throws Exception {
@@ -78,11 +78,11 @@ class OidcApplicationResourceTest {
         assertThat(response.client_id()).isNotBlank();
         assertThat(response.client_secret()).isNotBlank();
         assertThat(response.grant_types()).containsExactly("client_credentials");
-        assertThat(response.callback_url()).isNull();
+        assertThat(response.callback_uri()).isNull();
     }
 
     @Test
-    void create_clientCredentialsOnly_noCallbackUrl_dbRoundTrip() throws Exception {
+    void create_clientCredentialsOnly_noCallbackUri_dbRoundTrip() throws Exception {
         JsonNode body = JSON.readTree("""
                 {
                   "name": "batch_job",
@@ -100,21 +100,21 @@ class OidcApplicationResourceTest {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         OidcApplication loaded = repo.findByName("batch_job").orElseThrow();
         assertThat(loaded.grantTypes()).containsExactly(GrantType.CLIENT_CREDENTIALS);
-        assertThat(loaded.callbackUrl()).isNull();
-        assertThat(loaded.homeUrl()).isNull();
+        assertThat(loaded.callbackUri()).isNull();
+        assertThat(loaded.homeUri()).isNull();
     }
 
     // ==================== Scenario 2: Web application ====================
-    // authorization_code + refresh_token, callback_url required
+    // authorization_code + refresh_token, callback_uri required
 
     @Test
-    void create_authorizationCode_withCallbackUrl_succeeds() throws Exception {
+    void create_authorizationCode_withCallbackUri_succeeds() throws Exception {
         JsonNode body = JSON.readTree("""
                 {
                   "name": "web_app",
                   "grant_types": ["authorization_code", "refresh_token"],
-                  "callback_url": "https://webapp.example/callback",
-                  "home_url": "https://webapp.example",
+                  "callback_uri": "https://webapp.example/callback",
+                  "home_uri": "https://webapp.example",
                   "description": "Web application"
                 }
                 """);
@@ -127,11 +127,11 @@ class OidcApplicationResourceTest {
 
         OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
         assertThat(response.grant_types()).containsExactlyInAnyOrder("authorization_code", "refresh_token");
-        assertThat(response.callback_url()).isEqualTo("https://webapp.example/callback");
+        assertThat(response.callback_uri()).isEqualTo("https://webapp.example/callback");
     }
 
     @Test
-    void create_authorizationCode_withoutCallbackUrl_fails() throws Exception {
+    void create_authorizationCode_withoutCallbackUri_fails() throws Exception {
         JsonNode body = JSON.readTree("""
                 {
                   "name": "broken_app",
@@ -147,7 +147,7 @@ class OidcApplicationResourceTest {
         assertThat(problem.getStatus()).isEqualTo(400);
         assertThat(problem.getViolations()).isNotEmpty();
         assertThat(problem.getViolations().stream().map(Problem.Violation::field))
-                .contains("/callback_url");
+                .contains("/callback_uri");
     }
 
     // ==================== Scenario 3: Empty grant_types rejected ====================
@@ -184,7 +184,7 @@ class OidcApplicationResourceTest {
 
         // Try to use authorization_code flow
         RestContext context = restContext();
-        var authorizeRequest = new net.unit8.bouncr.api.decoder.BouncrFormDecoders.AuthorizeRequest(
+        var authorizeRequest = new net.unit8.bouncr.data.AuthorizeRequest(
                 "code", "cc-client-1", "https://attacker.example/callback",
                 net.unit8.bouncr.data.Scope.parse("openid"), null, null, null);
 

@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.RoleCreate;
+import net.unit8.bouncr.api.boundary.RoleCreate;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Role;
 import net.unit8.raoh.Err;

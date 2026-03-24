@@ -152,42 +152,34 @@ public class OidcLogoutService {
             return CompletableFuture.completedFuture(false);
         }
 
-        try {
-            var targetUri = app.backchannelLogoutUri().toURI();
-            if (!LogoutUriPolicy.isAllowedBackchannelTarget(targetUri)) {
-                LOG.warn("Skip back-channel logout for app {} due to disallowed target URI", app.name());
-                return CompletableFuture.completedFuture(false);
-            }
-            String logoutToken = createLogoutToken(app, subject);
-            String body = "logout_token=" + URLEncoder.encode(logoutToken, StandardCharsets.UTF_8);
-            HttpRequest request = HttpRequest.newBuilder(targetUri)
-                    .timeout(REQUEST_TIMEOUT)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                            return true;
-                        }
-                        logBackchannelHttpFailure(app, response);
-                        return false;
-                    })
-                    .exceptionally(e -> {
-                        Throwable cause = unwrapException(e);
-                        LOG.warn("Back-channel logout request failed for app {}: {}", app.name(), cause.getMessage());
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Back-channel logout request failed for app {}", app.name(), e);
-                        }
-                        return false;
-                    });
-        } catch (URISyntaxException e) {
-            LOG.warn("Back-channel logout request preparation failed for app {}: {}", app.name(), e.getMessage());
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Back-channel logout request preparation failed for app {}", app.name(), e);
-            }
+        var targetUri = app.backchannelLogoutUri();
+        if (!LogoutUriPolicy.isAllowedBackchannelTarget(targetUri)) {
+            LOG.warn("Skip back-channel logout for app {} due to disallowed target URI", app.name());
             return CompletableFuture.completedFuture(false);
         }
+        String logoutToken = createLogoutToken(app, subject);
+        String body = "logout_token=" + URLEncoder.encode(logoutToken, StandardCharsets.UTF_8);
+        HttpRequest request = HttpRequest.newBuilder(targetUri)
+                .timeout(REQUEST_TIMEOUT)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        return true;
+                    }
+                    logBackchannelHttpFailure(app, response);
+                    return false;
+                })
+                .exceptionally(e -> {
+                    Throwable cause = unwrapException(e);
+                    LOG.warn("Back-channel logout request failed for app {}: {}", app.name(), cause.getMessage());
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Back-channel logout request failed for app {}", app.name(), e);
+                    }
+                    return false;
+                });
     }
 
     private void logBackchannelHttpFailure(OidcApplication app, HttpResponse<String> response) {

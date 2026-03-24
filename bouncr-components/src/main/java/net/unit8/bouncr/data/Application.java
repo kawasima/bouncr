@@ -17,5 +17,10 @@ import java.util.List;
  * @param writeProtected whether mutation is restricted
  * @param realms realms that belong to this application
  */
-public record Application(Long id, String name, String description, String passTo, String virtualPath, String topPage, Boolean writeProtected, List<Realm> realms) {
+public record Application(Long id, String name, String description, String passTo, String virtualPath, String topPage, boolean writeProtected, List<Realm> realms) {
+
+    /** Factory for decoder use — creates an Application without loaded relations. */
+    public static Application of(Long id, String name, String description, String passTo, String virtualPath, String topPage, boolean writeProtected) {
+        return new Application(id, name, description, passTo, virtualPath, topPage, writeProtected, null);
+    }
 }

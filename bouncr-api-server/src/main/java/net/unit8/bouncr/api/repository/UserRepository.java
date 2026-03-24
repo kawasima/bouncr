@@ -165,21 +165,9 @@ public class UserRepository {
     }
 
     public List<UserProfileValue> loadProfileValues(Long userId) {
-        var fId = field("user_profile_field_id", Long.class);
-        var fName = field("field_name", String.class);
-        var fJsonName = field("json_name", String.class);
-        var fIsRequired = field("is_required", Boolean.class);
-        var fIsIdentity = field("is_identity", Boolean.class);
-        var fRegex = field("regular_expression", String.class);
-        var fMaxLen = field("max_length", Integer.class);
-        var fMinLen = field("min_length", Integer.class);
-        var fNeedsVerification = field("needs_verification", Boolean.class);
-        var fPosition = field("field_position", Integer.class);
-        var fValue = field("profile_value", String.class);
-
         return dsl.select(
                         field("upf.user_profile_field_id", Long.class).as("user_profile_field_id"),
-                        field("upf.name", String.class).as("field_name"),
+                        field("upf.name", String.class).as("name"),
                         field("upf.json_name", String.class).as("json_name"),
                         field("upf.is_required", Boolean.class).as("is_required"),
                         field("upf.is_identity", Boolean.class).as("is_identity"),
@@ -187,24 +175,14 @@ public class UserRepository {
                         field("upf.max_length", Integer.class).as("max_length"),
                         field("upf.min_length", Integer.class).as("min_length"),
                         field("upf.needs_verification", Boolean.class).as("needs_verification"),
-                        field("upf.position", Integer.class).as("field_position"),
+                        field("upf.position", Integer.class).as("position"),
                         field("upv.\"value\"", String.class).as("profile_value"))
                 .from(table("user_profile_values").as("upv"))
                 .join(table("user_profile_fields").as("upf")).on(field("upf.user_profile_field_id").eq(field("upv.user_profile_field_id")))
                 .where(field("upv.user_id").eq(userId))
                 .fetch(rec -> {
-                    UserProfileField upf = new UserProfileField(
-                            rec.get(fId),
-                            rec.get(fName),
-                            rec.get(fJsonName),
-                            Boolean.TRUE.equals(rec.get(fIsRequired)),
-                            Boolean.TRUE.equals(rec.get(fIsIdentity)),
-                            rec.get(fRegex),
-                            rec.get(fMaxLen),
-                            rec.get(fMinLen),
-                            Boolean.TRUE.equals(rec.get(fNeedsVerification)),
-                            rec.get(fPosition));
-                    return new UserProfileValue(upf, null, rec.get(fValue));
+                    UserProfileField upf = USER_PROFILE_FIELD.decode(rec).getOrThrow();
+                    return new UserProfileValue(upf, null, rec.get(field("profile_value", String.class)));
                 });
     }
 
@@ -342,11 +320,10 @@ public class UserRepository {
                 .join(table("oidc_providers").as("op")).on(field("op.oidc_provider_id").eq(field("ou.oidc_provider_id")))
                 .where(field("ou.user_id").eq(userId))
                 .fetch(rec -> new OidcUser(
-                        new OidcProvider(
+                        OidcProvider.ofSummary(
                                 rec.get(field("oidc_provider_id", Long.class)),
                                 rec.get(field("name", String.class)),
-                                rec.get(field("name_lower", String.class)),
-                                null, null, null, null, null, null, null, null, null, null, false),
+                                rec.get(field("name_lower", String.class))),
                         null,
                         rec.get(field("oidc_sub", String.class))));
     }
@@ -387,11 +364,10 @@ public class UserRepository {
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        User user = new User(
+        User user = User.of(
                 rec.get(field("user_id", Long.class)),
                 rec.get(field("account", String.class)),
-                rec.get(field("write_protected", Boolean.class)),
-                null, null, null, null, null, null);
+                Boolean.TRUE.equals(rec.get(field("write_protected", Boolean.class))));
         return Optional.of(new OidcUser(null, user, rec.get(field("oidc_sub", String.class))));
     }
 

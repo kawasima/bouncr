@@ -10,7 +10,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnSignInOptions;
+import net.unit8.bouncr.api.boundary.WebAuthnSignInOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;

@@ -23,7 +23,7 @@ import java.util.List;
 public record User(
     Long id,
     String account,
-    Boolean writeProtected,
+    boolean writeProtected,
     List<Group> groups,
     List<UserProfileValue> userProfileValues,
     UserLock userLock,
@@ -31,4 +31,8 @@ public record User(
     List<String> permissions,
     List<String> unverifiedProfiles
 ) {
+    /** Factory for decoder use — creates a User without loaded relations. */
+    public static User of(Long id, String account, boolean writeProtected) {
+        return new User(id, account, writeProtected, null, null, null, null, null, null);
+    }
 }

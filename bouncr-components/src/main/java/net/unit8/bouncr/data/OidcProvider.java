@@ -1,7 +1,6 @@
 package net.unit8.bouncr.data;
 
 import java.net.URI;
-import java.net.URL;
 
 /**
  * External OpenID Connect identity provider configuration.
@@ -33,7 +32,13 @@ public record OidcProvider(
     String authorizationEndpoint,
     TokenEndpointAuthMethod tokenEndpointAuthMethod,
     URI redirectUri,
-    URL jwksUri,
+    URI jwksUri,
     String issuer,
     boolean pkceEnabled
-) {}
+) {
+    /** Factory for summary use — creates an OidcProvider with only identity fields. */
+    public static OidcProvider ofSummary(Long id, String name, String nameLower) {
+        return new OidcProvider(id, name, nameLower,
+                null, null, null, null, null, null, null, null, null, null, false);
+    }
+}

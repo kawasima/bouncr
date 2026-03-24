@@ -2,7 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PasswordCredentialUpdate;
+import net.unit8.bouncr.api.boundary.PasswordCredentialUpdate;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;

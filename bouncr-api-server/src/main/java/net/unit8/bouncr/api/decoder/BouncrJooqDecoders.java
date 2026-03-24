@@ -2,17 +2,13 @@ package net.unit8.bouncr.api.decoder;
 
 import net.unit8.bouncr.data.*;
 import net.unit8.raoh.Decoder;
-import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.jooq.JooqRecordDecoder;
 import org.jooq.Record;
 
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
 
-import static net.unit8.raoh.Decoders.combine;
-import static net.unit8.raoh.Decoders.recover;
+import static net.unit8.raoh.Decoders.*;
 import static net.unit8.raoh.ObjectDecoders.*;
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
 
@@ -23,107 +19,118 @@ public final class BouncrJooqDecoders {
 
     private BouncrJooqDecoders() {}
 
-    private static final Decoder<Object, byte[]> BYTES_DECODER = (in, path) -> {
-        if (in == null) return Result.fail(path, "required", "is required");
-        return Result.ok((byte[]) in);
-    };
+    // --- Primitive helpers ---
+
+    private static Decoder<Object, byte[]> bytes() {
+        return (in, path) -> {
+            if (in == null) return Result.fail(path, "required", "is required");
+            return Result.ok((byte[]) in);
+        };
+    }
+
+    /** Decodes a non-blank string to URI, treating null/blank as null. */
+    private static Decoder<Object, URI> nullableUri() {
+        return (in, path) -> {
+            if (in == null) return Result.ok(null);
+            if (in instanceof String s && !s.isBlank()) {
+                try {
+                    return Result.ok(URI.create(s.trim()));
+                } catch (IllegalArgumentException e) {
+                    return Result.fail(path, "invalid_format", "not a valid URI");
+                }
+            }
+            return Result.ok(null);
+        };
+    }
+
+    private static <T> JooqRecordDecoder<T> nullable(Decoder<Record, T> dec) {
+        return recover(nested(dec::decode), (T) null)::decode;
+    }
 
     // --- Permission ---
 
     public static final Decoder<Record, Permission> PERMISSION = combine(
             field("permission_id", long_()),
             field("name", string()),
-            optionalField("description", string()),
-            optionalField("write_protected", bool())
-    ).map((id, name, desc, wp) -> new Permission(id, name, desc.orElse(null), wp.orElse(false), null));
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map(Permission::of);
 
     // --- Application ---
 
     public static final Decoder<Record, Application> APPLICATION = combine(
             field("application_id", long_()),
             field("name", string()),
-            optionalField("description", string()),
-            optionalField("pass_to", string()),
-            optionalField("virtual_path", string()),
-            optionalField("top_page", string()),
-            optionalField("write_protected", bool())
-    ).map((id, name, desc, passTo, virtualPath, topPage, wp) -> new Application(
-            id, name, desc.orElse(null), passTo.orElse(null), virtualPath.orElse(null),
-            topPage.orElse(null), wp.orElse(false), null));
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("pass_to", string()), (String) null),
+            withDefault(field("virtual_path", string()), (String) null),
+            withDefault(field("top_page", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map(Application::of);
 
     // --- Realm ---
 
     public static final Decoder<Record, Realm> REALM = combine(
             field("realm_id", long_()),
             field("name", string()),
-            optionalField("name_lower", string()),
-            optionalField("url", string()),
-            optionalField("description", string()),
-            optionalField("write_protected", bool())
-    ).map((id, name, nameLower, url, desc, wp) -> new Realm(
-            id, name, nameLower.orElse(null), url.orElse(null), desc.orElse(null),
-            null, wp.orElse(false), null));
+            withDefault(field("name_lower", string()), (String) null),
+            withDefault(field("url", string()), (String) null),
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map(Realm::of);
 
     // --- Role ---
 
     public static final Decoder<Record, Role> ROLE = combine(
             field("role_id", long_()),
             field("name", string()),
-            optionalField("description", string()),
-            optionalField("write_protected", bool())
-    ).map((id, name, desc, wp) -> new Role(id, name, desc.orElse(null), wp.orElse(false), null));
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map(Role::of);
 
     // --- Group ---
 
     public static final Decoder<Record, Group> GROUP = combine(
             field("group_id", long_()),
             field("name", string()),
-            optionalField("description", string()),
-            optionalField("write_protected", bool())
-    ).map((id, name, desc, wp) -> new Group(id, name, desc.orElse(null), wp.orElse(false), null));
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map(Group::of);
 
     // --- User ---
 
     public static final Decoder<Record, User> USER = combine(
             field("user_id", long_()),
             field("account", string()),
-            optionalField("write_protected", bool())
-    ).map((id, account, wp) -> new User(id, account, wp.orElse(false),
-            null, null, null, null, null, null));
+            withDefault(field("write_protected", bool()), false)
+    ).map(User::of);
 
     // --- PasswordCredential ---
 
     public static final Decoder<Record, PasswordCredential> PASSWORD_CREDENTIAL = combine(
-            optionalField("password", BYTES_DECODER),
-            optionalField("salt", string()),
+            withDefault(field("password", bytes()), (byte[]) null),
+            withDefault(field("salt", string()), (String) null),
             field("initial", bool()),
             field("created_at", dateTime())
-    ).map((password, salt, initial, createdAt) -> new PasswordCredential(
-            null, password.orElse(null), salt.orElse(null), initial, createdAt));
+    ).map(PasswordCredential::of);
 
     // --- OtpKey ---
 
     public static final Decoder<Record, OtpKey> OTP_KEY =
-            field("otp_key", BYTES_DECODER)
-                    .map(key -> new OtpKey(key));
+            field("otp_key", bytes()).map(OtpKey::new);
 
     // --- UserLock ---
 
     public static final Decoder<Record, UserLock> USER_LOCK = combine(
-            field("lock_level", string()),
+            field("lock_level", enumOf(LockLevel.class)),
             field("locked_at", dateTime())
-    ).map((level, lockedAt) -> new UserLock(LockLevel.valueOf(level), lockedAt));
+    ).map(UserLock::new);
 
     // --- Nullable wrappers for LEFT JOIN ---
 
-    private static final JooqRecordDecoder<PasswordCredential> NULLABLE_PASSWORD_CREDENTIAL =
-            recover(nested(PASSWORD_CREDENTIAL::decode), (PasswordCredential) null)::decode;
-
-    private static final JooqRecordDecoder<OtpKey> NULLABLE_OTP_KEY =
-            recover(nested(OTP_KEY::decode), (OtpKey) null)::decode;
-
-    private static final JooqRecordDecoder<UserLock> NULLABLE_USER_LOCK =
-            recover(nested(USER_LOCK::decode), (UserLock) null)::decode;
+    private static final JooqRecordDecoder<PasswordCredential> NULLABLE_PASSWORD_CREDENTIAL = nullable(PASSWORD_CREDENTIAL);
+    private static final JooqRecordDecoder<OtpKey> NULLABLE_OTP_KEY = nullable(OTP_KEY);
+    private static final JooqRecordDecoder<UserLock> NULLABLE_USER_LOCK = nullable(USER_LOCK);
 
     // --- UserCredentials (for sign-in) ---
 
@@ -140,29 +147,20 @@ public final class BouncrJooqDecoders {
     public static final Decoder<Record, UserSession> USER_SESSION = combine(
             field("user_session_id", long_()),
             field("token", string()),
-            optionalNullableField("remote_address", string()),
-            optionalNullableField("user_agent", string()),
+            withDefault(field("remote_address", string()), (String) null),
+            withDefault(field("user_agent", string()), (String) null),
             field("created_at", dateTime())
     ).map((sessionId, token, remoteAddr, userAgent, createdAt) -> new UserSession(
-            sessionId, null, token, valueOf(remoteAddr), valueOf(userAgent), createdAt));
+            sessionId, null, token, remoteAddr, userAgent, createdAt));
 
     public static final Decoder<Record, UserSession> USER_SESSION_WITH_USER = combine(
             field("user_session_id", long_()),
-            field("user_id", long_()),
-            field("account", string()),
-            optionalField("write_protected", bool()),
+            nested(USER::decode),
             field("token", string()),
-            optionalNullableField("remote_address", string()),
-            optionalNullableField("user_agent", string()),
+            withDefault(field("remote_address", string()), (String) null),
+            withDefault(field("user_agent", string()), (String) null),
             field("created_at", dateTime())
-    ).map((sessionId, userId, account, wp, token, remoteAddr, userAgent, createdAt) -> new UserSession(
-            sessionId,
-            new User(userId, account, wp.orElse(false),
-                    null, null, null, null, null, null),
-            token,
-            valueOf(remoteAddr),
-            valueOf(userAgent),
-            createdAt));
+    ).map(UserSession::new);
 
     // --- UserAction ---
 
@@ -170,11 +168,11 @@ public final class BouncrJooqDecoders {
             field("user_action_id", long_()),
             field("action_id", long_()),
             field("actor", string()),
-            optionalNullableField("actor_ip", string()),
-            optionalNullableField("options", string()),
+            withDefault(field("actor_ip", string()), (String) null),
+            withDefault(field("options", string()), (String) null),
             field("created_at", dateTime())
-    ).map((id, actionId, actor, actorIp, options, createdAt) -> new UserAction(
-            id, ActionType.of(actionId), actor, valueOf(actorIp), valueOf(options), createdAt));
+    ).map((id, actionId, actor, actorIp, options, createdAt) ->
+            new UserAction(id, ActionType.of(actionId), actor, actorIp, options, createdAt));
 
     // --- Invitation ---
 
@@ -183,7 +181,7 @@ public final class BouncrJooqDecoders {
             field("code", string()),
             field("email", string()),
             field("invited_at", dateTime())
-    ).map((id, code, email, invitedAt) -> new Invitation(id, code, email, invitedAt, null, null));
+    ).map(Invitation::of);
 
     // --- GroupInvitation ---
 
@@ -191,57 +189,53 @@ public final class BouncrJooqDecoders {
             field("group_invitation_id", long_()),
             field("group_id", long_()),
             field("name", string()),
-            optionalField("description", string()),
-            optionalField("write_protected", bool())
-    ).map((giId, groupId, name, desc, wp) -> new GroupInvitation(
-            giId, null,
-            new Group(groupId, name, desc.orElse(null), wp.orElse(false), null)));
+            withDefault(field("description", string()), (String) null),
+            withDefault(field("write_protected", bool()), false)
+    ).map((giId, groupId, name, desc, wp) ->
+            new GroupInvitation(giId, null, new Group(groupId, name, desc, wp, null)));
 
     // --- OidcInvitation ---
 
     public static final Decoder<Record, OidcInvitation> OIDC_INVITATION = combine(
             field("oidc_invitation_id", long_()),
-            optionalField("oidc_payload", string())
-    ).map((id, payload) -> new OidcInvitation(id, null, null, payload.orElse(null)));
+            withDefault(field("oidc_payload", string()), (String) null)
+    ).map((id, payload) -> new OidcInvitation(id, null, null, payload));
 
-    // --- Assignment ---
+    // --- Assignment (flat JOIN structuring with nested) ---
 
-    public static final Decoder<Record, Assignment> ASSIGNMENT = combine(
+    private static final JooqRecordDecoder<Group> GROUP_FROM_ASSIGNMENT = combine(
             field("group_id", long_()),
             field("group_name", string()),
-            optionalField("group_description", string()),
-            optionalField("group_write_protected", bool()),
-            field("role_id", long_()),
-            field("role_name", string()),
-            optionalField("role_description", string()),
-            optionalField("role_write_protected", bool())
-    ).map((groupId, groupName, groupDesc, groupWp, roleId, roleName, roleDesc, roleWp) -> new Assignment(
-            new Group(groupId, groupName, groupDesc.orElse(null), groupWp.orElse(false), null),
-            new Role(roleId, roleName, roleDesc.orElse(null), roleWp.orElse(false), null),
-            null));
+            withDefault(field("group_description", string()), (String) null),
+            withDefault(field("group_write_protected", bool()), false)
+    ).map(Group::of)::decode;
 
-    public static final Decoder<Record, Assignment> ASSIGNMENT_WITH_REALM = combine(
-            field("group_id", long_()),
-            field("group_name", string()),
-            optionalField("group_description", string()),
-            optionalField("group_write_protected", bool()),
+    private static final JooqRecordDecoder<Role> ROLE_FROM_ASSIGNMENT = combine(
             field("role_id", long_()),
             field("role_name", string()),
-            optionalField("role_description", string()),
-            optionalField("role_write_protected", bool()),
+            withDefault(field("role_description", string()), (String) null),
+            withDefault(field("role_write_protected", bool()), false)
+    ).map(Role::of)::decode;
+
+    private static final JooqRecordDecoder<Realm> REALM_FROM_ASSIGNMENT = combine(
             field("realm_id", long_()),
             field("realm_name", string()),
-            optionalField("realm_name_lower", string()),
-            optionalField("realm_url", string()),
-            optionalField("realm_description", string()),
-            optionalField("realm_write_protected", bool())
-    ).map((groupId, groupName, groupDesc, groupWp,
-           roleId, roleName, roleDesc, roleWp,
-           realmId, realmName, realmNameLower, realmUrl, realmDesc, realmWp) -> new Assignment(
-            new Group(groupId, groupName, groupDesc.orElse(null), groupWp.orElse(false), null),
-            new Role(roleId, roleName, roleDesc.orElse(null), roleWp.orElse(false), null),
-            new Realm(realmId, realmName, realmNameLower.orElse(null), realmUrl.orElse(null),
-                    realmDesc.orElse(null), null, realmWp.orElse(false), null)));
+            withDefault(field("realm_name_lower", string()), (String) null),
+            withDefault(field("realm_url", string()), (String) null),
+            withDefault(field("realm_description", string()), (String) null),
+            withDefault(field("realm_write_protected", bool()), false)
+    ).map(Realm::of)::decode;
+
+    public static final Decoder<Record, Assignment> ASSIGNMENT = combine(
+            nested(GROUP_FROM_ASSIGNMENT),
+            nested(ROLE_FROM_ASSIGNMENT)
+    ).map((group, role) -> new Assignment(group, role, null));
+
+    public static final Decoder<Record, Assignment> ASSIGNMENT_WITH_REALM = combine(
+            nested(GROUP_FROM_ASSIGNMENT),
+            nested(ROLE_FROM_ASSIGNMENT),
+            nested(REALM_FROM_ASSIGNMENT)
+    ).map(Assignment::new);
 
     // --- PasswordResetChallenge ---
 
@@ -249,116 +243,75 @@ public final class BouncrJooqDecoders {
             field("id", long_()),
             field("code", string()),
             field("expires_at", dateTime())
-    ).map((id, code, expiresAt) -> new PasswordResetChallenge(id, null, code, expiresAt));
+    ).map(PasswordResetChallenge::of);
 
     public static final Decoder<Record, PasswordResetChallenge> PRC_WITH_USER = combine(
             field("id", long_()),
-            field("user_id", long_()),
-            field("account", string()),
-            optionalField("write_protected", bool()),
+            nested(USER::decode),
             field("code", string()),
             field("expires_at", dateTime())
-    ).map((id, userId, account, wp, code, expiresAt) -> new PasswordResetChallenge(
-            id,
-            new User(userId, account, wp.orElse(false),
-                    null, null, null, null, null, null),
-            code, expiresAt));
+    ).map(PasswordResetChallenge::new);
 
     // --- UserProfileField ---
 
     public static final Decoder<Record, UserProfileField> USER_PROFILE_FIELD = combine(
             field("user_profile_field_id", long_()),
             field("name", string()),
-            optionalNullableField("json_name", string()),
+            withDefault(field("json_name", string()), (String) null),
             field("is_required", bool()),
             field("is_identity", bool()),
-            optionalNullableField("regular_expression", string()),
-            optionalNullableField("max_length", int_()),
-            optionalNullableField("min_length", int_()),
+            withDefault(field("regular_expression", string()), (String) null),
+            withDefault(field("max_length", int_()), (Integer) null),
+            withDefault(field("min_length", int_()), (Integer) null),
             field("needs_verification", bool()),
-            optionalField("position", int_())
-    ).map((id, name, jsonName, isRequired, isIdentity, regex, maxLen, minLen, needsVerification, position) ->
-            new UserProfileField(id, name, valueOf(jsonName), isRequired, isIdentity,
-                    valueOf(regex), valueOf(maxLen), valueOf(minLen),
-                    needsVerification, position.orElse(null)));
+            withDefault(field("position", int_()), (Integer) null)
+    ).map(UserProfileField::new);
 
     // --- OidcProvider ---
 
     public static final Decoder<Record, OidcProvider> OIDC_PROVIDER = combine(
             field("oidc_provider_id", long_()),
             field("name", string()),
-            optionalField("name_lower", string()),
-            optionalField("client_id", string()),
-            optionalField("client_secret", string()),
-            optionalNullableField("scope", string()),
-            optionalNullableField("response_type", string()),
-            optionalField("token_endpoint", string()),
-            optionalField("authorization_endpoint", string()),
+            withDefault(field("name_lower", string()), (String) null),
+            withDefault(field("client_id", string()), (String) null),
+            withDefault(field("client_secret", string()), (String) null),
+            withDefault(field("scope", string()), (String) null),
+            optionalField("response_type", string()),
+            withDefault(field("token_endpoint", string()), (String) null),
+            withDefault(field("authorization_endpoint", string()), (String) null),
             optionalField("token_endpoint_auth_method", string()),
-            optionalNullableField("redirect_uri", string()),
-            optionalNullableField("jwks_uri", string()),
-            optionalNullableField("issuer", string()),
-            optionalField("pkce_enabled", bool())
+            field("redirect_uri", nullableUri()),
+            field("jwks_uri", nullableUri()),
+            withDefault(field("issuer", string()), (String) null),
+            withDefault(field("pkce_enabled", bool()), false)
     ).map((id, name, nameLower, clientId, clientSecret, scope, responseType,
-           tokenEndpoint, authorizationEndpoint, authMethod, redirectUri, jwksUri, issuer, pkceEnabled) -> {
-        return new OidcProvider(
-                id, name, nameLower.orElse(null),
-                clientId.orElse(null), clientSecret.orElse(null),
-                valueOf(scope),
-                mapOf(responseType, ResponseType::of),
-                tokenEndpoint.orElse(null),
-                authorizationEndpoint.orElse(null),
-                authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
-                mapOf(redirectUri, URI::create),
-                mapOf(jwksUri, BouncrJooqDecoders::toUrl),
-                valueOf(issuer),
-                pkceEnabled.orElse(false));
-    });
+           tokenEndpoint, authorizationEndpoint, authMethod, redirectUri, jwksUri, issuer, pkceEnabled) ->
+            new OidcProvider(id, name, nameLower, clientId, clientSecret, scope,
+                    responseType.map(ResponseType::of).orElse(null),
+                    tokenEndpoint, authorizationEndpoint,
+                    authMethod.map(TokenEndpointAuthMethod::of).orElse(null),
+                    redirectUri, jwksUri, issuer, pkceEnabled));
 
     // --- OidcApplication ---
 
     public static final Decoder<Record, OidcApplication> OIDC_APPLICATION = combine(
             field("oidc_application_id", long_()),
             field("name", string()),
-            optionalField("name_lower", string()),
-            optionalField("client_id", string()),
-            optionalField("client_secret", string()),
-            optionalField("private_key", BYTES_DECODER),
-            optionalField("public_key", BYTES_DECODER),
-            optionalField("home_url", string()),
-            optionalField("callback_url", string()),
-            optionalField("description", string()),
-            optionalNullableField("backchannel_logout_uri", string()),
-            optionalNullableField("frontchannel_logout_uri", string())
+            withDefault(field("name_lower", string()), (String) null),
+            withDefault(field("client_id", string()), (String) null),
+            withDefault(field("client_secret", string()), (String) null),
+            withDefault(field("private_key", bytes()), (byte[]) null),
+            withDefault(field("public_key", bytes()), (byte[]) null),
+            field("home_uri", nullableUri()),
+            field("callback_uri", nullableUri()),
+            withDefault(field("description", string()), (String) null),
+            field("backchannel_logout_uri", nullableUri()),
+            field("frontchannel_logout_uri", nullableUri())
     ).map((id, name, nameLower, clientId, clientSecret, privateKey, publicKey,
-            homeUrl, callbackUrl, desc, backchannelLogoutUri, frontchannelLogoutUri) -> {
-        return new OidcApplication(
-                id, name, nameLower.orElse(null),
-                clientId.orElse(null), clientSecret.orElse(null),
-                privateKey.orElse(null), publicKey.orElse(null),
-                homeUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
-                callbackUrl.map(BouncrJooqDecoders::toUrl).orElse(null),
-                desc.orElse(null),
-                mapOf(backchannelLogoutUri, BouncrJooqDecoders::toUrl),
-                mapOf(frontchannelLogoutUri, BouncrJooqDecoders::toUrl),
-                null, null);
-    });
+            homeUri, callbackUri, desc, backchannelLogoutUri, frontchannelLogoutUri) ->
+            new OidcApplication(id, name, nameLower, clientId, clientSecret,
+                    privateKey, publicKey, homeUri, callbackUri, desc,
+                    backchannelLogoutUri, frontchannelLogoutUri,
+                    null, null));
 
-    /** Extract value from Presence, returning null for Absent/PresentNull. */
-    private static <T> T valueOf(Presence<T> p) {
-        return p instanceof Presence.Present<T> present ? present.value() : null;
-    }
-
-    /** Extract and map value from Presence, returning null for Absent/PresentNull. */
-    private static <T, R> R mapOf(Presence<T> p, java.util.function.Function<T, R> f) {
-        return p instanceof Presence.Present<T> present ? f.apply(present.value()) : null;
-    }
-
-    private static URL toUrl(String raw) {
-        try {
-            return URI.create(raw).toURL();
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Invalid URL: " + raw, e);
-        }
-    }
 }

@@ -81,8 +81,8 @@ export interface OidcApplication {
   name: string;
   client_id?: string;
   client_secret?: string;
-  home_url?: string;
-  callback_url?: string;
+  home_uri?: string;
+  callback_uri?: string;
   description?: string;
   backchannel_logout_uri?: string;
   frontchannel_logout_uri?: string;
@@ -273,8 +273,8 @@ export interface OidcProviderUpdateRequest extends OidcProviderCreateRequest {}
 export interface OidcApplicationCreateRequest {
   name: string;
   grant_types: string[];
-  home_url?: string;
-  callback_url?: string;
+  home_uri?: string;
+  callback_uri?: string;
   description?: string;
   backchannel_logout_uri?: string;
   frontchannel_logout_uri?: string;

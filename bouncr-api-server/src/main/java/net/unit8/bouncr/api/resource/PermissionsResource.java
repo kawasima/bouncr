@@ -9,7 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.PermissionCreate;
+import net.unit8.bouncr.api.boundary.PermissionCreate;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.raoh.Err;

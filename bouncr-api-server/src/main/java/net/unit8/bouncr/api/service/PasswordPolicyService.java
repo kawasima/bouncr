@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.service;
 
 import kotowari.restful.data.Problem;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.boundary.PasswordCredentialUpdate;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.util.PasswordUtils;
 import org.jooq.DSLContext;
@@ -32,7 +32,7 @@ public class PasswordPolicyService {
         return null;
     }
 
-    public Problem.Violation verifyPasswordChange(BouncrJsonDecoders.PasswordCredentialUpdate updateRequest) {
+    public Problem.Violation verifyPasswordChange(PasswordCredentialUpdate updateRequest) {
         var rec = dsl.select(
                         field("pc.password", byte[].class),
                         field("pc.salt", String.class),

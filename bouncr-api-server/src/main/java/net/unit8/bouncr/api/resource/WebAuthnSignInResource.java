@@ -16,7 +16,7 @@ import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.decoder.BouncrJsonDecoders.WebAuthnAuthenticate;
+import net.unit8.bouncr.api.boundary.WebAuthnAuthenticate;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;

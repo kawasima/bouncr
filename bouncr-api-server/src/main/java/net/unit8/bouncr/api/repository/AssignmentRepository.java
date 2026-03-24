@@ -1,9 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.Assignment;
-import net.unit8.bouncr.data.Group;
-import net.unit8.bouncr.data.Realm;
-import net.unit8.bouncr.data.Role;
 import org.jooq.DSLContext;
 
 import java.util.List;
@@ -45,15 +42,7 @@ public class AssignmentRepository {
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        Assignment assignment = new Assignment(
-                new Group(rec.get(field("group_id", Long.class)), rec.get(field("group_name", String.class)),
-                        rec.get(field("group_description", String.class)), rec.get(field("group_write_protected", Boolean.class)), null),
-                new Role(rec.get(field("role_id", Long.class)), rec.get(field("role_name", String.class)),
-                        rec.get(field("role_description", String.class)), rec.get(field("role_write_protected", Boolean.class)), null),
-                new Realm(rec.get(field("realm_id", Long.class)), rec.get(field("realm_name", String.class)),
-                        rec.get(field("realm_name_lower", String.class)), rec.get(field("realm_url", String.class)),
-                        rec.get(field("realm_description", String.class)), null, rec.get(field("realm_write_protected", Boolean.class)), null));
-        return Optional.of(assignment);
+        return Optional.of(ASSIGNMENT_WITH_REALM.decode(rec).getOrThrow());
     }
 
     public Long resolveIdByName(String tableName, String idColumn, String name) {

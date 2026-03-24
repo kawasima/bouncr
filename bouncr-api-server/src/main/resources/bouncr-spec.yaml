@@ -1206,9 +1206,9 @@ components:
           type: integer
         name:
           type: string
-        home_url:
+        home_uri:
           type: string
-        callback_url:
+        callback_uri:
           type: string
         description:
           type: string
@@ -1223,8 +1223,8 @@ components:
       required:
         - id
         - name
-        - home_url
-        - callback_url
+        - home_uri
+        - callback_uri
         - description
         - permissions
     SignOutResult:
@@ -1442,9 +1442,9 @@ components:
       properties:
         name:
           type: string
-        home_url:
+        home_uri:
           type: string
-        callback_url:
+        callback_uri:
           type: string
         description:
           type: string
@@ -1458,8 +1458,8 @@ components:
             type: string
       required:
         - name
-        - home_url
-        - callback_url
+        - home_uri
+        - callback_uri
         - description
         - permissions
     OidcApplicationUpdateRequest:
@@ -1467,9 +1467,9 @@ components:
       properties:
         name:
           type: string
-        home_url:
+        home_uri:
           type: string
-        callback_url:
+        callback_uri:
           type: string
         description:
           type: string
@@ -1484,8 +1484,8 @@ components:
       required:
         - id
         - name
-        - home_url
-        - callback_url
+        - home_uri
+        - callback_uri
         - description
         - permissions
     OidcProviderCreateRequest:

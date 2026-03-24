@@ -41,17 +41,17 @@ const oidcAppSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   grant_types: z.array(z.string()).min(1, 'At least one grant type is required'),
   description: z.union([z.string(), z.literal('')]).optional(),
-  home_url: z.union([httpUrl, z.literal('')]).optional(),
-  callback_url: z.union([httpUrl, z.literal('')]).optional(),
+  home_uri: z.union([httpUrl, z.literal('')]).optional(),
+  callback_uri: z.union([httpUrl, z.literal('')]).optional(),
   backchannel_logout_uri: z.union([httpUrl, z.literal('')]).optional(),
   frontchannel_logout_uri: z.union([httpUrl, z.literal('')]).optional(),
   permissions: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
-  if (data.grant_types.includes('authorization_code') && (!data.callback_url || data.callback_url === '')) {
+  if (data.grant_types.includes('authorization_code') && (!data.callback_uri || data.callback_uri === '')) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Callback URL is required when Authorization Code grant is enabled',
-      path: ['callback_url'],
+      path: ['callback_uri'],
     });
   }
 });
@@ -112,8 +112,8 @@ function OidcAppEditForm({
         name: target.name,
         grant_types: target.grant_types ?? ['authorization_code', 'refresh_token'],
         description: target.description ?? '',
-        home_url: target.home_url ?? '',
-        callback_url: target.callback_url ?? '',
+        home_uri: target.home_uri ?? '',
+        callback_uri: target.callback_uri ?? '',
         backchannel_logout_uri: target.backchannel_logout_uri ?? '',
         frontchannel_logout_uri: target.frontchannel_logout_uri ?? '',
       }
@@ -121,8 +121,8 @@ function OidcAppEditForm({
         name: '',
         grant_types: ['authorization_code', 'refresh_token'],
         description: '',
-        home_url: '',
-        callback_url: '',
+        home_uri: '',
+        callback_uri: '',
         backchannel_logout_uri: '',
         frontchannel_logout_uri: '',
       },
@@ -139,8 +139,8 @@ function OidcAppEditForm({
     };
     if (d.description?.trim()) payload.description = d.description.trim();
     if (d.grant_types.includes('authorization_code')) {
-      if (d.callback_url?.trim()) payload.callback_url = d.callback_url.trim();
-      if (d.home_url?.trim()) payload.home_url = d.home_url.trim();
+      if (d.callback_uri?.trim()) payload.callback_uri = d.callback_uri.trim();
+      if (d.home_uri?.trim()) payload.home_uri = d.home_uri.trim();
       payload.backchannel_logout_uri = d.backchannel_logout_uri?.trim() ?? '';
       payload.frontchannel_logout_uri = d.frontchannel_logout_uri?.trim() ?? '';
     }
@@ -273,16 +273,16 @@ function OidcAppEditForm({
       {hasAuthCode && (
         <>
           <div className="space-y-2">
-            <label htmlFor="callback_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+            <label htmlFor="callback_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
               Callback URL <span className="text-destructive">*</span>
             </label>
-            <input id="callback_url" {...register('callback_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
-            {errors.callback_url && <p className="text-sm text-destructive">{errors.callback_url.message}</p>}
+            <input id="callback_uri" {...register('callback_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
+            {errors.callback_uri && <p className="text-sm text-destructive">{errors.callback_uri.message}</p>}
           </div>
           <div className="space-y-2">
-            <label htmlFor="home_url" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
-            <input id="home_url" {...register('home_url')} disabled={isReadOnly} className="mansion-input w-full py-2" />
-            {errors.home_url && <p className="text-sm text-destructive">{errors.home_url.message}</p>}
+            <label htmlFor="home_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Homepage URL</label>
+            <input id="home_uri" {...register('home_uri')} disabled={isReadOnly} className="mansion-input w-full py-2" />
+            {errors.home_uri && <p className="text-sm text-destructive">{errors.home_uri.message}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="backchannel_logout_uri" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Back-channel Logout URI</label>

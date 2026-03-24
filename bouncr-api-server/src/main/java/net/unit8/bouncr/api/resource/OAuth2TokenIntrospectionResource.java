@@ -10,7 +10,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrFormDecoders;
-import net.unit8.bouncr.api.decoder.BouncrFormDecoders.IntrospectionRequest;
+import net.unit8.bouncr.data.IntrospectionRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.component.BouncrConfiguration;
