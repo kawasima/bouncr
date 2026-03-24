@@ -90,6 +90,23 @@ public class OidcApplicationsResource {
                 .isPresent();
     }
 
+    @Decision(value = PROCESSABLE, method = "POST")
+    public boolean isProcessable(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest,
+                                 UserPermissionPrincipal principal, RestContext context) {
+        List<String> requestedPermissions = createRequest._4();
+        if (requestedPermissions != null && !requestedPermissions.isEmpty()) {
+            var excess = requestedPermissions.stream()
+                    .filter(p -> !principal.permissions().contains(p))
+                    .toList();
+            if (!excess.isEmpty()) {
+                context.setMessage(Problem.valueOf(403,
+                        "Cannot grant permissions you do not have: " + excess));
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Decision(value = CONFLICT, method = "POST")
     public boolean isConflict(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);

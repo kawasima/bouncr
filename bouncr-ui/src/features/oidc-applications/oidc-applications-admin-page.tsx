@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -64,12 +64,14 @@ function OidcAppEditForm({
   problem,
   onDeleted,
   canUpdate = true,
+  grantablePermissions,
 }: {
   target: OidcApplication | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
   canUpdate?: boolean;
+  grantablePermissions: Set<string>;
 }) {
   const isCreate = !target;
   const isReadOnly = !!target && !canUpdate;
@@ -89,10 +91,10 @@ function OidcAppEditForm({
       api.getPermissions({ limit: 1000 }),
       api.getRoles({ limit: 1000 }),
     ]).then(([perms, roles]) => {
-      setAllPermissions(perms ?? []);
+      setAllPermissions((perms ?? []).filter((p) => grantablePermissions.has(p.name)));
       setAllRoles(roles ?? []);
     }).catch(() => {});
-  }, []);
+  }, [grantablePermissions]);
 
   const handleAddRolePermissions = async (roleName: string) => {
     try {
@@ -408,10 +410,11 @@ function OidcAppEditForm({
 }
 
 export function OidcApplicationsAdminPage() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.create);
   const canDelete = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.delete);
   const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.update);
+  const grantablePermissions = useMemo(() => new Set(permissions), [permissions]);
 
   return (
     <AdminCrudPage
@@ -425,6 +428,7 @@ export function OidcApplicationsAdminPage() {
           {...props}
           onDeleted={canDelete ? props.onDeleted : undefined}
           canUpdate={canUpdate}
+          grantablePermissions={grantablePermissions}
         />
       )}
     />

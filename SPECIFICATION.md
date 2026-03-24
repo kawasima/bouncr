@@ -104,6 +104,8 @@ data SigningKeyPair = privateKey AND publicKey
 // callbackUri: redirect URI for authorization code flow (RFC 6749)
 data OidcClientMetadata = homeUri(URI)? AND callbackUri(URI)? AND backchannelLogoutUri(URI)? AND frontchannelLogoutUri(URI)? AND Set<GrantType>
 
+// Invariant: permissions granted to an OidcApplication must be a subset
+// of the operating user's own permissions (enforced at create and update)
 data OidcApplication = OidcApplicationId AND name AND ClientCredentials AND SigningKeyPair? AND OidcClientMetadata AND description? AND List<Permission>
 
 // ===== Invitation =====

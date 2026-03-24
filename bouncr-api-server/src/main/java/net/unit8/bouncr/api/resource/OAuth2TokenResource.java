@@ -337,6 +337,14 @@ public class OAuth2TokenResource {
         claims.put("jti", UUID.randomUUID().toString());
         claims.put("scope", scope);
         claims.put("client_id", clientId);
+
+        List<String> permissions = Arrays.stream(scope.split("\\s+"))
+                .filter(s -> !s.equals("openid"))
+                .toList();
+        if (!permissions.isEmpty()) {
+            claims.put("permissions", permissions);
+        }
+
         return RsaJwtSigner.sign(claims, privateKeyBytes, kid);
     }
 
