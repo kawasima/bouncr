@@ -683,7 +683,7 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
             stmtInsRealm.setBoolean(5, true);
             stmtInsRealm.setString(6, "bouncr_oauth2");
             stmtInsRealm.executeUpdate();
-            Long oauth2RealmId = fetchGeneratedKey(stmtInsRealm);
+            fetchGeneratedKey(stmtInsRealm); // realm ID not needed (no assignments for OAuth2 realm)
 
             stmtInsAssignment.setLong(1, adminGroupId);
             stmtInsAssignment.setLong(2, adminRoleId);

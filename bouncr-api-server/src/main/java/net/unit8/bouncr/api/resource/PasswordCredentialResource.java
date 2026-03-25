@@ -110,6 +110,7 @@ public class PasswordCredentialResource {
         };
     }
 
+    // POST is allowed for client tokens (admin/service account provisioning)
     @Decision(value = AUTHORIZED, method = "POST")
     public boolean isAuthorizedPost(UserPermissionPrincipal principal) {
         return principal != null;

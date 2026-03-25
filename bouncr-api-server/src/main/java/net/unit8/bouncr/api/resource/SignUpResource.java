@@ -76,6 +76,8 @@ public class SignUpResource {
         };
     }
 
+    // Sign-up is a public endpoint (anonymous access allowed, gated by ALLOWED).
+    // Reject only client_credentials tokens — user provisioning should use UsersResource.
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         if (PrincipalUtils.isClientToken(principal)) return false;

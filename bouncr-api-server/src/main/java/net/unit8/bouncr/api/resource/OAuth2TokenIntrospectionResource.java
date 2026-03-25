@@ -120,7 +120,6 @@ public class OAuth2TokenIntrospectionResource {
         if (profileMap.get("sub") != null) response.put("sub", profileMap.get("sub"));
         response.put("client_id", tokenClientId);
         if (profileMap.get("scope") != null) response.put("scope", profileMap.get("scope"));
-        if (profileMap.get("token_type") != null) response.put("token_type", profileMap.get("token_type"));
         response.put("token_type", "Bearer");
 
         return jsonResponse(200, response);
