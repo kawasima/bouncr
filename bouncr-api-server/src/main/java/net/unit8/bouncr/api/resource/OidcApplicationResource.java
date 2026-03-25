@@ -20,6 +20,7 @@ import net.unit8.raoh.Presence;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -76,6 +77,23 @@ public class OidcApplicationResource {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("oidc_application:delete"))
                 .isPresent();
+    }
+
+    @Decision(value = PROCESSABLE, method = "PUT")
+    public boolean isProcessable(OidcApplicationUpdate updateRequest,
+                                 UserPermissionPrincipal principal, RestContext context) {
+        List<String> requestedPermissions = updateRequest.permissions();
+        if (requestedPermissions != null && !requestedPermissions.isEmpty()) {
+            var excess = requestedPermissions.stream()
+                    .filter(p -> !principal.permissions().contains(p))
+                    .toList();
+            if (!excess.isEmpty()) {
+                context.setMessage(Problem.valueOf(403,
+                        "Cannot grant permissions you do not have: " + excess));
+                return false;
+            }
+        }
+        return true;
     }
 
     @Decision(value = CONFLICT, method = "PUT")

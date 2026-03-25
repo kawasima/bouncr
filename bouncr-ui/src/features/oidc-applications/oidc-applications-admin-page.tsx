@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -64,12 +64,14 @@ function OidcAppEditForm({
   problem,
   onDeleted,
   canUpdate = true,
+  grantablePermissions,
 }: {
   target: OidcApplication | null;
   onSubmit: (data: Record<string, unknown>) => Promise<boolean>;
   problem: Problem | null;
   onDeleted?: () => void;
   canUpdate?: boolean;
+  grantablePermissions: Set<string>;
 }) {
   const isCreate = !target;
   const isReadOnly = !!target && !canUpdate;
@@ -84,22 +86,30 @@ function OidcAppEditForm({
     new Set(target?.permissions?.map((p) => p.name) ?? []),
   );
 
+  // Permissions already assigned to the target app (may include ones the current user cannot grant)
+  const existingPerms = useMemo(
+    () => new Set(target?.permissions?.map((p) => p.name) ?? []),
+    [target],
+  );
+
   useEffect(() => {
     Promise.all([
       api.getPermissions({ limit: 1000 }),
       api.getRoles({ limit: 1000 }),
     ]).then(([perms, roles]) => {
-      setAllPermissions(perms ?? []);
+      // Show grantable permissions + already-assigned permissions (even if not grantable, so they can be unchecked)
+      setAllPermissions((perms ?? []).filter((p) => grantablePermissions.has(p.name) || existingPerms.has(p.name)));
       setAllRoles(roles ?? []);
     }).catch(() => {});
-  }, []);
+  }, [grantablePermissions, existingPerms]);
 
   const handleAddRolePermissions = async (roleName: string) => {
     try {
       const perms = await api.getRolePermissions(roleName);
       setSelectedPerms((prev) => {
         const next = new Set(prev);
-        (perms ?? []).forEach((p) => next.add(p.name));
+        // Only add permissions the current user can grant
+        (perms ?? []).filter((p) => grantablePermissions.has(p.name)).forEach((p) => next.add(p.name));
         return next;
       });
     } catch { /* ignore */ }
@@ -408,10 +418,11 @@ function OidcAppEditForm({
 }
 
 export function OidcApplicationsAdminPage() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
   const canCreate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.create);
   const canDelete = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.delete);
   const canUpdate = hasPermission(...RESOURCE_PERMISSIONS.oidcApplication.update);
+  const grantablePermissions = useMemo(() => new Set(permissions), [permissions]);
 
   return (
     <AdminCrudPage
@@ -425,6 +436,7 @@ export function OidcApplicationsAdminPage() {
           {...props}
           onDeleted={canDelete ? props.onDeleted : undefined}
           canUpdate={canUpdate}
+          grantablePermissions={grantablePermissions}
         />
       )}
     />
