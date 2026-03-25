@@ -115,7 +115,9 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 		slog.Info("refreshed access token", "session", truncateToken(token))
 	}
 
-	// Extract permissionsByRealm and filter to matched realm
+	// Extract permissionsByRealm and filter to matched realm.
+	// Falls back to wildcard "*" key for client_credentials tokens
+	// that are not scoped to a specific realm.
 	var permissions []interface{}
 	if pbr, ok := profileMap["permissionsByRealm"]; ok {
 		if pbrMap, ok := pbr.(map[string]interface{}); ok {
@@ -123,6 +125,14 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 			if perms, ok := pbrMap[realmKey]; ok {
 				if permList, ok := perms.([]interface{}); ok {
 					permissions = permList
+				}
+			}
+			// Wildcard fallback for realm-independent tokens (e.g. client_credentials)
+			if permissions == nil {
+				if perms, ok := pbrMap["*"]; ok {
+					if permList, ok := perms.([]interface{}); ok {
+						permissions = permList
+					}
 				}
 			}
 		} else {
@@ -139,6 +149,14 @@ func (a *Authenticator) Authenticate(ctx context.Context, headers map[string]str
 				if perms, ok := pbrMap[realmKeyStr]; ok {
 					if permList, ok := perms.([]interface{}); ok {
 						permissions = permList
+					}
+				}
+				// Wildcard fallback
+				if permissions == nil {
+					if perms, ok := pbrMap["*"]; ok {
+						if permList, ok := perms.([]interface{}); ok {
+							permissions = permList
+						}
 					}
 				}
 			}
