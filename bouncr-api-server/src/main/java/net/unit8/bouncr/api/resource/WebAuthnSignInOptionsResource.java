@@ -1,6 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Headers;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
@@ -8,6 +9,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -46,6 +48,12 @@ public class WebAuthnSignInOptionsResource {
 
     @Inject
     private StoreProvider storeProvider;
+
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
+        return true;
+    }
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validate(JsonNode body, RestContext context) {

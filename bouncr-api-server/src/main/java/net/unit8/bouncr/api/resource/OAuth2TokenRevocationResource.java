@@ -29,6 +29,7 @@ import java.util.Map;
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 
 /**
@@ -118,6 +119,12 @@ public class OAuth2TokenRevocationResource {
         var refreshData = storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(token);
         if (refreshData instanceof OAuth2RefreshToken rt && authenticatedClientId.equals(rt.clientId())) {
             storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(token);
+        }
+        // Revoke opaque access token
+        var tokenData = storeProvider.getStore(BOUNCR_TOKEN).read(token);
+        if (tokenData instanceof Map<?, ?> profileMap
+                && authenticatedClientId.equals(profileMap.get("client_id"))) {
+            storeProvider.getStore(BOUNCR_TOKEN).delete(token);
         }
 
         // Always 200 OK (RFC 7009 §2.2)

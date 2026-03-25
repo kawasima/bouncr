@@ -14,12 +14,14 @@ import net.unit8.bouncr.data.TokenRequest;
 import net.unit8.bouncr.data.TokenRequest.AuthorizationCodeGrant;
 import net.unit8.bouncr.data.TokenRequest.ClientCredentialsGrant;
 import net.unit8.bouncr.data.TokenRequest.RefreshTokenGrant;
+import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.api.service.OidcClaimMapper;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.GrantType;
+import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OAuth2RefreshToken;
 import net.unit8.bouncr.data.OidcApplication;
@@ -32,7 +34,9 @@ import org.jooq.DSLContext;
 
 import jakarta.inject.Inject;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,6 +48,7 @@ import java.util.UUID;
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 
 /**
@@ -161,7 +166,7 @@ public class OAuth2TokenResource {
 
         ApiResponse response = switch (tokenRequest) {
             case AuthorizationCodeGrant grant -> handleAuthorizationCode(grant, oidcApplication, clientId, dsl);
-            case RefreshTokenGrant grant -> handleRefreshToken(grant, oidcApplication, clientId);
+            case RefreshTokenGrant grant -> handleRefreshToken(grant, oidcApplication, clientId, dsl);
             case ClientCredentialsGrant grant -> handleClientCredentials(grant, oidcApplication, clientId);
         };
         context.put(TOKEN_RESPONSE, response);
@@ -201,13 +206,19 @@ public class OAuth2TokenResource {
             }
         }
 
+        String scopeStr = authCode.scope().toString();
+        UserRepository userRepo = new UserRepository(dsl);
+        Map<String, List<String>> permissionsByRealm = userRepo.getPermissionsByRealm(authCode.user().userId());
+
+        String accessToken = writeAccessToken(
+                authCode.user().account(), authCode.user().userId(), clientId, scopeStr,
+                "user", permissionsByRealm);
+
+        // id_token: OIDC spec requires RSA-signed JWT
         byte[] privateKeyBytes = decryptPrivateKey(app);
         try {
             String issuer = issuer(clientId);
             String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
-            String scopeStr = authCode.scope().toString();
-
-            String accessToken = signAccessToken(issuer, authCode.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
 
             Map<String, Object> idClaims = new LinkedHashMap<>();
             idClaims.put("iss", issuer);
@@ -240,7 +251,7 @@ public class OAuth2TokenResource {
     }
 
     private ApiResponse handleRefreshToken(RefreshTokenGrant grant,
-                                           OidcApplication app, String clientId) {
+                                           OidcApplication app, String clientId, DSLContext dsl) {
         Serializable stored = storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(grant.refreshToken());
         if (!(stored instanceof OAuth2RefreshToken refreshData))
             return tokenError(OAuth2Error.INVALID_GRANT, "Refresh token is invalid or expired");
@@ -252,36 +263,34 @@ public class OAuth2TokenResource {
             return tokenError(OAuth2Error.INVALID_SCOPE, "Requested scope exceeds originally granted scope");
         }
 
+        String scopeStr = scope.toString();
+        UserRepository userRepo = new UserRepository(dsl);
+        Map<String, List<String>> permissionsByRealm = userRepo.getPermissionsByRealm(refreshData.user().userId());
+
+        String accessToken = writeAccessToken(
+                refreshData.user().account(), refreshData.user().userId(), clientId, scopeStr,
+                "user", permissionsByRealm);
+
         long now = config.getClock().instant().getEpochSecond();
-        byte[] privateKeyBytes = decryptPrivateKey(app);
-        try {
-            String issuer = issuer(clientId);
-            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
-            String scopeStr = scope.toString();
+        String newRefreshToken = UUID.randomUUID().toString();
+        OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
+                clientId, refreshData.user(), scope, now);
+        storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(newRefreshToken, newRefreshData);
+        storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(grant.refreshToken());
 
-            String accessToken = signAccessToken(issuer, refreshData.user().account(), clientId, scopeStr, kid, privateKeyBytes, now);
-
-            String newRefreshToken = UUID.randomUUID().toString();
-            OAuth2RefreshToken newRefreshData = new OAuth2RefreshToken(
-                    clientId, refreshData.user(), scope, now);
-            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).write(newRefreshToken, newRefreshData);
-            storeProvider.getStore(OAUTH2_REFRESH_TOKEN).delete(grant.refreshToken());
-
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("access_token", accessToken);
-            response.put("token_type", "Bearer");
-            response.put("expires_in", config.getAccessTokenExpires());
-            response.put("refresh_token", newRefreshToken);
-            response.put("scope", scopeStr);
-            return tokenResponse(response);
-        } finally {
-            Arrays.fill(privateKeyBytes, (byte) 0);
-        }
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", accessToken);
+        response.put("token_type", "Bearer");
+        response.put("expires_in", config.getAccessTokenExpires());
+        response.put("refresh_token", newRefreshToken);
+        response.put("scope", scopeStr);
+        return tokenResponse(response);
     }
 
     private ApiResponse handleClientCredentials(ClientCredentialsGrant grant,
                                                 OidcApplication app, String clientId) {
         Scope scope = grant.scope();
+        List<String> permissionNames;
         if (app.permissions() != null && !app.permissions().isEmpty()) {
             Set<String> allowedScopes = new HashSet<>();
             allowedScopes.add("openid");
@@ -290,26 +299,30 @@ public class OAuth2TokenResource {
                 return tokenError(OAuth2Error.INVALID_SCOPE,
                         "Requested scope exceeds client's registered permissions");
             }
+            // Filter to requested scope, or use all permissions if scope is unspecified
+            if (scope.values().isEmpty()) {
+                permissionNames = app.permissions().stream().map(Permission::name).toList();
+            } else {
+                Set<String> requested = new HashSet<>(scope.values());
+                permissionNames = app.permissions().stream()
+                        .map(Permission::name)
+                        .filter(requested::contains)
+                        .toList();
+            }
+        } else {
+            permissionNames = List.of();
         }
 
-        long now = config.getClock().instant().getEpochSecond();
-        byte[] privateKeyBytes = decryptPrivateKey(app);
-        try {
-            String issuer = issuer(clientId);
-            String kid = RsaJwtSigner.deriveKid(app.signingKeys().publicKey());
-            String scopeStr = scope.toString();
+        String scopeStr = scope.toString();
+        Map<String, List<String>> permissionsByRealm = Map.of("*", permissionNames);
+        String accessToken = writeAccessToken(clientId, 0L, clientId, scopeStr, "client", permissionsByRealm);
 
-            String accessToken = signAccessToken(issuer, clientId, clientId, scopeStr, kid, privateKeyBytes, now);
-
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("access_token", accessToken);
-            response.put("token_type", "Bearer");
-            response.put("expires_in", config.getAccessTokenExpires());
-            response.put("scope", scopeStr);
-            return tokenResponse(response);
-        } finally {
-            Arrays.fill(privateKeyBytes, (byte) 0);
-        }
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", accessToken);
+        response.put("token_type", "Bearer");
+        response.put("expires_in", config.getAccessTokenExpires());
+        response.put("scope", scopeStr);
+        return tokenResponse(response);
     }
 
     // ==================== Shared helpers ====================
@@ -326,17 +339,17 @@ public class OAuth2TokenResource {
         return encryptor.decrypt(app.signingKeys().privateKey());
     }
 
-    private String signAccessToken(String issuer, String sub, String clientId, String scope,
-                                   String kid, byte[] privateKeyBytes, long now) {
-        Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("iss", issuer);
-        claims.put("sub", sub);
-        claims.put("aud", clientId);
-        claims.put("exp", now + config.getAccessTokenExpires());
-        claims.put("iat", now);
-        claims.put("jti", UUID.randomUUID().toString());
-        claims.put("scope", scope);
-        claims.put("client_id", clientId);
+    private String writeAccessToken(String sub, Long userId, String clientId, String scope,
+                                    String tokenType, Map<String, List<String>> permissionsByRealm) {
+        String token = UUID.randomUUID().toString();
+        HashMap<String, Object> profileMap = new HashMap<>();
+        profileMap.put("iss", "bouncr");
+        profileMap.put("sub", sub);
+        profileMap.put("uid", userId != null ? Long.toString(userId) : "0");
+        profileMap.put("token_type", tokenType);
+        profileMap.put("client_id", clientId);
+        profileMap.put("scope", scope);
+        profileMap.put("permissionsByRealm", permissionsByRealm);
 
         List<String> permissions = (scope == null || scope.isBlank())
                 ? List.of()
@@ -347,10 +360,11 @@ public class OAuth2TokenResource {
                         .filter(s -> s.contains(":"))
                         .toList();
         if (!permissions.isEmpty()) {
-            claims.put("permissions", permissions);
+            profileMap.put("permissions", new ArrayList<>(permissions));
         }
 
-        return RsaJwtSigner.sign(claims, privateKeyBytes, kid);
+        storeProvider.getStore(BOUNCR_TOKEN).write(token, profileMap);
+        return token;
     }
 
     private ApiResponse tokenResponse(Map<String, Object> body) {

@@ -124,6 +124,13 @@ data AuthorizeRequest = responseType AND clientId AND redirectUri AND Scope AND 
 // Sealed: each grant type carries only its relevant parameters
 data TokenRequest = AuthorizationCodeGrant | RefreshTokenGrant | ClientCredentialsGrant
 
+// ===== OAuth2 token types =====
+// access_token: opaque UUID stored in Redis (not JWT). Looked up via BOUNCR_TOKEN store.
+// id_token: JWT signed with RS256 per OIDC spec (only issued for authorization_code and refresh_token grants).
+// token_type field in Redis profileMap: "client" for client_credentials grant, "user" for user-initiated flows.
+// client_credentials tokens use wildcard "*" realm, granting permissions across all realms assigned to the OIDC application.
+// Resources that are user-specific (sign-in, sign-up, sessions, WebAuthn, OTP) reject client tokens.
+
 // Immutable set of OAuth2 scope values, parsed from space-separated string
 data Scope = Set<String>
 

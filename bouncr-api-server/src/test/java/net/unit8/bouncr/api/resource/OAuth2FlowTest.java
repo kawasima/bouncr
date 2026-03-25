@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static net.unit8.bouncr.component.StoreProvider.StoreType.AUTHORIZATION_CODE;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 import static net.unit8.bouncr.component.StoreProvider.StoreType.OAUTH2_REFRESH_TOKEN;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -143,15 +144,18 @@ class OAuth2FlowTest {
         assertThat(body.get("token_type")).isEqualTo("Bearer");
         assertThat(body.get("scope")).isEqualTo("openid");
 
-        // Step 4: Verify access_token is a valid JWT with correct claims
+        // Step 4: Verify access_token is an opaque UUID stored in BOUNCR_TOKEN store
         String accessToken = (String) body.get("access_token");
-        Map<String, Object> accessClaims = RsaJwtSigner.verify(accessToken, app.signingKeys().publicKey());
-        assertThat(accessClaims).isNotNull();
-        assertThat(accessClaims.get("iss")).isEqualTo("https://issuer.example/oauth2/openid/" + app.credentials().clientId());
-        assertThat(accessClaims.get("sub")).isEqualTo("testuser");
-        assertThat(accessClaims.get("aud")).isEqualTo(app.credentials().clientId());
-        assertThat(accessClaims).containsKey("exp");
-        assertThat(accessClaims.get("scope")).isEqualTo("openid");
+        assertThat(accessToken).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileMap = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(accessToken);
+        assertThat(profileMap).isNotNull();
+        assertThat(profileMap.get("sub")).isEqualTo("testuser");
+        assertThat(profileMap.get("token_type")).isEqualTo("user");
+        assertThat(profileMap.get("uid")).isEqualTo("1");
+        assertThat(profileMap.get("client_id")).isEqualTo(app.credentials().clientId());
+        assertThat(profileMap.get("scope")).isEqualTo("openid");
 
         // Step 5: Verify id_token is a valid JWT with correct claims
         String idToken = (String) body.get("id_token");
@@ -202,12 +206,16 @@ class OAuth2FlowTest {
         assertThat(body).doesNotContainKey("refresh_token");
         assertThat(body).doesNotContainKey("id_token");
 
-        // Verify access_token JWT has client_id as sub
+        // Verify access_token is an opaque UUID stored in BOUNCR_TOKEN store
         String accessToken = (String) body.get("access_token");
-        Map<String, Object> claims = RsaJwtSigner.verify(accessToken, app.signingKeys().publicKey());
-        assertThat(claims).isNotNull();
-        assertThat(claims.get("sub")).isEqualTo(app.credentials().clientId());
-        assertThat(claims.get("client_id")).isEqualTo(app.credentials().clientId());
+        assertThat(accessToken).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileMap = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(accessToken);
+        assertThat(profileMap).isNotNull();
+        assertThat(profileMap.get("sub")).isEqualTo(app.credentials().clientId());
+        assertThat(profileMap.get("token_type")).isEqualTo("client");
+        assertThat(profileMap.get("client_id")).isEqualTo(app.credentials().clientId());
     }
 
     // ==================== Test 3: refresh_token flow ====================
@@ -279,11 +287,16 @@ class OAuth2FlowTest {
         // Verify old refresh token is deleted (single-use rotation)
         assertThat(storeProvider.getStore(OAUTH2_REFRESH_TOKEN).read(refreshToken)).isNull();
 
-        // Verify new access_token is valid
+        // Verify new access_token is an opaque UUID stored in BOUNCR_TOKEN store
         String newAccessToken = (String) refreshBody.get("access_token");
-        Map<String, Object> claims = RsaJwtSigner.verify(newAccessToken, app.signingKeys().publicKey());
-        assertThat(claims).isNotNull();
-        assertThat(claims.get("sub")).isEqualTo("refreshuser");
+        assertThat(newAccessToken).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileMap = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(newAccessToken);
+        assertThat(profileMap).isNotNull();
+        assertThat(profileMap.get("sub")).isEqualTo("refreshuser");
+        assertThat(profileMap.get("token_type")).isEqualTo("user");
+        assertThat(profileMap.get("uid")).isEqualTo("2");
     }
 
     // ==================== Test 4: PKCE (S256) ====================
@@ -334,10 +347,15 @@ class OAuth2FlowTest {
         Map<String, Object> body = (Map<String, Object>) response.getBody();
         assertThat(body).containsKey("access_token");
 
-        // Verify the JWT is valid
-        Map<String, Object> claims = RsaJwtSigner.verify((String) body.get("access_token"), app.signingKeys().publicKey());
-        assertThat(claims).isNotNull();
-        assertThat(claims.get("sub")).isEqualTo("pkceuser");
+        // Verify access_token is an opaque UUID stored in BOUNCR_TOKEN store
+        String accessToken = (String) body.get("access_token");
+        assertThat(accessToken).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileMap = (Map<String, Object>) storeProvider.getStore(BOUNCR_TOKEN).read(accessToken);
+        assertThat(profileMap).isNotNull();
+        assertThat(profileMap.get("sub")).isEqualTo("pkceuser");
+        assertThat(profileMap.get("token_type")).isEqualTo("user");
     }
 
     @Test

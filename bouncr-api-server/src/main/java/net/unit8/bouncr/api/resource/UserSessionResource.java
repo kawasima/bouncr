@@ -15,6 +15,7 @@ import kotowari.restful.resource.AllowedMethods;
 import static enkan.util.BeanBuilder.builder;
 import net.unit8.bouncr.api.boundary.SignOutResponse;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.service.OidcLogoutService;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
@@ -54,6 +55,7 @@ public class UserSessionResource {
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 

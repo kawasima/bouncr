@@ -41,7 +41,7 @@ class WebAuthnSignInResourceTest {
         httpReq.setRemoteAddr("10.0.0.1");
         RestContext context = restContext();
 
-        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, null);
+        boolean result = resource.authenticate(req, null, httpReq, new ActionRecord(), context, null);
 
         assertThat(result).isFalse();
         assertThat(context.getMessage())

@@ -9,7 +9,9 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import net.unit8.bouncr.api.repository.InvitationRepository;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.service.PasswordCredentialService;
@@ -72,6 +74,14 @@ public class SignUpResource {
             }
             case Err(var issues) -> toProblem(issues);
         };
+    }
+
+    // Sign-up is a public endpoint (anonymous access allowed, gated by ALLOWED).
+    // Reject only client_credentials tokens — user provisioning should use UsersResource.
+    @Decision(AUTHORIZED)
+    public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
+        return true;
     }
 
     @Decision(ALLOWED)

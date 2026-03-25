@@ -6,6 +6,7 @@ import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.OtpKey;
 import net.unit8.bouncr.data.User;
@@ -25,6 +26,7 @@ public class OtpKeyResource {
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 

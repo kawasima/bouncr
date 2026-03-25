@@ -6,8 +6,10 @@ import enkan.data.Extendable;
 import enkan.data.HttpRequest;
 import enkan.data.HttpResponse;
 import enkan.middleware.WebMiddleware;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.util.MixinUtils;
 import net.unit8.bouncr.api.repository.UserActionRepository;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import org.jooq.DSLContext;
 
 import java.security.Principal;
@@ -37,6 +39,11 @@ public class ActionLoggingMiddleware implements WebMiddleware {
                         .orElse(null));
 
         if (actor == null) return;
+
+        Principal principal = request.getPrincipal();
+        if (principal instanceof UserPermissionPrincipal upp && PrincipalUtils.isClientToken(upp)) {
+            actor = "client:" + actor;
+        }
 
         DSLContext dsl = null;
         if (request instanceof Extendable e) {

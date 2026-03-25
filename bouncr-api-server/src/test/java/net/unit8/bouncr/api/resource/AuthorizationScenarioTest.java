@@ -40,13 +40,37 @@ class AuthorizationScenarioTest {
         }
 
         @Test
-        void authorized_nullPrincipal_rejected() {
-            assertThat(resource.isAuthorized(null)).isFalse();
+        void authorized_nullPrincipal_rejected_post() {
+            assertThat(resource.isAuthorizedPost(null)).isFalse();
         }
 
         @Test
-        void authorized_authenticatedUser_accepted() {
-            assertThat(resource.isAuthorized(principal("alice"))).isTrue();
+        void authorized_authenticatedUser_accepted_post() {
+            assertThat(resource.isAuthorizedPost(principal("alice"))).isTrue();
+        }
+
+        @Test
+        void authorized_nullPrincipal_rejected_delete() {
+            assertThat(resource.isAuthorizedDelete(null)).isFalse();
+        }
+
+        @Test
+        void authorized_authenticatedUser_accepted_delete() {
+            assertThat(resource.isAuthorizedDelete(principal("alice"))).isTrue();
+        }
+
+        @Test
+        void authorized_clientToken_rejected_put() {
+            var clientPrincipal = new UserPermissionPrincipal(1L, "client-app",
+                    Map.of("token_type", "client"), Set.of());
+            assertThat(resource.isAuthorizedPut(clientPrincipal)).isFalse();
+        }
+
+        @Test
+        void authorized_clientToken_rejected_delete() {
+            var clientPrincipal = new UserPermissionPrincipal(1L, "client-app",
+                    Map.of("token_type", "client"), Set.of());
+            assertThat(resource.isAuthorizedDelete(clientPrincipal)).isFalse();
         }
 
         @Test

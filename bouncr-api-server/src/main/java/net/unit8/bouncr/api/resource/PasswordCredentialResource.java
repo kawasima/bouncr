@@ -10,6 +10,7 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.PasswordCredential;
@@ -109,8 +110,21 @@ public class PasswordCredentialResource {
         };
     }
 
-    @Decision(value = AUTHORIZED, method = {"POST", "DELETE"})
-    public boolean isAuthorized(UserPermissionPrincipal principal) {
+    // POST is allowed for client tokens (admin/service account provisioning)
+    @Decision(value = AUTHORIZED, method = "POST")
+    public boolean isAuthorizedPost(UserPermissionPrincipal principal) {
+        return principal != null;
+    }
+
+    @Decision(value = AUTHORIZED, method = "PUT")
+    public boolean isAuthorizedPut(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
+        return true;
+    }
+
+    @Decision(value = AUTHORIZED, method = "DELETE")
+    public boolean isAuthorizedDelete(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 
