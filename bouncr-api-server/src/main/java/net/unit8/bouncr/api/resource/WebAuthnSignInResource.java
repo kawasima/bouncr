@@ -4,6 +4,7 @@ import com.webauthn4j.converter.exception.DataConversionException;
 import com.webauthn4j.data.AuthenticationData;
 import com.webauthn4j.verifier.exception.VerificationException;
 import enkan.collection.Headers;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
 import kotowari.restful.Decision;
@@ -17,6 +18,7 @@ import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.component.AuthFailureTracker;
@@ -76,10 +78,12 @@ public class WebAuthnSignInResource {
 
     @Decision(AUTHORIZED)
     public boolean authenticate(String authRequest,
+                                UserPermissionPrincipal principal,
                                 HttpRequest request,
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         String ip = request.getRemoteAddr();
         if (authFailureTracker.isBlocked(ip, null)) {
             context.setMessage(Problem.valueOf(429, "Too many failed attempts",

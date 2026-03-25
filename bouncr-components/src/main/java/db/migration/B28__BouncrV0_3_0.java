@@ -665,6 +665,26 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
             stmtInsRolePermission.setLong(2, myDeletePermissionId);
             stmtInsRolePermission.executeUpdate();
 
+            // OAuth2 endpoints application
+            stmtInsApplication.setString(1, "BOUNCR_OAUTH2");
+            stmtInsApplication.setString(2, "OAuth2 endpoints");
+            stmtInsApplication.setString(3, Env.getString("API_BACKEND_URL_OAUTH2", "http://api:3005/oauth2"));
+            stmtInsApplication.setString(4, "/oauth2");
+            stmtInsApplication.setString(5, "/oauth2");
+            stmtInsApplication.setBoolean(6, true);
+            stmtInsApplication.setString(7, "bouncr_oauth2");
+            stmtInsApplication.executeUpdate();
+            Long oauth2ApplicationId = fetchGeneratedKey(stmtInsApplication);
+
+            stmtInsRealm.setString(1, "BOUNCR_OAUTH2");
+            stmtInsRealm.setString(2, "");
+            stmtInsRealm.setLong(3, oauth2ApplicationId);
+            stmtInsRealm.setString(4, "OAuth2 realm");
+            stmtInsRealm.setBoolean(5, true);
+            stmtInsRealm.setString(6, "bouncr_oauth2");
+            stmtInsRealm.executeUpdate();
+            Long oauth2RealmId = fetchGeneratedKey(stmtInsRealm);
+
             stmtInsAssignment.setLong(1, adminGroupId);
             stmtInsAssignment.setLong(2, adminRoleId);
             stmtInsAssignment.setLong(3, bouncrRealmId);

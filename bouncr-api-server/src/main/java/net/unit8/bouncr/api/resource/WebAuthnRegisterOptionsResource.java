@@ -9,6 +9,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnRegistrationOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -46,6 +47,7 @@ public class WebAuthnRegisterOptionsResource {
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 

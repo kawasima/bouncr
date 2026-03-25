@@ -10,7 +10,9 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import enkan.security.bouncr.UserPermissionPrincipal;
 import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.api.service.SignInService;
@@ -78,10 +80,12 @@ public class PasswordSignInResource {
 
     @Decision(AUTHORIZED)
     public boolean authenticate(Tuple3<WordName, String, String> signInRequest,
+                                UserPermissionPrincipal principal,
                                 HttpRequest request,
                                 ActionRecord actionRecord,
                                 RestContext context,
                                 DSLContext dsl) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         String ip = request.getRemoteAddr();
         String account = signInRequest._1().value();
         if (authFailureTracker.isBlocked(ip, account)) {

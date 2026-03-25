@@ -17,6 +17,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
@@ -61,6 +62,7 @@ public class WebAuthnRegisterResource {
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 

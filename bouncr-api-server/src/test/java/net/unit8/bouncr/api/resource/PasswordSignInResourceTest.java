@@ -123,7 +123,7 @@ public class PasswordSignInResourceTest {
         RestContext context = restContext();
         context.put(PasswordSignInResource.SIGN_IN_REQ, req);
 
-        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
+        boolean result = resource.authenticate(req, null, httpReq, new ActionRecord(), context, dsl);
 
         assertThat(result).isFalse();
         assertThat(dummySaltCalled[0]).as("getDummySalt() must be called for unknown accounts").isTrue();
@@ -157,7 +157,7 @@ public class PasswordSignInResourceTest {
         httpReq.setRemoteAddr("10.0.0.1");
         RestContext context = restContext();
 
-        boolean result = resource.authenticate(req, httpReq, new ActionRecord(), context, dsl);
+        boolean result = resource.authenticate(req, null, httpReq, new ActionRecord(), context, dsl);
 
         assertThat(result).isFalse();
         assertThat(context.getMessage())

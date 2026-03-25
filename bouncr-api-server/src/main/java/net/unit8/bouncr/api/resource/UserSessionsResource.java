@@ -6,6 +6,7 @@ import kotowari.restful.Decision;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.repository.UserSessionRepository;
 import net.unit8.bouncr.api.util.PaginationParams;
+import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.data.UserSession;
 import org.jooq.DSLContext;
 
@@ -20,6 +21,7 @@ public class UserSessionsResource {
 
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
+        if (PrincipalUtils.isClientToken(principal)) return false;
         return principal != null;
     }
 

@@ -11,11 +11,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrFormDecoders;
 import net.unit8.bouncr.data.IntrospectionRequest;
-import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.service.OAuth2ClientAuthenticator;
 import net.unit8.bouncr.component.BouncrConfiguration;
+import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.OidcApplication;
-import net.unit8.bouncr.sign.RsaJwtSigner;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
@@ -27,6 +26,7 @@ import java.util.Map;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
+import static net.unit8.bouncr.component.StoreProvider.StoreType.BOUNCR_TOKEN;
 
 /**
  * OAuth2 Token Introspection endpoint (RFC 7662).
@@ -44,6 +44,9 @@ public class OAuth2TokenIntrospectionResource {
 
     @Inject
     private BouncrConfiguration config;
+
+    @Inject
+    private StoreProvider storeProvider;
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem isMalformed(Parameters params, RestContext context) {
@@ -97,40 +100,27 @@ public class OAuth2TokenIntrospectionResource {
         return true;
     }
 
+    @SuppressWarnings("unchecked")
     @Decision(HANDLE_CREATED)
     public ApiResponse handleCreated(IntrospectionRequest introspectionRequest,
-                                     OidcApplication oidcApplication, DSLContext dsl) {
+                                     OidcApplication oidcApplication) {
         String token = introspectionRequest.token();
 
-        Map<String, Object> unverifiedPayload = RsaJwtSigner.extractUnverifiedClaims(token);
-        if (unverifiedPayload == null) return inactiveResponse();
+        Object stored = storeProvider.getStore(BOUNCR_TOKEN).read(token);
+        if (stored == null) return inactiveResponse();
 
-        Object clientIdObj = unverifiedPayload.get("client_id");
+        Map<String, Object> profileMap = (Map<String, Object>) stored;
+
+        Object clientIdObj = profileMap.get("client_id");
         if (!(clientIdObj instanceof String tokenClientId)) return inactiveResponse();
         if (!tokenClientId.equals(oidcApplication.credentials().clientId())) return inactiveResponse();
 
-        OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        byte[] publicKey = repo.findPublicKeyByClientId(tokenClientId).orElse(null);
-        if (publicKey == null) return inactiveResponse();
-
-        Map<String, Object> claims = RsaJwtSigner.verify(token, publicKey);
-        if (claims == null) return inactiveResponse();
-
-        long now = config.getClock().instant().getEpochSecond();
-        Object expObj = claims.get("exp");
-        if (!(expObj instanceof Number) || ((Number) expObj).longValue() < now) {
-            return inactiveResponse();
-        }
-
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("active", true);
-        if (claims.get("sub") != null) response.put("sub", claims.get("sub"));
-        if (claims.get("client_id") != null) response.put("client_id", claims.get("client_id"));
-        if (claims.get("scope") != null) response.put("scope", claims.get("scope"));
-        if (claims.get("iss") != null) response.put("iss", claims.get("iss"));
-        if (claims.get("exp") != null) response.put("exp", claims.get("exp"));
-        if (claims.get("iat") != null) response.put("iat", claims.get("iat"));
-        if (claims.get("jti") != null) response.put("jti", claims.get("jti"));
+        if (profileMap.get("sub") != null) response.put("sub", profileMap.get("sub"));
+        response.put("client_id", tokenClientId);
+        if (profileMap.get("scope") != null) response.put("scope", profileMap.get("scope"));
+        if (profileMap.get("token_type") != null) response.put("token_type", profileMap.get("token_type"));
         response.put("token_type", "Bearer");
 
         return jsonResponse(200, response);
