@@ -27,6 +27,8 @@ hs_err_pid*
 
 *.iml
 .idea
+.lsp
+.clj-kondo
 
 src/dev/resources/*.jks
 src/dev/resources/*.p12

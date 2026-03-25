@@ -259,6 +259,53 @@ class OidcApplicationResourceTest {
                 .contains("/grant_types");
     }
 
+    // ==================== Scenario 7: Permission subset enforcement ====================
+
+    @Test
+    void create_permissionSubset_succeeds() throws Exception {
+        JsonNode body = JSON.readTree("""
+                {
+                  "name": "subset_app",
+                  "grant_types": ["client_credentials"],
+                  "permissions": ["oidc_application:read"]
+                }
+                """);
+        RestContext context = restContext();
+        assertThat(createResource.validateCreate(body, context)).isNull();
+
+        var principal = new enkan.security.bouncr.UserPermissionPrincipal(
+                1L, "admin", Map.of(),
+                java.util.Set.of("oidc_application:create", "oidc_application:read", "oidc_application:update"));
+
+        boolean processable = createResource.isProcessable(
+                context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                principal, context);
+        assertThat(processable).isTrue();
+    }
+
+    @Test
+    void create_permissionExceedsCallerPermissions_rejected() throws Exception {
+        JsonNode body = JSON.readTree("""
+                {
+                  "name": "excess_app",
+                  "grant_types": ["client_credentials"],
+                  "permissions": ["any_user:delete"]
+                }
+                """);
+        RestContext context = restContext();
+        assertThat(createResource.validateCreate(body, context)).isNull();
+
+        var principal = new enkan.security.bouncr.UserPermissionPrincipal(
+                1L, "admin", Map.of(),
+                java.util.Set.of("oidc_application:create", "oidc_application:read"));
+
+        boolean processable = createResource.isProcessable(
+                context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                principal, context);
+        assertThat(processable).isFalse();
+        assertThat(context.getMessage().orElse(null)).isInstanceOf(Problem.class);
+    }
+
     // ==================== Helpers ====================
 
     private BouncrConfiguration createConfig() {

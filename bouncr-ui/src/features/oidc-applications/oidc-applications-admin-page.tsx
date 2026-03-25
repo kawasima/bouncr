@@ -86,22 +86,30 @@ function OidcAppEditForm({
     new Set(target?.permissions?.map((p) => p.name) ?? []),
   );
 
+  // Permissions already assigned to the target app (may include ones the current user cannot grant)
+  const existingPerms = useMemo(
+    () => new Set(target?.permissions?.map((p) => p.name) ?? []),
+    [target],
+  );
+
   useEffect(() => {
     Promise.all([
       api.getPermissions({ limit: 1000 }),
       api.getRoles({ limit: 1000 }),
     ]).then(([perms, roles]) => {
-      setAllPermissions((perms ?? []).filter((p) => grantablePermissions.has(p.name)));
+      // Show grantable permissions + already-assigned permissions (even if not grantable, so they can be unchecked)
+      setAllPermissions((perms ?? []).filter((p) => grantablePermissions.has(p.name) || existingPerms.has(p.name)));
       setAllRoles(roles ?? []);
     }).catch(() => {});
-  }, [grantablePermissions]);
+  }, [grantablePermissions, existingPerms]);
 
   const handleAddRolePermissions = async (roleName: string) => {
     try {
       const perms = await api.getRolePermissions(roleName);
       setSelectedPerms((prev) => {
         const next = new Set(prev);
-        (perms ?? []).forEach((p) => next.add(p.name));
+        // Only add permissions the current user can grant
+        (perms ?? []).filter((p) => grantablePermissions.has(p.name)).forEach((p) => next.add(p.name));
         return next;
       });
     } catch { /* ignore */ }
