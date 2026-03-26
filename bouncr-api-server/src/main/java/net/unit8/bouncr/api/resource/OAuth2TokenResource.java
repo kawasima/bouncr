@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
@@ -299,14 +300,17 @@ public class OAuth2TokenResource {
                 return tokenError(OAuth2Error.INVALID_SCOPE,
                         "Requested scope exceeds client's registered permissions");
             }
-            // Filter to requested scope, or use all permissions if scope is unspecified
-            if (scope.values().isEmpty()) {
+            // Filter to requested permission scopes, or use all permissions if
+            // no permission-bearing scopes were requested (openid alone counts as "none")
+            Set<String> requestedPermissions = scope.values().stream()
+                    .filter(s -> !"openid".equals(s))
+                    .collect(Collectors.toSet());
+            if (requestedPermissions.isEmpty()) {
                 permissionNames = app.permissions().stream().map(Permission::name).toList();
             } else {
-                Set<String> requested = new HashSet<>(scope.values());
                 permissionNames = app.permissions().stream()
                         .map(Permission::name)
-                        .filter(requested::contains)
+                        .filter(requestedPermissions::contains)
                         .toList();
             }
         } else {
