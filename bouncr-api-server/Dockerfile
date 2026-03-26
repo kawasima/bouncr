@@ -13,7 +13,10 @@ COPY bouncr-hook-email/pom.xml bouncr-hook-email/
 COPY bouncr-hook-license/pom.xml bouncr-hook-license/
 COPY bouncr-api-e2e-test/pom.xml bouncr-api-e2e-test/
 
-# Copy source code
+# Download dependencies in a separate layer (cached unless POMs change)
+RUN mvn dependency:go-offline -pl bouncr-api-server -am -B -q || true
+
+# Copy source code (this layer invalidates on source changes, but deps are cached above)
 COPY bouncr-components/src bouncr-components/src
 COPY bouncr-api-server/src bouncr-api-server/src
 

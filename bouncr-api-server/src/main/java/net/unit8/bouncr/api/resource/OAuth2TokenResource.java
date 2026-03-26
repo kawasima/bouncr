@@ -351,14 +351,11 @@ public class OAuth2TokenResource {
         profileMap.put("scope", scope);
         profileMap.put("permissionsByRealm", permissionsByRealm);
 
-        List<String> permissions = (scope == null || scope.isBlank())
-                ? List.of()
-                : Arrays.stream(scope.split("\\s+"))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .filter(s -> !"openid".equals(s))
-                        .filter(s -> s.contains(":"))
-                        .toList();
+        // Derive permissions from permissionsByRealm (authoritative source)
+        List<String> permissions = permissionsByRealm.values().stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
         if (!permissions.isEmpty()) {
             profileMap.put("permissions", new ArrayList<>(permissions));
         }
