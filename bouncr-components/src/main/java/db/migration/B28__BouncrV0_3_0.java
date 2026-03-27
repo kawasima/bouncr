@@ -261,7 +261,7 @@ public class B28__BouncrV0_3_0 implements JavaMigration {
                     .column(field("response_type", SQLDataType.VARCHAR(100)))
                     .column(field("authorization_endpoint", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("token_endpoint", SQLDataType.VARCHAR(100).nullable(false)))
-                    .column(field("token_endpoint_auth_method", SQLDataType.VARCHAR(10).nullable(false)))
+                    .column(field("token_endpoint_auth_method", SQLDataType.VARCHAR(30).nullable(false)))
                     .column(field("name_lower", SQLDataType.VARCHAR(100).nullable(false)))
                     .column(field("redirect_uri", SQLDataType.VARCHAR(255)))
                     .column(field("jwks_uri", SQLDataType.VARCHAR(512)))

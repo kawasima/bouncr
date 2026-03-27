@@ -251,11 +251,27 @@ public final class BouncrJsonDecoders {
             field("token_endpoint_auth_method", string().nonBlank()),
             field("redirect_uri", string().nonBlank().maxLength(255).uri()),
             withDefault(field("pkce_enabled", bool()), false)
-    ).map((name, ae, te, jwks, iss, cid, cs, scope, rt, team, ru, pkce) ->
-            new Tuple3<>(name,
-                    new OidcProviderMetadata(ae, te, jwks, iss),
-                    new OidcProviderClientConfig(new ClientCredentials(cid, cs), scope,
-                            ResponseType.of(rt), TokenEndpointAuthMethod.of(team), ru, pkce)))::decode;
+    ).<Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig>>flatMap(
+            (name, ae, te, jwks, iss, cid, cs, scope, rt, team, ru, pkce) -> {
+                ResponseType responseType;
+                try {
+                    responseType = ResponseType.of(rt);
+                } catch (IllegalArgumentException e) {
+                    return Result.fail(Path.ROOT.append("response_type"), "invalid",
+                            "unknown response_type: " + rt);
+                }
+                TokenEndpointAuthMethod authMethod;
+                try {
+                    authMethod = TokenEndpointAuthMethod.of(team);
+                } catch (IllegalArgumentException e) {
+                    return Result.fail(Path.ROOT.append("token_endpoint_auth_method"), "invalid",
+                            "unknown token_endpoint_auth_method: " + team);
+                }
+                return Result.ok(new Tuple3<>(name,
+                        new OidcProviderMetadata(ae, te, jwks, iss),
+                        new OidcProviderClientConfig(new ClientCredentials(cid, cs), scope,
+                                responseType, authMethod, ru, pkce)));
+            })::decode;
 
     // Update uses the same decoder as create — all fields are required for full replacement.
     // If partial update is needed in the future, define a separate decoder here.

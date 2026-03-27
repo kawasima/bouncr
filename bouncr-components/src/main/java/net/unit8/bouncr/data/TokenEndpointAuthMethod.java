@@ -7,10 +7,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Client authentication method at the OAuth2 token endpoint.
  */
 public enum TokenEndpointAuthMethod {
-    /** Client credentials passed in POST parameters. */
-    CLIENT_SECRET_POST("POST"),
-    /** Client credentials passed via HTTP Basic authentication. */
-    CLIENT_SECRET_BASIC("BASIC");
+    /** Client credentials passed in POST parameters (RFC 7591: client_secret_post). */
+    CLIENT_SECRET_POST("client_secret_post"),
+    /** Client credentials passed via HTTP Basic authentication (RFC 7591: client_secret_basic). */
+    CLIENT_SECRET_BASIC("client_secret_basic");
 
     private final String value;
 
