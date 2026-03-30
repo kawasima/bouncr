@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
 import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.OidcProviderClientConfig;
@@ -20,6 +21,7 @@ import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -90,12 +92,12 @@ public class OidcProviderResource {
     }
 
     @Decision(HANDLE_OK)
-    public OidcProvider find(OidcProvider oidcProvider) {
-        return oidcProvider;
+    public Map<String, Object> find(OidcProvider oidcProvider) {
+        return BouncrJsonEncoders.OIDC_PROVIDER.encode(oidcProvider);
     }
 
     @Decision(PUT)
-    public OidcProvider update(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
+    public Map<String, Object> update(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         var meta = updateRequest._2();
         var clientCfg = updateRequest._3();
@@ -114,7 +116,7 @@ public class OidcProviderResource {
                 meta.issuer(),
                 clientCfg.pkceEnabled()
         );
-        return repo.findByName(updateRequest._1().value()).orElseThrow();
+        return BouncrJsonEncoders.OIDC_PROVIDER.encode(repo.findByName(updateRequest._1().value()).orElseThrow());
     }
 
     @Decision(DELETE)

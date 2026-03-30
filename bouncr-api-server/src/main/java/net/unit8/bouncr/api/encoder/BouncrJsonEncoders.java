@@ -2,6 +2,7 @@ package net.unit8.bouncr.api.encoder;
 
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Group;
+import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.Role;
@@ -51,6 +52,22 @@ public final class BouncrJsonEncoders {
         property("virtual_path",    Application::virtualPath,   nullable(string())),
         property("top_page",        Application::topPage,       nullable(string())),
         property("writeProtected", Application::writeProtected, bool())
+    );
+
+    public static final Encoder<OidcProvider, Map<String, Object>> OIDC_PROVIDER = object(
+        property("id",                      OidcProvider::id,                                                      long_()),
+        property("name",                    OidcProvider::name,                                                    string()),
+        property("clientId",                p -> p.clientConfig().credentials().clientId(),                        string()),
+        property("clientSecret",            p -> p.clientConfig().credentials().clientSecret(),                    nullable(string())),
+        property("scope",                   p -> p.clientConfig().scope(),                                         nullable(string())),
+        property("responseType",            p -> p.clientConfig().responseType() != null ? p.clientConfig().responseType().getName() : null, nullable(string())),
+        property("authorizationEndpoint",   p -> p.providerMetadata().authorizationEndpoint(),                     nullable(string())),
+        property("tokenEndpoint",           p -> p.providerMetadata().tokenEndpoint(),                             nullable(string())),
+        property("tokenEndpointAuthMethod", p -> p.clientConfig().tokenEndpointAuthMethod() != null ? p.clientConfig().tokenEndpointAuthMethod().getValue() : null, nullable(string())),
+        property("redirectUri",             p -> p.clientConfig().redirectUri() != null ? p.clientConfig().redirectUri().toString() : null, nullable(string())),
+        property("jwksUri",                 p -> p.providerMetadata().jwksUri() != null ? p.providerMetadata().jwksUri().toString() : null, nullable(string())),
+        property("issuer",                  p -> p.providerMetadata().issuer(),                                    nullable(string())),
+        property("pkceEnabled",             p -> p.clientConfig().pkceEnabled(),                                   bool())
     );
 
     private BouncrJsonEncoders() {}
