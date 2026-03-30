@@ -2,11 +2,13 @@ package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.Role;
+import net.unit8.bouncr.data.RoleSpec;
+import net.unit8.bouncr.data.RoleWithPermissions;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
@@ -30,11 +32,12 @@ public class RoleRepository {
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        List<Permission> permissions = embedPermissions
-                ? findPermissionsByRoleId(rec.get(field("role_id", Long.class)))
-                : null;
         Role role = ROLE.decode(rec).getOrThrow();
-        return Optional.of(permissions != null ? new Role(role.id(), role.name(), role.description(), role.writeProtected(), permissions) : role);
+        if (embedPermissions) {
+            List<Permission> permissions = findPermissionsByRoleId(role.id());
+            return Optional.of(RoleWithPermissions.of(role, permissions));
+        }
+        return Optional.of(role);
     }
 
     public List<Role> search(String q, Long userId, boolean isAdmin, int offset, int limit) {
@@ -66,17 +69,17 @@ public class RoleRepository {
                 .fetch(rec -> ROLE.decode(rec).getOrThrow());
     }
 
-    public boolean isNameUnique(String name) {
+    public boolean isNameUnique(WordName name) {
         return dsl.selectCount()
                 .from(table("roles"))
-                .where(field("name_lower").eq(name.toLowerCase(Locale.US)))
+                .where(field("name_lower").eq(name.lowercase()))
                 .fetchOne(0, int.class) == 0;
     }
 
-    public Role insert(String name, String description) {
+    public Role insert(RoleSpec spec) {
         Record rec = dsl.insertInto(table("roles"),
                         field("name"), field("name_lower"), field("description"), field("write_protected"))
-                .values(name, name.toLowerCase(Locale.US), description, false)
+                .values(spec.name().value(), spec.name().lowercase(), spec.description(), false)
                 .returningResult(
                         field("role_id", Long.class),
                         field("name", String.class),
@@ -86,22 +89,22 @@ public class RoleRepository {
         return ROLE.decode(rec).getOrThrow();
     }
 
-    public void update(String currentName, String newName, String description) {
+    public void update(WordName currentName, RoleSpec spec) {
         var updateSet = dsl.update(table("roles"))
-                .set(field("name"), (Object) (newName != null ? newName : field("name")));
-        if (newName != null) {
-            updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
+                .set(field("name"), (Object) (spec.name() != null ? spec.name().value() : currentName.value()));
+        if (spec.name() != null) {
+            updateSet = updateSet.set(field("name_lower"), (Object) spec.name().lowercase());
         }
-        if (description != null) {
-            updateSet = updateSet.set(field("description"), (Object) description);
+        if (spec.description() != null) {
+            updateSet = updateSet.set(field("description"), (Object) spec.description());
         }
-        updateSet.where(field("name").eq(currentName))
+        updateSet.where(field("name").eq(currentName.value()))
                 .execute();
     }
 
-    public void delete(String name) {
+    public void delete(WordName name) {
         dsl.deleteFrom(table("roles"))
-                .where(field("name").eq(name))
+                .where(field("name").eq(name.value()))
                 .execute();
     }
 

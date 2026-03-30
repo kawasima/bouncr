@@ -11,11 +11,9 @@ import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
-import net.unit8.bouncr.data.WordName;
-import net.unit8.bouncr.api.util.ContextKeys;
+import net.unit8.bouncr.data.ApplicationSpec;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple5;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -28,17 +26,16 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class ApplicationsResource {
-    static final ContextKey<Tuple5<WordName, String, String, String, String>> CREATE_REQ =
-            ContextKeys.of(Tuple5.class);
+    static final ContextKey<ApplicationSpec> APPLICATION_SPEC = ContextKey.of(ApplicationSpec.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateCreate(JsonNode body, RestContext context) {
         if (body == null) {
             return Problem.valueOf(400, "request is empty");
         }
-        return switch (BouncrJsonDecoders.APPLICATION_CREATE.decode(body)) {
-            case Ok(Tuple5(var name, var desc, var vp, var pt, var tp)) -> {
-                context.put(CREATE_REQ, new Tuple5<>((WordName) name, (String) desc, (String) vp, (String) pt, (String) tp));
+        return switch (BouncrJsonDecoders.APPLICATION_SPEC.decode(body)) {
+            case Ok(var applicationSpec) -> {
+                context.put(APPLICATION_SPEC, applicationSpec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
@@ -65,9 +62,9 @@ public class ApplicationsResource {
     }
 
     @Decision(value = CONFLICT, method = "POST")
-    public boolean isConflict(Tuple5<WordName, String, String, String, String> createRequest, DSLContext dsl) {
+    public boolean isConflict(ApplicationSpec applicationSpec, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
-        return !repo.isNameUnique(createRequest._1().value());
+        return !repo.isNameUnique(applicationSpec.name());
     }
 
     @Decision(HANDLE_OK)
@@ -81,9 +78,8 @@ public class ApplicationsResource {
     }
 
     @Decision(POST)
-    public Application create(Tuple5<WordName, String, String, String, String> createRequest, DSLContext dsl) {
+    public Application create(ApplicationSpec applicationSpec, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
-        return repo.insert(createRequest._1().value(), createRequest._2(),
-                createRequest._3(), createRequest._4(), createRequest._5());
+        return repo.insert(applicationSpec);
     }
 }

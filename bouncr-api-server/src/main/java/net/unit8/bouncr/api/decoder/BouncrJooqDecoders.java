@@ -51,51 +51,69 @@ public final class BouncrJooqDecoders {
 
     public static final Decoder<Record, Permission> PERMISSION = combine(
             field("permission_id", long_()),
-            field("name", string()),
-            withDefault(field("description", string()), (String) null),
+            nested(
+                    combine(
+                            field("name", string()).map(PermissionName::new),
+                            withDefault(field("description", string()), (String) null)
+                    ).map(PermissionSpec::new)::decode
+            ),
             withDefault(field("write_protected", bool()), false)
-    ).map(Permission::of);
+    ).map(Permission::new);
 
     // --- Application ---
-
     public static final Decoder<Record, Application> APPLICATION = combine(
             field("application_id", long_()),
-            field("name", string()),
-            withDefault(field("description", string()), (String) null),
-            withDefault(field("pass_to", string()), (String) null),
-            withDefault(field("virtual_path", string()), (String) null),
-            withDefault(field("top_page", string()), (String) null),
+            nested(
+                    combine(
+                            field("name", string()).map(WordName::new),
+                            withDefault(field("description", string()), (String) null),
+                            withDefault(field("pass_to", string()), (String) null),
+                            withDefault(field("virtual_path", string()), (String) null),
+                            withDefault(field("top_page", string()), (String) null)
+                    ).map(ApplicationSpec::new)::decode
+            ),
             withDefault(field("write_protected", bool()), false)
-    ).map(Application::of);
+    ).map(ApplicationPure::new);
 
     // --- Realm ---
 
     public static final Decoder<Record, Realm> REALM = combine(
             field("realm_id", long_()),
-            field("name", string()),
-            withDefault(field("name_lower", string()), (String) null),
-            withDefault(field("url", string()), (String) null),
-            withDefault(field("description", string()), (String) null),
+            nested(
+                    combine(
+                            field("name", string()).map(WordName::new),
+                            withDefault(field("url", string()), (String) null),
+                            withDefault(field("description", string()), (String) null)
+                    ).map(RealmSpec::new)::decode
+            ),
             withDefault(field("write_protected", bool()), false)
-    ).map(Realm::of);
+    ).map(RealmPure::new);
 
     // --- Role ---
 
     public static final Decoder<Record, Role> ROLE = combine(
             field("role_id", long_()),
-            field("name", string()),
-            withDefault(field("description", string()), (String) null),
+            nested(
+                    combine(
+                            field("name", string()).map(WordName::new),
+                            withDefault(field("description", string()), (String) null)
+                    ).map(RoleSpec::new)::decode
+            ),
             withDefault(field("write_protected", bool()), false)
-    ).map(Role::of);
+    ).map(RolePure::new);
 
     // --- Group ---
 
     public static final Decoder<Record, Group> GROUP = combine(
             field("group_id", long_()),
-            field("name", string()),
-            withDefault(field("description", string()), (String) null),
+            nested(
+                    combine(
+                            field("name", string()).map(WordName::new),
+                            withDefault(field("description", string()), (String) null)
+                    ).map(GroupSpec::new)::decode
+            ),
             withDefault(field("write_protected", bool()), false)
-    ).map(Group::of);
+    ).map(GroupPure::new);
 
     // --- User ---
 
@@ -192,7 +210,7 @@ public final class BouncrJooqDecoders {
             withDefault(field("description", string()), (String) null),
             withDefault(field("write_protected", bool()), false)
     ).map((giId, groupId, name, desc, wp) ->
-            new GroupInvitation(giId, null, new Group(groupId, name, desc, wp, null)));
+            new GroupInvitation(giId, null, new GroupPure(groupId, new GroupSpec(new WordName(name), desc), wp)));
 
     // --- OidcInvitation ---
 
@@ -205,26 +223,37 @@ public final class BouncrJooqDecoders {
 
     private static final JooqRecordDecoder<Group> GROUP_FROM_ASSIGNMENT = combine(
             field("group_id", long_()),
-            field("group_name", string()),
-            withDefault(field("group_description", string()), (String) null),
+            nested(
+                    combine(
+                            field("group_name", string()).map(WordName::new),
+                            withDefault(field("group_description", string()), (String) null)
+                    ).map(GroupSpec::new)::decode
+            ),
             withDefault(field("group_write_protected", bool()), false)
-    ).map(Group::of)::decode;
+    ).<Group>map((id, spec, wp) -> new GroupPure(id, spec, wp))::decode;
 
     private static final JooqRecordDecoder<Role> ROLE_FROM_ASSIGNMENT = combine(
             field("role_id", long_()),
-            field("role_name", string()),
-            withDefault(field("role_description", string()), (String) null),
+            nested(
+                    combine(
+                            field("role_name", string()).map(WordName::new),
+                            withDefault(field("role_description", string()), (String) null)
+                    ).map(RoleSpec::new)::decode
+            ),
             withDefault(field("role_write_protected", bool()), false)
-    ).map(Role::of)::decode;
+    ).<Role>map((id, spec, wp) -> new RolePure(id, spec, wp))::decode;
 
     private static final JooqRecordDecoder<Realm> REALM_FROM_ASSIGNMENT = combine(
             field("realm_id", long_()),
-            field("realm_name", string()),
-            withDefault(field("realm_name_lower", string()), (String) null),
-            withDefault(field("realm_url", string()), (String) null),
-            withDefault(field("realm_description", string()), (String) null),
+            nested(
+                    combine(
+                            field("realm_name", string()).map(WordName::new),
+                            withDefault(field("realm_url", string()), (String) null),
+                            withDefault(field("realm_description", string()), (String) null)
+                    ).map(RealmSpec::new)::decode
+            ),
             withDefault(field("realm_write_protected", bool()), false)
-    ).map(Realm::of)::decode;
+    ).<Realm>map((id, spec, wp) -> new RealmPure(id, spec, wp))::decode;
 
     public static final Decoder<Record, Assignment> ASSIGNMENT = combine(
             nested(GROUP_FROM_ASSIGNMENT),

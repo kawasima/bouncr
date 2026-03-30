@@ -1,11 +1,12 @@
 package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.Realm;
+import net.unit8.bouncr.data.RealmSpec;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
@@ -18,18 +19,16 @@ public class RealmRepository {
         this.dsl = dsl;
     }
 
-    public Optional<Realm> findByApplicationAndName(String appName, String realmName) {
+    public Optional<Realm> findByApplicationAndName(WordName appName, String realmName) {
         var rec = dsl.select(
                         field("r.realm_id", Long.class).as("realm_id"),
                         field("r.name", String.class).as("name"),
-                        field("r.name_lower", String.class).as("name_lower"),
                         field("r.url", String.class).as("url"),
                         field("r.description", String.class).as("description"),
-                        field("r.application_id", Long.class).as("application_id"),
                         field("r.write_protected", Boolean.class).as("write_protected"))
                 .from(table("realms").as("r"))
                 .join(table("applications").as("a")).on(field("a.application_id").eq(field("r.application_id")))
-                .where(field("a.name").eq(appName)
+                .where(field("a.name").eq(appName.value())
                         .and(field("r.name").eq(realmName)))
                 .fetchOne();
         if (rec == null) return Optional.empty();
@@ -37,10 +36,10 @@ public class RealmRepository {
         return Optional.of(REALM.decode(rec).getOrThrow());
     }
 
-    public List<Realm> search(String appName, String q, int offset, int limit) {
+    public List<Realm> search(WordName appName, String q, int offset, int limit) {
         var condition = noCondition();
-        if (appName != null && !appName.isEmpty()) {
-            condition = condition.and(field("a.name").eq(appName));
+        if (appName != null) {
+            condition = condition.and(field("a.name").eq(appName.value()));
         }
         if (q != null && !q.isEmpty()) {
             condition = condition.and(LikeQuery.contains(field("r.name", String.class), q));
@@ -49,10 +48,8 @@ public class RealmRepository {
         return dsl.select(
                         field("r.realm_id", Long.class).as("realm_id"),
                         field("r.name", String.class).as("name"),
-                        field("r.name_lower", String.class).as("name_lower"),
                         field("r.url", String.class).as("url"),
                         field("r.description", String.class).as("description"),
-                        field("r.application_id", Long.class).as("application_id"),
                         field("r.write_protected", Boolean.class).as("write_protected"))
                 .from(table("realms").as("r"))
                 .join(table("applications").as("a")).on(field("a.application_id").eq(field("r.application_id")))
@@ -63,44 +60,43 @@ public class RealmRepository {
                 .fetch(rec -> REALM.decode(rec).getOrThrow());
     }
 
-    public Realm insert(Long applicationId, String name, String url, String description) {
+    public Realm insert(Long applicationId, RealmSpec spec) {
         Record rec = dsl.insertInto(table("realms"),
                         field("application_id"), field("name"), field("name_lower"),
                         field("url"), field("description"), field("write_protected"))
-                .values(applicationId, name, name.toLowerCase(Locale.US), url, description, false)
+                .values(applicationId, spec.name().value(), spec.name().lowercase(),
+                        spec.url(), spec.description(), false)
                 .returningResult(
                         field("realm_id", Long.class),
                         field("name", String.class),
-                        field("name_lower", String.class),
                         field("url", String.class),
                         field("description", String.class),
-                        field("application_id", Long.class),
                         field("write_protected", Boolean.class))
                 .fetchOne();
         return REALM.decode(rec).getOrThrow();
     }
 
-    public void update(Long applicationId, String currentName, String newName, String url, String description) {
+    public void update(Long applicationId, WordName currentName, RealmSpec spec) {
         var updateSet = dsl.update(table("realms"))
-                .set(field("name"), (Object) (newName != null ? newName : field("name")));
-        if (newName != null) {
-            updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
+                .set(field("name"), (Object) (spec.name() != null ? spec.name().value() : currentName.value()));
+        if (spec.name() != null) {
+            updateSet = updateSet.set(field("name_lower"), (Object) spec.name().lowercase());
         }
-        if (url != null) {
-            updateSet = updateSet.set(field("url"), (Object) url);
+        if (spec.url() != null) {
+            updateSet = updateSet.set(field("url"), (Object) spec.url());
         }
-        if (description != null) {
-            updateSet = updateSet.set(field("description"), (Object) description);
+        if (spec.description() != null) {
+            updateSet = updateSet.set(field("description"), (Object) spec.description());
         }
         updateSet.where(field("application_id").eq(applicationId)
-                        .and(field("name").eq(currentName)))
+                        .and(field("name").eq(currentName.value())))
                 .execute();
     }
 
-    public void delete(Long applicationId, String name) {
+    public void delete(Long applicationId, WordName name) {
         dsl.deleteFrom(table("realms"))
                 .where(field("application_id").eq(applicationId)
-                        .and(field("name").eq(name)))
+                        .and(field("name").eq(name.value())))
                 .execute();
     }
 }

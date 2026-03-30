@@ -13,11 +13,10 @@ import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
+import net.unit8.bouncr.data.RealmSpec;
 import net.unit8.bouncr.data.WordName;
-import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -29,8 +28,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "POST"})
 public class RealmsResource {
-    static final ContextKey<Tuple3<WordName, String, String>> CREATE_REQ =
-            ContextKeys.of(Tuple3.class);
+    static final ContextKey<RealmSpec> REALM_SPEC = ContextKey.of(RealmSpec.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
 
     @Decision(value = MALFORMED, method = "POST")
@@ -38,9 +36,9 @@ public class RealmsResource {
         if (body == null) {
             return Problem.valueOf(400, "request is empty");
         }
-        return switch (BouncrJsonDecoders.REALM_CREATE.decode(body)) {
-            case Ok(Tuple3(var name, var desc, var url)) -> {
-                context.put(CREATE_REQ, new Tuple3<>((WordName) name, (String) desc, (String) url));
+        return switch (BouncrJsonDecoders.REALM_SPEC.decode(body)) {
+            case Ok(var spec) -> {
+                context.put(REALM_SPEC, (RealmSpec) spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
@@ -69,15 +67,15 @@ public class RealmsResource {
     @Decision(PROCESSABLE)
     public boolean isProcessable(Parameters params, RestContext context, DSLContext dsl) {
         ApplicationRepository appRepo = new ApplicationRepository(dsl);
-        Optional<Application> application = appRepo.findByName(params.get("name"), false);
+        Optional<Application> application = appRepo.findByName(new WordName(params.get("name")), false);
         application.ifPresent(a -> context.put(APPLICATION, a));
         return application.isPresent();
     }
 
     @Decision(POST)
-    public Realm create(Tuple3<WordName, String, String> createRequest, Application application, DSLContext dsl) {
+    public Realm create(RealmSpec realmSpec, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
-        return repo.insert(application.id(), createRequest._1().value(), createRequest._3(), createRequest._2());
+        return repo.insert(application.id(), realmSpec);
     }
 
     @Decision(HANDLE_OK)

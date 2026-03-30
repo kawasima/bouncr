@@ -3,8 +3,7 @@ package net.unit8.bouncr.api.resource;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.api.repository.RolePermissionRepository;
 import net.unit8.bouncr.api.repository.RoleRepository;
-import net.unit8.bouncr.data.Permission;
-import net.unit8.bouncr.data.Role;
+import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,10 +37,10 @@ class RolePermissionsResourceTest {
         RolePermissionRepository rpRepo = new RolePermissionRepository(dsl);
 
         // Create a role and permissions (some already exist from V23 migration)
-        Role role = roleRepo.insert("test_role", "Test role");
-        Permission perm1 = permRepo.insert("custom:read", "Custom read permission");
-        Permission perm2 = permRepo.insert("custom:write", "Custom write permission");
-        Permission perm3 = permRepo.insert("custom:delete", "Custom delete permission");
+        Role role = roleRepo.insert(new RoleSpec(new WordName("test_role"), "Test role"));
+        Permission perm1 = permRepo.insert(new PermissionSpec(new PermissionName("custom:read"), "Custom read permission"));
+        Permission perm2 = permRepo.insert(new PermissionSpec(new PermissionName("custom:write"), "Custom write permission"));
+        Permission perm3 = permRepo.insert(new PermissionSpec(new PermissionName("custom:delete"), "Custom delete permission"));
 
         // Add perm1 and perm2
         rpRepo.addPermission(role.id(), perm1.id());
@@ -49,7 +48,7 @@ class RolePermissionsResourceTest {
 
         List<Permission> permissions = rpRepo.findPermissionsByRole("test_role");
         assertThat(permissions).hasSize(2);
-        assertThat(permissions.stream().map(Permission::name))
+        assertThat(permissions.stream().map(p -> p.name().value()))
                 .containsExactlyInAnyOrder("custom:read", "custom:write");
 
         // Add perm3
@@ -57,7 +56,7 @@ class RolePermissionsResourceTest {
 
         permissions = rpRepo.findPermissionsByRole("test_role");
         assertThat(permissions).hasSize(3);
-        assertThat(permissions.stream().map(Permission::name))
+        assertThat(permissions.stream().map(p -> p.name().value()))
                 .containsExactlyInAnyOrder("custom:read", "custom:write", "custom:delete");
     }
 
@@ -67,10 +66,10 @@ class RolePermissionsResourceTest {
         PermissionRepository permRepo = new PermissionRepository(dsl);
         RolePermissionRepository rpRepo = new RolePermissionRepository(dsl);
 
-        Role role = roleRepo.insert("test_role", "Test role");
-        Permission perm1 = permRepo.insert("custom:read", "Custom read");
-        Permission perm2 = permRepo.insert("custom:write", "Custom write");
-        Permission perm3 = permRepo.insert("custom:delete", "Custom delete");
+        Role role = roleRepo.insert(new RoleSpec(new WordName("test_role"), "Test role"));
+        Permission perm1 = permRepo.insert(new PermissionSpec(new PermissionName("custom:read"), "Custom read"));
+        Permission perm2 = permRepo.insert(new PermissionSpec(new PermissionName("custom:write"), "Custom write"));
+        Permission perm3 = permRepo.insert(new PermissionSpec(new PermissionName("custom:delete"), "Custom delete"));
 
         rpRepo.addPermission(role.id(), perm1.id());
         rpRepo.addPermission(role.id(), perm2.id());
@@ -83,7 +82,7 @@ class RolePermissionsResourceTest {
         // Only perm2 should remain
         List<Permission> permissions = rpRepo.findPermissionsByRole("test_role");
         assertThat(permissions).hasSize(1);
-        assertThat(permissions.getFirst().name()).isEqualTo("custom:write");
+        assertThat(permissions.getFirst().name().value()).isEqualTo("custom:write");
     }
 
     @Test
@@ -92,10 +91,10 @@ class RolePermissionsResourceTest {
         PermissionRepository permRepo = new PermissionRepository(dsl);
         RolePermissionRepository rpRepo = new RolePermissionRepository(dsl);
 
-        Role role = roleRepo.insert("test_role", "Test role");
-        Permission perm1 = permRepo.insert("custom:read", "Custom read");
-        Permission perm2 = permRepo.insert("custom:write", "Custom write");
-        Permission perm3 = permRepo.insert("custom:delete", "Custom delete");
+        Role role = roleRepo.insert(new RoleSpec(new WordName("test_role"), "Test role"));
+        Permission perm1 = permRepo.insert(new PermissionSpec(new PermissionName("custom:read"), "Custom read"));
+        Permission perm2 = permRepo.insert(new PermissionSpec(new PermissionName("custom:write"), "Custom write"));
+        Permission perm3 = permRepo.insert(new PermissionSpec(new PermissionName("custom:delete"), "Custom delete"));
 
         rpRepo.addPermission(role.id(), perm1.id());
         rpRepo.addPermission(role.id(), perm2.id());
@@ -105,7 +104,7 @@ class RolePermissionsResourceTest {
 
         List<Permission> permissions = rpRepo.findPermissionsByRole("test_role");
         assertThat(permissions).hasSize(2);
-        assertThat(permissions.stream().map(Permission::name))
+        assertThat(permissions.stream().map(p -> p.name().value()))
                 .containsExactlyInAnyOrder("custom:write", "custom:delete");
     }
 }

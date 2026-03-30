@@ -76,71 +76,42 @@ public final class BouncrJsonDecoders {
 
     // ===== Application =====
 
-    public static final JsonDecoder<Tuple5<WordName, String, String, String, String>> APPLICATION_CREATE = combine(
+    public static final JsonDecoder<ApplicationSpec> APPLICATION_SPEC = combine(
             field("name", WORD_NAME),
-            field("description", string().nonBlank()),
+            withDefault(field("description", string().nonBlank()), (String) null),
             field("virtual_path", string().nonBlank().maxLength(100)),
             field("pass_to", string().nonBlank().maxLength(100)),
             withDefault(field("top_page", string().maxLength(100)), (String) null)
-    ).map(Tuple5::new)::decode;
-
-    public static final JsonDecoder<Tuple5<WordName, String, String, String, String>> APPLICATION_UPDATE = combine(
-            field("name", WORD_NAME),
-            field("description", string().nonBlank()),
-            field("virtual_path", string().nonBlank().maxLength(100)),
-            field("pass_to", string().nonBlank().maxLength(100)),
-            withDefault(field("top_page", string().maxLength(100)), (String) null)
-    ).map(Tuple5::new)::decode;
+    ).map(ApplicationSpec::new)::decode;
 
     // ===== Group =====
 
-    public static final JsonDecoder<Tuple2<WordName, String>> GROUP_CREATE = combine(
+    public static final JsonDecoder<GroupSpec> GROUP_SPEC = combine(
             field("name", WORD_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
-
-    public static final JsonDecoder<Tuple3<WordName, String, List<String>>> GROUP_UPDATE = combine(
-            field("name", WORD_NAME),
-            field("description", string().nonBlank()),
-            withDefault(field("users", list(string())), (List<String>) null)
-    ).map(Tuple3::new)::decode;
+            withDefault(field("description", string().nonBlank()), (String) null)
+    ).map(GroupSpec::new)::decode;
 
     // ===== Role =====
 
-    public static final JsonDecoder<Tuple2<WordName, String>> ROLE_CREATE = combine(
+    public static final JsonDecoder<RoleSpec> ROLE_SPEC = combine(
             field("name", WORD_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
-
-    public static final JsonDecoder<Tuple2<WordName, String>> ROLE_UPDATE = combine(
-            field("name", WORD_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
+            withDefault(field("description", string().nonBlank()), (String) null)
+    ).map(RoleSpec::new)::decode;
 
     // ===== Permission =====
 
-    public static final JsonDecoder<Tuple2<PermissionName, String>> PERMISSION_CREATE = combine(
+    public static final JsonDecoder<PermissionSpec> PERMISSION_SPEC = combine(
             field("name", PERMISSION_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
-
-    public static final JsonDecoder<Tuple2<PermissionName, String>> PERMISSION_UPDATE = combine(
-            field("name", PERMISSION_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
+            withDefault(field("description", string().nonBlank()), (String) null)
+    ).map(PermissionSpec::new)::decode;
 
     // ===== Realm =====
 
-    public static final JsonDecoder<Tuple3<WordName, String, String>> REALM_CREATE = combine(
+    public static final JsonDecoder<RealmSpec> REALM_SPEC = combine(
             field("name", WORD_NAME),
-            field("description", string().nonBlank()),
-            field("url", string().nonBlank())
-    ).map(Tuple3::new)::decode;
-
-    public static final JsonDecoder<Tuple2<WordName, String>> REALM_UPDATE = combine(
-            field("name", WORD_NAME),
-            field("description", string().nonBlank())
-    ).map(Tuple2::new)::decode;
+            withDefault(field("url", string().nonBlank()), (String) null),
+            withDefault(field("description", string().nonBlank()), (String) null)
+    ).map(RealmSpec::new)::decode;
 
     // ===== Invitation =====
 

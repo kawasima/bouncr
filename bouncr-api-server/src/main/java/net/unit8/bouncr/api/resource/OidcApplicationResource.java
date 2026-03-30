@@ -21,7 +21,6 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -98,11 +97,11 @@ public class OidcApplicationResource {
 
     @Decision(value = CONFLICT, method = "PUT")
     public boolean isConflict(OidcApplicationUpdate updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest.name().value(), params.get("name"))) {
+        if (updateRequest.name().matches(params.get("name"))) {
             return false;
         }
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        return !repo.isNameUnique(updateRequest.name().value());
+        return !repo.isNameUnique(updateRequest.name());
     }
 
     @Decision(EXISTS)

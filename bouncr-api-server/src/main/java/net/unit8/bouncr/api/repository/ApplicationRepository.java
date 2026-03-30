@@ -1,7 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
-import net.unit8.bouncr.data.Application;
-import net.unit8.bouncr.data.Realm;
+import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 
@@ -18,7 +17,7 @@ public class ApplicationRepository {
         this.dsl = dsl;
     }
 
-    public Optional<Application> findByName(String name, boolean embedRealms) {
+    public Optional<Application> findByName(WordName name, boolean embedRealms) {
         var rec = dsl.select(
                         field("application_id", Long.class),
                         field("name", String.class),
@@ -28,13 +27,14 @@ public class ApplicationRepository {
                         field("top_page", String.class),
                         field("write_protected", Boolean.class))
                 .from(table("applications"))
-                .where(field("name").eq(name))
+                .where(field("name").eq(name.value()))
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
         Application app = APPLICATION.decode(rec).getOrThrow();
         List<Realm> realms = embedRealms ? findRealmsByApplicationId(rec.get(field("application_id", Long.class))) : null;
-        return Optional.of(realms != null ? new Application(app.id(), app.name(), app.description(), app.passTo(), app.virtualPath(), app.topPage(), app.writeProtected(), realms) : app);
+        return Optional.of(realms != null ?
+                ApplicationWithRealms.of(app, realms) : app);
     }
 
     public List<Application> search(String q, boolean embedRealms, int offset, int limit) {
@@ -71,22 +71,22 @@ public class ApplicationRepository {
         return apps.map(rec -> {
             Application app = APPLICATION.decode(rec).getOrThrow();
             List<Realm> realms = realmsByAppId.getOrDefault(app.id(), List.of());
-            return new Application(app.id(), app.name(), app.description(), app.passTo(), app.virtualPath(), app.topPage(), app.writeProtected(), realms);
+            return ApplicationWithRealms.of(app, realms);
         });
     }
 
-    public boolean isNameUnique(String name) {
+    public boolean isNameUnique(WordName name) {
         return dsl.selectCount()
                 .from(table("applications"))
-                .where(field("name_lower").eq(name.toLowerCase(Locale.US)))
+                .where(field("name_lower").eq(name.lowercase()))
                 .fetchOne(0, int.class) == 0;
     }
 
-    public Application insert(String name, String description, String virtualPath, String passTo, String topPage) {
+    public Application insert(ApplicationSpec spec) {
         Record rec = dsl.insertInto(table("applications"),
                         field("name"), field("name_lower"), field("description"),
                         field("virtual_path"), field("pass_to"), field("top_page"), field("write_protected"))
-                .values(name, name.toLowerCase(Locale.US), description, virtualPath, passTo, topPage, false)
+                .values(spec.name().value(), spec.name().lowercase(), spec.description(), spec.virtualPath(), spec.passTo(), spec.topPage(), false)
                 .returningResult(
                         field("application_id", Long.class),
                         field("name", String.class),
@@ -99,30 +99,31 @@ public class ApplicationRepository {
         return APPLICATION.decode(rec).getOrThrow();
     }
 
-    public void update(String currentName, String newName, String description, String virtualPath, String passTo, String topPage) {
+    public void update(WordName currentName, ApplicationSpec spec) {
         var updateSet = dsl.update(table("applications"))
-                .set(field("name"), (Object) (newName != null ? newName : field("name")));
-        if (newName != null) {
-            updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
+                .set(field("name"), (Object) (spec.name() != null ? spec.name().value() : currentName.value()));
+        if (spec.name() != null) {
+            updateSet = updateSet.set(field("name_lower"), (Object) spec.name().lowercase());
         }
-        if (description != null) {
-            updateSet = updateSet.set(field("description"), (Object) description);
+        if (spec.description() != null) {
+            updateSet = updateSet.set(field("description"), (Object) spec.description());
         }
-        if (virtualPath != null) {
-            updateSet = updateSet.set(field("virtual_path"), (Object) virtualPath);
+        if (spec.passTo() != null) {
+            updateSet = updateSet.set(field("pass_to"), (Object) spec.passTo());
         }
-        if (passTo != null) {
-            updateSet = updateSet.set(field("pass_to"), (Object) passTo);
+        if (spec.virtualPath() != null) {
+            updateSet = updateSet.set(field("virtual_path"), (Object) spec.virtualPath());
         }
-        if (topPage != null) {
-            updateSet = updateSet.set(field("top_page"), (Object) topPage);
+        if (spec.topPage() != null) {
+            updateSet = updateSet.set(field("top_page"), (Object) spec.topPage());
         }
-        updateSet.where(field("name").eq(currentName)).execute();
+        updateSet.where(field("name").eq(currentName.value()))
+                .execute();
     }
 
-    public void delete(String name) {
+    public void delete(WordName name) {
         dsl.deleteFrom(table("applications"))
-                .where(field("name").eq(name))
+                .where(field("name").eq(name.value()))
                 .execute();
     }
 

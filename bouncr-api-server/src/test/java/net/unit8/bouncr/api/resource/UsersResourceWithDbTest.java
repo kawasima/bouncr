@@ -2,7 +2,7 @@ package net.unit8.bouncr.api.resource;
 
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
-import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +59,7 @@ class UsersResourceWithDbTest {
         User admin = userRepo.findByAccount("admin").orElseThrow();
         User full = userRepo.findByIdFull(admin.id(), true, false).orElseThrow();
         assertThat(full.groups()).isNotEmpty();
-        assertThat(full.groups().stream().map(g -> g.name()))
+        assertThat(full.groups().stream().map(g -> g.name().value()))
                 .contains("BOUNCR_ADMIN", "BOUNCR_USER");
     }
 
@@ -86,9 +86,9 @@ class UsersResourceWithDbTest {
         User user2 = userRepo.insert("member2");
         User user3 = userRepo.insert("outsider");
 
-        var group = groupRepo.insert("shared_group", "A shared group");
-        groupRepo.addUser("shared_group", user1.id());
-        groupRepo.addUser("shared_group", user2.id());
+        var group = groupRepo.insert(new GroupSpec(new WordName("shared_group"), "A shared group"));
+        groupRepo.addUser(new WordName("shared_group"), user1.id());
+        groupRepo.addUser(new WordName("shared_group"), user2.id());
 
         // Non-admin search: user1 can only see users in same groups
         List<User> visible = userRepo.search(null, null, user1.id(), false, 0, 100);

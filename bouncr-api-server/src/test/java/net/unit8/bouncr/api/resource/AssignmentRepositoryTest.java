@@ -45,17 +45,17 @@ class AssignmentRepositoryTest {
     }
 
     private Group createGroup(String name) {
-        return groupRepo.insert(name, name + " description");
+        return groupRepo.insert(new GroupSpec(new WordName(name), name + " description"));
     }
 
     private Role createRole(String name) {
-        return roleRepo.insert(name, name + " description");
+        return roleRepo.insert(new RoleSpec(new WordName(name), name + " description"));
     }
 
     private Realm createRealm(String appName, String realmName) {
-        Application app = appRepo.findByName(appName, false).orElseGet(
-                () -> appRepo.insert(appName, "App " + appName, "/" + appName, "http://localhost", "/"));
-        return realmRepo.insert(app.id(), realmName, "http://" + realmName, realmName + " description");
+        Application app = appRepo.findByName(new WordName(appName), false).orElseGet(
+                () -> appRepo.insert(new ApplicationSpec(new WordName(appName), "App " + appName, "http://localhost", "/" + appName, "/")));
+        return realmRepo.insert(app.id(), new RealmSpec(new WordName(realmName), "http://" + realmName, realmName + " description"));
     }
 
     @Test
@@ -68,9 +68,9 @@ class AssignmentRepositoryTest {
 
         Optional<Assignment> found = assignmentRepo.findByGroupRoleRealm("assign_grp", "assign_role", "assign_realm");
         assertThat(found).isPresent();
-        assertThat(found.get().group().name()).isEqualTo("assign_grp");
-        assertThat(found.get().role().name()).isEqualTo("assign_role");
-        assertThat(found.get().realm().name()).isEqualTo("assign_realm");
+        assertThat(found.get().group().name().value()).isEqualTo("assign_grp");
+        assertThat(found.get().role().name().value()).isEqualTo("assign_role");
+        assertThat(found.get().realm().name().value()).isEqualTo("assign_realm");
     }
 
     @Test
@@ -127,10 +127,10 @@ class AssignmentRepositoryTest {
 
         List<Assignment> assignments = assignmentRepo.findByGroup(group.id());
         assertThat(assignments).hasSize(2);
-        assertThat(assignments.stream().map(a -> a.role().name()))
+        assertThat(assignments.stream().map(a -> a.role().name().value()))
                 .containsExactlyInAnyOrder("fbg_role1", "fbg_role2");
         // findByGroup returns realm info
-        assertThat(assignments.stream().map(a -> a.realm().name()))
+        assertThat(assignments.stream().map(a -> a.realm().name().value()))
                 .allMatch("fbg_realm"::equals);
     }
 
@@ -148,7 +148,7 @@ class AssignmentRepositoryTest {
 
         List<Assignment> assignments = assignmentRepo.findByRealm(realm.id());
         assertThat(assignments).hasSize(2);
-        assertThat(assignments.stream().map(a -> a.group().name()))
+        assertThat(assignments.stream().map(a -> a.group().name().value()))
                 .containsExactlyInAnyOrder("fbr_grp1", "fbr_grp2");
     }
 
@@ -174,7 +174,7 @@ class AssignmentRepositoryTest {
         assignmentRepo.insert(group.id(), role.id(), realm.id());
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isTrue();
 
-        groupRepo.delete("cascade_grp");
+        groupRepo.delete(new WordName("cascade_grp"));
         // Assignment should be gone due to ON DELETE CASCADE on group_id FK
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isFalse();
     }
@@ -188,7 +188,7 @@ class AssignmentRepositoryTest {
         assignmentRepo.insert(group.id(), role.id(), realm.id());
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isTrue();
 
-        roleRepo.delete("cascade_r_role");
+        roleRepo.delete(new WordName("cascade_r_role"));
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isFalse();
     }
 
@@ -196,13 +196,13 @@ class AssignmentRepositoryTest {
     void cascadeDeleteRealm_removesAssignments() {
         Group group = createGroup("cascade_re_grp");
         Role role = createRole("cascade_re_role");
-        Application app = appRepo.insert("cascade_re_app", "App", "/crapp", "http://a", "/");
-        Realm realm = realmRepo.insert(app.id(), "cascade_re_realm", "http://r", "Realm");
+        Application app = appRepo.insert(new ApplicationSpec(new WordName("cascade_re_app"), "App", "http://a", "/crapp", "/"));
+        Realm realm = realmRepo.insert(app.id(), new RealmSpec(new WordName("cascade_re_realm"), "http://r", "Realm"));
 
         assignmentRepo.insert(group.id(), role.id(), realm.id());
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isTrue();
 
-        realmRepo.delete(app.id(), "cascade_re_realm");
+        realmRepo.delete(app.id(), new WordName("cascade_re_realm"));
         assertThat(assignmentRepo.exists(group.id(), role.id(), realm.id())).isFalse();
     }
 
@@ -248,13 +248,13 @@ class AssignmentRepositoryTest {
         User user = userRepo.insert("perm_user");
         Group group = createGroup("perm_grp");
         Role role = createRole("perm_role");
-        Permission perm = permRepo.insert("custom:access", "Custom access");
+        Permission perm = permRepo.insert(new PermissionSpec(new PermissionName("custom:access"), "Custom access"));
         rpRepo.addPermission(role.id(), perm.id());
 
-        Application app = appRepo.insert("perm_app", "Perm App", "/perm", "http://a", "/");
-        Realm realm = realmRepo.insert(app.id(), "perm_realm", "http://r", "Realm");
+        Application app = appRepo.insert(new ApplicationSpec(new WordName("perm_app"), "Perm App", "http://a", "/perm", "/"));
+        Realm realm = realmRepo.insert(app.id(), new RealmSpec(new WordName("perm_realm"), "http://r", "Realm"));
 
-        groupRepo.addUser("perm_grp", user.id());
+        groupRepo.addUser(new WordName("perm_grp"), user.id());
         assignmentRepo.insert(group.id(), role.id(), realm.id());
 
         // Now verify the user can resolve permissions through the chain

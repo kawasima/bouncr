@@ -30,7 +30,7 @@ class InvitationTest {
                 1L, "INV-002", "bob@example.com",
                 LocalDateTime.now(), List.of(), List.of());
 
-        Group group = new Group(10L, "developers", "Dev team", false, List.of());
+        Group group = new GroupPure(10L, new GroupSpec(new WordName("developers"), "Dev team"), false);
         GroupInvitation gi = new GroupInvitation(100L, invitation, group);
 
         Invitation withGroups = new Invitation(
@@ -38,7 +38,7 @@ class InvitationTest {
                 invitation.invitedAt(), List.of(gi), invitation.oidcInvitations());
 
         assertThat(withGroups.groupInvitations()).hasSize(1);
-        assertThat(withGroups.groupInvitations().get(0).group().name()).isEqualTo("developers");
+        assertThat(withGroups.groupInvitations().get(0).group().name()).isEqualTo(new WordName("developers"));
         assertThat(withGroups.groupInvitations().get(0).invitation()).isSameAs(invitation);
     }
 
@@ -77,7 +77,7 @@ class InvitationTest {
                 3L, "INV-004", "dave@example.com",
                 LocalDateTime.now(), List.of(), List.of());
 
-        Group group = new Group(30L, "admins", "Administrators", true, List.of());
+        Group group = new GroupPure(30L, new GroupSpec(new WordName("admins"), "Administrators"), true);
         GroupInvitation gi = new GroupInvitation(300L, invitation, group);
 
         assertThat(gi.id()).isEqualTo(300L);

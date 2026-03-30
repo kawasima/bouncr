@@ -12,15 +12,13 @@ import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
+import net.unit8.bouncr.data.RealmSpec;
 import net.unit8.bouncr.data.WordName;
-import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -28,8 +26,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class RealmResource {
-    static final ContextKey<Tuple2<WordName, String>> UPDATE_REQ =
-            ContextKeys.of(Tuple2.class);
+    static final ContextKey<RealmSpec> REALM_SPEC = ContextKey.of(RealmSpec.class);
     static final ContextKey<Application> APPLICATION = ContextKey.of(Application.class);
     static final ContextKey<Realm> REALM = ContextKey.of(Realm.class);
 
@@ -38,9 +35,9 @@ public class RealmResource {
         if (body == null) {
             return Problem.valueOf(400, "request is empty");
         }
-        return switch (BouncrJsonDecoders.REALM_UPDATE.decode(body)) {
-            case Ok(Tuple2(var name, var desc)) -> {
-                context.put(UPDATE_REQ, new Tuple2<>((WordName) name, (String) desc));
+        return switch (BouncrJsonDecoders.REALM_SPEC.decode(body)) {
+            case Ok(var spec) -> {
+                context.put(REALM_SPEC, (RealmSpec) spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
@@ -76,18 +73,13 @@ public class RealmResource {
     @Decision(PROCESSABLE)
     public boolean isProcessable(Parameters params, RestContext context, DSLContext dsl) {
         ApplicationRepository appRepo = new ApplicationRepository(dsl);
-        Optional<Application> application = appRepo.findByName(params.get("name"), false);
+        Optional<Application> application = appRepo.findByName(new WordName(params.get("name")), false);
         application.ifPresent(a -> context.put(APPLICATION, a));
         return application.isPresent();
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(Tuple2<WordName, String> updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest._1().value(), params.get("realmName"))) {
-            return false;
-        }
-        // Realm uniqueness is scoped to the application, but we check name_lower globally
-        // for simplicity, matching the original behavior
+    public boolean isConflict() {
         return false;
     }
 
@@ -105,10 +97,10 @@ public class RealmResource {
     }
 
     @Decision(PUT)
-    public Realm update(Tuple2<WordName, String> updateRequest, Realm realm, Application application, DSLContext dsl) {
+    public Realm update(RealmSpec realmSpec, Realm realm, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
-        repo.update(application.id(), realm.name(), updateRequest._1().value(), null, updateRequest._2());
-        return repo.findByApplicationAndName(application.name(), updateRequest._1().value()).orElseThrow();
+        repo.update(application.id(), realm.name(), realmSpec);
+        return repo.findByApplicationAndName(application.name(), realmSpec.name().value()).orElseThrow();
     }
 
     @Decision(DELETE)

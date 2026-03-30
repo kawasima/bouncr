@@ -10,6 +10,7 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
+import net.unit8.bouncr.data.GroupWithUsers;
 import net.unit8.bouncr.data.User;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
@@ -72,8 +73,11 @@ public class GroupUsersResource {
     @Decision(HANDLE_OK)
     public List<User> list(Group group, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
-        Optional<Group> groupWithUsers = repo.findByName(group.name(), true);
-        return groupWithUsers.map(Group::users).orElse(List.of());
+        Optional<Group> groupWithUsers = repo.findByName(group.name().value(), true);
+        return groupWithUsers
+                .filter(GroupWithUsers.class::isInstance)
+                .map(g -> ((GroupWithUsers) g).users())
+                .orElse(List.of());
     }
 
     @Decision(POST)

@@ -3,7 +3,7 @@ package net.unit8.bouncr.api.resource;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
-import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,9 +82,9 @@ class UsersResourceTest {
         User user2 = userRepo.insert("grouped2");
         User user3 = userRepo.insert("ungrouped");
 
-        var group = groupRepo.insert("testgroup", "Test group");
-        groupRepo.addUser("testgroup", user1.id());
-        groupRepo.addUser("testgroup", user2.id());
+        var group = groupRepo.insert(new GroupSpec(new WordName("testgroup"), "Test group"));
+        groupRepo.addUser(new WordName("testgroup"), user1.id());
+        groupRepo.addUser(new WordName("testgroup"), user2.id());
 
         List<User> users = userRepo.search(null, group.id(), 1L, true, 0, 10);
         assertThat(users).hasSize(2);

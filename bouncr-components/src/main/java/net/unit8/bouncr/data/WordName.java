@@ -1,5 +1,7 @@
 package net.unit8.bouncr.data;
 
+import java.util.Locale;
+
 /**
  * A validated name consisting of word characters ({@code \w+}), max 100 characters.
  *
@@ -8,4 +10,12 @@ package net.unit8.bouncr.data;
  *
  * @param value the validated name string
  */
-public record WordName(String value) {}
+public record WordName(String value) {
+    public String lowercase() {
+        return value.toLowerCase(Locale.US);
+    }
+
+    public boolean matches(String other) {
+        return value.equals(other);
+    }
+}

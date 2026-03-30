@@ -73,7 +73,7 @@ public class RolePermissionsResource {
     @Decision(HANDLE_OK)
     public List<Permission> list(Role role, DSLContext dsl) {
         RolePermissionRepository repo = new RolePermissionRepository(dsl);
-        return repo.findPermissionsByRole(role.name());
+        return repo.findPermissionsByRole(role.name().value());
     }
 
     @Decision(POST)

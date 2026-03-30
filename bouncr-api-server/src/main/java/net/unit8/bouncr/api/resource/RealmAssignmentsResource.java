@@ -10,6 +10,7 @@ import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Assignment;
 import net.unit8.bouncr.data.Realm;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class RealmAssignmentsResource {
     @Decision(EXISTS)
     public boolean exists(Parameters params, RestContext context, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
-        Optional<Realm> realm = repo.findByApplicationAndName(params.get("name"), params.get("realmName"));
+        Optional<Realm> realm = repo.findByApplicationAndName(new WordName(params.get("name")), params.get("realmName"));
         realm.ifPresent(r -> context.put(REALM, r));
         return realm.isPresent();
     }
