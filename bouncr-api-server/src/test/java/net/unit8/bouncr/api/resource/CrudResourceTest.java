@@ -134,6 +134,23 @@ class CrudResourceTest {
         }
 
         @Test
+        void rename_toSameName_isNotConflict() {
+            GroupRepository repo = new GroupRepository(dsl);
+            repo.insert(new GroupSpec(new WordName("mygroup"), "desc"));
+            // Same name → isNameUnique returns false, but isConflict skips the check: no conflict
+            assertThat(repo.isNameUnique(new WordName("mygroup"))).isFalse();
+        }
+
+        @Test
+        void rename_toDuplicateName_isConflict() {
+            GroupRepository repo = new GroupRepository(dsl);
+            repo.insert(new GroupSpec(new WordName("group_a"), "A"));
+            repo.insert(new GroupSpec(new WordName("group_b"), "B"));
+            // Trying to rename group_a → group_b: name is taken
+            assertThat(repo.isNameUnique(new WordName("group_b"))).isFalse();
+        }
+
+        @Test
         void addUser_toNonExistentGroup_throwsIllegalArgument() {
             GroupRepository repo = new GroupRepository(dsl);
             UserRepository userRepo = new UserRepository(dsl);
@@ -213,6 +230,21 @@ class CrudResourceTest {
             RoleRepository repo = new RoleRepository(dsl);
             repo.delete(new WordName("no_such_role"));
         }
+
+        @Test
+        void rename_toSameName_isNotConflict() {
+            RoleRepository repo = new RoleRepository(dsl);
+            repo.insert(new RoleSpec(new WordName("myrole"), "desc"));
+            assertThat(repo.isNameUnique(new WordName("myrole"))).isFalse();
+        }
+
+        @Test
+        void rename_toDuplicateName_isConflict() {
+            RoleRepository repo = new RoleRepository(dsl);
+            repo.insert(new RoleSpec(new WordName("role_a"), "A"));
+            repo.insert(new RoleSpec(new WordName("role_b"), "B"));
+            assertThat(repo.isNameUnique(new WordName("role_b"))).isFalse();
+        }
     }
 
     @Nested
@@ -271,6 +303,21 @@ class CrudResourceTest {
 
             List<Long> ids = repo.findIdsByNames(List.of("test:exists", "test:nope"));
             assertThat(ids).containsExactly(p1.id());
+        }
+
+        @Test
+        void rename_toSameName_isNotConflict() {
+            PermissionRepository repo = new PermissionRepository(dsl);
+            repo.insert(new PermissionSpec(new PermissionName("my:perm"), "desc"));
+            assertThat(repo.isNameUnique(new PermissionName("my:perm"))).isFalse();
+        }
+
+        @Test
+        void rename_toDuplicateName_isConflict() {
+            PermissionRepository repo = new PermissionRepository(dsl);
+            repo.insert(new PermissionSpec(new PermissionName("perm:a"), "A"));
+            repo.insert(new PermissionSpec(new PermissionName("perm:b"), "B"));
+            assertThat(repo.isNameUnique(new PermissionName("perm:b"))).isFalse();
         }
 
         @Test
@@ -361,6 +408,21 @@ class CrudResourceTest {
             Application foundApp2 = results.stream().filter(a -> a.name().value().equals("sapp2")).findFirst().orElseThrow();
             assertThat(((ApplicationWithRealms) foundApp1).realms()).hasSize(1);
             assertThat(((ApplicationWithRealms) foundApp2).realms()).isEmpty();
+        }
+
+        @Test
+        void rename_toSameName_isNotConflict() {
+            ApplicationRepository repo = new ApplicationRepository(dsl);
+            repo.insert(new ApplicationSpec(new WordName("myapp"), "desc", "http://a", "/p", "/"));
+            assertThat(repo.isNameUnique(new WordName("myapp"))).isFalse();
+        }
+
+        @Test
+        void rename_toDuplicateName_isConflict() {
+            ApplicationRepository repo = new ApplicationRepository(dsl);
+            repo.insert(new ApplicationSpec(new WordName("app_a"), "A", "http://a", "/pa", "/"));
+            repo.insert(new ApplicationSpec(new WordName("app_b"), "B", "http://b", "/pb", "/"));
+            assertThat(repo.isNameUnique(new WordName("app_b"))).isFalse();
         }
 
         @Test
