@@ -2,6 +2,7 @@ package net.unit8.bouncr;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import net.unit8.bouncr.data.WordName;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,13 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class JacksonTest {
+
+    @Test
+    public void wordName_serializesAsString() throws Exception {
+        JsonMapper mapper = JsonMapper.builder().build();
+        String json = mapper.writeValueAsString(new WordName("hello"));
+        assertThat(json).isEqualTo("\"hello\"");
+    }
 
     @Test
     public void test() throws Exception {
