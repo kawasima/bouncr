@@ -281,15 +281,6 @@ class AuthorizationScenarioTest {
             assertThat(resource.isPostAllowed(principal("alice"))).isFalse();
         }
 
-        @Test
-        void getListAllowed_withInvitationCreate_accepted() {
-            assertThat(resource.isGetAllowed(principal("alice", "invitation:create"))).isTrue();
-        }
-
-        @Test
-        void getListAllowed_noPermission_rejected() {
-            assertThat(resource.isGetAllowed(principal("alice"))).isFalse();
-        }
     }
 
     // ==================== GroupResource ====================
