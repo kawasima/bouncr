@@ -95,8 +95,8 @@ public final class BouncrJsonEncoders {
     public static final Encoder<OidcProvider, Map<String, Object>> OIDC_PROVIDER = object(
         property("id",                      OidcProvider::id,                                                                                            long_()),
         property("name",                    OidcProvider::name,                                                                                          string()),
-        property("clientId",                p -> p.clientConfig().credentials().clientId(),                                                              string()),
-        property("clientSecret",            p -> p.clientConfig().credentials().clientSecret(),                                                          nullable(string())),
+        property("clientId",        p -> p.clientConfig().credentials().clientId(),                          string()),
+        property("clientSecretSet", p -> p.clientConfig().credentials().clientSecret() != null,             bool()),
         property("scope",                   p -> p.clientConfig().scope(),                                                                               nullable(string())),
         property("responseType",            p -> Optional.ofNullable(p.clientConfig().responseType()).map(r -> r.getName()).orElse(null),                 nullable(string())),
         property("authorizationEndpoint",   p -> p.providerMetadata().authorizationEndpoint(),                                                           nullable(string())),

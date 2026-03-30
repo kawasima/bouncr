@@ -64,7 +64,7 @@ export interface OidcProvider {
   id: number;
   name: string;
   clientId: string;
-  clientSecret?: string;
+  clientSecretSet: boolean;
   scope: string;
   responseType: string;
   authorizationEndpoint: string;
