@@ -9,6 +9,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupSpec;
@@ -17,6 +18,7 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -87,15 +89,15 @@ public class GroupResource {
     }
 
     @Decision(HANDLE_OK)
-    public Group find(Group group) {
-        return group;
+    public Map<String, Object> find(Group group) {
+        return BouncrJsonEncoders.GROUP.encode(group);
     }
 
     @Decision(PUT)
-    public Group update(GroupSpec groupSpec, Group group, DSLContext dsl) {
+    public Map<String, Object> update(GroupSpec groupSpec, Group group, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         repo.update(group.name(), groupSpec);
-        return repo.findByName(groupSpec.name().value(), false).orElseThrow();
+        return BouncrJsonEncoders.GROUP.encode(repo.findByName(groupSpec.name().value(), false).orElseThrow());
     }
 
     @Decision(DELETE)

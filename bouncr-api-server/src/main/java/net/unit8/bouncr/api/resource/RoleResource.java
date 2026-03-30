@@ -8,15 +8,16 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.RoleSpec;
-import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -85,15 +86,15 @@ public class RoleResource {
     }
 
     @Decision(HANDLE_OK)
-    public Role find(Role role) {
-        return role;
+    public Map<String, Object> find(Role role) {
+        return BouncrJsonEncoders.ROLE.encode(role);
     }
 
     @Decision(PUT)
-    public Role update(RoleSpec roleSpec, Role role, DSLContext dsl) {
+    public Map<String, Object> update(RoleSpec roleSpec, Role role, DSLContext dsl) {
         RoleRepository repo = new RoleRepository(dsl);
         repo.update(role.name(), roleSpec);
-        return repo.findByName(roleSpec.name().value(), false).orElseThrow();
+        return BouncrJsonEncoders.ROLE.encode(repo.findByName(roleSpec.name().value(), false).orElseThrow());
     }
 
     @Decision(DELETE)

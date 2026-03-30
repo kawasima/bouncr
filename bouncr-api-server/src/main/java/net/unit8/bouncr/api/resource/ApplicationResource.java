@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.ApplicationSpec;
@@ -17,6 +18,7 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -87,15 +89,15 @@ public class ApplicationResource {
     }
 
     @Decision(HANDLE_OK)
-    public Application find(Application application) {
-        return application;
+    public Map<String, Object> find(Application application) {
+        return BouncrJsonEncoders.APPLICATION.encode(application);
     }
 
     @Decision(PUT)
-    public Application update(ApplicationSpec spec, Application application, DSLContext dsl) {
+    public Map<String, Object> update(ApplicationSpec spec, Application application, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
         repo.update(application.name(), spec);
-        return repo.findByName(spec.name(), false).orElseThrow();
+        return BouncrJsonEncoders.APPLICATION.encode(repo.findByName(spec.name(), false).orElseThrow());
     }
 
     @Decision(DELETE)

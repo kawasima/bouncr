@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.PermissionSpec;
@@ -16,6 +17,7 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -84,15 +86,15 @@ public class PermissionResource {
     }
 
     @Decision(HANDLE_OK)
-    public Permission find(Permission permission) {
-        return permission;
+    public Map<String, Object> find(Permission permission) {
+        return BouncrJsonEncoders.PERMISSION.encode(permission);
     }
 
     @Decision(PUT)
-    public Permission update(PermissionSpec permissionSpec, Permission permission, DSLContext dsl) {
+    public Map<String, Object> update(PermissionSpec permissionSpec, Permission permission, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
         repo.update(permission.name(), permissionSpec);
-        return repo.findByName(permissionSpec.name().value()).orElseThrow();
+        return BouncrJsonEncoders.PERMISSION.encode(repo.findByName(permissionSpec.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)

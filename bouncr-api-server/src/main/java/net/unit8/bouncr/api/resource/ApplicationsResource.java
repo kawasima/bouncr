@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.data.Application;
@@ -18,6 +19,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -68,18 +70,20 @@ public class ApplicationsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Application> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
         String q = params.get("q");
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean embedRealms = Objects.equals(params.get("embed"), "realms");
-        return repo.search(q, embedRealms, offset, limit);
+        return repo.search(q, embedRealms, offset, limit).stream()
+                .map(BouncrJsonEncoders.APPLICATION::encode)
+                .toList();
     }
 
     @Decision(POST)
-    public Application create(ApplicationSpec applicationSpec, DSLContext dsl) {
+    public Map<String, Object> create(ApplicationSpec applicationSpec, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
-        return repo.insert(applicationSpec);
+        return BouncrJsonEncoders.APPLICATION.encode(repo.insert(applicationSpec));
     }
 }

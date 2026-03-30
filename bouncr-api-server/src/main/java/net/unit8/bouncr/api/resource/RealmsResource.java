@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
@@ -21,6 +22,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -73,17 +75,19 @@ public class RealmsResource {
     }
 
     @Decision(POST)
-    public Realm create(RealmSpec realmSpec, Application application, DSLContext dsl) {
+    public Map<String, Object> create(RealmSpec realmSpec, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
-        return repo.insert(application.id(), realmSpec);
+        return BouncrJsonEncoders.REALM.encode(repo.insert(application.id(), realmSpec));
     }
 
     @Decision(HANDLE_OK)
-    public List<Realm> list(Parameters params, Application application, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
         String q = params.get("q");
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
-        return repo.search(application.name(), q, offset, limit);
+        return repo.search(application.name(), q, offset, limit).stream()
+                .map(BouncrJsonEncoders.REALM::encode)
+                .toList();
     }
 }

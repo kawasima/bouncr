@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
 import net.unit8.bouncr.data.Application;
@@ -19,6 +20,7 @@ import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -92,15 +94,15 @@ public class RealmResource {
     }
 
     @Decision(HANDLE_OK)
-    public Realm find(Realm realm) {
-        return realm;
+    public Map<String, Object> find(Realm realm) {
+        return BouncrJsonEncoders.REALM.encode(realm);
     }
 
     @Decision(PUT)
-    public Realm update(RealmSpec realmSpec, Realm realm, Application application, DSLContext dsl) {
+    public Map<String, Object> update(RealmSpec realmSpec, Realm realm, Application application, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
         repo.update(application.id(), realm.name(), realmSpec);
-        return repo.findByApplicationAndName(application.name(), realmSpec.name().value()).orElseThrow();
+        return BouncrJsonEncoders.REALM.encode(repo.findByApplicationAndName(application.name(), realmSpec.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)

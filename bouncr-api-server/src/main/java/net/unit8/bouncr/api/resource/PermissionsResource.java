@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
@@ -18,6 +19,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -67,18 +69,20 @@ public class PermissionsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Permission> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
         String q = params.get("q");
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean isAdmin = principal.hasPermission("any_permission:read");
-        return repo.search(q, principal.getId(), isAdmin, offset, limit);
+        return repo.search(q, principal.getId(), isAdmin, offset, limit).stream()
+                .map(BouncrJsonEncoders.PERMISSION::encode)
+                .toList();
     }
 
     @Decision(POST)
-    public Permission create(PermissionSpec permissionSpec, DSLContext dsl) {
+    public Map<String, Object> create(PermissionSpec permissionSpec, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
-        return repo.insert(permissionSpec);
+        return BouncrJsonEncoders.PERMISSION.encode(repo.insert(permissionSpec));
     }
 }

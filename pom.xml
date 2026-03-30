@@ -50,7 +50,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <enkan.version>0.14.0</enkan.version>
         <kotowari-restful.version>0.14.0</kotowari-restful.version>
-        <raoh.version>0.4.1</raoh.version>
+        <raoh.version>0.4.2-SNAPSHOT</raoh.version>
         <enkan-bouncr.version>0.14.0</enkan-bouncr.version>
         <jackson-jakarta-rs-json-provider.version>3.1.0</jackson-jakarta-rs-json-provider.version>
         <bouncycastle.version>1.83</bouncycastle.version>
@@ -239,6 +239,11 @@
             <dependency>
                 <groupId>net.unit8.raoh</groupId>
                 <artifactId>raoh-jooq</artifactId>
+                <version>${raoh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.unit8.raoh</groupId>
+                <artifactId>raoh-encoder</artifactId>
                 <version>${raoh.version}</version>
             </dependency>
             <dependency>
