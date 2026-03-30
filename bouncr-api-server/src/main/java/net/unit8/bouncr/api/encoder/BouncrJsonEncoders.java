@@ -18,21 +18,21 @@ public final class BouncrJsonEncoders {
         property("id",              Permission::id,             long_()),
         property("name",            p -> p.name().value(),      string()),
         property("description",     Permission::description,    nullable(string())),
-        property("write_protected", Permission::writeProtected, bool())
+        property("writeProtected", Permission::writeProtected, bool())
     );
 
     public static final Encoder<Role, Map<String, Object>> ROLE = object(
         property("id",              Role::id,                   long_()),
         property("name",            r -> r.name().value(),      string()),
         property("description",     Role::description,          nullable(string())),
-        property("write_protected", Role::writeProtected,       bool())
+        property("writeProtected", Role::writeProtected,       bool())
     );
 
     public static final Encoder<Group, Map<String, Object>> GROUP = object(
         property("id",              Group::id,                  long_()),
         property("name",            g -> g.name().value(),      string()),
         property("description",     Group::description,         nullable(string())),
-        property("write_protected", Group::writeProtected,      bool())
+        property("writeProtected", Group::writeProtected,      bool())
     );
 
     public static final Encoder<Realm, Map<String, Object>> REALM = object(
@@ -40,7 +40,7 @@ public final class BouncrJsonEncoders {
         property("name",            r -> r.name().value(),      string()),
         property("url",             Realm::url,                 nullable(string())),
         property("description",     Realm::description,         nullable(string())),
-        property("write_protected", Realm::writeProtected,      bool())
+        property("writeProtected", Realm::writeProtected,      bool())
     );
 
     public static final Encoder<Application, Map<String, Object>> APPLICATION = object(
@@ -50,7 +50,7 @@ public final class BouncrJsonEncoders {
         property("pass_to",         Application::passTo,        nullable(string())),
         property("virtual_path",    Application::virtualPath,   nullable(string())),
         property("top_page",        Application::topPage,       nullable(string())),
-        property("write_protected", Application::writeProtected, bool())
+        property("writeProtected", Application::writeProtected, bool())
     );
 
     private BouncrJsonEncoders() {}
