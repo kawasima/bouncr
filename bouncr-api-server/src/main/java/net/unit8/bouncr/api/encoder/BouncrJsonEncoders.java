@@ -16,6 +16,7 @@ import net.unit8.raoh.encoder.Encoder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static net.unit8.raoh.encoder.MapEncoders.*;
 import static net.unit8.raoh.encoder.ObjectEncoders.*;
@@ -63,12 +64,12 @@ public final class BouncrJsonEncoders {
         property("clientId",                p -> p.clientConfig().credentials().clientId(),                        string()),
         property("clientSecret",            p -> p.clientConfig().credentials().clientSecret(),                    nullable(string())),
         property("scope",                   p -> p.clientConfig().scope(),                                         nullable(string())),
-        property("responseType",            p -> p.clientConfig().responseType() != null ? p.clientConfig().responseType().getName() : null, nullable(string())),
-        property("authorizationEndpoint",   p -> p.providerMetadata().authorizationEndpoint(),                     nullable(string())),
-        property("tokenEndpoint",           p -> p.providerMetadata().tokenEndpoint(),                             nullable(string())),
-        property("tokenEndpointAuthMethod", p -> p.clientConfig().tokenEndpointAuthMethod() != null ? p.clientConfig().tokenEndpointAuthMethod().getValue() : null, nullable(string())),
-        property("redirectUri",             p -> p.clientConfig().redirectUri() != null ? p.clientConfig().redirectUri().toString() : null, nullable(string())),
-        property("jwksUri",                 p -> p.providerMetadata().jwksUri() != null ? p.providerMetadata().jwksUri().toString() : null, nullable(string())),
+        property("responseType",            p -> Optional.ofNullable(p.clientConfig().responseType()).map(r -> r.getName()).orElse(null),                   nullable(string())),
+        property("authorizationEndpoint",   p -> p.providerMetadata().authorizationEndpoint(),                                                               nullable(string())),
+        property("tokenEndpoint",           p -> p.providerMetadata().tokenEndpoint(),                                                                       nullable(string())),
+        property("tokenEndpointAuthMethod", p -> Optional.ofNullable(p.clientConfig().tokenEndpointAuthMethod()).map(m -> m.getValue()).orElse(null),         nullable(string())),
+        property("redirectUri",             p -> Optional.ofNullable(p.clientConfig().redirectUri()).map(u -> u.toString()).orElse(null),                     nullable(string())),
+        property("jwksUri",                 p -> Optional.ofNullable(p.providerMetadata().jwksUri()).map(u -> u.toString()).orElse(null),                     nullable(string())),
         property("issuer",                  p -> p.providerMetadata().issuer(),                                    nullable(string())),
         property("pkceEnabled",             p -> p.clientConfig().pkceEnabled(),                                   bool())
     );
@@ -98,16 +99,16 @@ public final class BouncrJsonEncoders {
         property("token",          UserSession::token,         string()),
         property("remote_address", UserSession::remoteAddress, nullable(string())),
         property("user_agent",     UserSession::userAgent,     nullable(string())),
-        property("created_at",     s -> s.createdAt() != null ? s.createdAt().toString() : null, nullable(string()))
+        property("created_at",     s -> Optional.ofNullable(s.createdAt()).map(Object::toString).orElse(null), nullable(string()))
     );
 
     public static final Encoder<UserAction, Map<String, Object>> USER_ACTION = object(
         property("id",          UserAction::id,                                                 long_()),
-        property("action_type", a -> a.actionType() != null ? a.actionType().name() : null,    nullable(string())),
+        property("action_type", a -> Optional.ofNullable(a.actionType()).map(Enum::name).orElse(null), nullable(string())),
         property("actor",       UserAction::actor,                                              nullable(string())),
         property("actor_ip",    UserAction::actorIp,                                            nullable(string())),
         property("options",     UserAction::options,                                            nullable(string())),
-        property("created_at",  a -> a.createdAt() != null ? a.createdAt().toString() : null,  nullable(string()))
+        property("created_at",  a -> Optional.ofNullable(a.createdAt()).map(Object::toString).orElse(null), nullable(string()))
     );
 
     private static final Encoder<GroupInvitation, Map<String, Object>> GROUP_INVITATION = object(
@@ -125,9 +126,9 @@ public final class BouncrJsonEncoders {
         property("id",               Invitation::id,    long_()),
         property("code",             Invitation::code,  string()),
         property("email",            Invitation::email, nullable(string())),
-        property("invitedAt",        i -> i.invitedAt() != null ? i.invitedAt().toString() : null, nullable(string())),
-        property("groupInvitations", i -> i.groupInvitations() != null ? i.groupInvitations() : List.<GroupInvitation>of(), list(nested(GROUP_INVITATION))),
-        property("oidcInvitations",  i -> i.oidcInvitations()  != null ? i.oidcInvitations()  : List.<OidcInvitation>of(),  list(nested(OIDC_INVITATION)))
+        property("invitedAt",        i -> Optional.ofNullable(i.invitedAt()).map(Object::toString).orElse(null),                nullable(string())),
+        property("groupInvitations", i -> Optional.ofNullable(i.groupInvitations()).orElse(List.of()),                         list(nested(GROUP_INVITATION))),
+        property("oidcInvitations",  i -> Optional.ofNullable(i.oidcInvitations()).orElse(List.of()),                          list(nested(OIDC_INVITATION)))
     );
 
     private BouncrJsonEncoders() {}
