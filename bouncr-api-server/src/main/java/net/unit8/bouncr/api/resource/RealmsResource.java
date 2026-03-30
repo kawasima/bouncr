@@ -38,7 +38,7 @@ public class RealmsResource {
         }
         return switch (BouncrJsonDecoders.REALM_SPEC.decode(body)) {
             case Ok(var spec) -> {
-                context.put(REALM_SPEC, (RealmSpec) spec);
+                context.put(REALM_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);

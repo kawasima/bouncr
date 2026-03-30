@@ -34,7 +34,7 @@ public class RoleResource {
         }
         return switch (BouncrJsonDecoders.ROLE_SPEC.decode(body)) {
             case Ok(var spec) -> {
-                context.put(ROLE_SPEC, (RoleSpec) spec);
+                context.put(ROLE_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);

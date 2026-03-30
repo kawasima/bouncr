@@ -34,7 +34,7 @@ public class GroupsResource {
         }
         return switch (BouncrJsonDecoders.GROUP_SPEC.decode(body)) {
             case Ok(var spec) -> {
-                context.put(GROUP_SPEC, (GroupSpec) spec);
+                context.put(GROUP_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);

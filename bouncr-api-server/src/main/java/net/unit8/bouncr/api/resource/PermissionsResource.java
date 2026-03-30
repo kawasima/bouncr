@@ -34,7 +34,7 @@ public class PermissionsResource {
         }
         return switch (BouncrJsonDecoders.PERMISSION_SPEC.decode(body)) {
             case Ok(var spec) -> {
-                context.put(PERMISSION_SPEC, (PermissionSpec) spec);
+                context.put(PERMISSION_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
