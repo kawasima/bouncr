@@ -30,7 +30,7 @@ import java.util.Optional;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
-@AllowedMethods({"GET", "POST"})
+@AllowedMethods({"POST"})
 public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
@@ -58,13 +58,6 @@ public class InvitationsResource {
     @Decision(AUTHORIZED)
     public boolean isAuthorized(UserPermissionPrincipal principal) {
         return principal != null;
-    }
-
-    @Decision(value = ALLOWED, method = "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("invitation:create"))
-                .isPresent();
     }
 
     @Decision(value = ALLOWED, method = "POST")
