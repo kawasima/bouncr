@@ -6,14 +6,15 @@ import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
-import net.unit8.bouncr.data.Assignment;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -44,8 +45,10 @@ public class RealmAssignmentsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Assignment> list(Realm realm, DSLContext dsl) {
+    public List<Map<String, Object>> list(Realm realm, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
-        return repo.findByRealm(realm.id());
+        return repo.findByRealm(realm.id()).stream()
+                .map(BouncrJsonEncoders.ASSIGNMENT::encode)
+                .toList();
     }
 }

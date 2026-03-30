@@ -4,12 +4,13 @@ import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.UserActionRepository;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.data.UserAction;
 import org.jooq.DSLContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -33,9 +34,9 @@ public class UserActionsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<UserAction> handleOk(Parameters params,
-                                     UserPermissionPrincipal principal,
-                                     DSLContext dsl) {
+    public List<Map<String, Object>> handleOk(Parameters params,
+                                              UserPermissionPrincipal principal,
+                                              DSLContext dsl) {
         UserActionRepository repo = new UserActionRepository(dsl);
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
@@ -46,6 +47,8 @@ public class UserActionsResource {
         } else {
             actor = principal.getName();
         }
-        return repo.search(actor, offset, limit);
+        return repo.search(actor, offset, limit).stream()
+                .map(BouncrJsonEncoders.USER_ACTION::encode)
+                .toList();
     }
 }

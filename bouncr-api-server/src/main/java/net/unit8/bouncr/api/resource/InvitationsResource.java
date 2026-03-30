@@ -8,6 +8,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.boundary.IdObject;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.Email;
@@ -23,6 +24,7 @@ import tools.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -87,7 +89,7 @@ public class InvitationsResource {
     }
 
     @Decision(HANDLE_CREATED)
-    public Invitation handleCreated(Invitation invitation) {
-        return invitation;
+    public Map<String, Object> handleCreated(Invitation invitation) {
+        return BouncrJsonEncoders.INVITATION.encode(invitation);
     }
 }
