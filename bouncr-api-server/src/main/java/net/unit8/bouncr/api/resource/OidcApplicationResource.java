@@ -8,8 +8,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.OidcApplicationUpdate;
-import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
+import net.unit8.bouncr.data.OidcApplicationUpdateSpec;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.GrantType;
@@ -21,6 +21,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -29,7 +30,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class OidcApplicationResource {
-    static final ContextKey<OidcApplicationUpdate> UPDATE_REQ = ContextKey.of(OidcApplicationUpdate.class);
+    static final ContextKey<OidcApplicationUpdateSpec> UPDATE_REQ = ContextKey.of(OidcApplicationUpdateSpec.class);
     static final ContextKey<OidcApplication> OIDC_APPLICATION = ContextKey.of(OidcApplication.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -38,7 +39,7 @@ public class OidcApplicationResource {
             return Problem.valueOf(400, "request is empty");
         }
         return switch (BouncrJsonDecoders.OIDC_APPLICATION_UPDATE.decode(body)) {
-            case Ok<OidcApplicationUpdate> ok -> {
+            case Ok<OidcApplicationUpdateSpec> ok -> {
                 try {
                     LogoutUriPolicy.normalizeBackchannelLogoutUri(presenceToNullable(ok.value().backchannelLogoutUri()));
                     LogoutUriPolicy.normalizeLogoutUri(presenceToNullable(ok.value().frontchannelLogoutUri()));
@@ -48,7 +49,7 @@ public class OidcApplicationResource {
                     yield Problem.valueOf(400, e.getMessage());
                 }
             }
-            case Err<OidcApplicationUpdate>(var issues) -> toProblem(issues);
+            case Err<OidcApplicationUpdateSpec>(var issues) -> toProblem(issues);
         };
     }
 
@@ -79,7 +80,7 @@ public class OidcApplicationResource {
     }
 
     @Decision(value = PROCESSABLE, method = "PUT")
-    public boolean isProcessable(OidcApplicationUpdate updateRequest,
+    public boolean isProcessable(OidcApplicationUpdateSpec updateRequest,
                                  UserPermissionPrincipal principal, RestContext context) {
         List<String> requestedPermissions = updateRequest.permissions();
         if (requestedPermissions != null && !requestedPermissions.isEmpty()) {
@@ -96,7 +97,7 @@ public class OidcApplicationResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(OidcApplicationUpdate updateRequest, Parameters params, DSLContext dsl) {
+    public boolean isConflict(OidcApplicationUpdateSpec updateRequest, Parameters params, DSLContext dsl) {
         if (updateRequest.name().matches(params.get("name"))) {
             return false;
         }
@@ -113,12 +114,12 @@ public class OidcApplicationResource {
     }
 
     @Decision(HANDLE_OK)
-    public OidcApplicationResponse find(OidcApplication oidcApplication) {
-        return OidcApplicationResponse.of(oidcApplication);
+    public Map<String, Object> find(OidcApplication oidcApplication) {
+        return BouncrJsonEncoders.encodeOidcApplication(oidcApplication);
     }
 
     @Decision(PUT)
-    public OidcApplicationResponse update(OidcApplicationUpdate updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
+    public Map<String, Object> update(OidcApplicationUpdateSpec updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.updateProfile(
                 oidcApplication.name(),
@@ -136,7 +137,7 @@ public class OidcApplicationResource {
             repo.setPermissions(appId, updateRequest.permissions());
         }
         repo.setGrantTypes(appId, GrantType.parseAll(updateRequest.grantTypes()));
-        return OidcApplicationResponse.of(repo.findByName(updateRequest.name().value()).orElseThrow());
+        return BouncrJsonEncoders.encodeOidcApplication(repo.findByName(updateRequest.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)

@@ -11,6 +11,7 @@ import net.unit8.bouncr.data.OidcSession;
 import net.unit8.bouncr.util.RandomUtils;
 
 import jakarta.inject.Inject;
+import java.util.Map;
 import java.util.UUID;
 
 import static kotowari.restful.DecisionPoint.POST;
@@ -27,7 +28,7 @@ public class PreSignInResource {
     private static final String COOKIE_NAME = "OIDC_SESSION_ID";
 
     @Decision(POST)
-    public OidcSession post(RestContext context) {
+    public Map<String, Object> post(RestContext context) {
         String oidcSessionId = UUID.randomUUID().toString();
         String nonce = RandomUtils.generateRandomString(32, config.getSecureRandom());
         String state = RandomUtils.generateRandomString(8, config.getSecureRandom());
@@ -38,6 +39,6 @@ public class PreSignInResource {
         String cookieHeader = cookies.session(COOKIE_NAME, oidcSessionId, (int) config.getOidcSessionExpires()).toHttpString();
         context.setHeaders(Headers.of("Set-Cookie", cookieHeader));
 
-        return oidcSession;
+        return Map.of("nonce", nonce, "state", state);
     }
 }

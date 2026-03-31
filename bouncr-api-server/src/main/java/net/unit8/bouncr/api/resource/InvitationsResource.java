@@ -7,7 +7,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.IdObject;
+import net.unit8.bouncr.data.EntityRef;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -35,7 +35,7 @@ public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
 
-    static final ContextKey<Tuple2<Email, List<IdObject>>> CREATE_REQ =
+    static final ContextKey<Tuple2<Email, List<EntityRef>>> CREATE_REQ =
             ContextKeys.of(Tuple2.class);
     static final ContextKey<Invitation> CREATED = ContextKey.of(Invitation.class);
 
@@ -47,7 +47,7 @@ public class InvitationsResource {
         return switch (BouncrJsonDecoders.INVITATION_CREATE.decode(body)) {
             case Ok(Tuple2(var email, var groups)) -> {
                 @SuppressWarnings("unchecked")
-                var typedGroups = (List<IdObject>) groups;
+                var typedGroups = (List<EntityRef>) groups;
                 context.put(CREATE_REQ, new Tuple2<>((Email) email, typedGroups));
                 yield null;
             }
@@ -68,12 +68,12 @@ public class InvitationsResource {
     }
 
     @Decision(POST)
-    public boolean create(Tuple2<Email, List<IdObject>> createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple2<Email, List<EntityRef>> createRequest, RestContext context, DSLContext dsl) {
         InvitationRepository repo = new InvitationRepository(dsl);
         String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
         List<Long> groupIds = createRequest._2() != null
                 ? createRequest._2().stream()
-                    .map(IdObject::id)
+                    .map(EntityRef::id)
                     .toList()
                 : List.of();
         Invitation invitation = repo.insert(createRequest._1().value(), code, LocalDateTime.now(), groupIds);

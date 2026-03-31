@@ -7,7 +7,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
-import net.unit8.bouncr.api.boundary.ResolvedAssignment;
+import net.unit8.bouncr.data.AssignmentId;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
@@ -34,7 +34,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
  */
 @AllowedMethods({"POST", "DELETE"})
 public class AssignmentsResource {
-    static final ContextKey<List<ResolvedAssignment>> RESOLVED = ContextKeys.of(List.class);
+    static final ContextKey<List<AssignmentId>> RESOLVED = ContextKeys.of(List.class);
 
     @Decision(value = MALFORMED, method = "POST")
     public Problem validateForPost(JsonNode body, RestContext context, DSLContext dsl) {
@@ -57,7 +57,7 @@ public class AssignmentsResource {
         return switch (BouncrJsonDecoders.assignments(repo).decode(body)) {
             case Ok(var resolved) -> {
                 var existing = resolved.stream()
-                        .filter(a -> repo.exists(a.groupId(), a.roleId(), a.realmId()))
+                        .filter(a -> repo.exists(a.group(), a.role(), a.realm()))
                         .toList();
                 context.put(RESOLVED, existing);
                 yield null;
@@ -82,19 +82,19 @@ public class AssignmentsResource {
     }
 
     @Decision(POST)
-    public Void create(List<ResolvedAssignment> resolved, DSLContext dsl) {
+    public Void create(List<AssignmentId> resolved, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
-        for (ResolvedAssignment a : resolved) {
-            repo.insert(a.groupId(), a.roleId(), a.realmId());
+        for (AssignmentId a : resolved) {
+            repo.insert(a.group(), a.role(), a.realm());
         }
         return null;
     }
 
     @Decision(DELETE)
-    public Void delete(List<ResolvedAssignment> resolved, DSLContext dsl) {
+    public Void delete(List<AssignmentId> resolved, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
-        for (ResolvedAssignment a : resolved) {
-            repo.delete(a.groupId(), a.roleId(), a.realmId());
+        for (AssignmentId a : resolved) {
+            repo.delete(a.group(), a.role(), a.realm());
         }
         return null;
     }

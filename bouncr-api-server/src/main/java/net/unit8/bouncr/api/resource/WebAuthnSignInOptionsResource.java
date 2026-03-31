@@ -10,7 +10,6 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.PrincipalUtils;
-import net.unit8.bouncr.api.boundary.WebAuthnAuthenticationOptions;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
@@ -27,6 +26,7 @@ import tools.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,7 +40,7 @@ public class WebAuthnSignInOptionsResource {
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
     static final ContextKey<String> REQ = ContextKey.of("webauthnSignInOptionsReq", String.class);
 
-    record PostResult(WebAuthnAuthenticationOptions options, String sessionId) {}
+    record PostResult(Map<String, Object> options, String sessionId) {}
     static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
 
     @Inject
@@ -75,7 +75,7 @@ public class WebAuthnSignInOptionsResource {
         byte[] challenge = webAuthnService.generateChallenge();
         Base64.Encoder b64url = Base64.getUrlEncoder().withoutPadding();
 
-        List<WebAuthnAuthenticationOptions.AllowCredential> allowCredentials = List.of();
+        List<Map<String, Object>> allowCredentials = List.of();
         Long userId = null;
 
         if (request != null) {
@@ -85,10 +85,10 @@ public class WebAuthnSignInOptionsResource {
                 userId = userOpt.get().id();
                 WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
                 allowCredentials = credRepo.findByUserId(userId).stream()
-                        .map(c -> new WebAuthnAuthenticationOptions.AllowCredential(
-                                "public-key",
-                                b64url.encodeToString(c.credentialId()),
-                                c.transports() != null && !c.transports().isEmpty()
+                        .map(c -> Map.<String, Object>of(
+                                "type", "public-key",
+                                "id", b64url.encodeToString(c.credentialId()),
+                                "transports", c.transports() != null && !c.transports().isEmpty()
                                         ? List.of(c.transports().split(","))
                                         : List.of()))
                         .toList();
@@ -101,11 +101,11 @@ public class WebAuthnSignInOptionsResource {
         storeProvider.getStore(WEBAUTHN_CHALLENGE).write(sessionId,
                 new WebAuthnChallenge(challenge, userId, config.getWebAuthnRpId(), WebAuthnChallenge.TYPE_AUTHENTICATION));
 
-        WebAuthnAuthenticationOptions options = new WebAuthnAuthenticationOptions(
-                b64url.encodeToString(challenge),
-                config.getWebAuthnRpId(),
-                allowCredentials,
-                "preferred");
+        Map<String, Object> options = Map.of(
+                "challenge", b64url.encodeToString(challenge),
+                "rpId", config.getWebAuthnRpId(),
+                "allowCredentials", allowCredentials,
+                "userVerification", "preferred");
 
         context.put(RESULT, new PostResult(options, sessionId));
         return true;

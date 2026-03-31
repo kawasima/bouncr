@@ -15,7 +15,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
@@ -161,7 +161,7 @@ public class WebAuthnRegisterResource {
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, WebAuthnCredentialResponse.of(credential))
+                .set(ApiResponse::setBody, BouncrJsonEncoders.WEBAUTHN_CREDENTIAL.encode(credential))
                 .build();
     }
 }

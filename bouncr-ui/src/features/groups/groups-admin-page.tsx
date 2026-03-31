@@ -368,7 +368,7 @@ function GroupEditFormWithUsers(props: {
     }
   };
 
-  const isWriteProtected = props.target?.writeProtected === true;
+  const isWriteProtected = props.target?.write_protected === true;
 
   return (
     <div>

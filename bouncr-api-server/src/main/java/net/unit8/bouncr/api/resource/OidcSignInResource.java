@@ -6,6 +6,7 @@ import enkan.collection.Headers;
 import enkan.collection.Parameters;
 import enkan.data.Cookie;
 import enkan.data.HttpRequest;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import enkan.exception.FalteringEnvironmentException;
 import enkan.exception.MisconfigurationException;
@@ -420,7 +421,7 @@ public class OidcSignInResource {
                 .orElse(builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 200)
                         .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie, "Set-Cookie", tokenCookie))
-                        .set(ApiResponse::setBody, userSession)
+                        .set(ApiResponse::setBody, BouncrJsonEncoders.encodeSignInSession(userSession))
                         .build());
     }
 

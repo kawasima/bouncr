@@ -8,8 +8,9 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -89,18 +90,20 @@ public class UsersResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<User> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+    public List<Map<String, Object>> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         String q = params.get("q");
         Long groupId = PaginationParams.parseLong(params.get("group_id"));
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         boolean isAdmin = principal.hasPermission("any_user:read");
-        return userRepo.search(q, groupId, principal.getId(), isAdmin, offset, limit);
+        return userRepo.search(q, groupId, principal.getId(), isAdmin, offset, limit).stream()
+                .map(BouncrJsonEncoders::encodeUser)
+                .toList();
     }
 
     @Decision(POST)
-    public User doPost(WordName createReq,
+    public Map<String, Object> doPost(WordName createReq,
                        UserProfile userProfile,
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
@@ -123,6 +126,7 @@ public class UsersResource {
         actionRecord.setActor(principal.getName());
         actionRecord.setDescription(createReq.value());
 
-        return userRepo.findByIdFull(user.id(), false, false).orElse(user);
+        return BouncrJsonEncoders.encodeUser(
+                userRepo.findByIdFull(user.id(), false, false).orElse(user));
     }
 }

@@ -14,30 +14,30 @@ import { RESOURCE_PERMISSIONS } from '@/auth/permissions';
 const config: AdminCrudConfig<OidcProvider> = {
   fetchList: api.getOidcProviders,
   fetchOne: api.getOidcProvider,
-  create: (data) => api.createOidcProvider(data as unknown as OidcProvider & { clientSecret: string }),
-  update: (name, data) => api.updateOidcProvider(name, data as unknown as OidcProvider & { clientSecret: string }),
+  create: (data) => api.createOidcProvider(data as unknown as OidcProvider & { client_secret: string }),
+  update: (name, data) => api.updateOidcProvider(name, data as unknown as OidcProvider & { client_secret: string }),
   getIdentifier: (p) => p.name,
 };
 
 const columns: ColumnDef<OidcProvider>[] = [
   { header: 'Name', accessor: 'name' },
-  { header: 'Response Type', accessor: 'responseType' },
+  { header: 'Response Type', accessor: 'response_type' },
   { header: 'Scope', accessor: 'scope' },
 ];
 
 const oidcProviderSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  clientId: z.string().min(1, 'Client ID is required'),
-  clientSecret: z.string().min(1, 'Client Secret is required'),
+  client_id: z.string().min(1, 'Client ID is required'),
+  client_secret: z.string().min(1, 'Client Secret is required'),
   scope: z.string().min(1, 'Scope is required'),
-  responseType: z.string().min(1, 'Response Type is required'),
-  authorizationEndpoint: z.string().url('Must be a valid URL'),
-  tokenEndpoint: z.string().url('Must be a valid URL'),
-  tokenEndpointAuthMethod: z.string().min(1, 'Auth Method is required'),
-  redirectUri: z.string().optional(),
-  jwksUri: z.string().optional(),
+  response_type: z.string().min(1, 'Response Type is required'),
+  authorization_endpoint: z.string().url('Must be a valid URL'),
+  token_endpoint: z.string().url('Must be a valid URL'),
+  token_endpoint_auth_method: z.string().min(1, 'Auth Method is required'),
+  redirect_uri: z.string().optional(),
+  jwks_uri: z.string().optional(),
   issuer: z.string().optional(),
-  pkceEnabled: z.boolean().optional(),
+  pkce_enabled: z.boolean().optional(),
 });
 
 type OidcProviderFormData = z.infer<typeof oidcProviderSchema>;
@@ -57,24 +57,24 @@ function OidcProviderEditForm({
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<OidcProviderFormData>({
     resolver: zodResolver(oidcProviderSchema),
     defaultValues: target ?? {
-      name: '', clientId: '', clientSecret: '', scope: 'openid',
-      responseType: 'code', authorizationEndpoint: '', tokenEndpoint: '',
-      tokenEndpointAuthMethod: 'client_secret_basic', redirectUri: '', jwksUri: '', issuer: '',
-      pkceEnabled: false,
+      name: '', client_id: '', client_secret: '', scope: 'openid',
+      response_type: 'code', authorization_endpoint: '', token_endpoint: '',
+      token_endpoint_auth_method: 'client_secret_basic', redirect_uri: '', jwks_uri: '', issuer: '',
+      pkce_enabled: false,
     },
   });
 
   const fields: { id: keyof OidcProviderFormData; label: string; type?: string; placeholder?: string; disabled?: boolean }[] = [
     { id: 'name', label: 'Name', disabled: !!target || isReadOnly },
-    { id: 'clientId', label: 'Client ID' },
-    { id: 'clientSecret', label: 'Client Secret', type: 'password' },
+    { id: 'client_id', label: 'Client ID' },
+    { id: 'client_secret', label: 'Client Secret', type: 'password' },
     { id: 'scope', label: 'Scope', placeholder: 'openid email profile' },
-    { id: 'responseType', label: 'Response Type', placeholder: 'code' },
-    { id: 'authorizationEndpoint', label: 'Authorization Endpoint' },
-    { id: 'tokenEndpoint', label: 'Token Endpoint' },
-    { id: 'tokenEndpointAuthMethod', label: 'Token Endpoint Auth Method', placeholder: 'client_secret_basic' },
-    { id: 'redirectUri', label: 'Redirect URI' },
-    { id: 'jwksUri', label: 'JWKS URI' },
+    { id: 'response_type', label: 'Response Type', placeholder: 'code' },
+    { id: 'authorization_endpoint', label: 'Authorization Endpoint' },
+    { id: 'token_endpoint', label: 'Token Endpoint' },
+    { id: 'token_endpoint_auth_method', label: 'Token Endpoint Auth Method', placeholder: 'client_secret_basic' },
+    { id: 'redirect_uri', label: 'Redirect URI' },
+    { id: 'jwks_uri', label: 'JWKS URI' },
     { id: 'issuer', label: 'Issuer' },
   ];
 
@@ -98,8 +98,8 @@ function OidcProviderEditForm({
         </div>
       ))}
       <div className="flex items-center gap-3">
-        <input type="checkbox" id="pkceEnabled" {...register('pkceEnabled')} disabled={isReadOnly} className="accent-gold" />
-        <label htmlFor="pkceEnabled" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+        <input type="checkbox" id="pkce_enabled" {...register('pkce_enabled')} disabled={isReadOnly} className="accent-gold" />
+        <label htmlFor="pkce_enabled" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
           PKCE Enabled
         </label>
       </div>

@@ -11,7 +11,6 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnRegistrationOptions;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.service.WebAuthnService;
@@ -42,7 +41,7 @@ public class WebAuthnRegisterOptionsResource {
 
     private static final String COOKIE_NAME = "WEBAUTHN_SESSION_ID";
 
-    record PostResult(WebAuthnRegistrationOptions options, String sessionId) {}
+    record PostResult(Map<String, Object> options, String sessionId) {}
     static final ContextKey<PostResult> RESULT = ContextKey.of(PostResult.class);
 
     @Decision(AUTHORIZED)
@@ -78,23 +77,24 @@ public class WebAuthnRegisterOptionsResource {
 
         Base64.Encoder b64url = Base64.getUrlEncoder().withoutPadding();
 
-        WebAuthnRegistrationOptions options = new WebAuthnRegistrationOptions(
-                b64url.encodeToString(challenge),
-                new WebAuthnRegistrationOptions.RelyingParty(config.getWebAuthnRpId(), config.getWebAuthnRpName()),
-                new WebAuthnRegistrationOptions.UserEntity(
-                        b64url.encodeToString(WebAuthnService.userIdToHandle(user.id())),
-                        user.account(),
-                        user.account()),
-                List.of(
-                        new WebAuthnRegistrationOptions.PubKeyCredParam("public-key", -7),   // ES256
-                        new WebAuthnRegistrationOptions.PubKeyCredParam("public-key", -257)  // RS256
+        Map<String, Object> options = Map.of(
+                "challenge", b64url.encodeToString(challenge),
+                "rp", Map.of("id", config.getWebAuthnRpId(), "name", config.getWebAuthnRpName()),
+                "user", Map.of(
+                        "id", b64url.encodeToString(WebAuthnService.userIdToHandle(user.id())),
+                        "name", user.account(),
+                        "displayName", user.account()),
+                "pubKeyCredParams", List.of(
+                        Map.of("type", "public-key", "alg", -7),   // ES256
+                        Map.of("type", "public-key", "alg", -257)  // RS256
                 ),
-                existing.stream()
-                        .map(c -> new WebAuthnRegistrationOptions.CredentialDescriptor(
-                                "public-key", b64url.encodeToString(c.credentialId())))
+                "excludeCredentials", existing.stream()
+                        .map(c -> Map.<String, Object>of(
+                                "type", "public-key",
+                                "id", b64url.encodeToString(c.credentialId())))
                         .toList(),
-                Map.of("residentKey", "preferred", "userVerification", "preferred"),
-                "none");
+                "authenticatorSelection", Map.of("residentKey", "preferred", "userVerification", "preferred"),
+                "attestation", "none");
 
         context.put(RESULT, new PostResult(options, sessionId));
         return true;

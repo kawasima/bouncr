@@ -11,6 +11,7 @@ import net.unit8.apistandard.resourcefilter.ResourceField;
 import net.unit8.apistandard.resourcefilter.ResourceFilter;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -151,7 +152,7 @@ public class UserResource {
     }
 
     @Decision(HANDLE_OK)
-    public User handleOk(User user, Parameters params, DSLContext dsl) {
+    public Map<String, Object> handleOk(User user, Parameters params, DSLContext dsl) {
         List<ResourceField> embedEntities = some(params.get("embed"), embed -> new ResourceFilter().parse(embed))
                 .orElse(Collections.emptyList());
 
@@ -166,11 +167,11 @@ public class UserResource {
                     user.oidcUsers(), new ArrayList<>(permissions), user.unverifiedProfiles());
         }
 
-        return user;
+        return BouncrJsonEncoders.encodeUser(user);
     }
 
     @Decision(PUT)
-    public User update(User user,
+    public Map<String, Object> update(User user,
                        UserProfile userProfile,
                        ActionRecord actionRecord,
                        UserPermissionPrincipal principal,
@@ -229,7 +230,8 @@ public class UserResource {
         actionRecord.setActor(principal.getName());
         actionRecord.setDescription(user.account());
 
-        return userRepo.findByIdFull(user.id(), false, false).orElse(user);
+        return BouncrJsonEncoders.encodeUser(
+                userRepo.findByIdFull(user.id(), false, false).orElse(user));
     }
 
     @Decision(DELETE)

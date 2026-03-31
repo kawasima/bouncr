@@ -7,8 +7,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.SignUpResponse;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.api.util.PrincipalUtils;
@@ -34,7 +34,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static enkan.util.BeanBuilder.builder;
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 import static net.unit8.raoh.json.JsonDecoders.combine;
@@ -122,7 +121,7 @@ public class SignUpResource {
     }
 
     @Decision(POST)
-    public SignUpResponse create(Tuple3<WordName, String, Boolean> signUp,
+    public Map<String, Object> create(Tuple3<WordName, String, Boolean> signUp,
                                 UserProfile userProfile,
                                 RestContext context,
                                 DSLContext dsl) {
@@ -190,11 +189,9 @@ public class SignUpResource {
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_UP, context);
 
-        return builder(new SignUpResponse())
-                .set(SignUpResponse::setId, user.id())
-                .set(SignUpResponse::setAccount, user.account())
-                .set(SignUpResponse::setUserProfiles, new HashMap<>(userProfile.values()))
-                .set(SignUpResponse::setPassword, initialPassword != null ? initialPassword.password() : null)
-                .build();
+        return BouncrJsonEncoders.encodeSignUp(
+                user,
+                new HashMap<>(userProfile.values()),
+                initialPassword != null ? initialPassword.password() : null);
     }
 }

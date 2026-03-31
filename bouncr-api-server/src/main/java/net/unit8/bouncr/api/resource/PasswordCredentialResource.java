@@ -30,6 +30,7 @@ import jakarta.inject.Inject;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -197,7 +198,7 @@ public class PasswordCredentialResource {
     }
 
     @Decision(POST)
-    public PasswordCredential create(Tuple3<WordName, String, Boolean> createRequest,
+    public Map<String, Object> create(Tuple3<WordName, String, Boolean> createRequest,
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
@@ -217,11 +218,11 @@ public class PasswordCredentialResource {
         actionRecord.setActor(principal.getName());
         actionRecord.setDescription(user.account());
 
-        return passwordCredential;
+        return Map.of();
     }
 
     @Decision(PUT)
-    public PasswordCredential update(Tuple3<String, String, String> updateRequest,
+    public Map<String, Object> update(Tuple3<String, String, String> updateRequest,
                                      User user,
                                      UserPermissionPrincipal principal,
                                      ActionRecord actionRecord,
@@ -244,7 +245,7 @@ public class PasswordCredentialResource {
                 .orElse(user.account()));
         actionRecord.setDescription(user.account());
 
-        return passwordCredential;
+        return Map.of();
     }
 
     @Decision(DELETE)

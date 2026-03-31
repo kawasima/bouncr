@@ -22,6 +22,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
+import java.util.Map;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
@@ -61,7 +62,7 @@ public class PasswordResetResource {
     }
 
     @Decision(PUT)
-    public InitialPassword reset(PasswordResetChallenge resetChallenge,
+    public Map<String, Object> reset(PasswordResetChallenge resetChallenge,
                                  User user,
                                  ActionRecord actionRecord,
                                  RestContext context,
@@ -79,6 +80,6 @@ public class PasswordResetResource {
         actionRecord.setActor(user.account());
         config.getHookRepo().runHook(HookPoint.AFTER_PASSWORD_RESET, context);
 
-        return initialPassword;
+        return Map.of("password", initialPassword.password());
     }
 }

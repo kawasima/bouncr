@@ -5,7 +5,6 @@ import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.GrantType;
@@ -74,11 +73,11 @@ class OidcApplicationResourceTest {
                 context, dsl);
         assertThat(created).isTrue();
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        assertThat(response.client_id()).isNotBlank();
-        assertThat(response.client_secret()).isNotBlank();
-        assertThat(response.grant_types()).containsExactly("client_credentials");
-        assertThat(response.callback_uri()).isNull();
+        Map<String, Object> response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        assertThat((String) response.get("client_id")).isNotBlank();
+        assertThat((String) response.get("client_secret")).isNotBlank();
+        assertThat(response.get("grant_types")).isEqualTo(java.util.List.of("client_credentials"));
+        assertThat(response.get("callback_uri")).isNull();
     }
 
     @Test
@@ -125,9 +124,9 @@ class OidcApplicationResourceTest {
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 context, dsl);
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        assertThat(response.grant_types()).containsExactlyInAnyOrder("authorization_code", "refresh_token");
-        assertThat(response.callback_uri()).isEqualTo("https://webapp.example/callback");
+        Map<String, Object> response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        assertThat(response.get("grant_types")).isEqualTo(java.util.List.of("authorization_code", "refresh_token"));
+        assertThat(response.get("callback_uri")).isEqualTo("https://webapp.example/callback");
     }
 
     @Test
@@ -213,8 +212,8 @@ class OidcApplicationResourceTest {
         createResource.create(
                 createCtx.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
                 createCtx, dsl);
-        OidcApplicationCreatedResponse created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        String originalSecret = created.client_secret();
+        Map<String, Object> created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        String originalSecret = (String) created.get("client_secret");
 
         // Regenerate secret
         OidcApplicationSecretResource secretResource = new OidcApplicationSecretResource();

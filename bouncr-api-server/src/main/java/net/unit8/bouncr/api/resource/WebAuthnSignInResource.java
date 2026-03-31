@@ -15,7 +15,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
+import java.util.Map;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PrincipalUtils;
@@ -211,8 +211,9 @@ public class WebAuthnSignInResource {
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Set-Cookie", tokenCookie,
                         "Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, new WebAuthnSignInResponse(
-                        userSession.token(), user.account()))
+                .set(ApiResponse::setBody, Map.of(
+                        "token", userSession.token(),
+                        "account", user.account()))
                 .build();
     }
 }

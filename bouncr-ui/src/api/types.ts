@@ -34,7 +34,7 @@ export interface Group {
   id: number;
   name: string;
   description: string;
-  writeProtected?: boolean;
+  write_protected?: boolean;
   users?: User[];
 }
 
@@ -63,17 +63,17 @@ export interface UserAction {
 export interface OidcProvider {
   id: number;
   name: string;
-  clientId: string;
-  clientSecretSet: boolean;
+  client_id: string;
+  client_secret_set: boolean;
   scope: string;
-  responseType: string;
-  authorizationEndpoint: string;
-  tokenEndpoint: string;
-  tokenEndpointAuthMethod: string;
-  redirectUri?: string;
-  jwksUri?: string;
+  response_type: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  token_endpoint_auth_method: string;
+  redirect_uri?: string;
+  jwks_uri?: string;
   issuer?: string;
-  pkceEnabled?: boolean;
+  pkce_enabled?: boolean;
 }
 
 export interface OidcApplication {
@@ -103,9 +103,9 @@ export interface Invitation {
   id: number;
   code: string;
   email: string;
-  invitedAt: string;
-  groupInvitations?: GroupInvitation[];
-  oidcInvitations?: OidcInvitation[];
+  invited_at: string;
+  group_invitations?: GroupInvitation[];
+  oidc_invitations?: OidcInvitation[];
 }
 
 export interface GroupInvitation {
@@ -115,8 +115,8 @@ export interface GroupInvitation {
 
 export interface OidcInvitation {
   id: number;
-  oidcProvider: OidcProvider;
-  oidcPayload: string;
+  oidc_provider: OidcProvider;
+  oidc_payload: string;
 }
 
 export interface Assignment {
@@ -126,20 +126,20 @@ export interface Assignment {
 }
 
 export interface UserLock {
-  lockLevel: string;
-  lockedAt: string;
+  lock_level: string;
+  locked_at: string;
 }
 
 export interface UserProfileField {
   id: number;
   name: string;
-  jsonName: string;
-  isRequired: boolean;
-  isIdentity: boolean;
-  regularExpression?: string;
-  maxLength?: number;
-  minLength?: number;
-  needsVerification?: boolean;
+  json_name: string;
+  is_required: boolean;
+  is_identity: boolean;
+  regular_expression?: string;
+  max_length?: number;
+  min_length?: number;
+  needs_verification?: boolean;
   position?: number;
 }
 
@@ -255,17 +255,17 @@ export interface RealmUpdateRequest {
 
 export interface OidcProviderCreateRequest {
   name: string;
-  clientId: string;
-  clientSecret: string;
+  client_id: string;
+  client_secret: string;
   scope: string;
-  responseType: string;
-  authorizationEndpoint: string;
-  tokenEndpoint: string;
-  tokenEndpointAuthMethod: string;
-  redirectUri?: string;
-  jwksUri?: string;
+  response_type: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  token_endpoint_auth_method: string;
+  redirect_uri?: string;
+  jwks_uri?: string;
   issuer?: string;
-  pkceEnabled?: boolean;
+  pkce_enabled?: boolean;
 }
 
 export type OidcProviderUpdateRequest = OidcProviderCreateRequest;
