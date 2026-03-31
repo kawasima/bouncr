@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.api.encoder.BouncrJooqEncoders;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupSpec;
 import net.unit8.bouncr.data.GroupWithUsers;
@@ -76,15 +77,10 @@ public class GroupRepository {
     }
 
     public Group insert(GroupSpec spec) {
-        Record rec = dsl.insertInto(table("groups"),
-                        field("name"), field("name_lower"), field("description"), field("write_protected"))
-                .values(spec.name().value(), spec.name().lowercase(), spec.description(), false)
-                .returningResult(
-                        field("group_id", Long.class),
-                        field("name", String.class),
-                        field("description", String.class),
-                        field("write_protected", Boolean.class))
-                .fetchOne();
+        Record rec = BouncrJooqEncoders.insertInto(dsl, "groups",
+                BouncrJooqEncoders.GROUP_SPEC, spec,
+                List.of(field("group_id", Long.class), field("name", String.class),
+                        field("description", String.class), field("write_protected", Boolean.class)));
         return GROUP.decode(rec).getOrThrow();
     }
 

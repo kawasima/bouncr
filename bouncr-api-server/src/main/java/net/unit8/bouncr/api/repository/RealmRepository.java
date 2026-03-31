@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.api.encoder.BouncrJooqEncoders;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.RealmSpec;
 import net.unit8.bouncr.data.WordName;
@@ -7,6 +8,7 @@ import org.jooq.DSLContext;
 import org.jooq.Record;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
@@ -61,18 +63,12 @@ public class RealmRepository {
     }
 
     public Realm insert(Long applicationId, RealmSpec spec) {
-        Record rec = dsl.insertInto(table("realms"),
-                        field("application_id"), field("name"), field("name_lower"),
-                        field("url"), field("description"), field("write_protected"))
-                .values(applicationId, spec.name().value(), spec.name().lowercase(),
-                        spec.url(), spec.description(), false)
-                .returningResult(
-                        field("realm_id", Long.class),
-                        field("name", String.class),
-                        field("url", String.class),
-                        field("description", String.class),
-                        field("write_protected", Boolean.class))
-                .fetchOne();
+        Record rec = BouncrJooqEncoders.insertInto(dsl, "realms",
+                BouncrJooqEncoders.REALM_SPEC, spec,
+                Map.of("application_id", applicationId),
+                List.of(field("realm_id", Long.class), field("name", String.class),
+                        field("url", String.class), field("description", String.class),
+                        field("write_protected", Boolean.class)));
         return REALM.decode(rec).getOrThrow();
     }
 
