@@ -149,10 +149,6 @@
             <groupId>net.unit8.raoh</groupId>
             <artifactId>raoh-jooq</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh-encoder</artifactId>
-        </dependency>
 
         <!-- Jackson -->
         <dependency>

@@ -24,8 +24,8 @@ import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple2;
-import net.unit8.raoh.combinator.Tuple3;
+import net.unit8.raoh.decode.combinator.Tuple2;
+import net.unit8.raoh.decode.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 

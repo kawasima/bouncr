@@ -4,7 +4,7 @@ import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
 import enkan.component.jooq.JooqProvider;
 import jakarta.inject.Inject;
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.jooq.JooqRecordDecoders;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static net.unit8.raoh.Decoders.combine;
-import static net.unit8.raoh.ObjectDecoders.long_;
-import static net.unit8.raoh.ObjectDecoders.string;
+import static net.unit8.raoh.decode.Decoders.combine;
+import static net.unit8.raoh.decode.ObjectDecoders.long_;
+import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static org.jooq.impl.DSL.*;
 
 public class RealmCache extends SystemComponent<RealmCache> {

@@ -1,15 +1,15 @@
 package net.unit8.bouncr.api.decoder;
 
 import net.unit8.bouncr.data.*;
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.jooq.JooqRecordDecoder;
 import org.jooq.Record;
 
 import java.net.URI;
 
-import static net.unit8.raoh.Decoders.*;
-import static net.unit8.raoh.ObjectDecoders.*;
+import static net.unit8.raoh.decode.Decoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
 
 /**

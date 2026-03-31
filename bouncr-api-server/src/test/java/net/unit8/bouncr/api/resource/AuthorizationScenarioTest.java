@@ -3,7 +3,7 @@ package net.unit8.bouncr.api.resource;
 import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import net.unit8.bouncr.component.BouncrConfiguration;
-import net.unit8.raoh.combinator.Tuple3;
+import net.unit8.raoh.decode.combinator.Tuple3;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

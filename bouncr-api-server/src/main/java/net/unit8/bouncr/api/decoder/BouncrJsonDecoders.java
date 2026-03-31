@@ -5,13 +5,13 @@ import net.unit8.bouncr.api.boundary.*;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.data.*;
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
-import net.unit8.raoh.combinator.*;
+import net.unit8.raoh.decode.combinator.*;
 import net.unit8.raoh.json.JsonDecoder;
 import tools.jackson.databind.JsonNode;
 
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static net.unit8.raoh.Decoders.withDefault;
+import static net.unit8.raoh.decode.Decoders.withDefault;
 import static net.unit8.raoh.json.JsonDecoders.*;
 
 /**

@@ -1,17 +1,17 @@
 package net.unit8.bouncr.api.decoder;
 
 import net.unit8.bouncr.data.*;
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 
 import java.util.Map;
 
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 /**
  * Raoh-based decoders for {@code application/x-www-form-urlencoded} OAuth2 requests.
  *
- * <p>Uses {@link net.unit8.raoh.map.MapDecoders} to decode form parameters from
+ * <p>Uses {@link net.unit8.raoh.decode.map.MapDecoders} to decode form parameters from
  * {@link enkan.collection.Parameters} (which implements {@code Map<String, Object>}).
  * This gives the same applicative validation and error accumulation as
  * {@link BouncrJsonDecoders} does for JSON request bodies.
@@ -32,7 +32,7 @@ import static net.unit8.raoh.map.MapDecoders.*;
  * }</pre>
  *
  * @see BouncrJsonDecoders
- * @see net.unit8.raoh.map.MapDecoders
+ * @see net.unit8.raoh.decode.map.MapDecoders
  */
 public final class BouncrFormDecoders {
 
@@ -91,7 +91,7 @@ public final class BouncrFormDecoders {
      * Decoder for {@code POST /oauth2/token} form parameters.
      *
      * <p>Dispatches on the {@code grant_type} field to the appropriate
-     * sub-decoder using {@link net.unit8.raoh.map.MapDecoders#discriminate}.
+     * sub-decoder using {@link net.unit8.raoh.decode.map.MapDecoders#discriminate}.
      * Unknown grant types produce a validation error automatically.
      */
     public static final Decoder<Map<String, Object>, TokenRequest> TOKEN_REQUEST = discriminate(

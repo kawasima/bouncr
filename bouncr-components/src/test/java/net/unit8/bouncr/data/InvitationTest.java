@@ -86,13 +86,13 @@ class InvitationTest {
     }
 
     @Test
-    void nullLists_allowed() {
+    void nullLists_normalizedToEmpty() {
         Invitation invitation = new Invitation(
                 4L, "INV-005", "eve@example.com",
                 LocalDateTime.now(), null, null);
 
-        assertThat(invitation.groupInvitations()).isNull();
-        assertThat(invitation.oidcInvitations()).isNull();
+        assertThat(invitation.groupInvitations()).isEmpty();
+        assertThat(invitation.oidcInvitations()).isEmpty();
     }
 
     @Test

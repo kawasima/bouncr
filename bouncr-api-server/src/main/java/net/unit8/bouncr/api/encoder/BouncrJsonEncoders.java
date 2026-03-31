@@ -12,12 +12,12 @@ import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.UserAction;
 import net.unit8.bouncr.data.UserSession;
-import net.unit8.raoh.encoder.Encoder;
+import net.unit8.raoh.encode.Encoder;
 
 import java.util.Map;
 
-import static net.unit8.raoh.encoder.MapEncoders.*;
-import static net.unit8.raoh.encoder.ObjectEncoders.*;
+import static net.unit8.raoh.encode.MapEncoders.*;
+import static net.unit8.raoh.encode.ObjectEncoders.*;
 
 /**
  * Central registry of raoh {@link Encoder} instances that convert domain objects
