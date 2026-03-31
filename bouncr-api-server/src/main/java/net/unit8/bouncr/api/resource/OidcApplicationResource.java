@@ -8,6 +8,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.OidcApplicationUpdateSpec;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
@@ -119,7 +121,7 @@ public class OidcApplicationResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(OidcApplicationUpdateSpec updateRequest, OidcApplication oidcApplication, DSLContext dsl) {
+    public Map<String, Object> update(OidcApplicationUpdateSpec updateRequest, OidcApplication oidcApplication, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.updateProfile(
                 oidcApplication.name(),
@@ -137,13 +139,19 @@ public class OidcApplicationResource {
             repo.setPermissions(appId, updateRequest.permissions());
         }
         repo.setGrantTypes(appId, GrantType.parseAll(updateRequest.grantTypes()));
+        actionRecord.setActionType(ActionType.OIDC_APPLICATION_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(oidcApplication.name());
         return BouncrJsonEncoders.encodeOidcApplication(repo.findByName(updateRequest.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Void delete(OidcApplication oidcApplication, DSLContext dsl) {
+    public Void delete(OidcApplication oidcApplication, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         repo.delete(oidcApplication.name());
+        actionRecord.setActionType(ActionType.OIDC_APPLICATION_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(oidcApplication.name());
         return null;
     }
 

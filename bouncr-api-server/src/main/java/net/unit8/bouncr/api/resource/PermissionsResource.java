@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.PermissionRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.PermissionSpec;
 import net.unit8.raoh.Err;
@@ -81,8 +83,11 @@ public class PermissionsResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(PermissionSpec permissionSpec, DSLContext dsl) {
+    public Map<String, Object> create(PermissionSpec permissionSpec, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
+        actionRecord.setActionType(ActionType.PERMISSION_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(permissionSpec.name().value());
         return BouncrJsonEncoders.PERMISSION.encode(repo.insert(permissionSpec));
     }
 }

@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
@@ -125,7 +127,7 @@ public class OidcApplicationsResource {
     }
 
     @Decision(POST)
-    public boolean create(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, ActionRecord actionRecord, UserPermissionPrincipal principal, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
 
         String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
@@ -168,6 +170,9 @@ public class OidcApplicationsResource {
         // Return plaintext client_secret once (never stored or retrievable again)
         OidcApplication saved = repo.findByName(createRequest._1().value()).orElse(app);
         context.put(RESPONSE, BouncrJsonEncoders.encodeOidcApplicationCreated(saved, plaintextSecret));
+        actionRecord.setActionType(ActionType.OIDC_APPLICATION_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(createRequest._1().value());
         return true;
     }
 

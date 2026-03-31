@@ -9,9 +9,11 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.RealmSpec;
@@ -75,8 +77,11 @@ public class RealmsResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(RealmSpec realmSpec, Application application, DSLContext dsl) {
+    public Map<String, Object> create(RealmSpec realmSpec, Application application, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
+        actionRecord.setActionType(ActionType.REALM_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(realmSpec.name().value());
         return BouncrJsonEncoders.REALM.encode(repo.insert(application.id(), realmSpec));
     }
 

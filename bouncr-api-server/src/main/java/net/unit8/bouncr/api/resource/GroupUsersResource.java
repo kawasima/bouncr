@@ -9,7 +9,9 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupWithUsers;
 import net.unit8.raoh.Err;
@@ -85,22 +87,28 @@ public class GroupUsersResource {
     }
 
     @Decision(POST)
-    public List<String> create(List<String> userAccounts, Group group, DSLContext dsl) {
+    public List<String> create(List<String> userAccounts, Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         List<Long> userIds = findUserIdsByAccounts(dsl, userAccounts);
         for (Long userId : userIds) {
             repo.addUser(group.name(), userId);
         }
+        actionRecord.setActionType(ActionType.GROUP_USER_ADDED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value() + " " + userAccounts.size() + " users");
         return userAccounts;
     }
 
     @Decision(DELETE)
-    public List<String> delete(List<String> userAccounts, Group group, DSLContext dsl) {
+    public List<String> delete(List<String> userAccounts, Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         List<Long> userIds = findUserIdsByAccounts(dsl, userAccounts);
         for (Long userId : userIds) {
             repo.removeUser(group.name(), userId);
         }
+        actionRecord.setActionType(ActionType.GROUP_USER_REMOVED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value() + " " + userAccounts.size() + " users");
         return userAccounts;
     }
 

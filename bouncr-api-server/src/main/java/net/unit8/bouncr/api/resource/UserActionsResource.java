@@ -29,7 +29,7 @@ public class UserActionsResource {
         return Optional.ofNullable(principal)
                 .filter(p -> p.hasPermission("user:read")
                         || p.hasPermission("any_user:read")
-                        || (p.hasPermission("my:read") && Objects.equals(p.getName(), params.get("account"))))
+                        || (p.hasPermission("my:read") && Objects.equals(p.getName(), params.get("actor"))))
                 .isPresent();
     }
 

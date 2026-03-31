@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupSpec;
 import net.unit8.raoh.Err;
@@ -81,8 +83,11 @@ public class GroupsResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(GroupSpec groupSpec, DSLContext dsl) {
+    public Map<String, Object> create(GroupSpec groupSpec, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
+        actionRecord.setActionType(ActionType.GROUP_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(groupSpec.name().value());
         return BouncrJsonEncoders.GROUP.encode(repo.insert(groupSpec));
     }
 }

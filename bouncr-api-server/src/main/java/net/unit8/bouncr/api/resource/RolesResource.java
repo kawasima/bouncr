@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.RoleRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.RoleSpec;
 import net.unit8.raoh.Err;
@@ -81,8 +83,11 @@ public class RolesResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(RoleSpec roleSpec, DSLContext dsl) {
+    public Map<String, Object> create(RoleSpec roleSpec, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RoleRepository repo = new RoleRepository(dsl);
+        actionRecord.setActionType(ActionType.ROLE_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(roleSpec.name().value());
         return BouncrJsonEncoders.ROLE.encode(repo.insert(roleSpec));
     }
 }

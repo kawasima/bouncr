@@ -7,6 +7,8 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.AssignmentId;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.util.ContextKeys;
@@ -82,20 +84,26 @@ public class AssignmentsResource {
     }
 
     @Decision(POST)
-    public Void create(List<AssignmentId> resolved, DSLContext dsl) {
+    public Void create(List<AssignmentId> resolved, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
         for (AssignmentId a : resolved) {
             repo.insert(a.group(), a.role(), a.realm());
         }
+        actionRecord.setActionType(ActionType.ASSIGNMENT_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(resolved.size() + " assignments");
         return null;
     }
 
     @Decision(DELETE)
-    public Void delete(List<AssignmentId> resolved, DSLContext dsl) {
+    public Void delete(List<AssignmentId> resolved, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
         for (AssignmentId a : resolved) {
             repo.delete(a.group(), a.role(), a.realm());
         }
+        actionRecord.setActionType(ActionType.ASSIGNMENT_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(resolved.size() + " assignments");
         return null;
     }
 }

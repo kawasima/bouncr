@@ -13,6 +13,8 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 
 import static enkan.util.BeanBuilder.builder;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.bouncr.api.util.PrincipalUtils;
@@ -87,7 +89,7 @@ public class UserSessionResource {
     }
 
     @Decision(DELETE)
-    public Void delete(String subject, RestContext context, DSLContext dsl) {
+    public Void delete(String subject, ActionRecord actionRecord, RestContext context, DSLContext dsl) {
         String token = context.get(RESOLVED_TOKEN).orElse(null);
         String resolvedSubject = resolveSubject(subject, token);
         OidcLogoutService.LogoutResult logoutResult = new OidcLogoutService(config).propagateSignOut(resolvedSubject, dsl);
@@ -95,6 +97,10 @@ public class UserSessionResource {
         storeProvider.getStore(REFRESH_TOKEN).delete(token);
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
+
+        actionRecord.setActionType(ActionType.USER_SIGNOUT);
+        actionRecord.setActor(resolvedSubject);
+        actionRecord.setDescription(resolvedSubject);
 
         var response = Map.<String, Object>of(
                 "frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()),

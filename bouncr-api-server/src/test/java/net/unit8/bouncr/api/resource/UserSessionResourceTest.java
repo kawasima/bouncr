@@ -71,7 +71,7 @@ class UserSessionResourceTest {
 
         RestContext context = restContext();
         context.put(RESOLVED_TOKEN, "session-token");
-        resource.delete("admin", context, dsl);
+        resource.delete("admin", new net.unit8.bouncr.api.logging.ActionRecord(), context, dsl);
         ApiResponse apiResponse = resource.handleOk(context);
         @SuppressWarnings("unchecked")
         Map<String, Object> response = (Map<String, Object>) apiResponse.getBody();

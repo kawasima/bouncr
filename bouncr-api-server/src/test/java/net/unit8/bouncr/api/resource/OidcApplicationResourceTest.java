@@ -70,6 +70,7 @@ class OidcApplicationResourceTest {
 
         boolean created = createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
         assertThat(created).isTrue();
 
@@ -93,6 +94,7 @@ class OidcApplicationResourceTest {
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
 
         // Verify round-trip through DB
@@ -122,6 +124,7 @@ class OidcApplicationResourceTest {
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
 
         Map<String, Object> response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
@@ -211,6 +214,7 @@ class OidcApplicationResourceTest {
         createResource.validateCreate(body, createCtx);
         createResource.create(
                 createCtx.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 createCtx, dsl);
         Map<String, Object> created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
         String originalSecret = (String) created.get("client_secret");
@@ -318,6 +322,12 @@ class OidcApplicationResourceTest {
     private RestContext restContext() {
         Resource stubResource = decisionPoint -> ctx -> null;
         return new RestContext(stubResource, new DefaultHttpRequest());
+    }
+
+    private enkan.security.bouncr.UserPermissionPrincipal adminPrincipal() {
+        return new enkan.security.bouncr.UserPermissionPrincipal(
+                1L, "admin", Map.of(),
+                java.util.Set.of("oidc_application:create", "oidc_application:read", "oidc_application:update", "oidc_application:delete"));
     }
 
     private void setField(Object target, String fieldName, Object value) {

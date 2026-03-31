@@ -9,7 +9,9 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.data.EntityRef;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.InvitationRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.Email;
 import net.unit8.bouncr.data.Invitation;
@@ -68,7 +70,7 @@ public class InvitationsResource {
     }
 
     @Decision(POST)
-    public boolean create(Tuple2<Email, List<EntityRef>> createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple2<Email, List<EntityRef>> createRequest, ActionRecord actionRecord, UserPermissionPrincipal principal, RestContext context, DSLContext dsl) {
         InvitationRepository repo = new InvitationRepository(dsl);
         String code = RandomUtils.generateRandomString(8, config.getSecureRandom());
         List<Long> groupIds = createRequest._2() != null
@@ -78,6 +80,9 @@ public class InvitationsResource {
                 : List.of();
         Invitation invitation = repo.insert(createRequest._1().value(), code, LocalDateTime.now(), groupIds);
         context.put(CREATED, invitation);
+        actionRecord.setActionType(ActionType.INVITATION_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(createRequest._1().value());
         return true;
     }
 

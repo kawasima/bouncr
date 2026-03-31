@@ -5,8 +5,10 @@ import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.util.PrincipalUtils;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.User;
 
@@ -64,17 +66,23 @@ public class OtpKeyResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> create(User user, DSLContext dsl) {
+    public Map<String, Object> create(User user, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         byte[] key = RandomUtils.generateRandomString(20, config.getSecureRandom()).getBytes();
         userRepo.insertOtpKey(user.id(), key);
+        actionRecord.setActionType(ActionType.OTP_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(principal.getName());
         return Map.of("key", Base64.getEncoder().encodeToString(key));
     }
 
     @Decision(DELETE)
-    public Void delete(User user, DSLContext dsl) {
+    public Void delete(User user, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         UserRepository userRepo = new UserRepository(dsl);
         userRepo.deleteOtpKey(user.id());
+        actionRecord.setActionType(ActionType.OTP_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(principal.getName());
         return null;
     }
 }

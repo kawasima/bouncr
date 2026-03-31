@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
 import net.unit8.bouncr.api.repository.RealmRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.Realm;
 import net.unit8.bouncr.data.RealmSpec;
@@ -99,16 +101,22 @@ public class RealmResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(RealmSpec realmSpec, Realm realm, Application application, DSLContext dsl) {
+    public Map<String, Object> update(RealmSpec realmSpec, Realm realm, Application application, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
         repo.update(application.id(), realm.name(), realmSpec);
+        actionRecord.setActionType(ActionType.REALM_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(realm.name().value());
         return BouncrJsonEncoders.REALM.encode(repo.findByApplicationAndName(application.name(), realmSpec.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Void delete(Realm realm, Application application, DSLContext dsl) {
+    public Void delete(Realm realm, Application application, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RealmRepository repo = new RealmRepository(dsl);
         repo.delete(application.id(), realm.name());
+        actionRecord.setActionType(ActionType.REALM_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(realm.name().value());
         return null;
     }
 }

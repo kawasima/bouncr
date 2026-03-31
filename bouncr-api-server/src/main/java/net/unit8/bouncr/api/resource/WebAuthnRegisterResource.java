@@ -16,6 +16,8 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
@@ -88,6 +90,7 @@ public class WebAuthnRegisterResource {
     @Decision(POST)
     public Object doPost(Tuple2<String, String> request,
                          UserPermissionPrincipal principal,
+                         ActionRecord actionRecord,
                          HttpRequest httpRequest,
                          RestContext context,
                          DSLContext dsl) {
@@ -150,6 +153,9 @@ public class WebAuthnRegisterResource {
                 String.join(",", transports), format,
                 request._2(), true);
         context.put(CREDENTIAL, credential);
+        actionRecord.setActionType(ActionType.WEBAUTHN_REGISTERED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(principal.getName());
         return true;
     }
 

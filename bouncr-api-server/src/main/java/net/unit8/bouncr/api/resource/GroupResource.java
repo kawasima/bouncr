@@ -10,7 +10,9 @@ import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupSpec;
 import net.unit8.raoh.Err;
@@ -94,20 +96,26 @@ public class GroupResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(GroupSpec groupSpec, Group group, DSLContext dsl) {
+    public Map<String, Object> update(GroupSpec groupSpec, Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         repo.update(group.name(), groupSpec);
+        actionRecord.setActionType(ActionType.GROUP_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value());
         return BouncrJsonEncoders.GROUP.encode(repo.findByName(groupSpec.name().value(), false).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Object delete(Group group, DSLContext dsl) {
+    public Object delete(Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         if (Boolean.TRUE.equals(group.writeProtected())) {
             return Problem.valueOf(403, "Cannot delete a write-protected group",
                     BouncrProblem.UNPROCESSABLE.problemUri());
         }
         GroupRepository repo = new GroupRepository(dsl);
         repo.delete(group.name());
+        actionRecord.setActionType(ActionType.GROUP_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value());
         return null;
     }
 }
