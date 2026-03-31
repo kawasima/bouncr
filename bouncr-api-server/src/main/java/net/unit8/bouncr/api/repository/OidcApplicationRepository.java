@@ -6,6 +6,7 @@ import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.OidcClientMetadata;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.SigningKeyPair;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.slf4j.Logger;
@@ -143,10 +144,10 @@ public class OidcApplicationRepository {
         return attachGrantTypes(apps);
     }
 
-    public boolean isNameUnique(String name) {
+    public boolean isNameUnique(WordName name) {
         return dsl.selectCount()
                 .from(table("oidc_applications"))
-                .where(field("name_lower").eq(name.toLowerCase(Locale.US)))
+                .where(field("name_lower").eq(name.lowercase()))
                 .fetchOne(0, int.class) == 0;
     }
 

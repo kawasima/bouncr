@@ -8,6 +8,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.boundary.IdObject;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.InvitationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.Email;
@@ -16,19 +17,20 @@ import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.decode.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
 import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
-@AllowedMethods({"GET", "POST"})
+@AllowedMethods({"POST"})
 public class InvitationsResource {
     @Inject
     private BouncrConfiguration config;
@@ -58,13 +60,6 @@ public class InvitationsResource {
         return principal != null;
     }
 
-    @Decision(value = ALLOWED, method = "GET")
-    public boolean isGetAllowed(UserPermissionPrincipal principal) {
-        return Optional.ofNullable(principal)
-                .filter(p -> p.hasPermission("invitation:create"))
-                .isPresent();
-    }
-
     @Decision(value = ALLOWED, method = "POST")
     public boolean isPostAllowed(UserPermissionPrincipal principal) {
         return Optional.ofNullable(principal)
@@ -87,7 +82,7 @@ public class InvitationsResource {
     }
 
     @Decision(HANDLE_CREATED)
-    public Invitation handleCreated(Invitation invitation) {
-        return invitation;
+    public Map<String, Object> handleCreated(Invitation invitation) {
+        return BouncrJsonEncoders.INVITATION.encode(invitation);
     }
 }

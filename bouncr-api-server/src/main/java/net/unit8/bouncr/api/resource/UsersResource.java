@@ -21,7 +21,7 @@ import net.unit8.bouncr.data.UserProfile;
 import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.decode.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 

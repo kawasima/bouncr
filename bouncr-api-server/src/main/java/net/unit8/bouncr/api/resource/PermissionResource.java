@@ -1,7 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
@@ -9,17 +8,16 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.PermissionRepository;
 import net.unit8.bouncr.data.Permission;
-import net.unit8.bouncr.data.PermissionName;
-import net.unit8.bouncr.api.util.ContextKeys;
+import net.unit8.bouncr.data.PermissionSpec;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple2;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -27,8 +25,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class PermissionResource {
-    static final ContextKey<Tuple2<PermissionName, String>> UPDATE_REQ =
-            ContextKeys.of(Tuple2.class);
+    static final ContextKey<PermissionSpec> PERMISSION_SPEC = ContextKey.of(PermissionSpec.class);
     static final ContextKey<Permission> PERMISSION = ContextKey.of(Permission.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -36,9 +33,9 @@ public class PermissionResource {
         if (body == null) {
             return Problem.valueOf(400, "request is empty");
         }
-        return switch (BouncrJsonDecoders.PERMISSION_UPDATE.decode(body)) {
-            case Ok(Tuple2(var name, var desc)) -> {
-                context.put(UPDATE_REQ, new Tuple2<>((PermissionName) name, (String) desc));
+        return switch (BouncrJsonDecoders.PERMISSION_SPEC.decode(body)) {
+            case Ok(var spec) -> {
+                context.put(PERMISSION_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
@@ -72,12 +69,12 @@ public class PermissionResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(Tuple2<PermissionName, String> updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
+    public boolean isConflict(PermissionSpec permissionSpec, Parameters params, DSLContext dsl) {
+        if (permissionSpec.name().matches(params.get("name"))) {
             return false;
         }
         PermissionRepository repo = new PermissionRepository(dsl);
-        return !repo.isNameUnique(updateRequest._1().value());
+        return !repo.isNameUnique(permissionSpec.name());
     }
 
     @Decision(EXISTS)
@@ -89,15 +86,15 @@ public class PermissionResource {
     }
 
     @Decision(HANDLE_OK)
-    public Permission find(Permission permission) {
-        return permission;
+    public Map<String, Object> find(Permission permission) {
+        return BouncrJsonEncoders.PERMISSION.encode(permission);
     }
 
     @Decision(PUT)
-    public Permission update(Tuple2<PermissionName, String> updateRequest, Permission permission, DSLContext dsl) {
+    public Map<String, Object> update(PermissionSpec permissionSpec, Permission permission, DSLContext dsl) {
         PermissionRepository repo = new PermissionRepository(dsl);
-        repo.update(permission.name(), updateRequest._1().value(), updateRequest._2());
-        return repo.findByName(updateRequest._1().value()).orElseThrow();
+        repo.update(permission.name(), permissionSpec);
+        return BouncrJsonEncoders.PERMISSION.encode(repo.findByName(permissionSpec.name().value()).orElseThrow());
     }
 
     @Decision(DELETE)

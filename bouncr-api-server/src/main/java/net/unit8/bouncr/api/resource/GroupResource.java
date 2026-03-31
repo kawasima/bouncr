@@ -9,17 +9,16 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.GroupRepository;
 import net.unit8.bouncr.data.Group;
-import net.unit8.bouncr.data.WordName;
-import net.unit8.bouncr.api.util.ContextKeys;
+import net.unit8.bouncr.data.GroupSpec;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -28,8 +27,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 
 @AllowedMethods({"GET", "PUT", "DELETE"})
 public class GroupResource {
-    static final ContextKey<Tuple3<WordName, String, List<String>>> UPDATE_REQ =
-            ContextKeys.of(Tuple3.class);
+    static final ContextKey<GroupSpec> GROUP_SPEC = ContextKey.of(GroupSpec.class);
     static final ContextKey<Group> GROUP = ContextKey.of(Group.class);
 
     @Decision(value = MALFORMED, method = "PUT")
@@ -37,11 +35,9 @@ public class GroupResource {
         if (body == null) {
             return Problem.valueOf(400, "request is empty");
         }
-        return switch (BouncrJsonDecoders.GROUP_UPDATE.decode(body)) {
-            case Ok(Tuple3(var name, var desc, var users)) -> {
-                @SuppressWarnings("unchecked")
-                var typedUsers = (List<String>) users;
-                context.put(UPDATE_REQ, new Tuple3<>((WordName) name, (String) desc, typedUsers));
+        return switch (BouncrJsonDecoders.GROUP_SPEC.decode(body)) {
+            case Ok(var spec) -> {
+                context.put(GROUP_SPEC, spec);
                 yield null;
             }
             case Err(var issues) -> toProblem(issues);
@@ -75,12 +71,12 @@ public class GroupResource {
     }
 
     @Decision(value = CONFLICT, method = "PUT")
-    public boolean isConflict(Tuple3<WordName, String, List<String>> updateRequest, Parameters params, DSLContext dsl) {
-        if (Objects.equals(updateRequest._1().value(), params.get("name"))) {
+    public boolean isConflict(GroupSpec groupSpec, Parameters params, DSLContext dsl) {
+        if (groupSpec.name().matches(params.get("name"))) {
             return false;
         }
         GroupRepository repo = new GroupRepository(dsl);
-        return !repo.isNameUnique(updateRequest._1().value());
+        return !repo.isNameUnique(groupSpec.name());
     }
 
     @Decision(EXISTS)
@@ -93,15 +89,15 @@ public class GroupResource {
     }
 
     @Decision(HANDLE_OK)
-    public Group find(Group group) {
-        return group;
+    public Map<String, Object> find(Group group) {
+        return BouncrJsonEncoders.GROUP.encode(group);
     }
 
     @Decision(PUT)
-    public Group update(Tuple3<WordName, String, List<String>> updateRequest, Group group, DSLContext dsl) {
+    public Map<String, Object> update(GroupSpec groupSpec, Group group, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
-        repo.update(group.name(), updateRequest._1().value(), updateRequest._2());
-        return repo.findByName(updateRequest._1().value(), false).orElseThrow();
+        repo.update(group.name(), groupSpec);
+        return BouncrJsonEncoders.GROUP.encode(repo.findByName(groupSpec.name().value(), false).orElseThrow());
     }
 
     @Decision(DELETE)

@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.RolePermissionRepository;
 import net.unit8.bouncr.api.repository.RoleRepository;
 import net.unit8.bouncr.data.Permission;
@@ -19,6 +20,7 @@ import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.unit8.bouncr.api.repository.PermissionRepository;
@@ -71,9 +73,11 @@ public class RolePermissionsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Permission> list(Role role, DSLContext dsl) {
+    public List<Map<String, Object>> list(Role role, DSLContext dsl) {
         RolePermissionRepository repo = new RolePermissionRepository(dsl);
-        return repo.findPermissionsByRole(role.name());
+        return repo.findPermissionsByRole(role.name().value()).stream()
+                .map(BouncrJsonEncoders.PERMISSION::encode)
+                .toList();
     }
 
     @Decision(POST)

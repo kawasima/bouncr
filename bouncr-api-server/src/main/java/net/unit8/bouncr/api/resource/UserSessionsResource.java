@@ -4,13 +4,14 @@ import enkan.collection.Parameters;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.UserSessionRepository;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.util.PrincipalUtils;
-import net.unit8.bouncr.data.UserSession;
 import org.jooq.DSLContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -35,10 +36,12 @@ public class UserSessionsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<UserSession> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
+    public List<Map<String, Object>> handleOk(Parameters params, UserPermissionPrincipal principal, DSLContext dsl) {
         UserSessionRepository repo = new UserSessionRepository(dsl);
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
-        return repo.searchByUserId(principal.getId(), offset, limit);
+        return repo.searchByUserId(principal.getId(), offset, limit).stream()
+                .map(BouncrJsonEncoders.USER_SESSION::encode)
+                .toList();
     }
 }

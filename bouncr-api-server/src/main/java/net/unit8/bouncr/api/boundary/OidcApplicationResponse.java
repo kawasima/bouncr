@@ -1,11 +1,12 @@
 package net.unit8.bouncr.api.boundary;
 
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.data.GrantType;
 import net.unit8.bouncr.data.OidcApplication;
 import net.unit8.bouncr.data.OidcClientMetadata;
-import net.unit8.bouncr.data.Permission;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Public view of an OIDC application, excluding sensitive fields
@@ -20,7 +21,7 @@ public record OidcApplicationResponse(
         String description,
         String backchannel_logout_uri,
         String frontchannel_logout_uri,
-        List<Permission> permissions,
+        List<Map<String, Object>> permissions,
         List<String> grant_types
 ) {
     public static OidcApplicationResponse of(OidcApplication app) {
@@ -28,6 +29,9 @@ public record OidcApplicationResponse(
         var grantTypes = meta != null && meta.grantTypes() != null
                 ? meta.grantTypes().stream().map(GrantType::getValue).toList()
                 : GrantType.DEFAULT_GRANT_TYPES;
+        var permissions = app.permissions() != null
+                ? app.permissions().stream().map(BouncrJsonEncoders.PERMISSION::encode).toList()
+                : List.<Map<String, Object>>of();
         return new OidcApplicationResponse(
                 app.id(),
                 app.name(),
@@ -37,7 +41,7 @@ public record OidcApplicationResponse(
                 app.description(),
                 meta != null ? meta.backchannelLogoutUriString() : null,
                 meta != null ? meta.frontchannelLogoutUriString() : null,
-                app.permissions() != null ? app.permissions() : List.of(),
+                permissions,
                 grantTypes);
     }
 }

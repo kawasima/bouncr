@@ -6,13 +6,14 @@ import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.GroupRepository;
-import net.unit8.bouncr.data.Assignment;
 import net.unit8.bouncr.data.Group;
 import org.jooq.DSLContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -43,8 +44,10 @@ public class GroupAssignmentsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<Assignment> list(Group group, DSLContext dsl) {
+    public List<Map<String, Object>> list(Group group, DSLContext dsl) {
         AssignmentRepository repo = new AssignmentRepository(dsl);
-        return repo.findByGroup(group.id());
+        return repo.findByGroup(group.id()).stream()
+                .map(BouncrJsonEncoders.ASSIGNMENT::encode)
+                .toList();
     }
 }

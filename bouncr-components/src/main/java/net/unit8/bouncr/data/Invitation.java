@@ -15,8 +15,14 @@ import java.util.List;
  */
 public record Invitation(Long id, String code, String email, LocalDateTime invitedAt, List<GroupInvitation> groupInvitations, List<OidcInvitation> oidcInvitations) {
 
+    /** Normalizes null relation lists to empty lists. */
+    public Invitation {
+        groupInvitations = groupInvitations != null ? groupInvitations : List.of();
+        oidcInvitations = oidcInvitations != null ? oidcInvitations : List.of();
+    }
+
     /** Factory for decoder use — creates an Invitation without loaded relations. */
     public static Invitation of(Long id, String code, String email, LocalDateTime invitedAt) {
-        return new Invitation(id, code, email, invitedAt, null, null);
+        return new Invitation(id, code, email, invitedAt, List.of(), List.of());
     }
 }

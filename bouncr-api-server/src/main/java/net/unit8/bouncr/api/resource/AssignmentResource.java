@@ -6,10 +6,12 @@ import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.data.Assignment;
 import org.jooq.DSLContext;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -40,7 +42,7 @@ public class AssignmentResource {
     }
 
     @Decision(HANDLE_OK)
-    public Assignment find(Assignment assignment) {
-        return assignment;
+    public Map<String, Object> find(Assignment assignment) {
+        return BouncrJsonEncoders.ASSIGNMENT.encode(assignment);
     }
 }

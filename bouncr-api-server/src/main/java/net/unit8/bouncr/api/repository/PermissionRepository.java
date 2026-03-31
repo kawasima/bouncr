@@ -1,11 +1,12 @@
 package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.PermissionName;
+import net.unit8.bouncr.data.PermissionSpec;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
@@ -59,17 +60,17 @@ public class PermissionRepository {
                 .fetch(rec -> PERMISSION.decode(rec).getOrThrow());
     }
 
-    public boolean isNameUnique(String name) {
+    public boolean isNameUnique(PermissionName name) {
         return dsl.selectCount()
                 .from(table("permissions"))
-                .where(field("name_lower").eq(name.toLowerCase(Locale.US)))
+                .where(field("name_lower").eq(name.lowercase()))
                 .fetchOne(0, int.class) == 0;
     }
 
-    public Permission insert(String name, String description) {
+    public Permission insert(PermissionSpec spec) {
         Record rec = dsl.insertInto(table("permissions"),
                         field("name"), field("name_lower"), field("description"), field("write_protected"))
-                .values(name, name.toLowerCase(Locale.US), description, false)
+                .values(spec.name().value(), spec.name().lowercase(), spec.description(), false)
                 .returningResult(
                         field("permission_id", Long.class),
                         field("name", String.class),
@@ -79,22 +80,22 @@ public class PermissionRepository {
         return PERMISSION.decode(rec).getOrThrow();
     }
 
-    public void update(String currentName, String newName, String description) {
+    public void update(PermissionName currentName, PermissionSpec spec) {
         var updateSet = dsl.update(table("permissions"))
-                .set(field("name"), (Object) (newName != null ? newName : field("name")));
-        if (newName != null) {
-            updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
+                .set(field("name"), (Object) (spec.name() != null ? spec.name().value() : currentName.value()));
+        if (spec.name() != null) {
+            updateSet = updateSet.set(field("name_lower"), (Object) spec.name().lowercase());
         }
-        if (description != null) {
-            updateSet = updateSet.set(field("description"), (Object) description);
+        if (spec.description() != null) {
+            updateSet = updateSet.set(field("description"), (Object) spec.description());
         }
-        updateSet.where(field("name").eq(currentName))
+        updateSet.where(field("name").eq(currentName.value()))
                 .execute();
     }
 
-    public void delete(String name) {
+    public void delete(PermissionName name) {
         dsl.deleteFrom(table("permissions"))
-                .where(field("name").eq(name))
+                .where(field("name").eq(name.value()))
                 .execute();
     }
 

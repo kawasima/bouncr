@@ -1,19 +1,17 @@
 package net.unit8.bouncr.api.decoder;
 
 import net.unit8.bouncr.data.*;
-import net.unit8.raoh.Decoder;
-import net.unit8.raoh.Result;
+import net.unit8.raoh.decode.Decoder;
 
 import java.util.Map;
-import java.util.Optional;
 
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 /**
  * Raoh-based decoders for {@code application/x-www-form-urlencoded} OAuth2 requests.
  *
- * <p>Uses {@link net.unit8.raoh.map.MapDecoders} to decode form parameters from
+ * <p>Uses {@link net.unit8.raoh.decode.map.MapDecoders} to decode form parameters from
  * {@link enkan.collection.Parameters} (which implements {@code Map<String, Object>}).
  * This gives the same applicative validation and error accumulation as
  * {@link BouncrJsonDecoders} does for JSON request bodies.
@@ -34,7 +32,7 @@ import static net.unit8.raoh.map.MapDecoders.*;
  * }</pre>
  *
  * @see BouncrJsonDecoders
- * @see net.unit8.raoh.map.MapDecoders
+ * @see net.unit8.raoh.decode.map.MapDecoders
  */
 public final class BouncrFormDecoders {
 
@@ -92,29 +90,16 @@ public final class BouncrFormDecoders {
     /**
      * Decoder for {@code POST /oauth2/token} form parameters.
      *
-     * <p>First extracts {@code grant_type} to determine the variant, then
-     * delegates to the appropriate sub-decoder. Unknown grant types produce
-     * a validation error.
+     * <p>Dispatches on the {@code grant_type} field to the appropriate
+     * sub-decoder using {@link net.unit8.raoh.decode.map.MapDecoders#discriminate}.
+     * Unknown grant types produce a validation error automatically.
      */
-    public static final Decoder<Map<String, Object>, TokenRequest> TOKEN_REQUEST = (in, path) -> {
-        if (in == null) {
-            return Result.fail(path, "required", "request is empty");
-        }
-        Object grantTypeObj = in.get("grant_type");
-        if (!(grantTypeObj instanceof String grantTypeStr) || grantTypeStr.isBlank()) {
-            return Result.fail(path.append("grant_type"), "required", "grant_type is required");
-        }
-        Optional<GrantType> grantType = GrantType.fromString(grantTypeStr);
-        if (grantType.isEmpty()) {
-            return Result.fail(path.append("grant_type"), "unsupported",
-                    "Unsupported grant_type: " + grantTypeStr);
-        }
-        return switch (grantType.get()) {
-            case AUTHORIZATION_CODE -> AUTH_CODE_GRANT.decode(in, path);
-            case REFRESH_TOKEN -> REFRESH_GRANT.decode(in, path);
-            case CLIENT_CREDENTIALS -> CLIENT_CREDS_GRANT.decode(in, path);
-        };
-    };
+    public static final Decoder<Map<String, Object>, TokenRequest> TOKEN_REQUEST = discriminate(
+            "grant_type", Map.of(
+                    "authorization_code", AUTH_CODE_GRANT,
+                    "refresh_token",      REFRESH_GRANT,
+                    "client_credentials", CLIENT_CREDS_GRANT
+            ));
 
     // ==================== Token Introspection ====================
 

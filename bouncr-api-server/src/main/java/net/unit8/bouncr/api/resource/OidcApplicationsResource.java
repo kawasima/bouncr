@@ -24,7 +24,7 @@ import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple4;
+import net.unit8.raoh.decode.combinator.Tuple4;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
@@ -110,7 +110,7 @@ public class OidcApplicationsResource {
     @Decision(value = CONFLICT, method = "POST")
     public boolean isConflict(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
-        return !repo.isNameUnique(createRequest._1().value());
+        return !repo.isNameUnique(createRequest._1());
     }
 
     @Decision(HANDLE_OK)

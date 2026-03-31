@@ -29,7 +29,7 @@ import net.unit8.bouncr.util.PasswordUtils;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple3;
+import net.unit8.raoh.decode.combinator.Tuple3;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

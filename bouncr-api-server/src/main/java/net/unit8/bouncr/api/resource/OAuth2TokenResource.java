@@ -21,7 +21,6 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.data.AuthorizationCode;
 import net.unit8.bouncr.data.GrantType;
-import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.OAuth2Error;
 import net.unit8.bouncr.data.OAuth2RefreshToken;
 import net.unit8.bouncr.data.OidcApplication;
@@ -295,7 +294,7 @@ public class OAuth2TokenResource {
         if (app.permissions() != null && !app.permissions().isEmpty()) {
             Set<String> allowedScopes = new HashSet<>();
             allowedScopes.add("openid");
-            app.permissions().forEach(p -> allowedScopes.add(p.name()));
+            app.permissions().forEach(p -> allowedScopes.add(p.name().value()));
             if (!allowedScopes.containsAll(scope.values())) {
                 return tokenError(OAuth2Error.INVALID_SCOPE,
                         "Requested scope exceeds client's registered permissions");
@@ -306,10 +305,10 @@ public class OAuth2TokenResource {
                     .filter(s -> !"openid".equals(s))
                     .collect(Collectors.toSet());
             if (requestedPermissions.isEmpty()) {
-                permissionNames = app.permissions().stream().map(Permission::name).toList();
+                permissionNames = app.permissions().stream().map(p -> p.name().value()).toList();
             } else {
                 permissionNames = app.permissions().stream()
-                        .map(Permission::name)
+                        .map(p -> p.name().value())
                         .filter(requestedPermissions::contains)
                         .toList();
             }

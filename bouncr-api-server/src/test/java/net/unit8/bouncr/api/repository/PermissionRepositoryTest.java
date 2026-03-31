@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.api.resource.MockFactory;
-import net.unit8.bouncr.data.Permission;
+import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,17 +32,17 @@ class PermissionRepositoryTest {
 
     @Test
     void insertAndFindByName() {
-        Permission perm = repo.insert("custom:action", "A custom action permission");
+        Permission perm = repo.insert(new PermissionSpec(new PermissionName("custom:action"), "A custom action permission"));
 
         assertThat(perm.id()).isNotNull();
-        assertThat(perm.name()).isEqualTo("custom:action");
+        assertThat(perm.name().value()).isEqualTo("custom:action");
         assertThat(perm.description()).isEqualTo("A custom action permission");
         assertThat(perm.writeProtected()).isFalse();
 
         Optional<Permission> found = repo.findByName("custom:action");
         assertThat(found).isPresent();
         assertThat(found.get().id()).isEqualTo(perm.id());
-        assertThat(found.get().name()).isEqualTo("custom:action");
+        assertThat(found.get().name().value()).isEqualTo("custom:action");
     }
 
     @Test
@@ -55,11 +55,11 @@ class PermissionRepositoryTest {
     void searchWithQuery() {
         // V23 migration inserts many permissions (any_user:read, any_user:create, etc.)
         // Insert a custom one
-        repo.insert("custom:search", "Searchable permission");
+        repo.insert(new PermissionSpec(new PermissionName("custom:search"), "Searchable permission"));
 
         List<Permission> results = repo.search("custom", null, true, 0, 100);
         assertThat(results).hasSize(1);
-        assertThat(results.getFirst().name()).isEqualTo("custom:search");
+        assertThat(results.getFirst().name().value()).isEqualTo("custom:search");
     }
 
     @Test
@@ -84,20 +84,20 @@ class PermissionRepositoryTest {
 
     @Test
     void isNameUnique() {
-        assertThat(repo.isNameUnique("unique:perm")).isTrue();
+        assertThat(repo.isNameUnique(new PermissionName("unique:perm"))).isTrue();
 
-        repo.insert("unique:perm", "Unique permission");
+        repo.insert(new PermissionSpec(new PermissionName("unique:perm"), "Unique permission"));
 
-        assertThat(repo.isNameUnique("unique:perm")).isFalse();
+        assertThat(repo.isNameUnique(new PermissionName("unique:perm"))).isFalse();
         // Case-insensitive uniqueness
-        assertThat(repo.isNameUnique("Unique:Perm")).isFalse();
+        assertThat(repo.isNameUnique(new PermissionName("Unique:Perm"))).isFalse();
     }
 
     @Test
     void updatePermission() {
-        repo.insert("old:name", "Old description");
+        repo.insert(new PermissionSpec(new PermissionName("old:name"), "Old description"));
 
-        repo.update("old:name", "new:name", "New description");
+        repo.update(new PermissionName("old:name"), new PermissionSpec(new PermissionName("new:name"), "New description"));
 
         assertThat(repo.findByName("old:name")).isEmpty();
 
@@ -108,9 +108,9 @@ class PermissionRepositoryTest {
 
     @Test
     void updatePermissionNameOnly() {
-        repo.insert("rename:me", "Keep this description");
+        repo.insert(new PermissionSpec(new PermissionName("rename:me"), "Keep this description"));
 
-        repo.update("rename:me", "renamed:me", null);
+        repo.update(new PermissionName("rename:me"), new PermissionSpec(new PermissionName("renamed:me"), null));
 
         Optional<Permission> updated = repo.findByName("renamed:me");
         assertThat(updated).isPresent();
@@ -119,9 +119,9 @@ class PermissionRepositoryTest {
 
     @Test
     void updatePermissionDescriptionOnly() {
-        repo.insert("keep:name", "Old description");
+        repo.insert(new PermissionSpec(new PermissionName("keep:name"), "Old description"));
 
-        repo.update("keep:name", null, "Updated description");
+        repo.update(new PermissionName("keep:name"), new PermissionSpec(null, "Updated description"));
 
         Optional<Permission> updated = repo.findByName("keep:name");
         assertThat(updated).isPresent();
@@ -130,10 +130,10 @@ class PermissionRepositoryTest {
 
     @Test
     void deletePermission() {
-        repo.insert("delete:me", "To be deleted");
+        repo.insert(new PermissionSpec(new PermissionName("delete:me"), "To be deleted"));
         assertThat(repo.findByName("delete:me")).isPresent();
 
-        repo.delete("delete:me");
+        repo.delete(new PermissionName("delete:me"));
         assertThat(repo.findByName("delete:me")).isEmpty();
     }
 
@@ -146,14 +146,14 @@ class PermissionRepositoryTest {
         RolePermissionRepository rpRepo = new RolePermissionRepository(dsl);
 
         var user = userRepo.insert("limited_user");
-        var group = groupRepo.insert("limited_group", "Limited group");
-        var role = roleRepo.insert("limited_role", "Limited role");
+        var group = groupRepo.insert(new GroupSpec(new WordName("limited_group"), "Limited group"));
+        var role = roleRepo.insert(new RoleSpec(new WordName("limited_role"), "Limited role"));
 
-        Permission customPerm = repo.insert("limited:read", "Limited read");
+        Permission customPerm = repo.insert(new PermissionSpec(new PermissionName("limited:read"), "Limited read"));
         rpRepo.addPermission(role.id(), customPerm.id());
 
         // Add user to group
-        groupRepo.addUser("limited_group", user.id());
+        groupRepo.addUser(new WordName("limited_group"), user.id());
 
         // Assign role to group in realm (use the BOUNCR realm from V23)
         var realmId = dsl.select(org.jooq.impl.DSL.field("realm_id", Long.class))
@@ -170,11 +170,11 @@ class PermissionRepositoryTest {
 
         // Non-admin search: should only see permissions assigned to this user
         List<Permission> visible = repo.search(null, user.id(), false, 0, 100);
-        assertThat(visible.stream().map(Permission::name)).contains("limited:read");
+        assertThat(visible.stream().map(p -> p.name().value())).contains("limited:read");
 
         // The user should NOT see permissions not assigned to them
-        repo.insert("other:perm", "Other permission");
+        repo.insert(new PermissionSpec(new PermissionName("other:perm"), "Other permission"));
         visible = repo.search(null, user.id(), false, 0, 100);
-        assertThat(visible.stream().map(Permission::name)).doesNotContain("other:perm");
+        assertThat(visible.stream().map(p -> p.name().value())).doesNotContain("other:perm");
     }
 }

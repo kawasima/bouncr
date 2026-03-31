@@ -1,12 +1,14 @@
 package net.unit8.bouncr.api.repository;
 
 import net.unit8.bouncr.data.Group;
+import net.unit8.bouncr.data.GroupSpec;
+import net.unit8.bouncr.data.GroupWithUsers;
 import net.unit8.bouncr.data.User;
+import net.unit8.bouncr.data.WordName;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static net.unit8.bouncr.api.decoder.BouncrJooqDecoders.*;
@@ -30,11 +32,12 @@ public class GroupRepository {
                 .fetchOne();
         if (rec == null) return Optional.empty();
 
-        List<User> users = embedUsers
-                ? findUsersByGroupId(rec.get(field("group_id", Long.class)))
-                : null;
         Group group = GROUP.decode(rec).getOrThrow();
-        return Optional.of(users != null ? new Group(group.id(), group.name(), group.description(), group.writeProtected(), users) : group);
+        if (embedUsers) {
+            List<User> users = findUsersByGroupId(group.id());
+            return Optional.of(GroupWithUsers.of(group, users));
+        }
+        return Optional.of(group);
     }
 
     public List<Group> search(String q, Long userId, boolean isAdmin, int offset, int limit) {
@@ -65,17 +68,17 @@ public class GroupRepository {
                 .fetch(rec -> GROUP.decode(rec).getOrThrow());
     }
 
-    public boolean isNameUnique(String name) {
+    public boolean isNameUnique(WordName name) {
         return dsl.selectCount()
                 .from(table("groups"))
-                .where(field("name_lower").eq(name.toLowerCase(Locale.US)))
+                .where(field("name_lower").eq(name.lowercase()))
                 .fetchOne(0, int.class) == 0;
     }
 
-    public Group insert(String name, String description) {
+    public Group insert(GroupSpec spec) {
         Record rec = dsl.insertInto(table("groups"),
                         field("name"), field("name_lower"), field("description"), field("write_protected"))
-                .values(name, name.toLowerCase(Locale.US), description, false)
+                .values(spec.name().value(), spec.name().lowercase(), spec.description(), false)
                 .returningResult(
                         field("group_id", Long.class),
                         field("name", String.class),
@@ -85,26 +88,27 @@ public class GroupRepository {
         return GROUP.decode(rec).getOrThrow();
     }
 
-    public void update(String currentName, String newName, String description) {
+    public void update(WordName currentName, GroupSpec spec) {
+        // Use a sentinel no-op to get UpdateSetMoreStep, then conditionally add fields
         var updateSet = dsl.update(table("groups"))
-                .set(field("name"), (Object) (newName != null ? newName : field("name")));
-        if (newName != null) {
-            updateSet = updateSet.set(field("name_lower"), (Object) newName.toLowerCase(Locale.US));
+                .set(field("name"), (Object) (spec.name() != null ? spec.name().value() : currentName.value()));
+        if (spec.name() != null) {
+            updateSet = updateSet.set(field("name_lower"), (Object) spec.name().lowercase());
         }
-        if (description != null) {
-            updateSet = updateSet.set(field("description"), (Object) description);
+        if (spec.description() != null) {
+            updateSet = updateSet.set(field("description"), (Object) spec.description());
         }
-        updateSet.where(field("name").eq(currentName))
+        updateSet.where(field("name").eq(currentName.value()))
                 .execute();
     }
 
-    public void delete(String name) {
+    public void delete(WordName name) {
         dsl.deleteFrom(table("groups"))
-                .where(field("name").eq(name))
+                .where(field("name").eq(name.value()))
                 .execute();
     }
 
-    public void addUser(String groupName, Long userId) {
+    public void addUser(WordName groupName, Long userId) {
         Long groupId = resolveGroupId(groupName);
         dsl.insertInto(table("memberships"),
                         field("user_id"), field("group_id"))
@@ -112,7 +116,7 @@ public class GroupRepository {
                 .execute();
     }
 
-    public void removeUser(String groupName, Long userId) {
+    public void removeUser(WordName groupName, Long userId) {
         Long groupId = resolveGroupId(groupName);
         dsl.deleteFrom(table("memberships"))
                 .where(field("user_id").eq(userId)
@@ -120,13 +124,13 @@ public class GroupRepository {
                 .execute();
     }
 
-    private Long resolveGroupId(String groupName) {
+    private Long resolveGroupId(WordName groupName) {
         Long groupId = dsl.select(field("group_id", Long.class))
                 .from(table("groups"))
-                .where(field("name").eq(groupName))
+                .where(field("name").eq(groupName.value()))
                 .fetchOne(field("group_id", Long.class));
         if (groupId == null) {
-            throw new IllegalArgumentException("Group not found: " + groupName);
+            throw new IllegalArgumentException("Group not found: " + groupName.value());
         }
         return groupId;
     }

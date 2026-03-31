@@ -110,7 +110,7 @@ class UserResourceTest {
 
         assertThat(loaded.groups()).isNotNull();
         assertThat(loaded.groups()).isNotEmpty();
-        assertThat(loaded.groups().stream().map(g -> g.name()))
+        assertThat(loaded.groups().stream().map(g -> g.name().value()))
                 .contains("BOUNCR_ADMIN", "BOUNCR_USER");
     }
 }

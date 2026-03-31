@@ -5,7 +5,7 @@ import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.data.WordName;
-import net.unit8.raoh.combinator.Tuple3;
+import net.unit8.raoh.decode.combinator.Tuple3;
 import net.unit8.bouncr.component.AuthFailureTracker;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;

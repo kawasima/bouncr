@@ -8,6 +8,7 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
 import net.unit8.bouncr.data.OidcProvider;
@@ -17,11 +18,12 @@ import net.unit8.bouncr.data.WordName;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.combinator.Tuple3;
+import net.unit8.raoh.decode.combinator.Tuple3;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -72,20 +74,22 @@ public class OidcProvidersResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<OidcProvider> list(Parameters params, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         String q = params.get("q");
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
-        return repo.search(q, offset, limit);
+        return repo.search(q, offset, limit).stream()
+                .map(BouncrJsonEncoders.OIDC_PROVIDER::encode)
+                .toList();
     }
 
     @Decision(POST)
-    public OidcProvider create(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, DSLContext dsl) {
+    public Map<String, Object> create(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         var meta = createRequest._2();
         var clientCfg = createRequest._3();
-        return repo.insert(
+        return BouncrJsonEncoders.OIDC_PROVIDER.encode(repo.insert(
                 createRequest._1().value(),
                 clientCfg.credentials().clientId(),
                 clientCfg.credentials().clientSecret(),
@@ -98,6 +102,6 @@ public class OidcProvidersResource {
                 meta.jwksUri() != null ? meta.jwksUri().toString() : null,
                 meta.issuer(),
                 clientCfg.pkceEnabled()
-        );
+        ));
     }
 }

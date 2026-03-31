@@ -48,8 +48,8 @@ class SignUpAndResetFlowTest {
             GroupRepository groupRepo = new GroupRepository(dsl);
             InvitationRepository invRepo = new InvitationRepository(dsl);
 
-            Group group1 = groupRepo.insert("invite_grp1", "Group 1");
-            Group group2 = groupRepo.insert("invite_grp2", "Group 2");
+            Group group1 = groupRepo.insert(new GroupSpec(new WordName("invite_grp1"), "Group 1"));
+            Group group2 = groupRepo.insert(new GroupSpec(new WordName("invite_grp2"), "Group 2"));
 
             Invitation invitation = invRepo.insert(
                     "user@example.com", "INVITE01", LocalDateTime.now(),
@@ -69,7 +69,7 @@ class SignUpAndResetFlowTest {
             // Verify user is in both groups
             User fullUser = userRepo.findByIdFull(user.id(), true, false).orElseThrow();
             assertThat(fullUser.groups()).hasSize(2);
-            assertThat(fullUser.groups().stream().map(Group::name))
+            assertThat(fullUser.groups().stream().map(g -> g.name().value()))
                     .containsExactlyInAnyOrder("invite_grp1", "invite_grp2");
 
             // Invitation should be consumed
@@ -96,7 +96,7 @@ class SignUpAndResetFlowTest {
             GroupRepository groupRepo = new GroupRepository(dsl);
             InvitationRepository invRepo = new InvitationRepository(dsl);
 
-            Group group = groupRepo.insert("gi_cascade_grp", "Group");
+            Group group = groupRepo.insert(new GroupSpec(new WordName("gi_cascade_grp"), "Group"));
             invRepo.insert("cascade@test.com", "CASCDE01", LocalDateTime.now(),
                     List.of(group.id()));
 
