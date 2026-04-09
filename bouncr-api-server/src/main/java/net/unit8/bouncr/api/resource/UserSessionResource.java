@@ -1,9 +1,9 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.collection.Headers;
+import enkan.web.collection.Headers;
 import enkan.collection.Parameters;
-import enkan.data.Cookie;
-import enkan.data.HttpRequest;
+import enkan.web.data.Cookie;
+import enkan.web.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;

@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.service;
 
-import enkan.middleware.session.KeyValueStore;
+import enkan.web.middleware.session.KeyValueStore;
 import net.unit8.bouncr.api.resource.MockFactory;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.StoreProvider;

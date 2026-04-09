@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.collection.Headers;
+import enkan.web.collection.Headers;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;

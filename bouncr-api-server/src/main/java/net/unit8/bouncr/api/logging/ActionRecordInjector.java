@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.logging;
 
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import kotowari.inject.ParameterInjector;
 
 public class ActionRecordInjector implements ParameterInjector<ActionRecord> {

@@ -84,63 +84,10 @@
         </dependency>
         <dependency>
             <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-jedis</artifactId>
-            <version>0.12.0</version>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jooq</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-bouncr</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-web</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-component-eclipselink</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.jodah</groupId>
-                    <artifactId>failsafe</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.annotation</groupId>
-                    <artifactId>javax.annotation-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                    <artifactId>jackson-jaxrs-json-provider</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-component-ldaptive</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-component-eclipselink</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.jodah</groupId>
-                    <artifactId>failsafe</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.annotation</groupId>
-                    <artifactId>javax.annotation-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                    <artifactId>jackson-jaxrs-json-provider</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
-        <!-- Raoh (JSON/jOOQ decoders) -->
+<!-- Raoh (JSON/jOOQ decoders) -->
         <dependency>
             <groupId>net.unit8.raoh</groupId>
             <artifactId>raoh-json</artifactId>

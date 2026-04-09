@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.inject;
 
 import enkan.data.Extendable;
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import kotowari.inject.ParameterInjector;
 import org.jooq.DSLContext;
 

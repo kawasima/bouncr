@@ -2,9 +2,9 @@ package net.unit8.bouncr.api.middleware;
 
 import enkan.MiddlewareChain;
 import enkan.annotation.Middleware;
-import enkan.data.HttpRequest;
-import enkan.data.HttpResponse;
-import enkan.middleware.WebMiddleware;
+import enkan.web.data.HttpRequest;
+import enkan.web.data.HttpResponse;
+import enkan.web.middleware.WebMiddleware;
 
 /**
  * Resolves the real client IP from the X-Forwarded-For header set by Envoy

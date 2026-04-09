@@ -2,10 +2,10 @@ package net.unit8.bouncr.api.middleware;
 
 import enkan.Middleware;
 import enkan.MiddlewareChain;
-import enkan.collection.Headers;
-import enkan.data.DefaultHttpRequest;
-import enkan.data.HttpRequest;
-import enkan.data.HttpResponse;
+import enkan.web.collection.Headers;
+import enkan.web.data.DefaultHttpRequest;
+import enkan.web.data.HttpRequest;
+import enkan.web.data.HttpResponse;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.Predicate;
