@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.service;
 
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import net.unit8.bouncr.api.authn.OneTimePasswordGenerator;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.UserSessionRepository;

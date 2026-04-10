@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.util;
 
-import enkan.data.Cookie;
+import enkan.web.data.Cookie;
 import net.unit8.bouncr.component.BouncrConfiguration;
 
 /**

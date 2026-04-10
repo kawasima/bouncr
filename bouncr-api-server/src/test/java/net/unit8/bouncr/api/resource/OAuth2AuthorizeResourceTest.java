@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
 import enkan.collection.Parameters;
-import enkan.data.DefaultHttpRequest;
+import enkan.web.data.DefaultHttpRequest;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.Resource;

@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.data.DefaultHttpRequest;
+import enkan.web.data.DefaultHttpRequest;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;

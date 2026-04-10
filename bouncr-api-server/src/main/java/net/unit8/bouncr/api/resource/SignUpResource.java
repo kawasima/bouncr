@@ -19,7 +19,7 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
-import net.unit8.bouncr.sign.JwtClaim;
+import enkan.security.bouncr.claim.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.raoh.Err;

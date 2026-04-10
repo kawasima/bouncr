@@ -23,7 +23,7 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.component.config.PasswordPolicy;
 import net.unit8.bouncr.sign.JsonWebToken;
-import net.unit8.bouncr.sign.JwtHeader;
+import enkan.web.jwt.JwtHeader;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

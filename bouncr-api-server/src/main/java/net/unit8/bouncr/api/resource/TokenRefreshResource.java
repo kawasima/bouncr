@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import enkan.exception.MisconfigurationException;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;

@@ -2,8 +2,8 @@ package net.unit8.bouncr.component;
 
 import enkan.component.ComponentLifecycle;
 import enkan.component.SystemComponent;
-import enkan.middleware.session.KeyValueStore;
-import enkan.middleware.session.MemoryStore;
+import enkan.web.middleware.session.KeyValueStore;
+import enkan.web.middleware.session.MemoryStore;
 
 /**
  * Provides KeyValueStore instances for token and session storage.
