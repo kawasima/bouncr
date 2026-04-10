@@ -43,7 +43,7 @@
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-metrics</artifactId>
         </dependency>
-<dependency>
+        <dependency>
             <groupId>tools.jackson.jakarta.rs</groupId>
             <artifactId>jackson-jakarta-rs-json-provider</artifactId>
         </dependency>
