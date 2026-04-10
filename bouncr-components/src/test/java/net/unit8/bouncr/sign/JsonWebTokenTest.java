@@ -1,6 +1,7 @@
 package net.unit8.bouncr.sign;
 
 import enkan.web.jwt.JwtHeader;
+import enkan.web.jwt.JwtProcessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.type.TypeReference;
@@ -75,7 +76,7 @@ class JsonWebTokenTest {
         String token = jwt.sign(payload, header, SECRET);
         Key key = new SecretKeySpec(SECRET, "HmacSHA256");
 
-        byte[] verified = enkan.web.jwt.JwtProcessor.verify(token, key);
+        byte[] verified = JwtProcessor.verify(token, key);
         assertThat(verified).isNotNull();
     }
 
