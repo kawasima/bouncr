@@ -6,16 +6,21 @@ import enkan.web.collection.Headers;
 import enkan.web.data.DefaultHttpRequest;
 import enkan.web.data.HttpRequest;
 import enkan.web.data.HttpResponse;
+import enkan.web.middleware.ForwardedMiddleware;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.function.Predicate;
 
+import static enkan.util.BeanBuilder.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ClientIpMiddlewareTest {
-    private final ClientIpMiddleware middleware = new ClientIpMiddleware();
+class ForwardedMiddlewareTest {
+    private final ForwardedMiddleware middleware = builder(new ForwardedMiddleware())
+            .set(ForwardedMiddleware::setTrustedProxies,
+                    List.of("127.0.0.0/8"))
+            .build();
 
-    /** Stub chain that records the request passed to next() and returns null. */
     private static MiddlewareChain<HttpRequest, HttpResponse, HttpRequest, HttpResponse> noopChain() {
         return new MiddlewareChain<>() {
             @Override public MiddlewareChain<HttpRequest, HttpResponse, HttpRequest, HttpResponse> setNext(MiddlewareChain<HttpRequest, HttpResponse, ?, ?> next) { return this; }
@@ -27,9 +32,9 @@ class ClientIpMiddlewareTest {
         };
     }
 
-    private String resolvedAddr(String xff) {
+    private String resolvedAddr(String remoteAddr, String xff) {
         DefaultHttpRequest req = new DefaultHttpRequest();
-        req.setRemoteAddr("127.0.0.1");
+        req.setRemoteAddr(remoteAddr);
         req.setHeaders(Headers.empty());
         if (xff != null) {
             req.getHeaders().put("X-Forwarded-For", xff);
@@ -39,28 +44,26 @@ class ClientIpMiddlewareTest {
     }
 
     @Test
-    void singleEntryIsUsedDirectly() {
-        assertThat(resolvedAddr("203.0.113.1")).isEqualTo("203.0.113.1");
+    void trustedProxyHeaderIsApplied() {
+        // Request arrives from loopback (trusted proxy) — XFF header should be trusted
+        assertThat(resolvedAddr("127.0.0.1", "203.0.113.1")).isEqualTo("203.0.113.1");
     }
 
     @Test
-    void leftmostEntryIsUsedInMultiHop() {
+    void leftmostEntryIsUsedForMultiHop() {
         // "client, proxy1, proxy2" — leftmost is the original client
-        assertThat(resolvedAddr("203.0.113.1, 10.0.0.1, 10.0.0.2")).isEqualTo("203.0.113.1");
+        assertThat(resolvedAddr("127.0.0.1", "203.0.113.1, 10.0.0.1, 10.0.0.2"))
+                .isEqualTo("203.0.113.1");
     }
 
     @Test
-    void leadingAndTrailingSpacesAreTrimmed() {
-        assertThat(resolvedAddr("  203.0.113.1  , 10.0.0.1")).isEqualTo("203.0.113.1");
+    void untrustedProxyHeaderIsIgnored() {
+        // Request arrives from an untrusted IP — XFF header must not be applied
+        assertThat(resolvedAddr("203.0.113.99", "1.2.3.4")).isEqualTo("203.0.113.99");
     }
 
     @Test
     void missingHeaderLeavesRemoteAddrUnchanged() {
-        assertThat(resolvedAddr(null)).isEqualTo("127.0.0.1");
-    }
-
-    @Test
-    void blankHeaderLeavesRemoteAddrUnchanged() {
-        assertThat(resolvedAddr("   ")).isEqualTo("127.0.0.1");
+        assertThat(resolvedAddr("127.0.0.1", null)).isEqualTo("127.0.0.1");
     }
 }

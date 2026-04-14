@@ -86,6 +86,14 @@
             <groupId>net.unit8.enkan</groupId>
             <artifactId>enkan-component-jooq</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-bouncr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jedis</artifactId>
+        </dependency>
 
 <!-- Raoh (JSON/jOOQ decoders) -->
         <dependency>

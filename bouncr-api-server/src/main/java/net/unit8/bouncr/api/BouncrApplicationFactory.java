@@ -36,7 +36,7 @@ import enkan.middleware.jooq.JooqDslContextMiddleware;
 import enkan.middleware.jooq.JooqTransactionMiddleware;
 import net.unit8.bouncr.api.inject.DSLContextInjector;
 import net.unit8.bouncr.api.logging.ActionRecordInjector;
-import net.unit8.bouncr.api.middleware.ClientIpMiddleware;
+import enkan.web.middleware.ForwardedMiddleware;
 import net.unit8.bouncr.api.resource.*;
 import net.unit8.bouncr.util.DigestUtils;
 
@@ -146,8 +146,12 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         );
         // Enkan
         app.use(new DefaultCharsetMiddleware());
+        app.use(new SecurityHeadersMiddleware());
         app.use(new MetricsMiddleware<>());
-        app.use(new ClientIpMiddleware());
+        app.use(builder(new ForwardedMiddleware())
+                .set(ForwardedMiddleware::setTrustedProxies,
+                        List.of(Env.getString("TRUSTED_PROXY_CIDR", "127.0.0.0/8")))
+                .build());
         app.use((java.util.function.Predicate<HttpRequest>) NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
