@@ -222,6 +222,10 @@ export default function bouncrAuth(): Plugin {
 /**
  * Extracts the session token from the request.
  * Checks the Authorization: Bearer header first, then the session cookie.
+ *
+ * Cookie name matching strips RFC 6265bis prefixes (__Host-, __Secure-) before
+ * comparing with cookieName, because HostCookie serializes the name with the
+ * prefix (e.g. "__Host-BOUNCR_TOKEN") but the configured name is "BOUNCR_TOKEN".
  */
 function extractToken(req: http.IncomingMessage, cookieName: string): string | null {
   const auth = req.headers['authorization']
@@ -230,7 +234,8 @@ function extractToken(req: http.IncomingMessage, cookieName: string): string | n
   const cookieHeader = req.headers['cookie']
   if (cookieHeader) {
     for (const part of cookieHeader.split(';')) {
-      const [name, ...rest] = part.trim().split('=')
+      const [rawName, ...rest] = part.trim().split('=')
+      const name = rawName.replace(/^__Host-|^__Secure-/, '')
       if (name === cookieName) return rest.join('=')
     }
   }
