@@ -6,7 +6,7 @@ import net.unit8.bouncr.component.BouncrConfiguration;
 
 /**
  * Cookie factory for consistent cookie construction across all resources.
- * Uses enkan's Cookie API with SameSite support (enkan 0.14.0+).
+ * Uses enkan's Cookie API with SameSite and HostCookie support (enkan 0.15.0+).
  */
 public final class BouncrCookies {
     private final BouncrConfiguration config;

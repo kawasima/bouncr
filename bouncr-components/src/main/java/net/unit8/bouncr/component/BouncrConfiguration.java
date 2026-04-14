@@ -218,6 +218,15 @@ public class BouncrConfiguration extends SystemComponent<BouncrConfiguration> {
     public int getFailureAccountIpBlockSeconds() { return failureAccountIpBlockSeconds; }
     public void setFailureAccountIpBlockSeconds(int failureAccountIpBlockSeconds) { this.failureAccountIpBlockSeconds = failureAccountIpBlockSeconds; }
 
+    /**
+     * Returns whether session cookies (OIDC, WebAuthn) should have the {@code Secure} flag set.
+     *
+     * <p>Note: this flag applies <em>only</em> to session cookies created by
+     * {@link net.unit8.bouncr.api.util.BouncrCookies#session}. The primary auth token cookie
+     * ({@code BOUNCR_TOKEN}) is always issued as a {@code __Host-} prefixed
+     * {@link enkan.web.data.HostCookie}, which unconditionally enforces {@code Secure=true}
+     * regardless of this setting.
+     */
     public boolean isSecureCookie() {
         return secureCookie;
     }
