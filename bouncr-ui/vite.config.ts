@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    https: true,
+    https: {},
   },
   test: {
     environment: 'jsdom',
