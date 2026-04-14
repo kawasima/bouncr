@@ -146,9 +146,10 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         );
         // Enkan
         app.use(new DefaultCharsetMiddleware());
-        // COEP (require-corp) and CORP (same-origin) are disabled because Bouncr is a
-        // cross-origin API: the UI loads from a different origin and OIDC flows use popups/redirects.
-        // These defaults would block legitimate cross-origin requests.
+        // COEP (require-corp) is disabled and CORP is relaxed to cross-origin because Bouncr is a
+        // cross-origin API: the UI loads from a different origin and the API must be readable across
+        // origins. COOP (same-origin) is intentionally kept: all OIDC flows use full-page redirects
+        // (not popups), so window.opener is never required and same-origin isolation is safe.
         app.use(builder(new SecurityHeadersMiddleware())
                 .set(SecurityHeadersMiddleware::setCrossOriginEmbedderPolicy, (String) null)
                 .set(SecurityHeadersMiddleware::setCrossOriginResourcePolicy, "cross-origin")

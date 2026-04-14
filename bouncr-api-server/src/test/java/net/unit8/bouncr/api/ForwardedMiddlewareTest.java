@@ -48,10 +48,17 @@ class ForwardedMiddlewareTest {
     }
 
     private String resolvedAddrViaForwarded(String remoteAddr, String forwarded) {
+        return resolvedAddrViaForwarded(remoteAddr, forwarded, null);
+    }
+
+    private String resolvedAddrViaForwarded(String remoteAddr, String forwarded, String xff) {
         DefaultHttpRequest req = new DefaultHttpRequest();
         req.setRemoteAddr(remoteAddr);
         req.setHeaders(Headers.empty());
         req.getHeaders().put("Forwarded", forwarded);
+        if (xff != null) {
+            req.getHeaders().put("X-Forwarded-For", xff);
+        }
         middleware.handle(req, noopChain());
         return req.getRemoteAddr();
     }
@@ -94,13 +101,8 @@ class ForwardedMiddlewareTest {
     @Test
     void rfc7239ForwardedTakesPrecedenceOverXff() {
         // preferStandard=true: Forwarded header wins when both are present
-        DefaultHttpRequest req = new DefaultHttpRequest();
-        req.setRemoteAddr("127.0.0.1");
-        req.setHeaders(Headers.empty());
-        req.getHeaders().put("Forwarded", "for=203.0.113.1");
-        req.getHeaders().put("X-Forwarded-For", "1.2.3.4");
-        middleware.handle(req, noopChain());
-        assertThat(req.getRemoteAddr()).isEqualTo("203.0.113.1");
+        assertThat(resolvedAddrViaForwarded("127.0.0.1", "for=203.0.113.1", "1.2.3.4"))
+                .isEqualTo("203.0.113.1");
     }
 
     @Test
