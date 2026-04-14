@@ -130,6 +130,8 @@ func TestExtractToken_HostPrefixedCookie(t *testing.T) {
 }
 
 func TestExtractToken_SecurePrefixedCookie(t *testing.T) {
+	// __Secure- cookies (Secure=true enforced, no path restriction) are also preserved
+	// verbatim by Go's net/http, so stripping covers this prefix too.
 	headers := map[string]string{
 		"cookie": "__Secure-bouncr_token=secure-cookie-value",
 	}
