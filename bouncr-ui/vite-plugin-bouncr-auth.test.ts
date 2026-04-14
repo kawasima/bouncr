@@ -1,28 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import { extractToken } from './extract-token'
 import type { IncomingMessage } from 'node:http'
 
-// extractToken is a module-level function — import via dynamic re-export shim.
-// We test the logic by reproducing the function inline here, keeping it in sync
-// with the implementation. This avoids a circular dependency on the Vite plugin
-// module (which imports vite internals not available in the test environment).
-//
-// If extractToken is ever moved to a separate utility module, import it directly.
-function extractToken(req: Pick<IncomingMessage, 'headers'>, cookieName: string): string | null {
-  const auth = req.headers['authorization']
-  if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7)
-
-  const cookieHeader = req.headers['cookie']
-  if (typeof cookieHeader === 'string') {
-    for (const part of cookieHeader.split(';')) {
-      const [rawName, ...rest] = part.trim().split('=')
-      const name = rawName.replace(/^__Host-|^__Secure-/, '')
-      if (name === cookieName) return rest.join('=')
-    }
-  }
-  return null
-}
-
-function req(headers: Record<string, string>): Pick<IncomingMessage, 'headers'> {
+function req(headers: Record<string, string | string[]>): Pick<IncomingMessage, 'headers'> {
   return { headers }
 }
 
@@ -66,5 +46,16 @@ describe('extractToken', () => {
       req({ authorization: 'Bearer auth-token', cookie: '__Host-BOUNCR_TOKEN=cookie-token' }),
       'BOUNCR_TOKEN'
     )).toBe('auth-token')
+  })
+
+  it('handles authorization as string array (multiple header instances)', () => {
+    // Authorization is singular by convention — use the first value only
+    expect(extractToken(req({ authorization: ['Bearer first', 'Bearer second'] }), 'BOUNCR_TOKEN'))
+      .toBe('first')
+  })
+
+  it('handles cookie as string array (multiple header instances)', () => {
+    expect(extractToken(req({ cookie: ['__Host-BOUNCR_TOKEN=val1', 'other=val2'] }), 'BOUNCR_TOKEN'))
+      .toBe('val1')
   })
 })
