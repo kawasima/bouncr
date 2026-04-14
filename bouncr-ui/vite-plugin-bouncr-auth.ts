@@ -2,6 +2,7 @@ import type { Plugin } from 'vite'
 import http from 'node:http'
 import { URL } from 'node:url'
 import jwt from 'jsonwebtoken'
+import { extractToken } from './extract-token'
 
 const DEV_PERMISSIONS = [
   'any_user:read', 'any_user:create', 'any_user:update', 'any_user:delete',
@@ -219,25 +220,3 @@ export default function bouncrAuth(): Plugin {
   }
 }
 
-/**
- * Extracts the session token from the request.
- * Checks the Authorization: Bearer header first, then the session cookie.
- *
- * Cookie name matching strips RFC 6265bis prefixes (__Host-, __Secure-) before
- * comparing with cookieName, because HostCookie serializes the name with the
- * prefix (e.g. "__Host-BOUNCR_TOKEN") but the configured name is "BOUNCR_TOKEN".
- */
-function extractToken(req: http.IncomingMessage, cookieName: string): string | null {
-  const auth = req.headers['authorization']
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-
-  const cookieHeader = req.headers['cookie']
-  if (cookieHeader) {
-    for (const part of cookieHeader.split(';')) {
-      const [rawName, ...rest] = part.trim().split('=')
-      const name = rawName.replace(/^__Host-|^__Secure-/, '')
-      if (name === cookieName) return rest.join('=')
-    }
-  }
-  return null
-}
