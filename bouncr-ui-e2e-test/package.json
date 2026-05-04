@@ -7,7 +7,7 @@
     "test:headed": "HEADED=1 cucumber-js"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^11.0.0",
+    "@cucumber/cucumber": "^12.8.2",
     "@playwright/test": "^1.49.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
