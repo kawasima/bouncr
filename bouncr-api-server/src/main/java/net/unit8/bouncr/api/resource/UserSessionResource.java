@@ -1,9 +1,9 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.collection.Headers;
+import enkan.web.collection.Headers;
 import enkan.collection.Parameters;
-import enkan.data.Cookie;
-import enkan.data.HttpRequest;
+import enkan.web.data.Cookie;
+import enkan.web.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
@@ -13,8 +13,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 
 import static enkan.util.BeanBuilder.builder;
-import net.unit8.bouncr.api.boundary.SignOutResponse;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.api.util.BouncrCookies;
+import net.unit8.bouncr.api.util.ContextKeys;
 import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.service.OidcLogoutService;
 import net.unit8.bouncr.component.BouncrConfiguration;
@@ -45,7 +47,7 @@ import static net.unit8.bouncr.component.StoreProvider.StoreType.REFRESH_TOKEN;
 public class UserSessionResource {
     static final ContextKey<String> SUBJECT = ContextKey.of("subject", String.class);
     static final ContextKey<String> RESOLVED_TOKEN = ContextKey.of("resolvedToken", String.class);
-    static final ContextKey<SignOutResponse> LOGOUT_RESULT = ContextKey.of(SignOutResponse.class);
+    static final ContextKey<Map<String, Object>> LOGOUT_RESULT = ContextKeys.of(Map.class);
 
     @Inject
     private StoreProvider storeProvider;
@@ -87,7 +89,7 @@ public class UserSessionResource {
     }
 
     @Decision(DELETE)
-    public Void delete(String subject, RestContext context, DSLContext dsl) {
+    public Void delete(String subject, ActionRecord actionRecord, RestContext context, DSLContext dsl) {
         String token = context.get(RESOLVED_TOKEN).orElse(null);
         String resolvedSubject = resolveSubject(subject, token);
         OidcLogoutService.LogoutResult logoutResult = new OidcLogoutService(config).propagateSignOut(resolvedSubject, dsl);
@@ -96,12 +98,16 @@ public class UserSessionResource {
 
         config.getHookRepo().runHook(HookPoint.AFTER_SIGN_OUT, context);
 
-        SignOutResponse response = new SignOutResponse(
-                List.copyOf(logoutResult.frontchannelLogoutUrls()),
-                new SignOutResponse.BackchannelLogoutSummary(
-                        logoutResult.backchannelLogout().attempted(),
-                        logoutResult.backchannelLogout().succeeded(),
-                        logoutResult.backchannelLogout().failed()));
+        actionRecord.setActionType(ActionType.USER_SIGNOUT);
+        actionRecord.setActor(resolvedSubject);
+        actionRecord.setDescription(resolvedSubject);
+
+        var response = Map.<String, Object>of(
+                "frontchannel_logout_urls", List.copyOf(logoutResult.frontchannelLogoutUrls()),
+                "backchannel_logout", Map.of(
+                        "attempted", logoutResult.backchannelLogout().attempted(),
+                        "succeeded", logoutResult.backchannelLogout().succeeded(),
+                        "failed", logoutResult.backchannelLogout().failed()));
         context.put(LOGOUT_RESULT, response);
         return null;
     }
@@ -113,8 +119,9 @@ public class UserSessionResource {
 
     @Decision(HANDLE_OK)
     public ApiResponse handleOk(RestContext context) {
-        SignOutResponse body = context.get(LOGOUT_RESULT).orElse(new SignOutResponse(
-                List.of(), new SignOutResponse.BackchannelLogoutSummary(0, 0, 0)));
+        Map<String, Object> body = context.get(LOGOUT_RESULT).orElse(Map.of(
+                "frontchannel_logout_urls", List.of(),
+                "backchannel_logout", Map.of("attempted", 0, "succeeded", 0, "failed", 0)));
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 200)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", new BouncrCookies(config).clearToken().toHttpString()))

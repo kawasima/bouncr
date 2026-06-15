@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.collection.Headers;
-import enkan.data.HttpRequest;
+import enkan.web.collection.Headers;
+import enkan.web.data.HttpRequest;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
@@ -10,6 +10,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PrincipalUtils;
@@ -173,7 +174,7 @@ public class PasswordSignInResource {
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", cookie))
-                .set(ApiResponse::setBody, userSession)
+                .set(ApiResponse::setBody, BouncrJsonEncoders.encodeSignInSession(userSession))
                 .build();
     }
 }

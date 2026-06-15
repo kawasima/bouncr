@@ -1,7 +1,7 @@
 package net.unit8.bouncr.hook.license;
 
-import enkan.collection.Headers;
-import enkan.data.Cookie;
+import enkan.web.collection.Headers;
+import enkan.web.data.Cookie;
 import enkan.data.Extendable;
 import kotowari.restful.data.RestContext;
 import net.unit8.bouncr.hook.Hook;
