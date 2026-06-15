@@ -1,6 +1,6 @@
 package net.unit8.bouncr.hook.license;
 
-import enkan.data.Cookie;
+import enkan.web.data.Cookie;
 import enkan.data.Extendable;
 import kotowari.restful.data.ContextKey;
 import kotowari.restful.data.Problem;

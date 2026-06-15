@@ -8,10 +8,11 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
-import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
-import net.unit8.bouncr.api.boundary.OidcApplicationResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.api.util.LogoutUriPolicy;
 import net.unit8.bouncr.data.OidcApplication;
@@ -32,6 +33,7 @@ import jakarta.inject.Inject;
 import java.security.KeyPair;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static kotowari.restful.DecisionPoint.*;
@@ -41,7 +43,7 @@ import static net.unit8.bouncr.api.decoder.BouncrJsonDecoders.toProblem;
 public class OidcApplicationsResource {
     static final ContextKey<Tuple4<WordName, OidcClientMetadata, String, List<String>>> CREATE_REQ =
             ContextKeys.of(Tuple4.class);
-    static final ContextKey<OidcApplicationCreatedResponse> RESPONSE = ContextKey.of(OidcApplicationCreatedResponse.class);
+    static final ContextKey<Map<String, Object>> RESPONSE = ContextKeys.of(Map.class);
 
     @Inject
     private BouncrConfiguration config;
@@ -114,18 +116,18 @@ public class OidcApplicationsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<OidcApplicationResponse> list(Parameters params, DSLContext dsl) {
+    public List<Map<String, Object>> list(Parameters params, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
         String q = params.get("q");
         int offset = PaginationParams.parseOffset(params.get("offset"));
         int limit = PaginationParams.parseLimit(params.get("limit"), 10);
         return repo.search(q, offset, limit).stream()
-                .map(OidcApplicationResponse::of)
+                .map(BouncrJsonEncoders::encodeOidcApplication)
                 .toList();
     }
 
     @Decision(POST)
-    public boolean create(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, RestContext context, DSLContext dsl) {
+    public boolean create(Tuple4<WordName, OidcClientMetadata, String, List<String>> createRequest, ActionRecord actionRecord, UserPermissionPrincipal principal, RestContext context, DSLContext dsl) {
         OidcApplicationRepository repo = new OidcApplicationRepository(dsl);
 
         String clientId = RandomUtils.generateRandomString(16, config.getSecureRandom());
@@ -167,12 +169,15 @@ public class OidcApplicationsResource {
 
         // Return plaintext client_secret once (never stored or retrievable again)
         OidcApplication saved = repo.findByName(createRequest._1().value()).orElse(app);
-        context.put(RESPONSE, OidcApplicationCreatedResponse.of(saved, plaintextSecret));
+        context.put(RESPONSE, BouncrJsonEncoders.encodeOidcApplicationCreated(saved, plaintextSecret));
+        actionRecord.setActionType(ActionType.OIDC_APPLICATION_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(createRequest._1().value());
         return true;
     }
 
     @Decision(HANDLE_CREATED)
-    public OidcApplicationCreatedResponse handleCreated(OidcApplicationCreatedResponse response) {
+    public Map<String, Object> handleCreated(Map<String, Object> response) {
         return response;
     }
 }

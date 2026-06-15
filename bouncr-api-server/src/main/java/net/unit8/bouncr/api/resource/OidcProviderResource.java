@@ -9,7 +9,9 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.OidcProviderClientConfig;
 import net.unit8.bouncr.data.OidcProviderMetadata;
@@ -97,7 +99,7 @@ public class OidcProviderResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, OidcProvider oidcProvider, DSLContext dsl) {
+    public Map<String, Object> update(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> updateRequest, OidcProvider oidcProvider, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         var meta = updateRequest._2();
         var clientCfg = updateRequest._3();
@@ -116,13 +118,19 @@ public class OidcProviderResource {
                 meta.issuer(),
                 clientCfg.pkceEnabled()
         );
+        actionRecord.setActionType(ActionType.OIDC_PROVIDER_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(oidcProvider.name());
         return BouncrJsonEncoders.OIDC_PROVIDER.encode(repo.findByName(updateRequest._1().value()).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Void delete(OidcProvider oidcProvider, DSLContext dsl) {
+    public Void delete(OidcProvider oidcProvider, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         repo.delete(oidcProvider.name());
+        actionRecord.setActionType(ActionType.OIDC_PROVIDER_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(oidcProvider.name());
         return null;
     }
 }
