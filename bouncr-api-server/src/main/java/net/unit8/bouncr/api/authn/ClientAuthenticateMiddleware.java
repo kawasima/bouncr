@@ -2,10 +2,10 @@ package net.unit8.bouncr.api.authn;
 
 import enkan.MiddlewareChain;
 import enkan.annotation.Middleware;
-import enkan.data.HttpRequest;
-import enkan.data.HttpResponse;
+import enkan.web.data.HttpRequest;
+import enkan.web.data.HttpResponse;
 import enkan.data.PrincipalAvailable;
-import enkan.middleware.WebMiddleware;
+import enkan.web.middleware.WebMiddleware;
 import enkan.util.MixinUtils;
 
 import javax.naming.InvalidNameException;

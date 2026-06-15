@@ -98,6 +98,8 @@ public class BouncrApiEnkanSystemFactory implements EnkanSystemFactory {
                 "app", new ApplicationComponent<>("net.unit8.bouncr.api.BouncrApplicationFactory"),
                 "http", builder(new JettyComponent())
                         .set(JettyComponent::setPort, Env.getInt("PORT", 3005))
+                        .set(JettyComponent::setPreStopDelay, Env.getLong("JETTY_PRE_STOP_DELAY_MS", 5000L))
+                        .set(JettyComponent::setStopTimeout, Env.getLong("JETTY_STOP_TIMEOUT_MS", 30000L))
                         .build()
         ).relationships(
                 component("http").using("app"),

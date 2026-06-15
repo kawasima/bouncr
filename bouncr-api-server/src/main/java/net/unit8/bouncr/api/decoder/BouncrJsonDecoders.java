@@ -1,7 +1,6 @@
 package net.unit8.bouncr.api.decoder;
 
 import kotowari.restful.data.Problem;
-import net.unit8.bouncr.api.boundary.*;
 import net.unit8.bouncr.api.repository.AssignmentRepository;
 import net.unit8.bouncr.api.repository.UserProfileFieldRepository;
 import net.unit8.bouncr.data.*;
@@ -115,9 +114,9 @@ public final class BouncrJsonDecoders {
 
     // ===== Invitation =====
 
-    public static final JsonDecoder<Tuple2<Email, List<IdObject>>> INVITATION_CREATE = combine(
+    public static final JsonDecoder<Tuple2<Email, List<EntityRef>>> INVITATION_CREATE = combine(
             field("email", string().email().map(Email::new)),
-            withDefault(field("groups", list(field("id", long_()).map(IdObject::new))), List.of())
+            withDefault(field("groups", list(field("id", long_()).map(EntityRef::ofId))), List.of())
     ).map(Tuple2::new)::decode;
 
     // ===== Password Sign In =====
@@ -170,17 +169,17 @@ public final class BouncrJsonDecoders {
 
     // ===== Assignment =====
 
-    private static final JsonDecoder<AssignmentIdObject> ID_OBJECT = combine(
+    private static final JsonDecoder<EntityRef> ID_OBJECT = combine(
             withDefault(field("id", long_()), (Long) null),
             withDefault(field("name", string()), (String) null)
-    ).map(AssignmentIdObject::new)::decode;
+    ).map(EntityRef::new)::decode;
 
-    public static final JsonDecoder<List<AssignmentItem>> ASSIGNMENTS = list(
+    public static final JsonDecoder<List<AssignmentRef>> ASSIGNMENTS = list(
             combine(
                     field("group", ID_OBJECT),
                     field("role", ID_OBJECT),
                     field("realm", ID_OBJECT)
-            ).map(AssignmentItem::new)
+            ).map(AssignmentRef::new)
     )::decode;
 
     private static JsonDecoder<Long> resolvedId(AssignmentRepository repo, String tableName, String idColumn) {
@@ -197,13 +196,13 @@ public final class BouncrJsonDecoders {
         });
     }
 
-    public static JsonDecoder<List<ResolvedAssignment>> assignments(AssignmentRepository repo) {
+    public static JsonDecoder<List<AssignmentId>> assignments(AssignmentRepository repo) {
         return list(
                 combine(
                         field("group", resolvedId(repo, "groups", "group_id")),
                         field("role", resolvedId(repo, "roles", "role_id")),
                         field("realm", resolvedId(repo, "realms", "realm_id"))
-                ).map(ResolvedAssignment::new)
+                ).map(AssignmentId::new)
         )::decode;
     }
 
@@ -265,7 +264,7 @@ public final class BouncrJsonDecoders {
                             new OidcClientMetadata(hu, cu, bcu, fcu, GrantType.parseAll(gt)),
                             desc, perms)))::decode;
 
-    public static final JsonDecoder<OidcApplicationUpdate> OIDC_APPLICATION_UPDATE = combine(
+    public static final JsonDecoder<OidcApplicationUpdateSpec> OIDC_APPLICATION_UPDATE = combine(
             field("name", WORD_NAME),
             field("grant_types", list(string())),
             optionalNullableField("home_uri", httpUrl(2048)),
@@ -274,9 +273,9 @@ public final class BouncrJsonDecoders {
             optionalNullableField("backchannel_logout_uri", httpUrl(2048)),
             optionalNullableField("frontchannel_logout_uri", httpUrl(2048)),
             withDefault(field("permissions", list(string())), List.of())
-    ).<OidcApplicationUpdate>flatMap((name, gt, hu, cu, desc, bcu, fcu, perms) ->
+    ).<OidcApplicationUpdateSpec>flatMap((name, gt, hu, cu, desc, bcu, fcu, perms) ->
             validateOidcAppGrantTypes(gt, presenceToNullable(cu), presenceToNullable(hu)).map(v ->
-                    new OidcApplicationUpdate(name, gt, hu, cu, desc, bcu, fcu, perms)))::decode;
+                    new OidcApplicationUpdateSpec(name, gt, hu, cu, desc, bcu, fcu, perms)))::decode;
 
     // ===== Sign Up =====
 

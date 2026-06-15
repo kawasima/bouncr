@@ -8,16 +8,19 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.GroupRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Group;
 import net.unit8.bouncr.data.GroupWithUsers;
-import net.unit8.bouncr.data.User;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.Ok;
 import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.unit8.bouncr.api.repository.UserRepository;
@@ -71,32 +74,41 @@ public class GroupUsersResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<User> list(Group group, DSLContext dsl) {
+    public List<Map<String, Object>> list(Group group, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         Optional<Group> groupWithUsers = repo.findByName(group.name().value(), true);
         return groupWithUsers
                 .filter(GroupWithUsers.class::isInstance)
                 .map(g -> ((GroupWithUsers) g).users())
-                .orElse(List.of());
+                .orElse(List.of())
+                .stream()
+                .map(BouncrJsonEncoders::encodeUser)
+                .toList();
     }
 
     @Decision(POST)
-    public List<String> create(List<String> userAccounts, Group group, DSLContext dsl) {
+    public List<String> create(List<String> userAccounts, Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         List<Long> userIds = findUserIdsByAccounts(dsl, userAccounts);
         for (Long userId : userIds) {
             repo.addUser(group.name(), userId);
         }
+        actionRecord.setActionType(ActionType.GROUP_USER_ADDED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value() + " " + userAccounts.size() + " users");
         return userAccounts;
     }
 
     @Decision(DELETE)
-    public List<String> delete(List<String> userAccounts, Group group, DSLContext dsl) {
+    public List<String> delete(List<String> userAccounts, Group group, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         GroupRepository repo = new GroupRepository(dsl);
         List<Long> userIds = findUserIdsByAccounts(dsl, userAccounts);
         for (Long userId : userIds) {
             repo.removeUser(group.name(), userId);
         }
+        actionRecord.setActionType(ActionType.GROUP_USER_REMOVED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(group.name().value() + " " + userAccounts.size() + " users");
         return userAccounts;
     }
 

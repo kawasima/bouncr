@@ -3,10 +3,10 @@ package net.unit8.bouncr.api.resource;
 import com.webauthn4j.converter.exception.DataConversionException;
 import com.webauthn4j.data.AuthenticationData;
 import com.webauthn4j.verifier.exception.VerificationException;
-import enkan.collection.Headers;
+import enkan.web.collection.Headers;
 import enkan.security.bouncr.UserPermissionPrincipal;
-import enkan.data.Cookie;
-import enkan.data.HttpRequest;
+import enkan.web.data.Cookie;
+import enkan.web.data.HttpRequest;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.ContextKey;
@@ -15,7 +15,7 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnSignInResponse;
+import java.util.Map;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PrincipalUtils;
@@ -211,8 +211,9 @@ public class WebAuthnSignInResource {
                 .set(ApiResponse::setHeaders, Headers.of(
                         "Set-Cookie", tokenCookie,
                         "Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, new WebAuthnSignInResponse(
-                        userSession.token(), user.account()))
+                .set(ApiResponse::setBody, Map.of(
+                        "token", userSession.token(),
+                        "account", user.account()))
                 .build();
     }
 }

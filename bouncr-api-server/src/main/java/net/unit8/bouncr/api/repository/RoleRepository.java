@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.api.encoder.BouncrJooqEncoders;
 import net.unit8.bouncr.data.Permission;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.RoleSpec;
@@ -77,15 +78,10 @@ public class RoleRepository {
     }
 
     public Role insert(RoleSpec spec) {
-        Record rec = dsl.insertInto(table("roles"),
-                        field("name"), field("name_lower"), field("description"), field("write_protected"))
-                .values(spec.name().value(), spec.name().lowercase(), spec.description(), false)
-                .returningResult(
-                        field("role_id", Long.class),
-                        field("name", String.class),
-                        field("description", String.class),
-                        field("write_protected", Boolean.class))
-                .fetchOne();
+        Record rec = BouncrJooqEncoders.insertInto(dsl, "roles",
+                BouncrJooqEncoders.ROLE_SPEC, spec,
+                List.of(field("role_id", Long.class), field("name", String.class),
+                        field("description", String.class), field("write_protected", Boolean.class)));
         return ROLE.decode(rec).getOrThrow();
     }
 
