@@ -116,3 +116,27 @@ func TestExtractToken_EmptyBearerValue(t *testing.T) {
 		t.Errorf("expected empty string for empty bearer value, got '%s'", got)
 	}
 }
+
+func TestExtractToken_HostPrefixedCookie(t *testing.T) {
+	// HostCookie (RFC 6265bis __Host- prefix) — Go's net/http preserves the prefix in
+	// c.Name, so ExtractToken must strip it before comparing with cookieName.
+	headers := map[string]string{
+		"cookie": "__Host-bouncr_token=host-cookie-value",
+	}
+	got := ExtractToken(headers, "bouncr_token")
+	if got != "host-cookie-value" {
+		t.Errorf("expected 'host-cookie-value', got '%s'", got)
+	}
+}
+
+func TestExtractToken_SecurePrefixedCookie(t *testing.T) {
+	// __Secure- cookies (Secure=true enforced, no path restriction) are also preserved
+	// verbatim by Go's net/http, so stripping covers this prefix too.
+	headers := map[string]string{
+		"cookie": "__Secure-bouncr_token=secure-cookie-value",
+	}
+	got := ExtractToken(headers, "bouncr_token")
+	if got != "secure-cookie-value" {
+		t.Errorf("expected 'secure-cookie-value', got '%s'", got)
+	}
+}

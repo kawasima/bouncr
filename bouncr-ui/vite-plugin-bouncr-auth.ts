@@ -2,6 +2,7 @@ import type { Plugin } from 'vite'
 import http from 'node:http'
 import { URL } from 'node:url'
 import jwt from 'jsonwebtoken'
+import { extractToken } from './extract-token'
 
 const DEV_PERMISSIONS = [
   'any_user:read', 'any_user:create', 'any_user:update', 'any_user:delete',
@@ -219,20 +220,3 @@ export default function bouncrAuth(): Plugin {
   }
 }
 
-/**
- * Extracts the session token from the request.
- * Checks the Authorization: Bearer header first, then the session cookie.
- */
-function extractToken(req: http.IncomingMessage, cookieName: string): string | null {
-  const auth = req.headers['authorization']
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-
-  const cookieHeader = req.headers['cookie']
-  if (cookieHeader) {
-    for (const part of cookieHeader.split(';')) {
-      const [name, ...rest] = part.trim().split('=')
-      if (name === cookieName) return rest.join('=')
-    }
-  }
-  return null
-}
