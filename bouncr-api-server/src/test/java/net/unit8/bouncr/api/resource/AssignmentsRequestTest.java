@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import net.unit8.bouncr.api.boundary.AssignmentItem;
+import net.unit8.bouncr.data.AssignmentRef;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.raoh.Ok;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class AssignmentsRequestTest {
         assertThat(result).isInstanceOf(Ok.class);
 
         @SuppressWarnings("unchecked")
-        List<AssignmentItem> items = ((Ok<List<AssignmentItem>>) result).value();
+        List<AssignmentRef> items = ((Ok<List<AssignmentRef>>) result).value();
         assertThat(items).hasSize(1);
         assertThat(items.getFirst().group().id()).isEqualTo(1L);
         assertThat(items.getFirst().group().name()).isEqualTo("admin");
@@ -59,7 +59,7 @@ class AssignmentsRequestTest {
         assertThat(result).isInstanceOf(Ok.class);
 
         @SuppressWarnings("unchecked")
-        List<AssignmentItem> items = ((Ok<List<AssignmentItem>>) result).value();
+        List<AssignmentRef> items = ((Ok<List<AssignmentRef>>) result).value();
         assertThat(items).hasSize(1);
         assertThat(items.getFirst().group().id()).isNull();
         assertThat(items.getFirst().group().name()).isEqualTo("admin");

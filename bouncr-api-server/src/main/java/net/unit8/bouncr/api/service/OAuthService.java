@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.service;
 
-import enkan.collection.Headers;
-import enkan.data.HttpResponse;
+import enkan.web.collection.Headers;
+import enkan.web.data.HttpResponse;
 import net.unit8.bouncr.data.OAuth2Error;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;

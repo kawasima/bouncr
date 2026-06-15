@@ -2,10 +2,11 @@ package net.unit8.bouncr.api.resource;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
-import enkan.collection.Headers;
+import enkan.web.collection.Headers;
 import enkan.collection.Parameters;
-import enkan.data.Cookie;
-import enkan.data.HttpRequest;
+import enkan.web.data.Cookie;
+import enkan.web.data.HttpRequest;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import enkan.exception.FalteringEnvironmentException;
 import enkan.exception.MisconfigurationException;
@@ -28,7 +29,7 @@ import net.unit8.bouncr.component.StoreProvider;
 import net.unit8.bouncr.component.config.HookPoint;
 import net.unit8.bouncr.data.*;
 import net.unit8.bouncr.sign.JsonWebToken;
-import net.unit8.bouncr.sign.JwtClaim;
+import enkan.security.bouncr.claim.JwtClaim;
 import net.unit8.bouncr.util.RandomUtils;
 import net.unit8.bouncr.util.UriInterpolator;
 import org.jooq.DSLContext;
@@ -420,7 +421,7 @@ public class OidcSignInResource {
                 .orElse(builder(new ApiResponse())
                         .set(ApiResponse::setStatus, 200)
                         .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearCookie, "Set-Cookie", tokenCookie))
-                        .set(ApiResponse::setBody, userSession)
+                        .set(ApiResponse::setBody, BouncrJsonEncoders.encodeSignInSession(userSession))
                         .build());
     }
 

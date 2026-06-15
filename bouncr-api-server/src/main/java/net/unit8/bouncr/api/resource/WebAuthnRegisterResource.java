@@ -4,9 +4,9 @@ import com.webauthn4j.converter.exception.DataConversionException;
 import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData;
 import com.webauthn4j.verifier.exception.VerificationException;
-import enkan.data.Cookie;
-import enkan.collection.Headers;
-import enkan.data.HttpRequest;
+import enkan.web.data.Cookie;
+import enkan.web.collection.Headers;
+import enkan.web.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ApiResponse;
@@ -15,7 +15,9 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.api.util.BouncrCookies;
 import net.unit8.bouncr.api.util.PrincipalUtils;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
@@ -88,6 +90,7 @@ public class WebAuthnRegisterResource {
     @Decision(POST)
     public Object doPost(Tuple2<String, String> request,
                          UserPermissionPrincipal principal,
+                         ActionRecord actionRecord,
                          HttpRequest httpRequest,
                          RestContext context,
                          DSLContext dsl) {
@@ -150,6 +153,9 @@ public class WebAuthnRegisterResource {
                 String.join(",", transports), format,
                 request._2(), true);
         context.put(CREDENTIAL, credential);
+        actionRecord.setActionType(ActionType.WEBAUTHN_REGISTERED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(principal.getName());
         return true;
     }
 
@@ -161,7 +167,7 @@ public class WebAuthnRegisterResource {
         return builder(new ApiResponse())
                 .set(ApiResponse::setStatus, 201)
                 .set(ApiResponse::setHeaders, Headers.of("Set-Cookie", clearSessionCookie))
-                .set(ApiResponse::setBody, WebAuthnCredentialResponse.of(credential))
+                .set(ApiResponse::setBody, BouncrJsonEncoders.WEBAUTHN_CREDENTIAL.encode(credential))
                 .build();
     }
 }

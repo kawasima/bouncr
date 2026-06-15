@@ -17,12 +17,20 @@ func ExtractToken(headers map[string]string, cookieName string) string {
 	}
 
 	if cookieHeader, ok := headers["cookie"]; ok {
-		// Parse using net/http cookie parser
+		// Parse using net/http cookie parser.
+		// Go's net/http preserves RFC 6265bis cookie name prefixes (__Host-, __Secure-)
+		// in c.Name, so we strip them before comparing with the configured cookieName.
 		header := http.Header{}
 		header.Add("Cookie", cookieHeader)
 		request := http.Request{Header: header}
 		for _, c := range request.Cookies() {
-			if c.Name == cookieName {
+			name := c.Name
+			if strings.HasPrefix(name, "__Host-") {
+				name = strings.TrimPrefix(name, "__Host-")
+			} else if strings.HasPrefix(name, "__Secure-") {
+				name = strings.TrimPrefix(name, "__Secure-")
+			}
+			if name == cookieName {
 				return c.Value
 			}
 		}

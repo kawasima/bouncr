@@ -1,6 +1,6 @@
 package net.unit8.bouncr.hook.email.service;
 
-import enkan.data.HttpResponse;
+import enkan.web.data.HttpResponse;
 import enkan.exception.MisconfigurationException;
 import net.unit8.bouncr.hook.HookRuntimeException;
 import net.unit8.bouncr.hook.email.config.MailConfig;
