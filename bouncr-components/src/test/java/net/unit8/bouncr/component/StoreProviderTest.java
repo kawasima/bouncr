@@ -1,6 +1,6 @@
 package net.unit8.bouncr.component;
 
-import enkan.middleware.session.KeyValueStore;
+import enkan.web.middleware.session.KeyValueStore;
 import enkan.system.EnkanSystem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

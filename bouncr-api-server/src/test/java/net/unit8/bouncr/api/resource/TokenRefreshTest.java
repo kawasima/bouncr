@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.middleware.session.KeyValueStore;
+import enkan.web.middleware.session.KeyValueStore;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.UserSessionRepository;
 import net.unit8.bouncr.api.service.SignInService;

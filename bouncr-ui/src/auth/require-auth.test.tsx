@@ -5,7 +5,7 @@ import { RequireAuth } from './require-auth';
 
 // Mock useAuth to control authentication state
 const mockUseAuth = vi.fn();
-vi.mock('./auth-context', () => ({
+vi.mock('./use-auth', () => ({
   useAuth: () => mockUseAuth(),
 }));
 

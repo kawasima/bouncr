@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.OidcProviderRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.OidcProvider;
 import net.unit8.bouncr.data.OidcProviderClientConfig;
 import net.unit8.bouncr.data.OidcProviderMetadata;
@@ -85,10 +87,13 @@ public class OidcProvidersResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, DSLContext dsl) {
+    public Map<String, Object> create(Tuple3<WordName, OidcProviderMetadata, OidcProviderClientConfig> createRequest, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         OidcProviderRepository repo = new OidcProviderRepository(dsl);
         var meta = createRequest._2();
         var clientCfg = createRequest._3();
+        actionRecord.setActionType(ActionType.OIDC_PROVIDER_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(createRequest._1().value());
         return BouncrJsonEncoders.OIDC_PROVIDER.encode(repo.insert(
                 createRequest._1().value(),
                 clientCfg.credentials().clientId(),

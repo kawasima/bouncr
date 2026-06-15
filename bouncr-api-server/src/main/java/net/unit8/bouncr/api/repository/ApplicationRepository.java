@@ -1,5 +1,6 @@
 package net.unit8.bouncr.api.repository;
 
+import net.unit8.bouncr.api.encoder.BouncrJooqEncoders;
 import net.unit8.bouncr.data.*;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -83,19 +84,12 @@ public class ApplicationRepository {
     }
 
     public Application insert(ApplicationSpec spec) {
-        Record rec = dsl.insertInto(table("applications"),
-                        field("name"), field("name_lower"), field("description"),
-                        field("virtual_path"), field("pass_to"), field("top_page"), field("write_protected"))
-                .values(spec.name().value(), spec.name().lowercase(), spec.description(), spec.virtualPath(), spec.passTo(), spec.topPage(), false)
-                .returningResult(
-                        field("application_id", Long.class),
-                        field("name", String.class),
-                        field("description", String.class),
-                        field("pass_to", String.class),
-                        field("virtual_path", String.class),
-                        field("top_page", String.class),
-                        field("write_protected", Boolean.class))
-                .fetchOne();
+        Record rec = BouncrJooqEncoders.insertInto(dsl, "applications",
+                BouncrJooqEncoders.APPLICATION_SPEC, spec,
+                List.of(field("application_id", Long.class), field("name", String.class),
+                        field("description", String.class), field("pass_to", String.class),
+                        field("virtual_path", String.class), field("top_page", String.class),
+                        field("write_protected", Boolean.class)));
         return APPLICATION.decode(rec).getOrThrow();
     }
 

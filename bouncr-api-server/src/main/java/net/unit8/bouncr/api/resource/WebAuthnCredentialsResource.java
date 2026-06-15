@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import kotowari.restful.Decision;
 import kotowari.restful.data.ContextKey;
@@ -8,14 +8,17 @@ import kotowari.restful.data.Problem;
 import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.boundary.BouncrProblem;
-import net.unit8.bouncr.api.boundary.WebAuthnCredentialResponse;
+import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.UserRepository;
 import net.unit8.bouncr.api.repository.WebAuthnCredentialRepository;
 import net.unit8.bouncr.api.util.PrincipalUtils;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.User;
 import org.jooq.DSLContext;
 
 import java.util.List;
+import java.util.Map;
 
 import static kotowari.restful.DecisionPoint.*;
 
@@ -63,17 +66,20 @@ public class WebAuthnCredentialsResource {
     }
 
     @Decision(HANDLE_OK)
-    public List<WebAuthnCredentialResponse> list(User user, DSLContext dsl) {
+    public List<Map<String, Object>> list(User user, DSLContext dsl) {
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         return credRepo.findByUserId(user.id()).stream()
-                .map(WebAuthnCredentialResponse::of)
+                .map(BouncrJsonEncoders.WEBAUTHN_CREDENTIAL::encode)
                 .toList();
     }
 
     @Decision(DELETE)
-    public Void delete(Long credentialId, User user, DSLContext dsl) {
+    public Void delete(Long credentialId, User user, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         WebAuthnCredentialRepository credRepo = new WebAuthnCredentialRepository(dsl);
         credRepo.deleteByUserIdAndCredentialId(user.id(), credentialId);
+        actionRecord.setActionType(ActionType.WEBAUTHN_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(principal.getName());
         return null;
     }
 }

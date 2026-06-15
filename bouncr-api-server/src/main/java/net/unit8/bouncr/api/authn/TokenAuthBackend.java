@@ -1,6 +1,6 @@
 package net.unit8.bouncr.api.authn;
 
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import enkan.security.AuthBackend;
 import enkan.security.bouncr.UserPermissionPrincipal;
 import jakarta.inject.Inject;
