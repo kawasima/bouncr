@@ -9,7 +9,9 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.RoleRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Role;
 import net.unit8.bouncr.data.RoleSpec;
 import net.unit8.raoh.Err;
@@ -91,16 +93,22 @@ public class RoleResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(RoleSpec roleSpec, Role role, DSLContext dsl) {
+    public Map<String, Object> update(RoleSpec roleSpec, Role role, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RoleRepository repo = new RoleRepository(dsl);
         repo.update(role.name(), roleSpec);
+        actionRecord.setActionType(ActionType.ROLE_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(role.name().value());
         return BouncrJsonEncoders.ROLE.encode(repo.findByName(roleSpec.name().value(), false).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Void delete(Role role, DSLContext dsl) {
+    public Void delete(Role role, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         RoleRepository repo = new RoleRepository(dsl);
         repo.delete(role.name());
+        actionRecord.setActionType(ActionType.ROLE_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(role.name().value());
         return null;
     }
 }

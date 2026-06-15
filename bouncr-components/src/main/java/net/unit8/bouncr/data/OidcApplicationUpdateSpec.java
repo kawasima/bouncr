@@ -1,12 +1,12 @@
-package net.unit8.bouncr.api.boundary;
+package net.unit8.bouncr.data;
 
 import java.util.List;
-import net.unit8.bouncr.data.WordName;
 import net.unit8.raoh.Presence;
 
 /**
- * Request body for updating an OIDC client application.
- * Uses {@link net.unit8.raoh.Presence} for tri-state PATCH semantics.
+ * Update specification for an OIDC client application.
+ * Uses {@link Presence} for tri-state PATCH semantics:
+ * present with value, present with null (clear), or absent (no change).
  *
  * @param name display name of the OIDC application
  * @param grantTypes OAuth 2.0 grant types the application may use
@@ -17,7 +17,7 @@ import net.unit8.raoh.Presence;
  * @param frontchannelLogoutUri URI for frontchannel logout redirects (tri-state)
  * @param permissions list of permission names granted to the application
  */
-public record OidcApplicationUpdate(WordName name, List<String> grantTypes, Presence<String> homeUri,
-                                     Presence<String> callbackUri, Presence<String> description,
-                                     Presence<String> backchannelLogoutUri, Presence<String> frontchannelLogoutUri,
-                                     List<String> permissions) {}
+public record OidcApplicationUpdateSpec(WordName name, List<String> grantTypes, Presence<String> homeUri,
+                                        Presence<String> callbackUri, Presence<String> description,
+                                        Presence<String> backchannelLogoutUri, Presence<String> frontchannelLogoutUri,
+                                        List<String> permissions) {}

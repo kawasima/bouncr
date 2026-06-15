@@ -1,11 +1,10 @@
 package net.unit8.bouncr.api.resource;
 
-import enkan.data.DefaultHttpRequest;
+import enkan.web.data.DefaultHttpRequest;
 import kotowari.restful.data.ApiResponse;
 import kotowari.restful.data.Problem;
 import kotowari.restful.data.Resource;
 import kotowari.restful.data.RestContext;
-import net.unit8.bouncr.api.boundary.OidcApplicationCreatedResponse;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import net.unit8.bouncr.data.GrantType;
@@ -71,14 +70,15 @@ class OidcApplicationResourceTest {
 
         boolean created = createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
         assertThat(created).isTrue();
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        assertThat(response.client_id()).isNotBlank();
-        assertThat(response.client_secret()).isNotBlank();
-        assertThat(response.grant_types()).containsExactly("client_credentials");
-        assertThat(response.callback_uri()).isNull();
+        Map<String, Object> response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        assertThat((String) response.get("client_id")).isNotBlank();
+        assertThat((String) response.get("client_secret")).isNotBlank();
+        assertThat(response.get("grant_types")).isEqualTo(java.util.List.of("client_credentials"));
+        assertThat(response.get("callback_uri")).isNull();
     }
 
     @Test
@@ -94,6 +94,7 @@ class OidcApplicationResourceTest {
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
 
         // Verify round-trip through DB
@@ -123,11 +124,12 @@ class OidcApplicationResourceTest {
         assertThat(createResource.validateCreate(body, context)).isNull();
         createResource.create(
                 context.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 context, dsl);
 
-        OidcApplicationCreatedResponse response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        assertThat(response.grant_types()).containsExactlyInAnyOrder("authorization_code", "refresh_token");
-        assertThat(response.callback_uri()).isEqualTo("https://webapp.example/callback");
+        Map<String, Object> response = context.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        assertThat(response.get("grant_types")).isEqualTo(java.util.List.of("authorization_code", "refresh_token"));
+        assertThat(response.get("callback_uri")).isEqualTo("https://webapp.example/callback");
     }
 
     @Test
@@ -212,9 +214,10 @@ class OidcApplicationResourceTest {
         createResource.validateCreate(body, createCtx);
         createResource.create(
                 createCtx.get(OidcApplicationsResource.CREATE_REQ).orElseThrow(),
+                new net.unit8.bouncr.api.logging.ActionRecord(), adminPrincipal(),
                 createCtx, dsl);
-        OidcApplicationCreatedResponse created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
-        String originalSecret = created.client_secret();
+        Map<String, Object> created = createCtx.get(OidcApplicationsResource.RESPONSE).orElseThrow();
+        String originalSecret = (String) created.get("client_secret");
 
         // Regenerate secret
         OidcApplicationSecretResource secretResource = new OidcApplicationSecretResource();
@@ -319,6 +322,12 @@ class OidcApplicationResourceTest {
     private RestContext restContext() {
         Resource stubResource = decisionPoint -> ctx -> null;
         return new RestContext(stubResource, new DefaultHttpRequest());
+    }
+
+    private enkan.security.bouncr.UserPermissionPrincipal adminPrincipal() {
+        return new enkan.security.bouncr.UserPermissionPrincipal(
+                1L, "admin", Map.of(),
+                java.util.Set.of("oidc_application:create", "oidc_application:read", "oidc_application:update", "oidc_application:delete"));
     }
 
     private void setField(Object target, String fieldName, Object value) {

@@ -1,7 +1,7 @@
 package net.unit8.bouncr.extention.app;
 
 import enkan.MiddlewareChain;
-import enkan.application.WebApplication;
+import enkan.web.application.WebApplication;
 import kotowari.middleware.RoutingMiddleware;
 import kotowari.routing.Routes;
 import net.unit8.bouncr.extention.app.resource.VerificationEmailResource;
