@@ -44,32 +44,6 @@
             <artifactId>enkan-component-metrics</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.unit8.enkan</groupId>
-            <artifactId>enkan-bouncr</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-web</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.unit8.enkan</groupId>
-                    <artifactId>enkan-component-eclipselink</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.jodah</groupId>
-                    <artifactId>failsafe</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.annotation</groupId>
-                    <artifactId>javax.annotation-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
-                    <artifactId>jackson-jaxrs-json-provider</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>tools.jackson.jakarta.rs</groupId>
             <artifactId>jackson-jakarta-rs-json-provider</artifactId>
         </dependency>
@@ -98,9 +72,12 @@
         </dependency>
 
         <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-            <version>5.1.0</version>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-bouncr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.unit8.enkan</groupId>
+            <artifactId>enkan-component-jedis</artifactId>
         </dependency>
 
         <dependency>

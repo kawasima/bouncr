@@ -9,7 +9,9 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.ApplicationSpec;
 import net.unit8.bouncr.data.WordName;
@@ -94,16 +96,22 @@ public class ApplicationResource {
     }
 
     @Decision(PUT)
-    public Map<String, Object> update(ApplicationSpec spec, Application application, DSLContext dsl) {
+    public Map<String, Object> update(ApplicationSpec spec, Application application, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
         repo.update(application.name(), spec);
+        actionRecord.setActionType(ActionType.APPLICATION_MODIFIED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(application.name().value());
         return BouncrJsonEncoders.APPLICATION.encode(repo.findByName(spec.name(), false).orElseThrow());
     }
 
     @Decision(DELETE)
-    public Void delete(Application application, DSLContext dsl) {
+    public Void delete(Application application, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
         repo.delete(application.name());
+        actionRecord.setActionType(ActionType.APPLICATION_DELETED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(application.name().value());
         return null;
     }
 }

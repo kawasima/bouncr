@@ -1,7 +1,7 @@
 package net.unit8.bouncr.api.service;
 
 import enkan.collection.Parameters;
-import enkan.data.HttpRequest;
+import enkan.web.data.HttpRequest;
 import net.unit8.bouncr.api.repository.OidcApplicationRepository;
 import net.unit8.bouncr.component.BouncrConfiguration;
 import org.slf4j.Logger;

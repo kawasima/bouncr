@@ -9,8 +9,10 @@ import kotowari.restful.data.RestContext;
 import kotowari.restful.resource.AllowedMethods;
 import net.unit8.bouncr.api.decoder.BouncrJsonDecoders;
 import net.unit8.bouncr.api.encoder.BouncrJsonEncoders;
+import net.unit8.bouncr.api.logging.ActionRecord;
 import net.unit8.bouncr.api.util.PaginationParams;
 import net.unit8.bouncr.api.repository.ApplicationRepository;
+import net.unit8.bouncr.data.ActionType;
 import net.unit8.bouncr.data.Application;
 import net.unit8.bouncr.data.ApplicationSpec;
 import net.unit8.raoh.Err;
@@ -82,8 +84,11 @@ public class ApplicationsResource {
     }
 
     @Decision(POST)
-    public Map<String, Object> create(ApplicationSpec applicationSpec, DSLContext dsl) {
+    public Map<String, Object> create(ApplicationSpec applicationSpec, ActionRecord actionRecord, UserPermissionPrincipal principal, DSLContext dsl) {
         ApplicationRepository repo = new ApplicationRepository(dsl);
+        actionRecord.setActionType(ActionType.APPLICATION_CREATED);
+        actionRecord.setActor(principal.getName());
+        actionRecord.setDescription(applicationSpec.name().value());
         return BouncrJsonEncoders.APPLICATION.encode(repo.insert(applicationSpec));
     }
 }

@@ -2,15 +2,17 @@ package net.unit8.bouncr.api;
 
 import enkan.Application;
 import enkan.Env;
-import enkan.data.HttpRequest;
-import enkan.data.HttpResponse;
-import enkan.application.WebApplication;
+import enkan.web.data.HttpRequest;
+import enkan.web.data.HttpResponse;
+import enkan.web.application.WebApplication;
 import enkan.config.ApplicationFactory;
-import enkan.endpoint.ResourceEndpoint;
+import enkan.web.endpoint.ResourceEndpoint;
 import enkan.exception.MisconfigurationException;
-import enkan.middleware.*;
+import enkan.middleware.AuthenticationMiddleware;
+import enkan.middleware.ServiceUnavailableMiddleware;
 import enkan.middleware.metrics.MetricsMiddleware;
 import enkan.middleware.throttling.ThrottlingMiddleware;
+import enkan.web.middleware.*;
 import enkan.throttling.LimitRate;
 import enkan.throttling.Throttle;
 import enkan.security.bouncr.BouncrBackend;
@@ -34,7 +36,7 @@ import enkan.middleware.jooq.JooqDslContextMiddleware;
 import enkan.middleware.jooq.JooqTransactionMiddleware;
 import net.unit8.bouncr.api.inject.DSLContextInjector;
 import net.unit8.bouncr.api.logging.ActionRecordInjector;
-import net.unit8.bouncr.api.middleware.ClientIpMiddleware;
+import enkan.web.middleware.ForwardedMiddleware;
 import net.unit8.bouncr.api.resource.*;
 import net.unit8.bouncr.util.DigestUtils;
 
@@ -144,8 +146,19 @@ public class BouncrApplicationFactory implements ApplicationFactory<HttpRequest,
         );
         // Enkan
         app.use(new DefaultCharsetMiddleware());
+        // COEP (require-corp) is disabled and CORP is relaxed to cross-origin because Bouncr is a
+        // cross-origin API: the UI loads from a different origin and the API must be readable across
+        // origins. COOP (same-origin) is intentionally kept: all OIDC flows use full-page redirects
+        // (not popups), so window.opener is never required and same-origin isolation is safe.
+        app.use(builder(new SecurityHeadersMiddleware())
+                .set(SecurityHeadersMiddleware::setCrossOriginEmbedderPolicy, (String) null)
+                .set(SecurityHeadersMiddleware::setCrossOriginResourcePolicy, "cross-origin")
+                .build());
         app.use(new MetricsMiddleware<>());
-        app.use(new ClientIpMiddleware());
+        app.use(builder(new ForwardedMiddleware())
+                .set(ForwardedMiddleware::setTrustedProxies,
+                        List.of(Env.getString("TRUSTED_PROXY_CIDR", "127.0.0.0/8")))
+                .build());
         app.use((java.util.function.Predicate<HttpRequest>) NONE, new ServiceUnavailableMiddleware<>(new ResourceEndpoint("/public/html/503.html")));
         app.use(envIn("development"), new TraceMiddleware<>());
         app.use(new ContentTypeMiddleware());
