@@ -4,8 +4,8 @@
   "description": "Bouncr API server",
   "main": "index.js",
   "scripts": {
+    "redoc": "redocly build-docs src/main/resources/bouncr-spec.yaml -o target/redoc.html",
     "test": "jest",
-    "redoc-cli": "redoc-cli serve src/main/resources/bouncr-spec.yaml",
     "mock:server": "json-spec-server --port=3005 --openapi=src/main/resources/bouncr-spec.yaml --jsonspec=src/main/resources/bouncr-spec.js",
     "mock:client": "json-spec-client --baseUrl=http://localhost:3005/bouncr/api --openapi=src/main/resources/bouncr-spec.yaml"
   },
@@ -15,8 +15,11 @@
   "author": "kawasima",
   "license": "EPL-2.0",
   "devDependencies": {
-    "@json-spec/openapi": "0.1.5",
-    "redoc": "^2.0.0-rc.2",
-    "redoc-cli": "^0.7.0"
+    "@json-spec/openapi": "^0.1.12",
+    "@redocly/cli": "^2.82.0"
+  },
+  "overrides": {
+    "axios": "^1.21.1",
+    "qs": "^6.16.1"
   }
 }
