@@ -72,6 +72,8 @@
                     <environmentVariables>
                         <JWT_SECRET>e2e-test-secret-key-32-bytes-ok</JWT_SECRET>
                         <CLEAR_SCHEMA>true</CLEAR_SCHEMA>
+                        <!-- Tests only use APIRequestContext; no browser binaries are needed -->
+                        <PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD>1</PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD>
                     </environmentVariables>
                 </configuration>
             </plugin>
